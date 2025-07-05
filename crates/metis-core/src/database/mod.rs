@@ -196,29 +196,29 @@ impl DocumentStore {
         let updated_at_timestamp = document.updated_at.timestamp_millis() as f64 / 1000.0;
         let frontmatter_json = serde_json::to_string(&document.frontmatter)?;
 
-        sqlx::query!(
+        sqlx::query(
             r#"
             INSERT OR REPLACE INTO documents 
             (id, filepath, document_type, level, status, parent_id, 
              created_at, updated_at, content_hash, frontmatter_json, 
              exit_criteria_met, content, file_size, file_modified_at)
             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)
-            "#,
-            document.id,
-            document.filepath,
-            doc_type_str,
-            level_str,
-            document.status,
-            document.parent_id,
-            created_at_timestamp,
-            updated_at_timestamp,
-            document.content_hash,
-            frontmatter_json,
-            document.exit_criteria_met,
-            document.content,
-            document.file_size,
-            document.file_modified_at
+            "#
         )
+        .bind(&document.id)
+        .bind(&document.filepath)
+        .bind(&doc_type_str)
+        .bind(&level_str)
+        .bind(&document.status)
+        .bind(&document.parent_id)
+        .bind(created_at_timestamp)
+        .bind(updated_at_timestamp)
+        .bind(&document.content_hash)
+        .bind(&frontmatter_json)
+        .bind(document.exit_criteria_met)
+        .bind(&document.content)
+        .bind(document.file_size)
+        .bind(document.file_modified_at)
         .execute(&self.pool)
         .await?;
 
@@ -230,43 +230,45 @@ impl DocumentStore {
 
     /// Get a document by ID
     pub async fn get_document(&self, document_id: &str) -> Result<Option<Document>> {
-        let record = sqlx::query!(
+        use sqlx::Row;
+        
+        let record = sqlx::query(
             r#"
             SELECT id, filepath, document_type, level, status, parent_id, 
                    created_at, updated_at, content_hash, frontmatter_json, 
                    exit_criteria_met, content, file_size, file_modified_at
             FROM documents 
             WHERE id = ?
-            "#,
-            document_id
+            "#
         )
+        .bind(document_id)
         .fetch_optional(&self.pool)
         .await?;
 
         if let Some(row) = record {
-            let document_type: DocumentType = row.document_type.parse()?;
-            let level: DocumentType = row.level.parse()?;
-            let frontmatter: serde_json::Value = serde_json::from_str(&row.frontmatter_json)?;
+            let document_type: DocumentType = row.try_get::<String, _>("document_type")?.parse()?;
+            let level: DocumentType = row.try_get::<String, _>("level")?.parse()?;
+            let frontmatter: serde_json::Value = serde_json::from_str(&row.try_get::<String, _>("frontmatter_json")?)?;
             let created_at =
-                DateTime::from_timestamp(row.created_at as i64, 0).unwrap_or_else(Utc::now);
+                DateTime::from_timestamp(row.try_get::<f64, _>("created_at")? as i64, 0).unwrap_or_else(Utc::now);
             let updated_at =
-                DateTime::from_timestamp(row.updated_at as i64, 0).unwrap_or_else(Utc::now);
+                DateTime::from_timestamp(row.try_get::<f64, _>("updated_at")? as i64, 0).unwrap_or_else(Utc::now);
 
             Ok(Some(Document {
-                id: row.id.unwrap_or_default(),
-                filepath: row.filepath,
+                id: row.try_get::<Option<String>, _>("id")?.unwrap_or_default(),
+                filepath: row.try_get("filepath")?,
                 document_type,
                 level,
-                status: row.status,
-                parent_id: row.parent_id,
+                status: row.try_get("status")?,
+                parent_id: row.try_get("parent_id")?,
                 created_at,
                 updated_at,
-                content_hash: row.content_hash,
+                content_hash: row.try_get("content_hash")?,
                 frontmatter,
-                exit_criteria_met: row.exit_criteria_met.unwrap_or(false),
-                content: row.content,
-                file_size: row.file_size,
-                file_modified_at: row.file_modified_at,
+                exit_criteria_met: row.try_get::<Option<bool>, _>("exit_criteria_met")?.unwrap_or(false),
+                content: row.try_get("content")?,
+                file_size: row.try_get("file_size")?,
+                file_modified_at: row.try_get("file_modified_at")?,
             }))
         } else {
             Ok(None)
@@ -281,7 +283,8 @@ impl DocumentStore {
 
     /// Delete a document by ID
     pub async fn delete_document(&self, document_id: &str) -> Result<bool> {
-        let result = sqlx::query!("DELETE FROM documents WHERE id = ?", document_id)
+        let result = sqlx::query("DELETE FROM documents WHERE id = ?")
+            .bind(document_id)
             .execute(&self.pool)
             .await?;
 
@@ -295,12 +298,10 @@ impl DocumentStore {
         frontmatter: &serde_json::Value,
     ) -> Result<()> {
         // First, delete existing properties for this document
-        sqlx::query!(
-            "DELETE FROM document_properties WHERE document_id = ?",
-            document_id
-        )
-        .execute(&self.pool)
-        .await?;
+        sqlx::query("DELETE FROM document_properties WHERE document_id = ?")
+            .bind(document_id)
+            .execute(&self.pool)
+            .await?;
 
         // Extract properties from frontmatter
         if let serde_json::Value::Object(map) = frontmatter {
@@ -313,17 +314,17 @@ impl DocumentStore {
                     _ => (value.to_string(), "text".to_string()),
                 };
 
-                sqlx::query!(
+                sqlx::query(
                     r#"
                     INSERT INTO document_properties 
                     (document_id, property_name, property_value, property_type)
                     VALUES (?1, ?2, ?3, ?4)
-                    "#,
-                    document_id,
-                    key,
-                    prop_value,
-                    prop_type
+                    "#
                 )
+                .bind(document_id)
+                .bind(key)
+                .bind(&prop_value)
+                .bind(&prop_type)
                 .execute(&self.pool)
                 .await?;
             }

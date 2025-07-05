@@ -176,41 +176,43 @@ impl SyncEngine {
         let filepath_str = file_path.to_string_lossy().to_string();
 
         // Query database by filepath
-        let record = sqlx::query!(
+        use sqlx::Row;
+        
+        let record = sqlx::query(
             "SELECT id, filepath, document_type, level, status, parent_id, 
                     created_at, updated_at, content_hash, frontmatter_json, 
                     exit_criteria_met, content, file_size, file_modified_at
-             FROM documents WHERE filepath = ?",
-            filepath_str
+             FROM documents WHERE filepath = ?"
         )
+        .bind(&filepath_str)
         .fetch_optional(self.store.pool())
         .await?;
 
         if let Some(row) = record {
-            let document_type: crate::DocumentType = row.document_type.parse().unwrap_or_default();
-            let level: crate::DocumentType = row.level.parse().unwrap_or_default();
+            let document_type: crate::DocumentType = row.try_get::<String, _>("document_type")?.parse().unwrap_or_default();
+            let level: crate::DocumentType = row.try_get::<String, _>("level")?.parse().unwrap_or_default();
             let frontmatter: serde_json::Value =
-                serde_json::from_str(&row.frontmatter_json).unwrap_or_default();
+                serde_json::from_str(&row.try_get::<String, _>("frontmatter_json")?).unwrap_or_default();
             let created_at =
-                chrono::DateTime::from_timestamp(row.created_at as i64, 0).unwrap_or_default();
+                chrono::DateTime::from_timestamp(row.try_get::<f64, _>("created_at")? as i64, 0).unwrap_or_default();
             let updated_at =
-                chrono::DateTime::from_timestamp(row.updated_at as i64, 0).unwrap_or_default();
+                chrono::DateTime::from_timestamp(row.try_get::<f64, _>("updated_at")? as i64, 0).unwrap_or_default();
 
             Ok(Some(crate::Document {
-                id: row.id.unwrap_or_default(),
-                filepath: row.filepath,
+                id: row.try_get::<Option<String>, _>("id")?.unwrap_or_default(),
+                filepath: row.try_get("filepath")?,
                 document_type,
                 level,
-                status: row.status,
-                parent_id: row.parent_id,
+                status: row.try_get("status")?,
+                parent_id: row.try_get("parent_id")?,
                 created_at,
                 updated_at,
-                content_hash: row.content_hash,
+                content_hash: row.try_get("content_hash")?,
                 frontmatter,
-                exit_criteria_met: row.exit_criteria_met.unwrap_or(false),
-                content: row.content,
-                file_size: row.file_size,
-                file_modified_at: row.file_modified_at,
+                exit_criteria_met: row.try_get::<Option<bool>, _>("exit_criteria_met")?.unwrap_or(false),
+                content: row.try_get("content")?,
+                file_size: row.try_get("file_size")?,
+                file_modified_at: row.try_get("file_modified_at")?,
             }))
         } else {
             Ok(None)

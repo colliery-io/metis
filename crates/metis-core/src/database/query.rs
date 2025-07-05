@@ -108,7 +108,7 @@ impl QueryService {
     pub async fn find_documents_by_phase(&self, phase: &str) -> Result<Vec<Document>> {
         let phase_tag = format!("#phase/{}", phase);
         let search_pattern = format!("%{}%", phase_tag);
-        let records = sqlx::query!(
+        let records = sqlx::query(
             r#"
             SELECT id, filepath, document_type, level, status, parent_id, 
                    created_at, updated_at, content_hash, frontmatter_json, 
@@ -116,29 +116,30 @@ impl QueryService {
             FROM documents 
             WHERE frontmatter_json LIKE ?
             ORDER BY updated_at DESC
-            "#,
-            search_pattern
+            "#
         )
+        .bind(&search_pattern)
         .fetch_all(&self.pool)
         .await?;
 
         let mut documents = Vec::new();
         for row in records {
+            use sqlx::Row;
             documents.push(self.record_to_document(
-                row.id.unwrap_or_default(),
-                row.filepath,
-                row.document_type,
-                row.level,
-                row.status,
-                row.parent_id,
-                row.created_at,
-                row.updated_at,
-                row.content_hash,
-                row.frontmatter_json,
-                row.exit_criteria_met,
-                row.content,
-                row.file_size,
-                row.file_modified_at,
+                row.try_get::<Option<String>, _>("id")?.unwrap_or_default(),
+                row.try_get("filepath")?,
+                row.try_get("document_type")?,
+                row.try_get("level")?,
+                row.try_get("status")?,
+                row.try_get("parent_id")?,
+                row.try_get("created_at")?,
+                row.try_get("updated_at")?,
+                row.try_get("content_hash")?,
+                row.try_get("frontmatter_json")?,
+                row.try_get("exit_criteria_met")?,
+                row.try_get("content")?,
+                row.try_get("file_size")?,
+                row.try_get("file_modified_at")?,
             )?);
         }
         Ok(documents)
@@ -146,7 +147,7 @@ impl QueryService {
 
     /// Find documents by parent ID
     pub async fn find_documents_by_parent(&self, parent_id: &str) -> Result<Vec<Document>> {
-        let records = sqlx::query!(
+        let records = sqlx::query(
             r#"
             SELECT id, filepath, document_type, level, status, parent_id, 
                    created_at, updated_at, content_hash, frontmatter_json, 
@@ -154,29 +155,30 @@ impl QueryService {
             FROM documents 
             WHERE parent_id = ?
             ORDER BY updated_at DESC
-            "#,
-            parent_id
+            "#
         )
+        .bind(parent_id)
         .fetch_all(&self.pool)
         .await?;
 
         let mut documents = Vec::new();
         for row in records {
+            use sqlx::Row;
             documents.push(self.record_to_document(
-                row.id.unwrap_or_default(),
-                row.filepath,
-                row.document_type,
-                row.level,
-                row.status,
-                row.parent_id,
-                row.created_at,
-                row.updated_at,
-                row.content_hash,
-                row.frontmatter_json,
-                row.exit_criteria_met,
-                row.content,
-                row.file_size,
-                row.file_modified_at,
+                row.try_get::<Option<String>, _>("id")?.unwrap_or_default(),
+                row.try_get("filepath")?,
+                row.try_get("document_type")?,
+                row.try_get("level")?,
+                row.try_get("status")?,
+                row.try_get("parent_id")?,
+                row.try_get("created_at")?,
+                row.try_get("updated_at")?,
+                row.try_get("content_hash")?,
+                row.try_get("frontmatter_json")?,
+                row.try_get("exit_criteria_met")?,
+                row.try_get("content")?,
+                row.try_get("file_size")?,
+                row.try_get("file_modified_at")?,
             )?);
         }
         Ok(documents)
@@ -184,7 +186,9 @@ impl QueryService {
 
     /// Find orphaned documents (documents with parent_id that doesn't exist)
     pub async fn find_orphaned_documents(&self) -> Result<Vec<Document>> {
-        let records = sqlx::query!(
+        use sqlx::Row;
+        
+        let records = sqlx::query(
             r#"
             SELECT d.id, d.filepath, d.document_type, d.level, d.status, d.parent_id, 
                    d.created_at, d.updated_at, d.content_hash, d.frontmatter_json, 
@@ -201,20 +205,20 @@ impl QueryService {
         let mut documents = Vec::new();
         for row in records {
             documents.push(self.record_to_document(
-                row.id.unwrap_or_default(),
-                row.filepath,
-                row.document_type,
-                row.level,
-                row.status,
-                row.parent_id,
-                row.created_at,
-                row.updated_at,
-                row.content_hash,
-                row.frontmatter_json,
-                row.exit_criteria_met,
-                row.content,
-                row.file_size,
-                row.file_modified_at,
+                row.try_get::<Option<String>, _>("id")?.unwrap_or_default(),
+                row.try_get("filepath")?,
+                row.try_get("document_type")?,
+                row.try_get("level")?,
+                row.try_get("status")?,
+                row.try_get("parent_id")?,
+                row.try_get("created_at")?,
+                row.try_get("updated_at")?,
+                row.try_get("content_hash")?,
+                row.try_get("frontmatter_json")?,
+                row.try_get("exit_criteria_met")?,
+                row.try_get("content")?,
+                row.try_get("file_size")?,
+                row.try_get("file_modified_at")?,
             )?);
         }
         Ok(documents)
@@ -222,39 +226,45 @@ impl QueryService {
 
     /// Get all property names used in documents
     pub async fn get_all_property_names(&self) -> Result<Vec<String>> {
-        let records = sqlx::query!(
+        use sqlx::Row;
+        
+        let records = sqlx::query(
             "SELECT DISTINCT property_name FROM document_properties ORDER BY property_name"
         )
         .fetch_all(&self.pool)
         .await?;
 
-        Ok(records.into_iter().map(|row| row.property_name).collect())
+        Ok(records.into_iter().map(|row| row.try_get("property_name").unwrap_or_default()).collect())
     }
 
     /// Get all values for a specific property with usage counts
     pub async fn get_property_values(&self, prop_name: &str) -> Result<Vec<(String, usize)>> {
-        let records = sqlx::query!(
+        use sqlx::Row;
+        
+        let records = sqlx::query(
             r#"
             SELECT property_value, COUNT(*) as count 
             FROM document_properties 
             WHERE property_name = ? 
             GROUP BY property_value 
             ORDER BY count DESC, property_value
-            "#,
-            prop_name
+            "#
         )
+        .bind(prop_name)
         .fetch_all(&self.pool)
         .await?;
 
         Ok(records
             .into_iter()
-            .map(|row| (row.property_value.unwrap_or_default(), row.count as usize))
+            .map(|row| (row.try_get::<Option<String>, _>("property_value").unwrap_or_default().unwrap_or_default(), row.try_get::<i64, _>("count").unwrap_or_default() as usize))
             .collect())
     }
 
     /// Search documents by property value (equals only for now)
     pub async fn search_by_property(&self, prop_name: &str, value: &str) -> Result<Vec<Document>> {
-        let records = sqlx::query!(
+        use sqlx::Row;
+        
+        let records = sqlx::query(
             r#"
             SELECT DISTINCT d.id, d.filepath, d.document_type, d.level, d.status, d.parent_id, 
                            d.created_at, d.updated_at, d.content_hash, d.frontmatter_json, 
@@ -263,30 +273,30 @@ impl QueryService {
             JOIN document_properties p ON d.id = p.document_id
             WHERE p.property_name = ? AND p.property_value = ?
             ORDER BY d.updated_at DESC
-            "#,
-            prop_name,
-            value
+            "#
         )
+        .bind(prop_name)
+        .bind(value)
         .fetch_all(&self.pool)
         .await?;
 
         let mut documents = Vec::new();
         for row in records {
             documents.push(self.record_to_document(
-                row.id.unwrap_or_default(),
-                row.filepath,
-                row.document_type,
-                row.level,
-                row.status,
-                row.parent_id,
-                row.created_at,
-                row.updated_at,
-                row.content_hash,
-                row.frontmatter_json,
-                row.exit_criteria_met,
-                row.content,
-                row.file_size,
-                row.file_modified_at,
+                row.try_get::<Option<String>, _>("id")?.unwrap_or_default(),
+                row.try_get("filepath")?,
+                row.try_get("document_type")?,
+                row.try_get("level")?,
+                row.try_get("status")?,
+                row.try_get("parent_id")?,
+                row.try_get("created_at")?,
+                row.try_get("updated_at")?,
+                row.try_get("content_hash")?,
+                row.try_get("frontmatter_json")?,
+                row.try_get("exit_criteria_met")?,
+                row.try_get("content")?,
+                row.try_get("file_size")?,
+                row.try_get("file_modified_at")?,
             )?);
         }
         Ok(documents)

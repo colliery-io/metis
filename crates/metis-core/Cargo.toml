@@ -1,5 +1,5 @@
 [package]
-name = "metis-core"
+name = "metis-docs-core"
 version.workspace = true
 edition.workspace = true
 description = "Core library for Flight Levels documentation management system"
@@ -18,7 +18,7 @@ tracing-subscriber = { workspace = true }
 
 # Core-specific dependencies
 serde_yaml = "0.9"
-sqlx = { version = "0.7", features = ["sqlite", "runtime-tokio-rustls", "migrate", "chrono", "uuid", "json"] }
+sqlx = { version = "0.8", features = ["sqlite", "runtime-tokio-rustls", "migrate", "chrono", "uuid", "json"] }
 sha2 = "0.10"
 uuid = { version = "1.0", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }

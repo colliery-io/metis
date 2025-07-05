@@ -1,5 +1,5 @@
 [package]
-name = "metis-mcp-server"
+name = "metis-docs-mcp"
 version.workspace = true
 edition.workspace = true
 description = "MCP server for Metis documentation management system"
@@ -7,11 +7,11 @@ license.workspace = true
 authors.workspace = true
 
 [[bin]]
-name = "metis-mcp-server"
+name = "metis-mcp"
 path = "src/main.rs"
 
 [dependencies]
-metis-core = { version = "0.1.0", path = "../metis-core" }
+metis-docs-core = { version = "0.1.0", path = "../metis-core" }
 
 # Shared dependencies
 tokio = { workspace = true }
@@ -38,7 +38,7 @@ chrono = { version = "0.4", features = ["serde"] }
 
 [dev-dependencies]
 tempfile = { workspace = true }
-sqlx = { version = "0.7", features = ["sqlite", "runtime-tokio-rustls"] }
+sqlx = { version = "0.8", features = ["sqlite", "runtime-tokio-rustls"] }
 
 [lib]
 name = "metis_mcp_server"
