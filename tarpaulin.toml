@@ -1,0 +1,5 @@
+[default]
+workspace = true
+out = ["Html"]
+exclude-files = ["*/tests/*", "*/target/*", "*/src/bin/*"]
+avoid-cfg-tarpaulin = true

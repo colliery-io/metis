@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            INSERT OR REPLACE INTO documents \n            (id, filepath, document_type, level, status, parent_id, \n             created_at, updated_at, content_hash, frontmatter_json, \n             exit_criteria_met, content, file_size, file_modified_at)\n            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 14
+    },
+    "nullable": []
+  },
+  "hash": "472f53d2a1a39bd085134f34f40082ec6a253b2f6d62fc1007702f38cb70dc4e"
+}

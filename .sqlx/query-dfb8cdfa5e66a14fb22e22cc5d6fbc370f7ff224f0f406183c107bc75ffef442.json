@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT property_value, COUNT(*) as count \n            FROM document_properties \n            WHERE property_name = ? \n            GROUP BY property_value \n            ORDER BY count DESC, property_value\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "property_value",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "count",
+        "ordinal": 1,
+        "type_info": "Int64"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      false
+    ]
+  },
+  "hash": "dfb8cdfa5e66a14fb22e22cc5d6fbc370f7ff224f0f406183c107bc75ffef442"
+}

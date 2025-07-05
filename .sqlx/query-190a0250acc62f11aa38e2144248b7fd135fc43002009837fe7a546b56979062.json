@@ -1,0 +1,98 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT DISTINCT d.id, d.filepath, d.document_type, d.level, d.status, d.parent_id, \n                           d.created_at, d.updated_at, d.content_hash, d.frontmatter_json, \n                           d.exit_criteria_met, d.content, d.file_size, d.file_modified_at\n            FROM documents d\n            JOIN document_properties p ON d.id = p.document_id\n            WHERE p.property_name = ? AND p.property_value = ?\n            ORDER BY d.updated_at DESC\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "filepath",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "document_type",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "level",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "status",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "parent_id",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 6,
+        "type_info": "Float"
+      },
+      {
+        "name": "updated_at",
+        "ordinal": 7,
+        "type_info": "Float"
+      },
+      {
+        "name": "content_hash",
+        "ordinal": 8,
+        "type_info": "Text"
+      },
+      {
+        "name": "frontmatter_json",
+        "ordinal": 9,
+        "type_info": "Text"
+      },
+      {
+        "name": "exit_criteria_met",
+        "ordinal": 10,
+        "type_info": "Bool"
+      },
+      {
+        "name": "content",
+        "ordinal": 11,
+        "type_info": "Text"
+      },
+      {
+        "name": "file_size",
+        "ordinal": 12,
+        "type_info": "Int64"
+      },
+      {
+        "name": "file_modified_at",
+        "ordinal": 13,
+        "type_info": "Float"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "190a0250acc62f11aa38e2144248b7fd135fc43002009837fe7a546b56979062"
+}
