@@ -1,6 +1,6 @@
 //! Search and query operation tests
 
-use super::common::*;
+use crate::common::*;
 use metis_mcp_server::tools::{ListDocumentsTool, SearchDocumentsTool};
 
 /// Test listing documents

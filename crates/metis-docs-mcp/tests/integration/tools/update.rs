@@ -1,6 +1,6 @@
 //! Document update operation tests
 
-use super::common::*;
+use crate::common::*;
 use metis_mcp_server::tools::UpdateDocumentContentTool;
 
 /// Test updating document content

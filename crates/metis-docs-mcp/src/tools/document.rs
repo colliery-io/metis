@@ -42,6 +42,12 @@ pub struct CreateDocumentTool {
 
     /// Stakeholders involved
     pub stakeholders: Option<Vec<String>>,
+
+    /// Strategy ID for documents in the strategy hierarchy
+    pub strategy_id: Option<String>,
+
+    /// Initiative ID for tasks
+    pub initiative_id: Option<String>,
 }
 
 impl CreateDocumentTool {
@@ -51,8 +57,49 @@ impl CreateDocumentTool {
         // Parse document type
         let doc_type = DocumentType::from_str(&self.document_type).map_err(CallToolError::new)?;
 
-        // Create document context
+        // Create document context with hierarchy IDs based on document type
         let mut context = DocumentContext::new(self.title.clone());
+
+        // Set hierarchy IDs based on document type and provided parameters
+        match doc_type {
+            DocumentType::Vision => {
+                // Vision has no hierarchy IDs needed
+            }
+            DocumentType::Strategy => {
+                // Strategy uses provided strategy_id or generates from title
+                let strategy_id = self.strategy_id.clone()
+                    .unwrap_or_else(|| DocumentContext::title_to_slug(&self.title));
+                context = context.with_strategy_id(strategy_id);
+            }
+            DocumentType::Initiative => {
+                // Initiative requires strategy_id
+                if let Some(strategy_id) = &self.strategy_id {
+                    context = context.with_strategy_id(strategy_id.clone());
+                } else {
+                    return Ok(CallToolResult::text_content(vec![TextContent::from(
+                        serde_json::to_string_pretty(&serde_json::json!({
+                            "error": "Initiative requires strategy_id parameter"
+                        })).map_err(CallToolError::new)?
+                    )]));
+                }
+            }
+            DocumentType::Task => {
+                // Task requires both strategy_id and initiative_id
+                if let (Some(strategy_id), Some(initiative_id)) = (&self.strategy_id, &self.initiative_id) {
+                    context = context.with_strategy_id(strategy_id.clone());
+                    context = context.with_initiative_id(initiative_id.clone());
+                } else {
+                    return Ok(CallToolResult::text_content(vec![TextContent::from(
+                        serde_json::to_string_pretty(&serde_json::json!({
+                            "error": "Task requires both strategy_id and initiative_id parameters"
+                        })).map_err(CallToolError::new)?
+                    )]));
+                }
+            }
+            DocumentType::Adr => {
+                // ADRs are independent and have no hierarchy requirements
+            }
+        }
 
         // Add optional fields based on document type
         if let Some(parent) = &self.parent_title {

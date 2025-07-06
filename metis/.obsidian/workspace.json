@@ -1,56 +1,37 @@
 {
   "main": {
-    "id": "c104535793cf2a77",
+    "id": "0d528abef6b60053",
     "type": "split",
     "children": [
       {
-        "id": "36404ee46180afbf",
+        "id": "a30f1118daf26803",
         "type": "tabs",
         "children": [
           {
-            "id": "55c10171063ad12b",
+            "id": "6b1d46c2750d4841",
             "type": "leaf",
             "state": {
-              "type": "markdown",
-              "state": {
-                "file": "strategies/initial-capabilities/initiatives/process-documentation/initiative.md",
-                "mode": "source",
-                "source": false
-              },
+              "type": "empty",
+              "state": {},
               "icon": "lucide-file",
-              "title": "initiative"
-            }
-          },
-          {
-            "id": "c00cb05627e1ff6e",
-            "type": "leaf",
-            "state": {
-              "type": "markdown",
-              "state": {
-                "file": "strategies/native-ui/strategy.md",
-                "mode": "source",
-                "source": false
-              },
-              "icon": "lucide-file",
-              "title": "strategy"
+              "title": "New tab"
             }
           }
-        ],
-        "currentTab": 1
+        ]
       }
     ],
     "direction": "vertical"
   },
   "left": {
-    "id": "11b2fabfaeeacfc2",
+    "id": "262a43c499bd1281",
     "type": "split",
     "children": [
       {
-        "id": "92adebff44467f52",
+        "id": "c06faeac68ac0eee",
         "type": "tabs",
         "children": [
           {
-            "id": "e7fbaff0b4ec51cb",
+            "id": "85cf82cee6b69ba5",
             "type": "leaf",
             "state": {
               "type": "file-explorer",
@@ -63,7 +44,7 @@
             }
           },
           {
-            "id": "284015a390e2090f",
+            "id": "e8b2daeb397c5b2d",
             "type": "leaf",
             "state": {
               "type": "search",
@@ -80,7 +61,7 @@
             }
           },
           {
-            "id": "2a894678a3e75f30",
+            "id": "0c2183065189dcf2",
             "type": "leaf",
             "state": {
               "type": "bookmarks",
@@ -96,20 +77,19 @@
     "width": 300
   },
   "right": {
-    "id": "7157c53f2d52a00f",
+    "id": "6297e28943043573",
     "type": "split",
     "children": [
       {
-        "id": "54a39d912f9353f5",
+        "id": "8fb21470393ed595",
         "type": "tabs",
         "children": [
           {
-            "id": "3321fd4c5eb5797a",
+            "id": "c74a238245ec43cd",
             "type": "leaf",
             "state": {
               "type": "backlink",
               "state": {
-                "file": "vision.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -119,25 +99,24 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Backlinks for vision"
+              "title": "Backlinks"
             }
           },
           {
-            "id": "a442dfb8dd325999",
+            "id": "66b7ac450f22a263",
             "type": "leaf",
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "vision.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "Outgoing links from vision"
+              "title": "Outgoing links"
             }
           },
           {
-            "id": "353b129e363b520d",
+            "id": "7f6f9142b083d042",
             "type": "leaf",
             "state": {
               "type": "tag",
@@ -152,18 +131,17 @@
             }
           },
           {
-            "id": "868ba052ea77cfef",
+            "id": "b8aa417219b8352f",
             "type": "leaf",
             "state": {
               "type": "outline",
               "state": {
-                "file": "vision.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Outline of vision"
+              "title": "Outline"
             }
           }
         ]
@@ -183,14 +161,6 @@
       "command-palette:Open command palette": false
     }
   },
-  "active": "c00cb05627e1ff6e",
-  "lastOpenFiles": [
-    "strategies/semantic-search/strategy.md",
-    "metis-mcp-server.log",
-    "vision.md",
-    "strategies/native-ui/strategy.md",
-    "strategies/native-ui",
-    "strategies/initial-capabilities/initiatives/process-documentation/initiative.md",
-    "strategies/initial-capabilities/initiatives/process-documentation"
-  ]
+  "active": "6b1d46c2750d4841",
+  "lastOpenFiles": []
 }

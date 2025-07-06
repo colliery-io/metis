@@ -18,7 +18,7 @@ def run_tests():
         
         # Run our modular integration tests
         print("Running integration tests...")
-        result = subprocess.run(['cargo', 'test', '--test', 'main'], check=True)
+        result = subprocess.run(['cargo', 'test', '--package', 'metis-docs-mcp', '--test', 'integration'], check=True)
         
         return result.returncode
     except subprocess.CalledProcessError as e:
@@ -82,7 +82,8 @@ def generate_coverage():
             'cargo', 'tarpaulin', 
             '--out', 'Html', 
             '--lib',  # Include library tests
-            '--test', 'main'  # Include our modular integration tests
+            '--package', 'metis-docs-mcp',
+            '--test', 'integration'  # Include our modular integration tests
         ], check=True)
         print("Coverage report generated successfully")
         return result.returncode

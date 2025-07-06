@@ -14,6 +14,11 @@ pub struct DocumentContext {
     pub updated_at: DateTime<Utc>,
     pub parent_title: Option<String>,
     pub blocked_by: Vec<String>,
+    
+    // Hierarchy IDs for path resolution
+    pub strategy_id: Option<String>,  // Required for strategy/initiative/task hierarchy
+    pub initiative_id: Option<String>,
+    pub task_id: Option<String>,
 
     // Document-type specific fields
     pub risk_level: Option<RiskLevel>,        // Strategy
@@ -58,6 +63,9 @@ impl DocumentContext {
             updated_at: now,
             parent_title: None,
             blocked_by: Vec::new(),
+            strategy_id: None,
+            initiative_id: None,
+            task_id: None,
             risk_level: None,
             stakeholders: Vec::new(),
             technical_lead: None,
@@ -71,10 +79,18 @@ impl DocumentContext {
     /// Validate context for a specific document type
     pub fn validate_for_type(&self, doc_type: &DocumentType) -> Result<()> {
         match doc_type {
+            DocumentType::Vision => {
+                // Vision is independent and doesn't require hierarchy IDs
+            }
             DocumentType::Strategy => {
                 if self.risk_level.is_none() {
                     return Err(MetisError::MissingRequiredField {
                         field: "risk_level".to_string(),
+                    });
+                }
+                if self.strategy_id.is_none() {
+                    return Err(MetisError::MissingRequiredField {
+                        field: "strategy_id".to_string(),
                     });
                 }
             }
@@ -82,6 +98,23 @@ impl DocumentContext {
                 if self.complexity.is_none() {
                     return Err(MetisError::MissingRequiredField {
                         field: "complexity".to_string(),
+                    });
+                }
+                if self.strategy_id.is_none() {
+                    return Err(MetisError::MissingRequiredField {
+                        field: "strategy_id".to_string(),
+                    });
+                }
+            }
+            DocumentType::Task => {
+                if self.strategy_id.is_none() {
+                    return Err(MetisError::MissingRequiredField {
+                        field: "strategy_id".to_string(),
+                    });
+                }
+                if self.initiative_id.is_none() {
+                    return Err(MetisError::MissingRequiredField {
+                        field: "initiative_id".to_string(),
                     });
                 }
             }
@@ -96,9 +129,11 @@ impl DocumentContext {
                         field: "number".to_string(),
                     });
                 }
-            }
-            DocumentType::Vision | DocumentType::Task => {
-                // No additional required fields
+                if self.strategy_id.is_none() {
+                    return Err(MetisError::MissingRequiredField {
+                        field: "strategy_id".to_string(),
+                    });
+                }
             }
         }
         Ok(())
@@ -162,6 +197,21 @@ impl DocumentContext {
         self.number = Some(number);
         self
     }
+
+    pub fn with_strategy_id(mut self, strategy_id: String) -> Self {
+        self.strategy_id = Some(strategy_id);
+        self
+    }
+
+    pub fn with_initiative_id(mut self, initiative_id: String) -> Self {
+        self.initiative_id = Some(initiative_id);
+        self
+    }
+
+    pub fn with_task_id(mut self, task_id: String) -> Self {
+        self.task_id = Some(task_id);
+        self
+    }
 }
 
 #[cfg(test)]
@@ -198,11 +248,13 @@ mod tests {
     fn test_strategy_validation() {
         let ctx = DocumentContext::new("Test Strategy".to_string());
 
-        // Should fail without risk_level
+        // Should fail without risk_level and strategy_id
         assert!(ctx.validate_for_type(&DocumentType::Strategy).is_err());
 
-        // Should pass with risk_level
-        let ctx_with_risk = ctx.with_risk_level(RiskLevel::Medium);
+        // Should pass with risk_level and strategy_id
+        let ctx_with_risk = ctx
+            .with_risk_level(RiskLevel::Medium)
+            .with_strategy_id("test-strategy".to_string());
         assert!(ctx_with_risk
             .validate_for_type(&DocumentType::Strategy)
             .is_ok());
@@ -212,11 +264,13 @@ mod tests {
     fn test_initiative_validation() {
         let ctx = DocumentContext::new("Test Initiative".to_string());
 
-        // Should fail without complexity
+        // Should fail without complexity and strategy_id
         assert!(ctx.validate_for_type(&DocumentType::Initiative).is_err());
 
-        // Should pass with complexity
-        let ctx_with_complexity = ctx.with_complexity(Complexity::M);
+        // Should pass with complexity and strategy_id
+        let ctx_with_complexity = ctx
+            .with_complexity(Complexity::M)
+            .with_strategy_id("test-strategy".to_string());
         assert!(ctx_with_complexity
             .validate_for_type(&DocumentType::Initiative)
             .is_ok());
@@ -226,13 +280,14 @@ mod tests {
     fn test_adr_validation() {
         let ctx = DocumentContext::new("Test ADR".to_string());
 
-        // Should fail without decision_maker and number
+        // Should fail without decision_maker, number, and strategy_id
         assert!(ctx.validate_for_type(&DocumentType::Adr).is_err());
 
         // Should pass with required fields
         let ctx_complete = ctx
             .with_decision_maker("Engineering Team".to_string())
-            .with_number(1);
+            .with_number(1)
+            .with_strategy_id("test-strategy".to_string());
         assert!(ctx_complete.validate_for_type(&DocumentType::Adr).is_ok());
     }
 
@@ -240,9 +295,16 @@ mod tests {
     fn test_vision_and_task_validation() {
         let ctx = DocumentContext::new("Test Document".to_string());
 
-        // Vision and Task have no additional requirements
+        // Vision has no additional requirements
         assert!(ctx.validate_for_type(&DocumentType::Vision).is_ok());
-        assert!(ctx.validate_for_type(&DocumentType::Task).is_ok());
+        
+        // Task requires strategy_id and initiative_id
+        assert!(ctx.validate_for_type(&DocumentType::Task).is_err());
+        
+        let ctx_with_hierarchy = ctx
+            .with_strategy_id("test-strategy".to_string())
+            .with_initiative_id("test-initiative".to_string());
+        assert!(ctx_with_hierarchy.validate_for_type(&DocumentType::Task).is_ok());
     }
 
     #[test]

@@ -200,27 +200,27 @@ impl TemplateEngine {
         match doc_type {
             DocumentType::Vision => "vision.md".to_string(),
             DocumentType::Strategy => {
-                format!("strategies/{}/strategy.md", context.slug)
+                if let Some(ref strategy_id) = context.strategy_id {
+                    format!("strategies/{}/strategy.md", strategy_id)
+                } else {
+                    format!("strategies/{}/strategy.md", context.slug)
+                }
             }
             DocumentType::Initiative => {
-                if let Some(ref parent) = context.parent_title {
-                    let parent_slug = DocumentContext::title_to_slug(parent);
+                if let Some(ref strategy_id) = context.strategy_id {
                     format!(
                         "strategies/{}/initiatives/{}/initiative.md",
-                        parent_slug, context.slug
+                        strategy_id, context.slug
                     )
                 } else {
                     format!("initiatives/{}/initiative.md", context.slug)
                 }
             }
             DocumentType::Task => {
-                if let Some(ref parent) = context.parent_title {
-                    // For tasks, we need to traverse up to find the strategy
-                    // This is a simplified version - in practice we'd query the database
-                    let parent_slug = DocumentContext::title_to_slug(parent);
+                if let (Some(ref strategy_id), Some(ref initiative_id)) = (&context.strategy_id, &context.initiative_id) {
                     format!(
-                        "strategies/*/initiatives/{}/tasks/{}.md",
-                        parent_slug, context.slug
+                        "strategies/{}/initiatives/{}/tasks/{}.md",
+                        strategy_id, initiative_id, context.slug
                     )
                 } else {
                     format!("tasks/{}.md", context.slug)
@@ -273,6 +273,7 @@ mod tests {
         let engine = TemplateEngine::new().unwrap();
         let context = DocumentContext::new("Test Strategy".to_string())
             .with_risk_level(RiskLevel::High)
+            .with_strategy_id("test-strategy".to_string())
             .with_stakeholders(vec!["Engineering".to_string(), "Product".to_string()]);
 
         let result = engine.render_document(&DocumentType::Strategy, &context);
@@ -293,6 +294,7 @@ mod tests {
         let engine = TemplateEngine::new().unwrap();
         let context = DocumentContext::new("Test Initiative".to_string())
             .with_parent("Parent Strategy".to_string())
+            .with_strategy_id("parent-strategy".to_string())
             .with_complexity(Complexity::L)
             .with_technical_lead("Alice Smith".to_string());
 
@@ -312,6 +314,7 @@ mod tests {
         let engine = TemplateEngine::new().unwrap();
         let context = DocumentContext::new("Use Database for Storage".to_string())
             .with_decision_maker("Architecture Team".to_string())
+            .with_strategy_id("test-strategy".to_string())
             .with_number(5);
 
         let result = engine.render_document(&DocumentType::Adr, &context);
@@ -332,17 +335,20 @@ mod tests {
         let engine = TemplateEngine::new().unwrap();
 
         // Strategy without risk_level should fail
-        let strategy_context = DocumentContext::new("Test Strategy".to_string());
+        let strategy_context = DocumentContext::new("Test Strategy".to_string())
+            .with_strategy_id("test-strategy".to_string());
         let result = engine.render_document(&DocumentType::Strategy, &strategy_context);
         assert!(result.is_err());
 
         // Initiative without complexity should fail
-        let initiative_context = DocumentContext::new("Test Initiative".to_string());
+        let initiative_context = DocumentContext::new("Test Initiative".to_string())
+            .with_strategy_id("test-strategy".to_string());
         let result = engine.render_document(&DocumentType::Initiative, &initiative_context);
         assert!(result.is_err());
 
         // ADR without decision_maker should fail
-        let adr_context = DocumentContext::new("Test ADR".to_string());
+        let adr_context = DocumentContext::new("Test ADR".to_string())
+            .with_strategy_id("test-strategy".to_string());
         let result = engine.render_document(&DocumentType::Adr, &adr_context);
         assert!(result.is_err());
     }
@@ -359,7 +365,8 @@ mod tests {
         );
 
         // Strategy
-        let strategy_context = DocumentContext::new("Core Platform Strategy".to_string());
+        let strategy_context = DocumentContext::new("Core Platform Strategy".to_string())
+            .with_strategy_id("core-platform-strategy".to_string());
         assert_eq!(
             engine.generate_destination_path(&DocumentType::Strategy, &strategy_context),
             "strategies/core-platform-strategy/strategy.md"
@@ -367,14 +374,17 @@ mod tests {
 
         // Initiative with parent
         let initiative_context = DocumentContext::new("API Design".to_string())
-            .with_parent("Core Platform Strategy".to_string());
+            .with_parent("Core Platform Strategy".to_string())
+            .with_strategy_id("core-platform-strategy".to_string());
         assert_eq!(
             engine.generate_destination_path(&DocumentType::Initiative, &initiative_context),
             "strategies/core-platform-strategy/initiatives/api-design/initiative.md"
         );
 
         // ADR with number
-        let adr_context = DocumentContext::new("Use GraphQL".to_string()).with_number(42);
+        let adr_context = DocumentContext::new("Use GraphQL".to_string())
+            .with_strategy_id("test-strategy".to_string())
+            .with_number(42);
         assert_eq!(
             engine.generate_destination_path(&DocumentType::Adr, &adr_context),
             "decisions/adr-042-use-graphql.md"
@@ -390,8 +400,10 @@ mod tests {
         let result = engine.render_document(&DocumentType::Vision, &vision_context);
         assert!(result.is_ok());
 
-        // Task should render without any extra fields
-        let task_context = DocumentContext::new("Implement Feature".to_string());
+        // Task should render with required hierarchy fields
+        let task_context = DocumentContext::new("Implement Feature".to_string())
+            .with_strategy_id("test-strategy".to_string())
+            .with_initiative_id("test-initiative".to_string());
         let result = engine.render_document(&DocumentType::Task, &task_context);
         assert!(result.is_ok());
     }

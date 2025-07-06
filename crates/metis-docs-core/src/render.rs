@@ -51,6 +51,7 @@ mod tests {
 
         let context = DocumentContext::new("Test Strategy".to_string())
             .with_risk_level(RiskLevel::High)
+            .with_strategy_id("test-strategy".to_string())
             .with_stakeholders(vec!["Engineering".to_string(), "Product".to_string()]);
 
         let result = render(DocumentType::Strategy, context, docs_root).await;
@@ -76,6 +77,7 @@ mod tests {
 
         let context = DocumentContext::new("API Design".to_string())
             .with_parent("Core Platform Strategy".to_string())
+            .with_strategy_id("core-platform-strategy".to_string())
             .with_complexity(Complexity::L)
             .with_technical_lead("Alice Smith".to_string());
 
@@ -102,6 +104,7 @@ mod tests {
 
         let context = DocumentContext::new("Use GraphQL".to_string())
             .with_decision_maker("Architecture Team".to_string())
+            .with_strategy_id("test-strategy".to_string())
             .with_number(42);
 
         let result = render(DocumentType::Adr, context, docs_root).await;
@@ -125,7 +128,8 @@ mod tests {
         let docs_root = temp_dir.path();
 
         let context = DocumentContext::new("Deep Nested Strategy".to_string())
-            .with_risk_level(RiskLevel::Medium);
+            .with_risk_level(RiskLevel::Medium)
+            .with_strategy_id("deep-nested-strategy".to_string());
 
         // Ensure the directory doesn't exist initially
         let expected_dir = docs_root.join("strategies/deep-nested-strategy");

@@ -1,6 +1,6 @@
 //! Obsidian integration tests
 
-use super::common::*;
+use crate::common::*;
 use metis_mcp_server::tools::OpenVaultInObsidianTool;
 
 /// Test open vault in Obsidian tool with valid project

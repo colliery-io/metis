@@ -11,7 +11,7 @@ name = "metis-mcp"
 path = "src/main.rs"
 
 [dependencies]
-metis-docs-core = { version = "0.1.0", path = "../metis-core" }
+metis-docs-core = { version = "0.1.0", path = "../metis-docs-core" }
 
 # Shared dependencies
 tokio = { workspace = true }

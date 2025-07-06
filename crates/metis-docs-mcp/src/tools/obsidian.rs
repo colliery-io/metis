@@ -306,7 +306,14 @@ fn update_obsidian_config(
         .as_object_mut()
         .unwrap();
 
-    // Only add if vault doesn't already exist
+    // FIRST: Set all existing vaults to "open": false
+    for (_, vault_entry) in vaults.iter_mut() {
+        if let Some(vault_obj) = vault_entry.as_object_mut() {
+            vault_obj.insert("open".to_string(), serde_json::json!(false));
+        }
+    }
+
+    // THEN: Add or update the target vault and set it to "open": true
     if !vaults.contains_key(&vault_id) {
         vaults.insert(
             vault_id,

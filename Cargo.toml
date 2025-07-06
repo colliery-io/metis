@@ -1,7 +1,7 @@
 [workspace]
 members = [
-    "crates/metis-core",
-    "crates/metis-mcp-server"
+    "crates/metis-docs-core",
+    "crates/metis-docs-mcp"
 ]
 resolver = "2"
 
@@ -9,7 +9,7 @@ resolver = "2"
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
-authors = ["Your Name <your.email@example.com>"]
+authors = ["Dylan Storey <contact@collier.io>"]
 
 [workspace.dependencies]
 # Shared dependencies used by multiple crates

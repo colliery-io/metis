@@ -1,6 +1,6 @@
 //! Error handling and edge case tests
 
-use super::common::*;
+use crate::common::*;
 use metis_mcp_server::tools::{CreateDocumentTool, ListDocumentsTool};
 
 /// Test foreign key constraint handling
@@ -25,6 +25,8 @@ async fn test_foreign_key_constraint_handling() {
         complexity: Some("s".to_string()),
         decision_maker: None,
         stakeholders: None,
+        strategy_id: Some("non-existent-strategy".to_string()),
+        initiative_id: None,
     };
 
     let orphan_result = orphan_doc.call_tool().await;

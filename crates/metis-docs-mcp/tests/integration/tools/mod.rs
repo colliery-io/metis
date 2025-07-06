@@ -1,6 +1,22 @@
-//! Basic tool availability and initialization tests
+//! Tests for tools module
 
-use super::common::*;
+// Module declarations
+pub mod document;
+pub mod obsidian;
+pub mod phase;
+pub mod project;
+pub mod query;
+pub mod update;
+
+// Re-export all tools tests
+pub use document::*;
+pub use obsidian::*;
+pub use phase::*;
+pub use project::*;
+pub use query::*;
+pub use update::*;
+
+use crate::common::*;
 use metis_mcp_server::tools::MetisTools;
 
 /// Test that MCP server tools are available
