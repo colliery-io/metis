@@ -1,0 +1,14 @@
+id: {{ slug }}
+level: vision
+created_at: {{ created_at }}
+updated_at: {{ updated_at }}
+archived: false
+
+# Phase progression for vision
+tags:
+  - "#vision"
+  - "#phase/draft"
+  # - "#phase/review"
+  # - "#phase/published"
+
+exit_criteria_met: false

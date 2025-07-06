@@ -1,0 +1,18 @@
+id: {{ number }}-{{ slug }}
+level: adr
+created_at: {{ created_at }}
+updated_at: {{ updated_at }}
+decision_date: {{ decision_date }}
+decision_maker: {{ decision_maker }}
+parent: {{ parent_id }}
+archived: false
+
+# Phase progression for ADRs
+tags:
+  - "#adr"
+  - "#phase/draft"
+  # - "#phase/discussion"
+  # - "#phase/decided"
+  # - "#phase/superseded"
+
+exit_criteria_met: false

@@ -7,6 +7,7 @@
 pub mod context;
 pub mod core;
 pub mod database;
+pub mod domain;
 pub mod error;
 pub mod exit_criteria;
 pub mod models;

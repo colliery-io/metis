@@ -1,0 +1,21 @@
+id: {{ slug }}
+level: strategy
+created_at: {{ created_at }}
+updated_at: {{ updated_at }}
+parent: {{ parent_id }}
+blocked_by: {{ blocked_by | default(value=[]) }}
+archived: false
+
+# Phase progression for strategies
+tags:
+  - "#strategy"
+  - "#phase/shaping"
+  # - "#phase/design"
+  # - "#phase/ready"
+  # - "#phase/active"
+  # - "#phase/completed"
+
+exit_criteria_met: false
+success_metrics: []
+risk_level: {{ risk_level | default(value="medium") }}
+stakeholders: {{ stakeholders | default(value=[]) }}
