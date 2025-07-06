@@ -1,4 +1,4 @@
-id: vision-{{ slug }}
+id: {{ slug }}
 level: vision
 status: draft
 created_at: {{ created_at }}

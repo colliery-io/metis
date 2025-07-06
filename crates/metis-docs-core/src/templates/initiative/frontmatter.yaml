@@ -1,4 +1,4 @@
-id: initiative-{{ slug }}
+id: {{ slug }}
 level: initiative
 status: ready
 created_at: {{ created_at }}

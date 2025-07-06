@@ -1,4 +1,4 @@
-id: adr-{{ number }}-{{ slug }}
+id: {{ number }}-{{ slug }}
 level: adr
 status: decided
 created_at: {{ created_at }}

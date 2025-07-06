@@ -1,4 +1,4 @@
-id: strategy-{{ slug }}
+id: {{ slug }}
 level: strategy
 status: shaping
 created_at: {{ created_at }}

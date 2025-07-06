@@ -1,4 +1,4 @@
-id: task-{{ slug }}
+id: {{ slug }}
 level: task
 status: todo
 created_at: {{ created_at }}

@@ -1,20 +1,24 @@
 {
   "main": {
-    "id": "0d528abef6b60053",
+    "id": "74b211f38fd8973c",
     "type": "split",
     "children": [
       {
-        "id": "a30f1118daf26803",
+        "id": "750a5d9b65246d51",
         "type": "tabs",
         "children": [
           {
-            "id": "6b1d46c2750d4841",
+            "id": "1addf16b03ae2450",
             "type": "leaf",
             "state": {
-              "type": "empty",
-              "state": {},
+              "type": "markdown",
+              "state": {
+                "file": "strategies/code-maintainability/strategy.md",
+                "mode": "preview",
+                "source": false
+              },
               "icon": "lucide-file",
-              "title": "New tab"
+              "title": "strategy"
             }
           }
         ]
@@ -23,15 +27,15 @@
     "direction": "vertical"
   },
   "left": {
-    "id": "262a43c499bd1281",
+    "id": "0782da7b9ef7bbb9",
     "type": "split",
     "children": [
       {
-        "id": "c06faeac68ac0eee",
+        "id": "49b563e53756c6ee",
         "type": "tabs",
         "children": [
           {
-            "id": "85cf82cee6b69ba5",
+            "id": "a0eda5482aef1137",
             "type": "leaf",
             "state": {
               "type": "file-explorer",
@@ -44,7 +48,7 @@
             }
           },
           {
-            "id": "e8b2daeb397c5b2d",
+            "id": "ba65db873c411f1e",
             "type": "leaf",
             "state": {
               "type": "search",
@@ -61,7 +65,7 @@
             }
           },
           {
-            "id": "0c2183065189dcf2",
+            "id": "f39342bb374888bb",
             "type": "leaf",
             "state": {
               "type": "bookmarks",
@@ -74,22 +78,23 @@
       }
     ],
     "direction": "horizontal",
-    "width": 300
+    "width": 527.5
   },
   "right": {
-    "id": "6297e28943043573",
+    "id": "769a102c60d644f5",
     "type": "split",
     "children": [
       {
-        "id": "8fb21470393ed595",
+        "id": "f616dbf13fca979a",
         "type": "tabs",
         "children": [
           {
-            "id": "c74a238245ec43cd",
+            "id": "574a5f00362f9204",
             "type": "leaf",
             "state": {
               "type": "backlink",
               "state": {
+                "file": "strategies/code-maintainability/strategy.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -99,24 +104,25 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Backlinks"
+              "title": "Backlinks for strategy"
             }
           },
           {
-            "id": "66b7ac450f22a263",
+            "id": "49ea8ff200eae2f1",
             "type": "leaf",
             "state": {
               "type": "outgoing-link",
               "state": {
+                "file": "strategies/code-maintainability/strategy.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "Outgoing links"
+              "title": "Outgoing links from strategy"
             }
           },
           {
-            "id": "7f6f9142b083d042",
+            "id": "93a0ff618e2a7d54",
             "type": "leaf",
             "state": {
               "type": "tag",
@@ -131,17 +137,18 @@
             }
           },
           {
-            "id": "b8aa417219b8352f",
+            "id": "699c56fa6da5078d",
             "type": "leaf",
             "state": {
               "type": "outline",
               "state": {
+                "file": "strategies/code-maintainability/strategy.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Outline"
+              "title": "Outline of strategy"
             }
           }
         ]
@@ -161,6 +168,22 @@
       "command-palette:Open command palette": false
     }
   },
-  "active": "6b1d46c2750d4841",
-  "lastOpenFiles": []
+  "active": "1addf16b03ae2450",
+  "lastOpenFiles": [
+    "strategies/code-maintainability/initiatives/core-library-refactor/tasks/phase-2-document-operations.md",
+    "strategies/code-maintainability/initiatives/core-library-refactor/tasks/phase-1-document-domain-model.md",
+    "strategies/code-maintainability/initiatives/core-library-refactor/tasks/phase-5-cleanup.md",
+    "strategies/code-maintainability/initiatives/core-library-refactor/tasks/phase-4-infrastructure.md",
+    "strategies/code-maintainability/initiatives/core-library-refactor/tasks/phase-3-application-layer.md",
+    "strategies/code-maintainability/initiatives/core-library-refactor/tasks/phase-2-domain-logic.md",
+    "strategies/code-maintainability/initiatives/core-library-refactor/tasks/phase-1-foundation.md",
+    "strategies/code-maintainability/initiatives/core-library-refactor/tasks",
+    "strategies/code-maintainability/initiatives/core-library-refactor/initiative.md",
+    "strategies/code-maintainability/initiatives/core-library-refactor",
+    "strategies/code-maintainability/initiatives",
+    "strategies/strategy-code-maintainability/initiatives/core-library-refactor/initiative.md",
+    "strategies/strategy-code-maintainability/initiatives/core-library-refactor",
+    "strategies/strategy-code-maintainability/initiatives",
+    "strategies/strategy-code-maintainability"
+  ]
 }
