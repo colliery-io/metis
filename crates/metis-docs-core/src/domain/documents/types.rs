@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::fmt;
+use std::str::FromStr;
 
 /// Maximum length for document IDs
 const MAX_ID_LENGTH: usize = 35;
@@ -95,6 +96,21 @@ impl fmt::Display for DocumentType {
             DocumentType::Initiative => write!(f, "initiative"),
             DocumentType::Task => write!(f, "task"),
             DocumentType::Adr => write!(f, "adr"),
+        }
+    }
+}
+
+impl FromStr for DocumentType {
+    type Err = String;
+    
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "vision" => Ok(DocumentType::Vision),
+            "strategy" => Ok(DocumentType::Strategy),
+            "initiative" => Ok(DocumentType::Initiative),
+            "task" => Ok(DocumentType::Task),
+            "adr" => Ok(DocumentType::Adr),
+            _ => Err(format!("Unknown document type: {}", s)),
         }
     }
 }

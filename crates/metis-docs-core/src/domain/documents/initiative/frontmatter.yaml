@@ -1,22 +1,15 @@
 id: {{ slug }}
 level: initiative
+title: "{{ title }}"
 created_at: {{ created_at }}
 updated_at: {{ updated_at }}
 parent: {{ parent_id }}
-blocked_by: {{ blocked_by | default(value=[]) }}
-archived: false
+blocked_by: {{ blocked_by }}
+archived: {{ archived }}
 
-# Phase progression for initiatives
 tags:
-  - "#initiative"
-  - "#phase/discovery"
-  # - "#phase/design"
-  # - "#phase/ready"
-  # - "#phase/decompose"
-  # - "#phase/active"
-  # - "#phase/completed"
+{% for tag in tags %}  - "{{ tag }}"
+{% endfor %}
 
-exit_criteria_met: false
-technical_lead: {{ technical_lead }}
-estimated_complexity: {{ complexity }}
-related_adrs: {{ related_adrs | default(value=[]) }}
+exit_criteria_met: {{ exit_criteria_met }}
+estimated_complexity: {{ estimated_complexity }}

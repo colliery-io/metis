@@ -1,16 +1,14 @@
 id: {{ slug }}
 level: task
+title: "{{ title }}"
 created_at: {{ created_at }}
 updated_at: {{ updated_at }}
 parent: {{ parent_id }}
-blocked_by: {{ blocked_by | default(value=[]) }}
-archived: false
+blocked_by: {{ blocked_by }}
+archived: {{ archived }}
 
-# Phase progression for tasks
 tags:
-  - "#task"
-  - "#phase/todo"
-  # - "#phase/active"
-  # - "#phase/completed"
+{% for tag in tags %}  - "{{ tag }}"
+{% endfor %}
 
-exit_criteria_met: false
+exit_criteria_met: {{ exit_criteria_met }}

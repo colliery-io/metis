@@ -4,6 +4,7 @@ pub mod types;
 pub mod metadata;
 pub mod content;
 pub mod helpers;
+pub mod factory;
 
 // Document type implementations
 pub mod vision;

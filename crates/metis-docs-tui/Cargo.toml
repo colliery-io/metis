@@ -1,0 +1,31 @@
+[package]
+name = "metis-docs-tui"
+version.workspace = true
+edition.workspace = true
+description = "Terminal User Interface for Metis document management system"
+license.workspace = true
+authors.workspace = true
+
+[[bin]]
+name = "metis-tui"
+path = "src/main.rs"
+
+[dependencies]
+# Workspace dependencies
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+chrono = { workspace = true }
+
+# Local dependencies
+metis-docs-core = { path = "../metis-docs-core" }
+
+# TUI-specific dependencies
+ratatui = "0.28"
+crossterm = "0.28"
+tui-input = "0.10"
+tui-textarea = "0.6"

@@ -1,0 +1,1 @@
+// Navigation functionality is now integrated into app/mod.rs

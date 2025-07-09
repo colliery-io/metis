@@ -1,14 +1,12 @@
 id: {{ slug }}
 level: vision
+title: "{{ title }}"
 created_at: {{ created_at }}
 updated_at: {{ updated_at }}
-archived: false
+archived: {{ archived }}
 
-# Phase progression for vision
 tags:
-  - "#vision"
-  - "#phase/draft"
-  # - "#phase/review"
-  # - "#phase/published"
+{% for tag in tags %}  - "{{ tag }}"
+{% endfor %}
 
-exit_criteria_met: false
+exit_criteria_met: {{ exit_criteria_met }}

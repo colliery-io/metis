@@ -32,7 +32,7 @@
 
 ## Change Log
 
-### {{ created_at | date(format="%Y-%m-%d") }} - Initial Strategy
+###  Initial Strategy
 - **Change**: Created initial strategy document
 - **Rationale**: {Why this strategy was needed}
 - **Impact**: Baseline established for strategic direction

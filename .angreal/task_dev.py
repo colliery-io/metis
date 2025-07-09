@@ -5,28 +5,28 @@ import angreal
 
 @angreal.command(
     name='test',
-    about='Run all tests across workspace using modular test structure',
+    about='Run all tests across workspace crates independently',
     when_to_use=['During development', 'Before committing changes', 'In CI/CD pipelines'],
     when_not_to_use=['When only checking syntax', 'For quick formatting fixes']
 )
 def run_tests():
-    """Run all tests in the workspace using our modular test structure."""
-    try:
-        # Run unit tests for all crates
-        print("Running unit tests...")
-        result = subprocess.run(['cargo', 'test', '--lib'], check=True)
-        
-        # Run our modular integration tests
-        print("Running integration tests...")
-        result = subprocess.run(['cargo', 'test', '--package', 'metis-docs-mcp', '--test', 'integration'], check=True)
-        
-        return result.returncode
-    except subprocess.CalledProcessError as e:
-        print(f"Tests failed with exit code {e.returncode}")
-        sys.exit(e.returncode)
-    except FileNotFoundError:
-        print("Error: cargo command not found. Ensure Rust is installed.")
-        sys.exit(1)
+    """Run all tests in the workspace by testing each crate independently."""
+    crates = ['metis-docs-core', 'metis-docs-cli']
+    
+    for crate in crates:
+        try:
+            print(f"Running tests for {crate}...")
+            result = subprocess.run(['cargo', 'test', '--package', crate, '--', '--test-threads=1'], check=True)
+            print(f"✓ {crate} tests passed!")
+        except subprocess.CalledProcessError as e:
+            print(f"✗ {crate} tests failed with exit code {e.returncode}")
+            sys.exit(e.returncode)
+        except FileNotFoundError:
+            print("Error: cargo command not found. Ensure Rust is installed.")
+            sys.exit(1)
+    
+    print("✓ All crate tests completed successfully!")
+    return 0
 
 
 @angreal.command(
@@ -69,21 +69,41 @@ def clean_artifacts():
 
 
 @angreal.command(
+    name='test-core',
+    about='Run only the core library tests (metis-docs-core)',
+    when_to_use=['When you want to test only core functionality', 'During core development', 'For quick validation'],
+    when_not_to_use=['When testing CLI functionality', 'For comprehensive testing']
+)
+def run_core_tests():
+    """Run only the core library tests."""
+    try:
+        print("Running metis-docs-core tests...")
+        result = subprocess.run(['cargo', 'test', '--package', 'metis-docs-core', '--', '--test-threads=1'], check=True)
+        print("✓ All metis-docs-core tests passed!")
+        return result.returncode
+    except subprocess.CalledProcessError as e:
+        print(f"Tests failed with exit code {e.returncode}")
+        sys.exit(e.returncode)
+    except FileNotFoundError:
+        print("Error: cargo command not found. Ensure Rust is installed.")
+        sys.exit(1)
+
+
+@angreal.command(
     name='coverage',
-    about='Generate coverage report using tarpaulin with modular test structure',
+    about='Generate coverage report using tarpaulin for the workspace',
     when_to_use=['To measure test coverage', 'Before releases', 'To identify untested code'],
     when_not_to_use=['During rapid development cycles', 'When tarpaulin is not installed']
 )
 def generate_coverage():
-    """Generate coverage report using cargo tarpaulin with our modular tests."""
+    """Generate coverage report using cargo tarpaulin for the workspace."""
     try:
-        # Run tarpaulin with our specific test structure
+        # Run tarpaulin for the workspace
         result = subprocess.run([
             'cargo', 'tarpaulin', 
             '--out', 'Html', 
-            '--lib',  # Include library tests
-            '--package', 'metis-docs-mcp',
-            '--test', 'integration'  # Include our modular integration tests
+            '--workspace',  # Include all workspace crates
+            '--', '--test-threads=1'  # Ensure thread safety
         ], check=True)
         print("Coverage report generated successfully")
         return result.returncode

@@ -1,0 +1,1 @@
+// Document functionality is now integrated into app/mod.rs and services/

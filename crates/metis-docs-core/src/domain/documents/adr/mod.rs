@@ -5,7 +5,7 @@ use super::content::DocumentContent;
 use super::helpers::FrontmatterParser;
 use std::path::Path;
 use gray_matter;
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use tera::{Tera, Context};
 
 /// An ADR (Architecture Decision Record) documents architectural decisions
@@ -14,16 +14,60 @@ pub struct Adr {
     core: super::traits::DocumentCore,
     number: u32,
     decision_maker: String,
-    decision_date: DateTime<Utc>,
+    decision_date: Option<chrono::DateTime<Utc>>,
 }
 
 impl Adr {
-    /// Create a new ADR document from parsed file data
+    /// Create a new ADR document with content rendered from template
     pub fn new(
         number: u32,
         title: String,
         decision_maker: String,
-        decision_date: DateTime<Utc>,
+        decision_date: Option<chrono::DateTime<Utc>>,
+        parent_id: Option<DocumentId>,
+        tags: Vec<Tag>,
+        archived: bool,
+    ) -> Result<Self, DocumentValidationError> {
+        // Create fresh metadata
+        let metadata = DocumentMetadata::new();
+        
+        // Render the content template
+        let template_content = include_str!("content.md");
+        let mut tera = Tera::default();
+        tera.add_raw_template("adr_content", template_content)
+            .map_err(|e| DocumentValidationError::InvalidContent(format!("Template error: {}", e)))?;
+        
+        let mut context = Context::new();
+        context.insert("number", &number);
+        context.insert("title", &title);
+        
+        let rendered_content = tera.render("adr_content", &context)
+            .map_err(|e| DocumentValidationError::InvalidContent(format!("Template render error: {}", e)))?;
+        
+        let content = DocumentContent::new(&rendered_content);
+        
+        Ok(Self {
+            core: super::traits::DocumentCore {
+                title,
+                metadata,
+                content,
+                parent_id, // ADRs can reference the work that generated the need for decision
+                blocked_by: Vec::new(), // ADRs cannot be blocked
+                tags,
+                archived,
+            },
+            number,
+            decision_maker,
+            decision_date,
+        })
+    }
+    
+    /// Create an ADR document from existing data (used when loading from file)
+    pub fn from_parts(
+        number: u32,
+        title: String,
+        decision_maker: String,
+        decision_date: Option<chrono::DateTime<Utc>>,
         metadata: DocumentMetadata,
         content: DocumentContent,
         parent_id: Option<DocumentId>,
@@ -54,7 +98,7 @@ impl Adr {
         &self.decision_maker
     }
 
-    pub fn decision_date(&self) -> DateTime<Utc> {
+    pub fn decision_date(&self) -> Option<chrono::DateTime<Utc>> {
         self.decision_date
     }
 
@@ -104,16 +148,38 @@ impl Adr {
 
         // Extract ADR-specific fields
         let number = FrontmatterParser::extract_integer(&fm_map, "number")? as u32;
-        let decision_maker = FrontmatterParser::extract_string(&fm_map, "decision_maker")?;
-        let decision_date = FrontmatterParser::extract_datetime(&fm_map, "decision_date")?;
+        let decision_maker = FrontmatterParser::extract_string(&fm_map, "decision_maker").unwrap_or_default();
+        let decision_date = FrontmatterParser::extract_datetime(&fm_map, "decision_date").ok();
         let parent_id = FrontmatterParser::extract_string(&fm_map, "parent").ok().map(DocumentId::from);
 
         // Create metadata and content
         let metadata = DocumentMetadata::from_frontmatter(created_at, updated_at, exit_criteria_met);
         let content = DocumentContent::from_markdown(&parsed.content);
 
-        Ok(Self::new(number, title, decision_maker, decision_date, metadata, content, 
+        Ok(Self::from_parts(number, title, decision_maker, decision_date, metadata, content, 
                      parent_id, tags, archived))
+    }
+
+    /// Get the next phase in the ADR sequence
+    fn next_phase_in_sequence(current: Phase) -> Option<Phase> {
+        use Phase::*;
+        match current {
+            Draft => Some(Discussion),
+            Discussion => Some(Decided),
+            Decided => Some(Superseded),
+            Superseded => None, // Final phase
+            _ => None, // Invalid phase for ADR
+        }
+    }
+    
+    /// Update the phase tag in the document's tags
+    fn update_phase_tag(&mut self, new_phase: Phase) {
+        // Remove any existing phase tags
+        self.core.tags.retain(|tag| !matches!(tag, Tag::Phase(_)));
+        // Add the new phase tag
+        self.core.tags.push(Tag::Phase(new_phase));
+        // Update timestamp
+        self.core.metadata.updated_at = Utc::now();
     }
 
     /// Write the ADR document to a file
@@ -127,26 +193,23 @@ impl Adr {
     pub fn to_content(&self) -> Result<String, DocumentValidationError> {
         let mut tera = Tera::default();
         
-        // Add the templates to Tera
+        // Add the frontmatter template to Tera
         tera.add_raw_template("frontmatter", self.frontmatter_template())
-            .map_err(|e| DocumentValidationError::InvalidContent(format!("Template error: {}", e)))?;
-        tera.add_raw_template("content", self.content_template())
-            .map_err(|e| DocumentValidationError::InvalidContent(format!("Template error: {}", e)))?;
-        tera.add_raw_template("acceptance_criteria", self.acceptance_criteria_template())
             .map_err(|e| DocumentValidationError::InvalidContent(format!("Template error: {}", e)))?;
         
         // Create context with all document data
         let mut context = Context::new();
-        context.insert("slug", &self.id().to_string());
+        context.insert("slug", &DocumentId::title_to_slug(self.title()));
         context.insert("title", self.title());
         context.insert("created_at", &self.metadata().created_at.to_rfc3339());
         context.insert("updated_at", &self.metadata().updated_at.to_rfc3339());
-        context.insert("archived", &self.archived());
-        context.insert("exit_criteria_met", &self.metadata().exit_criteria_met);
+        context.insert("archived", &self.archived().to_string());
+        context.insert("exit_criteria_met", &self.metadata().exit_criteria_met.to_string());
         context.insert("parent_id", &self.parent_id().map(|id| id.to_string()).unwrap_or_default());
         context.insert("number", &self.number);
+        context.insert("formatted_number", &format!("{:03}", self.number));
         context.insert("decision_maker", &self.decision_maker);
-        context.insert("decision_date", &self.decision_date.to_rfc3339());
+        context.insert("decision_date", &self.decision_date.map(|d| d.to_rfc3339()).unwrap_or_default());
         
         // Convert tags to strings
         let tag_strings: Vec<String> = self.tags().iter().map(|tag| tag.to_str()).collect();
@@ -156,20 +219,18 @@ impl Adr {
         let frontmatter = tera.render("frontmatter", &context)
             .map_err(|e| DocumentValidationError::InvalidContent(format!("Frontmatter render error: {}", e)))?;
         
-        // Add content body and acceptance criteria to context
-        context.insert("body", &self.content().body);
-        context.insert("acceptance_criteria_content", &self.content().acceptance_criteria.as_deref().unwrap_or(""));
+        // Use the actual content body
+        let content_body = &self.content().body;
         
-        // Render content
-        let content_body = tera.render("content", &context)
-            .map_err(|e| DocumentValidationError::InvalidContent(format!("Content render error: {}", e)))?;
-        
-        // Render acceptance criteria
-        let acceptance_criteria = tera.render("acceptance_criteria", &context)
-            .map_err(|e| DocumentValidationError::InvalidContent(format!("Acceptance criteria render error: {}", e)))?;
+        // Use actual acceptance criteria if present, otherwise empty string
+        let acceptance_criteria = if let Some(ac) = &self.content().acceptance_criteria {
+            format!("\n\n## Acceptance Criteria\n\n{}", ac)
+        } else {
+            String::new()
+        };
         
         // Combine everything
-        Ok(format!("---\n{}---\n\n{}\n\n{}", frontmatter, content_body, acceptance_criteria))
+        Ok(format!("---\n{}\n---\n\n{}{}", frontmatter.trim_end(), content_body, acceptance_criteria))
     }
 
 }
@@ -273,11 +334,43 @@ impl Document for Adr {
     fn acceptance_criteria_template(&self) -> &'static str {
         include_str!("acceptance_criteria.md")
     }
+
+    fn transition_phase(&mut self, target_phase: Option<Phase>) -> Result<Phase, DocumentValidationError> {
+        let current_phase = self.phase()?;
+        
+        let new_phase = match target_phase {
+            Some(phase) => {
+                // Validate the transition is allowed
+                if !self.can_transition_to(phase) {
+                    return Err(DocumentValidationError::InvalidPhaseTransition { 
+                        from: current_phase, 
+                        to: phase 
+                    });
+                }
+                phase
+            }
+            None => {
+                // Auto-transition to next phase in sequence
+                match Self::next_phase_in_sequence(current_phase) {
+                    Some(next) => next,
+                    None => return Ok(current_phase), // Already at final phase
+                }
+            }
+        };
+        
+        self.update_phase_tag(new_phase);
+        Ok(new_phase)
+    }
+
+    fn core_mut(&mut self) -> &mut super::traits::DocumentCore {
+        &mut self.core
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::domain::documents::traits::DocumentValidationError;
 
     #[test]
     fn test_adr_from_content() {
@@ -334,13 +427,11 @@ This will allow us to leverage a large ecosystem.
             42,
             "Use Docker for Containerization".to_string(),
             "DevOps Team".to_string(),
-            Utc::now(),
-            DocumentMetadata::new(),
-            DocumentContent::new("Test content"),
+            Some(Utc::now()),
             None,
             vec![Tag::Phase(Phase::Decided)],
             false,
-        );
+        ).unwrap();
 
         assert_eq!(adr.id().to_string(), "042-use-docker-for-containerization");
         assert_eq!(adr.number(), 42);
@@ -383,13 +474,11 @@ exit_criteria_met: false
             1,
             "Test Decision".to_string(),
             "Architecture Team".to_string(),
-            Utc::now(),
-            DocumentMetadata::new(),
-            DocumentContent::new("Test content"),
+            Some(Utc::now()),
             None,
             vec![Tag::Phase(Phase::Decided)],
             false,
-        );
+        ).unwrap();
 
         assert!(adr.validate().is_ok());
         
@@ -398,13 +487,11 @@ exit_criteria_met: false
             1,
             "Test Decision".to_string(),
             "".to_string(), // Empty decision maker
-            Utc::now(),
-            DocumentMetadata::new(),
-            DocumentContent::new("Test content"),
+            Some(Utc::now()),
             None,
             vec![Tag::Phase(Phase::Decided)],
             false,
-        );
+        ).unwrap();
         
         assert!(adr_no_decision_maker.validate().is_err());
     }
@@ -415,13 +502,11 @@ exit_criteria_met: false
             1,
             "Test Decision".to_string(),
             "Architecture Team".to_string(),
-            Utc::now(),
-            DocumentMetadata::new(),
-            DocumentContent::new("Test content"),
+            Some(Utc::now()),
             None,
             vec![Tag::Phase(Phase::Decided)],
             false,
-        );
+        ).unwrap();
 
         assert_eq!(adr.blocked_by().len(), 0);
         assert!(adr.validate().is_ok());
@@ -433,13 +518,11 @@ exit_criteria_met: false
             1,
             "Test Decision".to_string(),
             "Architecture Team".to_string(),
-            Utc::now(),
-            DocumentMetadata::new(),
-            DocumentContent::new("Test content"),
+            Some(Utc::now()),
             None,
             vec![Tag::Phase(Phase::Discussion)],
             false,
-        );
+        ).unwrap();
 
         assert!(discussion_adr.can_transition_to(Phase::Decided));
         assert!(!discussion_adr.can_transition_to(Phase::Active));
@@ -449,13 +532,11 @@ exit_criteria_met: false
             1,
             "Test Decision".to_string(),
             "Architecture Team".to_string(),
-            Utc::now(),
-            DocumentMetadata::new(),
-            DocumentContent::new("Test content"),
+            Some(Utc::now()),
             None,
             vec![Tag::Phase(Phase::Decided)],
             false,
-        );
+        ).unwrap();
 
         assert!(decided_adr.can_transition_to(Phase::Superseded));
         assert!(!decided_adr.can_transition_to(Phase::Discussion));
@@ -467,40 +548,151 @@ exit_criteria_met: false
             1,
             "First Decision".to_string(),
             "Team".to_string(),
-            Utc::now(),
-            DocumentMetadata::new(),
-            DocumentContent::new("Test content"),
+            Some(Utc::now()),
             None,
             vec![Tag::Phase(Phase::Decided)],
             false,
-        );
+        ).unwrap();
 
         let adr42 = Adr::new(
             42,
             "Another Decision".to_string(),
             "Team".to_string(),
-            Utc::now(),
-            DocumentMetadata::new(),
-            DocumentContent::new("Test content"),
+            Some(Utc::now()),
             None,
             vec![Tag::Phase(Phase::Decided)],
             false,
-        );
+        ).unwrap();
 
         let adr999 = Adr::new(
             999,
             "Big Decision".to_string(),
             "Team".to_string(),
-            Utc::now(),
-            DocumentMetadata::new(),
-            DocumentContent::new("Test content"),
+            Some(Utc::now()),
             None,
             vec![Tag::Phase(Phase::Decided)],
             false,
-        );
+        ).unwrap();
 
         assert_eq!(adr1.id().to_string(), "001-first-decision");
         assert_eq!(adr42.id().to_string(), "042-another-decision");
         assert_eq!(adr999.id().to_string(), "999-big-decision");
+    }
+
+    #[test]
+    fn test_adr_transition_phase_auto() {
+        let mut adr = Adr::new(
+            1,
+            "Test Decision".to_string(),
+            "Architecture Team".to_string(),
+            Some(Utc::now()),
+            None,
+            vec![Tag::Phase(Phase::Draft)],
+            false,
+        ).unwrap();
+
+        // Auto-transition from Draft should go to Discussion
+        let new_phase = adr.transition_phase(None).unwrap();
+        assert_eq!(new_phase, Phase::Discussion);
+        assert_eq!(adr.phase().unwrap(), Phase::Discussion);
+
+        // Auto-transition from Discussion should go to Decided
+        let new_phase = adr.transition_phase(None).unwrap();
+        assert_eq!(new_phase, Phase::Decided);
+        assert_eq!(adr.phase().unwrap(), Phase::Decided);
+
+        // Auto-transition from Decided should go to Superseded
+        let new_phase = adr.transition_phase(None).unwrap();
+        assert_eq!(new_phase, Phase::Superseded);
+        assert_eq!(adr.phase().unwrap(), Phase::Superseded);
+
+        // Auto-transition from Superseded should stay at Superseded (final phase)
+        let new_phase = adr.transition_phase(None).unwrap();
+        assert_eq!(new_phase, Phase::Superseded);
+        assert_eq!(adr.phase().unwrap(), Phase::Superseded);
+    }
+
+    #[test]
+    fn test_adr_transition_phase_explicit() {
+        let mut adr = Adr::new(
+            1,
+            "Test Decision".to_string(),
+            "Architecture Team".to_string(),
+            Some(Utc::now()),
+            None,
+            vec![Tag::Phase(Phase::Discussion)],
+            false,
+        ).unwrap();
+
+        // Explicit transition from Discussion to Decided
+        let new_phase = adr.transition_phase(Some(Phase::Decided)).unwrap();
+        assert_eq!(new_phase, Phase::Decided);
+        assert_eq!(adr.phase().unwrap(), Phase::Decided);
+
+        // Explicit transition from Decided to Superseded
+        let new_phase = adr.transition_phase(Some(Phase::Superseded)).unwrap();
+        assert_eq!(new_phase, Phase::Superseded);
+        assert_eq!(adr.phase().unwrap(), Phase::Superseded);
+    }
+
+    #[test]
+    fn test_adr_transition_phase_invalid() {
+        let mut adr = Adr::new(
+            1,
+            "Test Decision".to_string(),
+            "Architecture Team".to_string(),
+            Some(Utc::now()),
+            None,
+            vec![Tag::Phase(Phase::Draft)],
+            false,
+        ).unwrap();
+
+        // Invalid transition from Draft to Decided (must go through Discussion)
+        let result = adr.transition_phase(Some(Phase::Decided));
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            DocumentValidationError::InvalidPhaseTransition { from, to } => {
+                assert_eq!(from, Phase::Draft);
+                assert_eq!(to, Phase::Decided);
+            }
+            _ => panic!("Expected InvalidPhaseTransition error"),
+        }
+        
+        // Should still be in Draft phase
+        assert_eq!(adr.phase().unwrap(), Phase::Draft);
+    }
+
+    #[test]
+    fn test_adr_update_section() {
+        // First create an ADR with the template
+        let mut adr = Adr::new(
+            1,
+            "Test Decision".to_string(),
+            "Architecture Team".to_string(),
+            Some(Utc::now()),
+            None,
+            vec![Tag::Phase(Phase::Draft)],
+            false,
+        ).unwrap();
+        
+        // Then update its content to have specific test content
+        adr.core_mut().content = DocumentContent::new("## Context\n\nOriginal context\n\n## Decision\n\nOriginal decision");
+
+        // Replace existing section
+        adr.update_section("Updated context information", "Context", false).unwrap();
+        let content = adr.content().body.clone();
+        assert!(content.contains("## Context\n\nUpdated context information"));
+        assert!(!content.contains("Original context"));
+
+        // Append to existing section
+        adr.update_section("Additional decision rationale", "Decision", true).unwrap();
+        let content = adr.content().body.clone();
+        assert!(content.contains("Original decision"));
+        assert!(content.contains("Additional decision rationale"));
+
+        // Add new section
+        adr.update_section("Impact analysis details", "Consequences", false).unwrap();
+        let content = adr.content().body.clone();
+        assert!(content.contains("## Consequences\n\nImpact analysis details"));
     }
 }

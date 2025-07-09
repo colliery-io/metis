@@ -5,7 +5,7 @@ use super::content::DocumentContent;
 use super::helpers::FrontmatterParser;
 use std::path::Path;
 use gray_matter;
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use tera::{Tera, Context};
 
 /// A Task document represents a concrete, actionable piece of work
@@ -15,12 +15,52 @@ pub struct Task {
 }
 
 impl Task {
-    /// Create a new Task document from parsed file data
+    /// Create a new Task document with content rendered from template
     pub fn new(
+        title: String,
+        parent_id: Option<DocumentId>, // Usually an Initiative
+        parent_title: Option<String>, // Title of parent for template rendering
+        blocked_by: Vec<DocumentId>,
+        tags: Vec<Tag>,
+        archived: bool,
+    ) -> Result<Self, DocumentValidationError> {
+        // Create fresh metadata
+        let metadata = DocumentMetadata::new();
+        
+        // Render the content template
+        let template_content = include_str!("content.md");
+        let mut tera = Tera::default();
+        tera.add_raw_template("task_content", template_content)
+            .map_err(|e| DocumentValidationError::InvalidContent(format!("Template error: {}", e)))?;
+        
+        let mut context = Context::new();
+        context.insert("title", &title);
+        context.insert("parent_title", &parent_title.unwrap_or_else(|| "Parent Initiative".to_string()));
+        
+        let rendered_content = tera.render("task_content", &context)
+            .map_err(|e| DocumentValidationError::InvalidContent(format!("Template render error: {}", e)))?;
+        
+        let content = DocumentContent::new(&rendered_content);
+        
+        Ok(Self {
+            core: super::traits::DocumentCore {
+                title,
+                metadata,
+                content,
+                parent_id,
+                blocked_by,
+                tags,
+                archived,
+            },
+        })
+    }
+    
+    /// Create a Task document from existing data (used when loading from file)
+    pub fn from_parts(
         title: String,
         metadata: DocumentMetadata,
         content: DocumentContent,
-        parent_id: Option<DocumentId>, // Usually an Initiative
+        parent_id: Option<DocumentId>,
         blocked_by: Vec<DocumentId>,
         tags: Vec<Tag>,
         archived: bool,
@@ -94,7 +134,29 @@ impl Task {
         let metadata = DocumentMetadata::from_frontmatter(created_at, updated_at, exit_criteria_met);
         let content = DocumentContent::from_markdown(&parsed.content);
 
-        Ok(Self::new(title, metadata, content, parent_id, blocked_by, tags, archived))
+        Ok(Self::from_parts(title, metadata, content, parent_id, blocked_by, tags, archived))
+    }
+
+    /// Get the next phase in the Task sequence
+    fn next_phase_in_sequence(current: Phase) -> Option<Phase> {
+        use Phase::*;
+        match current {
+            Todo => Some(Active),
+            Active => Some(Completed),
+            Completed => None, // Final phase
+            Blocked => None, // Blocked doesn't auto-transition
+            _ => None, // Invalid phase for Task
+        }
+    }
+    
+    /// Update the phase tag in the document's tags
+    fn update_phase_tag(&mut self, new_phase: Phase) {
+        // Remove any existing phase tags
+        self.core.tags.retain(|tag| !matches!(tag, Tag::Phase(_)));
+        // Add the new phase tag
+        self.core.tags.push(Tag::Phase(new_phase));
+        // Update timestamp
+        self.core.metadata.updated_at = Utc::now();
     }
 
     /// Write the Task document to a file
@@ -108,12 +170,8 @@ impl Task {
     pub fn to_content(&self) -> Result<String, DocumentValidationError> {
         let mut tera = Tera::default();
         
-        // Add the templates to Tera
+        // Add the frontmatter template to Tera
         tera.add_raw_template("frontmatter", self.frontmatter_template())
-            .map_err(|e| DocumentValidationError::InvalidContent(format!("Template error: {}", e)))?;
-        tera.add_raw_template("content", self.content_template())
-            .map_err(|e| DocumentValidationError::InvalidContent(format!("Template error: {}", e)))?;
-        tera.add_raw_template("acceptance_criteria", self.acceptance_criteria_template())
             .map_err(|e| DocumentValidationError::InvalidContent(format!("Template error: {}", e)))?;
         
         // Create context with all document data
@@ -122,10 +180,11 @@ impl Task {
         context.insert("title", self.title());
         context.insert("created_at", &self.metadata().created_at.to_rfc3339());
         context.insert("updated_at", &self.metadata().updated_at.to_rfc3339());
-        context.insert("archived", &self.archived());
-        context.insert("exit_criteria_met", &self.metadata().exit_criteria_met);
+        context.insert("archived", &self.archived().to_string());
+        context.insert("exit_criteria_met", &self.metadata().exit_criteria_met.to_string());
         context.insert("parent_id", &self.parent_id().map(|id| id.to_string()).unwrap_or_default());
-        context.insert("blocked_by", &self.blocked_by().iter().map(|id| id.to_string()).collect::<Vec<_>>());
+        let blocked_by_list: Vec<String> = self.blocked_by().iter().map(|id| id.to_string()).collect();
+        context.insert("blocked_by", &blocked_by_list);
         
         // Convert tags to strings
         let tag_strings: Vec<String> = self.tags().iter().map(|tag| tag.to_str()).collect();
@@ -135,20 +194,18 @@ impl Task {
         let frontmatter = tera.render("frontmatter", &context)
             .map_err(|e| DocumentValidationError::InvalidContent(format!("Frontmatter render error: {}", e)))?;
         
-        // Add content body and acceptance criteria to context
-        context.insert("body", &self.content().body);
-        context.insert("acceptance_criteria_content", &self.content().acceptance_criteria.as_deref().unwrap_or(""));
+        // Use the actual content body
+        let content_body = &self.content().body;
         
-        // Render content
-        let content_body = tera.render("content", &context)
-            .map_err(|e| DocumentValidationError::InvalidContent(format!("Content render error: {}", e)))?;
-        
-        // Render acceptance criteria
-        let acceptance_criteria = tera.render("acceptance_criteria", &context)
-            .map_err(|e| DocumentValidationError::InvalidContent(format!("Acceptance criteria render error: {}", e)))?;
+        // Use actual acceptance criteria if present, otherwise empty string
+        let acceptance_criteria = if let Some(ac) = &self.content().acceptance_criteria {
+            format!("\n\n## Acceptance Criteria\n\n{}", ac)
+        } else {
+            String::new()
+        };
         
         // Combine everything
-        Ok(format!("---\n{}---\n\n{}\n\n{}", frontmatter, content_body, acceptance_criteria))
+        Ok(format!("---\n{}\n---\n\n{}{}", frontmatter.trim_end(), content_body, acceptance_criteria))
     }
 
 }
@@ -255,14 +312,47 @@ impl Document for Task {
     fn acceptance_criteria_template(&self) -> &'static str {
         include_str!("acceptance_criteria.md")
     }
+
+    fn transition_phase(&mut self, target_phase: Option<Phase>) -> Result<Phase, DocumentValidationError> {
+        let current_phase = self.phase()?;
+        
+        let new_phase = match target_phase {
+            Some(phase) => {
+                // Validate the transition is allowed
+                if !self.can_transition_to(phase) {
+                    return Err(DocumentValidationError::InvalidPhaseTransition { 
+                        from: current_phase, 
+                        to: phase 
+                    });
+                }
+                phase
+            }
+            None => {
+                // Auto-transition to next phase in sequence
+                match Self::next_phase_in_sequence(current_phase) {
+                    Some(next) => next,
+                    None => return Ok(current_phase), // Already at final phase or blocked
+                }
+            }
+        };
+        
+        self.update_phase_tag(new_phase);
+        Ok(new_phase)
+    }
+
+    fn core_mut(&mut self) -> &mut super::traits::DocumentCore {
+        &mut self.core
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::domain::documents::traits::DocumentValidationError;
+    use tempfile::tempdir;
 
-    #[test]
-    fn test_task_from_content() {
+    #[tokio::test]
+    async fn test_task_from_content() {
         let content = r##"---
 id: test-task
 level: task
@@ -304,6 +394,19 @@ Details on how to implement this.
         assert_eq!(task.tags().len(), 2);
         assert_eq!(task.phase().unwrap(), Phase::Todo);
         assert!(task.content().has_acceptance_criteria());
+        
+        // Round-trip test: write to file and read back
+        let temp_dir = tempdir().unwrap();
+        let file_path = temp_dir.path().join("test-task.md");
+        
+        task.to_file(&file_path).await.unwrap();
+        let loaded_task = Task::from_file(&file_path).await.unwrap();
+        
+        assert_eq!(loaded_task.title(), task.title());
+        assert_eq!(loaded_task.phase().unwrap(), task.phase().unwrap());
+        assert_eq!(loaded_task.content().body, task.content().body);
+        assert_eq!(loaded_task.archived(), task.archived());
+        assert_eq!(loaded_task.tags().len(), task.tags().len());
     }
 
 
@@ -339,26 +442,24 @@ exit_criteria_met: false
     fn test_task_validation() {
         let task = Task::new(
             "Test Task".to_string(),
-            DocumentMetadata::new(),
-            DocumentContent::new("Test content"),
             Some(DocumentId::from("parent-initiative")),
+            Some("Parent Initiative".to_string()),
             vec![],
             vec![Tag::Label("task".to_string()), Tag::Phase(Phase::Todo)],
             false,
-        );
+        ).expect("Failed to create task");
 
         assert!(task.validate().is_ok());
         
         // Test validation failure - no parent
         let task_no_parent = Task::new(
             "Test Task".to_string(),
-            DocumentMetadata::new(),
-            DocumentContent::new("Test content"),
             None, // No parent
+            None,
             vec![],
             vec![Tag::Phase(Phase::Todo)],
             false,
-        );
+        ).expect("Failed to create task");
         
         assert!(task_no_parent.validate().is_err());
     }
@@ -368,26 +469,24 @@ exit_criteria_met: false
         // Task marked as blocked but no blocking documents
         let blocked_task = Task::new(
             "Blocked Task".to_string(),
-            DocumentMetadata::new(),
-            DocumentContent::new("Test content"),
             Some(DocumentId::from("parent-initiative")),
+            Some("Parent Initiative".to_string()),
             vec![], // No blocking documents
             vec![Tag::Phase(Phase::Blocked)],
             false,
-        );
+        ).expect("Failed to create task");
         
         assert!(blocked_task.validate().is_err());
         
         // Task marked as blocked with blocking documents
         let properly_blocked_task = Task::new(
             "Blocked Task".to_string(),
-            DocumentMetadata::new(),
-            DocumentContent::new("Test content"),
             Some(DocumentId::from("parent-initiative")),
+            Some("Parent Initiative".to_string()),
             vec![DocumentId::from("blocking-task")],
             vec![Tag::Phase(Phase::Blocked)],
             false,
-        );
+        ).expect("Failed to create task");
         
         assert!(properly_blocked_task.validate().is_ok());
     }
@@ -396,13 +495,12 @@ exit_criteria_met: false
     fn test_task_phase_transitions() {
         let task = Task::new(
             "Test Task".to_string(),
-            DocumentMetadata::new(),
-            DocumentContent::new("Test content"),
             Some(DocumentId::from("parent-initiative")),
+            Some("Parent Initiative".to_string()),
             vec![],
             vec![Tag::Phase(Phase::Todo)],
             false,
-        );
+        ).expect("Failed to create task");
 
         assert!(task.can_transition_to(Phase::Active));
         assert!(task.can_transition_to(Phase::Blocked));
@@ -414,13 +512,12 @@ exit_criteria_met: false
     fn test_task_active_phase_transitions() {
         let active_task = Task::new(
             "Active Task".to_string(),
-            DocumentMetadata::new(),
-            DocumentContent::new("Test content"),
             Some(DocumentId::from("parent-initiative")),
+            Some("Parent Initiative".to_string()),
             vec![],
             vec![Tag::Phase(Phase::Active)],
             false,
-        );
+        ).expect("Failed to create task");
 
         assert!(active_task.can_transition_to(Phase::Completed));
         assert!(active_task.can_transition_to(Phase::Blocked));
@@ -431,16 +528,129 @@ exit_criteria_met: false
     fn test_task_blocked_phase_transitions() {
         let blocked_task = Task::new(
             "Blocked Task".to_string(),
-            DocumentMetadata::new(),
-            DocumentContent::new("Test content"),
             Some(DocumentId::from("parent-initiative")),
+            Some("Parent Initiative".to_string()),
             vec![DocumentId::from("blocking-task")],
             vec![Tag::Phase(Phase::Blocked)],
             false,
-        );
+        ).expect("Failed to create task");
 
         assert!(blocked_task.can_transition_to(Phase::Active));
         assert!(blocked_task.can_transition_to(Phase::Todo));
         assert!(!blocked_task.can_transition_to(Phase::Completed));
+    }
+
+    #[test]
+    fn test_task_transition_phase_auto() {
+        let mut task = Task::new(
+            "Test Task".to_string(),
+            Some(DocumentId::from("parent-initiative")),
+            Some("Parent Initiative".to_string()),
+            vec![],
+            vec![Tag::Phase(Phase::Todo)],
+            false,
+        ).expect("Failed to create task");
+
+        // Auto-transition from Todo should go to Active
+        let new_phase = task.transition_phase(None).unwrap();
+        assert_eq!(new_phase, Phase::Active);
+        assert_eq!(task.phase().unwrap(), Phase::Active);
+
+        // Auto-transition from Active should go to Completed
+        let new_phase = task.transition_phase(None).unwrap();
+        assert_eq!(new_phase, Phase::Completed);
+        assert_eq!(task.phase().unwrap(), Phase::Completed);
+
+        // Auto-transition from Completed should stay at Completed (final phase)
+        let new_phase = task.transition_phase(None).unwrap();
+        assert_eq!(new_phase, Phase::Completed);
+        assert_eq!(task.phase().unwrap(), Phase::Completed);
+    }
+
+    #[test]
+    fn test_task_transition_phase_blocking() {
+        let mut task = Task::new(
+            "Test Task".to_string(),
+            Some(DocumentId::from("parent-initiative")),
+            Some("Parent Initiative".to_string()),
+            vec![DocumentId::from("blocking-task")],
+            vec![Tag::Phase(Phase::Todo)],
+            false,
+        ).expect("Failed to create task");
+
+        // Explicit transition from Todo to Blocked
+        let new_phase = task.transition_phase(Some(Phase::Blocked)).unwrap();
+        assert_eq!(new_phase, Phase::Blocked);
+        assert_eq!(task.phase().unwrap(), Phase::Blocked);
+
+        // Transition from Blocked back to Active (unblocking)
+        let new_phase = task.transition_phase(Some(Phase::Active)).unwrap();
+        assert_eq!(new_phase, Phase::Active);
+        assert_eq!(task.phase().unwrap(), Phase::Active);
+
+        // Blocked doesn't auto-transition
+        task.core.tags.retain(|tag| !matches!(tag, Tag::Phase(_)));
+        task.core.tags.push(Tag::Phase(Phase::Blocked));
+        let new_phase = task.transition_phase(None).unwrap();
+        assert_eq!(new_phase, Phase::Blocked); // Should stay blocked
+    }
+
+    #[test]
+    fn test_task_transition_phase_invalid() {
+        let mut task = Task::new(
+            "Test Task".to_string(),
+            Some(DocumentId::from("parent-initiative")),
+            Some("Parent Initiative".to_string()),
+            vec![],
+            vec![Tag::Phase(Phase::Todo)],
+            false,
+        ).expect("Failed to create task");
+
+        // Invalid transition from Todo to Completed (must go through Active)
+        let result = task.transition_phase(Some(Phase::Completed));
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            DocumentValidationError::InvalidPhaseTransition { from, to } => {
+                assert_eq!(from, Phase::Todo);
+                assert_eq!(to, Phase::Completed);
+            }
+            _ => panic!("Expected InvalidPhaseTransition error"),
+        }
+        
+        // Should still be in Todo phase
+        assert_eq!(task.phase().unwrap(), Phase::Todo);
+    }
+
+    #[test]
+    fn test_task_update_section() {
+        // First create a task with the template
+        let mut task = Task::new(
+            "Test Task".to_string(),
+            Some(DocumentId::from("parent-initiative")),
+            Some("Parent Initiative".to_string()),
+            vec![],
+            vec![Tag::Phase(Phase::Todo)],
+            false,
+        ).expect("Failed to create task");
+        
+        // Then update its content to have specific test content
+        task.core_mut().content = DocumentContent::new("## Description\n\nOriginal description\n\n## Implementation Notes\n\nOriginal notes");
+
+        // Replace existing section
+        task.update_section("Updated task description", "Description", false).unwrap();
+        let content = task.content().body.clone();
+        assert!(content.contains("## Description\n\nUpdated task description"));
+        assert!(!content.contains("Original description"));
+
+        // Append to existing section
+        task.update_section("Additional implementation details", "Implementation Notes", true).unwrap();
+        let content = task.content().body.clone();
+        assert!(content.contains("Original notes"));
+        assert!(content.contains("Additional implementation details"));
+
+        // Add new section
+        task.update_section("Test approach details", "Testing Strategy", false).unwrap();
+        let content = task.content().body.clone();
+        assert!(content.contains("## Testing Strategy\n\nTest approach details"));
     }
 }

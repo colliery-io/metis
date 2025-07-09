@@ -1,0 +1,56 @@
+use super::App;
+use crate::models::*;
+
+impl App {
+    pub fn next_board(&mut self) {
+        self.current_board = match self.current_board {
+            BoardType::Strategy => BoardType::Initiative,
+            BoardType::Initiative => BoardType::Task,
+            BoardType::Task => BoardType::Strategy,
+        };
+    }
+
+    pub fn previous_board(&mut self) {
+        self.current_board = match self.current_board {
+            BoardType::Strategy => BoardType::Task,
+            BoardType::Initiative => BoardType::Strategy,
+            BoardType::Task => BoardType::Initiative,
+        };
+    }
+
+    pub fn move_selection_left(&mut self) {
+        let (col, _item) = self.get_current_selection();
+        if col > 0 {
+            let new_col = col - 1;
+            self.set_selection(new_col, 0); // Reset to first item in new column
+        }
+    }
+
+    pub fn move_selection_right(&mut self) {
+        let (col, _item) = self.get_current_selection();
+        let board = self.get_current_board();
+        if col + 1 < board.columns.len() {
+            let new_col = col + 1;
+            self.set_selection(new_col, 0); // Reset to first item in new column
+        }
+    }
+
+    pub fn move_selection_up(&mut self) {
+        let (col, item) = self.get_current_selection();
+        let board = self.get_current_board();
+        if col < board.columns.len() && !board.columns[col].items.is_empty() {
+            let new_item = if item > 0 { item - 1 } else { 0 };
+            self.set_selection(col, new_item);
+        }
+    }
+
+    pub fn move_selection_down(&mut self) {
+        let (col, item) = self.get_current_selection();
+        let board = self.get_current_board();
+        if col < board.columns.len() && !board.columns[col].items.is_empty() {
+            let max_item = board.columns[col].items.len();
+            let new_item = if item + 1 < max_item { item + 1 } else { item };
+            self.set_selection(col, new_item);
+        }
+    }
+}

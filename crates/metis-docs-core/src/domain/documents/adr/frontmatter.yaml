@@ -1,18 +1,16 @@
-id: {{ number }}-{{ slug }}
+id: {{ formatted_number }}-{{ slug }}
 level: adr
+title: "{{ title }}"
+number: {{ number }}
 created_at: {{ created_at }}
 updated_at: {{ updated_at }}
 decision_date: {{ decision_date }}
 decision_maker: {{ decision_maker }}
 parent: {{ parent_id }}
-archived: false
+archived: {{ archived }}
 
-# Phase progression for ADRs
 tags:
-  - "#adr"
-  - "#phase/draft"
-  # - "#phase/discussion"
-  # - "#phase/decided"
-  # - "#phase/superseded"
+{% for tag in tags %}  - "{{ tag }}"
+{% endfor %}
 
-exit_criteria_met: false
+exit_criteria_met: {{ exit_criteria_met }}

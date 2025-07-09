@@ -16,6 +16,5 @@ tags:
   # - "#phase/completed"
 
 exit_criteria_met: false
-success_metrics: []
 risk_level: {{ risk_level | default(value="medium") }}
 stakeholders: {{ stakeholders | default(value=[]) }}
