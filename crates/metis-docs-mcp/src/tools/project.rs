@@ -1,4 +1,4 @@
-use metis_core::{initialize_project, ProjectConfig};
+use metis_docs_core::application::services::workspace::WorkspaceInitializationService;
 use rust_mcp_sdk::{
     macros::{mcp_tool, JsonSchema},
     schema::{schema_utils::CallToolError, CallToolResult, TextContent},
@@ -32,18 +32,13 @@ impl InitializeProjectTool {
     pub async fn call_tool(&self) -> std::result::Result<CallToolResult, CallToolError> {
         let base_path = PathBuf::from(&self.project_path);
 
-        let config = ProjectConfig {
-            root_path: base_path,
-            name: self.project_name.clone(),
-            description: self.description.clone(),
-        };
-
-        match initialize_project(config).await {
-            Ok(metadata) => {
+        match WorkspaceInitializationService::initialize_workspace(&base_path, &self.project_name).await {
+            Ok(result) => {
                 let response = serde_json::json!({
                     "message": format!("Project '{}' initialized successfully", self.project_name),
-                    "project_path": metadata.project_path,
-                    "database_path": metadata.database_path
+                    "project_path": result.metis_dir,
+                    "database_path": result.database_path,
+                    "vision_path": result.vision_path
                 });
 
                 Ok(CallToolResult::text_content(vec![TextContent::from(

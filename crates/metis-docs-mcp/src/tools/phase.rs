@@ -1,10 +1,15 @@
-use metis_core::{transition_phase, validate_exit_criteria};
+use metis_docs_core::{
+    application::services::workspace::transition::PhaseTransitionService,
+    domain::documents::{factory::DocumentFactory, types::Phase},
+    Document,
+};
 use rust_mcp_sdk::{
     macros::{mcp_tool, JsonSchema},
     schema::{schema_utils::CallToolError, CallToolResult, TextContent},
 };
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
+use std::str::FromStr;
 
 #[mcp_tool(
     name = "transition_phase",
@@ -32,17 +37,36 @@ pub struct TransitionPhaseTool {
 impl TransitionPhaseTool {
     pub async fn call_tool(&self) -> std::result::Result<CallToolResult, CallToolError> {
         let project_path = PathBuf::from(&self.project_path);
-        let document_path = project_path.join(&self.document_path);
-        let force = self.force.unwrap_or(false);
+        
+        // Parse the target phase
+        let target_phase = match Phase::from_str(&self.new_phase) {
+            Ok(phase) => phase,
+            Err(_) => {
+                let error_response = serde_json::json!({
+                    "error": format!("Invalid phase: '{}'", self.new_phase)
+                });
+                return Ok(CallToolResult::text_content(vec![TextContent::from(
+                    serde_json::to_string_pretty(&error_response).map_err(CallToolError::new)?,
+                )]));
+            }
+        };
 
-        match transition_phase(&document_path, &self.new_phase, force).await {
-            Ok(_) => {
+        // Extract document ID from path (assuming format like "strategies/strategy-name/strategy.md")
+        let document_id = self.extract_document_id();
+        
+        // Create transition service
+        let transition_service = PhaseTransitionService::new(&project_path);
+        
+        // Perform the transition - let the service handle validation unless forced
+        match transition_service.transition_document(&document_id, target_phase).await {
+            Ok(result) => {
                 let response = serde_json::json!({
-                    "message": format!("Document transitioned to phase '{}' successfully", self.new_phase),
-                    "document_path": self.document_path,
-                    "new_phase": self.new_phase,
-                    "project_path": self.project_path,
-                    "force": force
+                    "message": format!("Document transitioned from {} to {}", result.previous_phase, result.new_phase),
+                    "document_id": result.document_id,
+                    "document_type": result.document_type.to_string(),
+                    "previous_phase": result.previous_phase.to_string(),
+                    "new_phase": result.new_phase.to_string(),
+                    "project_path": self.project_path
                 });
 
                 Ok(CallToolResult::text_content(vec![TextContent::from(
@@ -52,8 +76,8 @@ impl TransitionPhaseTool {
             Err(e) => {
                 let error_response = serde_json::json!({
                     "error": format!("Failed to transition phase: {}", e),
-                    "document_path": self.document_path,
-                    "new_phase": self.new_phase,
+                    "document_id": document_id,
+                    "target_phase": self.new_phase,
                     "project_path": self.project_path
                 });
 
@@ -62,6 +86,25 @@ impl TransitionPhaseTool {
                 )]))
             }
         }
+    }
+    
+    fn extract_document_id(&self) -> String {
+        // Convert document_path to document_id
+        // Examples: "strategies/test-strategy/strategy.md" -> "test-strategy"
+        //          "vision.md" -> "vision"
+        let path = std::path::Path::new(&self.document_path);
+        
+        if let Some(parent) = path.parent() {
+            if let Some(parent_name) = parent.file_name() {
+                return parent_name.to_string_lossy().to_string();
+            }
+        }
+        
+        // Fallback: use filename without extension
+        path.file_stem()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_string()
     }
 }
 
@@ -90,20 +133,38 @@ impl CheckPhaseTransitionTool {
         let project_path = PathBuf::from(&self.project_path);
         let document_path = project_path.join(&self.document_path);
 
-        // Note: can_transition_phase function doesn't exist in metis-core, using validate_exit_criteria instead
-        match validate_exit_criteria(&document_path).await {
-            Ok(validation_result) => {
-                let can_transition = validation_result.met;
+        // Parse the target phase
+        let target_phase = match Phase::from_str(&self.target_phase) {
+            Ok(phase) => phase,
+            Err(_) => {
+                let error_response = serde_json::json!({
+                    "error": format!("Invalid phase: '{}'", self.target_phase)
+                });
+                return Ok(CallToolResult::text_content(vec![TextContent::from(
+                    serde_json::to_string_pretty(&error_response).map_err(CallToolError::new)?,
+                )]));
+            }
+        };
+
+        match DocumentFactory::load_from_file(&document_path).await {
+            Ok(document) => {
+                let transition_service = PhaseTransitionService::new(&project_path);
+                let doc_type = document.document_type();
+                let current_phase = document.phase();
+                let exit_criteria_met = document.exit_criteria_met();
+                
+                let is_valid_transition = transition_service.is_valid_transition(doc_type, current_phase, target_phase);
+                let can_transition = is_valid_transition && exit_criteria_met;
+                let valid_transitions = transition_service.get_valid_transitions_for(doc_type, current_phase);
+                
                 let response = serde_json::json!({
                     "can_transition": can_transition,
-                    "message": if can_transition {
-                        format!("Document can transition to phase '{}'", self.target_phase)
-                    } else {
-                        format!("Document cannot transition to phase '{}' - exit criteria not met", self.target_phase)
-                    },
-                    "document_path": self.document_path,
+                    "is_valid_transition": is_valid_transition,
+                    "exit_criteria_met": exit_criteria_met,
+                    "current_phase": current_phase.to_string(),
                     "target_phase": self.target_phase,
-                    "project_path": self.project_path
+                    "document_type": doc_type.to_string(),
+                    "valid_transitions": valid_transitions.iter().map(|p| p.to_string()).collect::<Vec<_>>()
                 });
 
                 Ok(CallToolResult::text_content(vec![TextContent::from(
@@ -112,10 +173,7 @@ impl CheckPhaseTransitionTool {
             }
             Err(e) => {
                 let error_response = serde_json::json!({
-                    "error": format!("Failed to check phase transition: {}", e),
-                    "document_path": self.document_path,
-                    "target_phase": self.target_phase,
-                    "project_path": self.project_path
+                    "error": format!("Failed to load document: {}", e)
                 });
 
                 Ok(CallToolResult::text_content(vec![TextContent::from(
@@ -148,20 +206,15 @@ impl ValidateExitCriteriaTool {
         let project_path = PathBuf::from(&self.project_path);
         let document_path = project_path.join(&self.document_path);
 
-        match validate_exit_criteria(&document_path).await {
-            Ok(validation_result) => {
+        match DocumentFactory::load_from_file(&document_path).await {
+            Ok(document) => {
+                let exit_criteria_met = document.exit_criteria_met();
+                
                 let response = serde_json::json!({
-                    "is_complete": validation_result.met,
-                    "total_criteria": validation_result.total_criteria,
-                    "completed_criteria": validation_result.completed_criteria,
-                    "missing_criteria": validation_result.missing_criteria,
-                    "message": if validation_result.met {
-                        "All exit criteria are completed"
-                    } else {
-                        "Some exit criteria are still pending"
-                    },
-                    "document_path": self.document_path,
-                    "project_path": self.project_path
+                    "exit_criteria_met": exit_criteria_met,
+                    "document_type": document.document_type().to_string(),
+                    "current_phase": document.phase().to_string(),
+                    "document_id": document.metadata().id.to_string()
                 });
 
                 Ok(CallToolResult::text_content(vec![TextContent::from(
@@ -170,9 +223,7 @@ impl ValidateExitCriteriaTool {
             }
             Err(e) => {
                 let error_response = serde_json::json!({
-                    "error": format!("Failed to validate exit criteria: {}", e),
-                    "document_path": self.document_path,
-                    "project_path": self.project_path
+                    "error": format!("Failed to load document: {}", e)
                 });
 
                 Ok(CallToolResult::text_content(vec![TextContent::from(

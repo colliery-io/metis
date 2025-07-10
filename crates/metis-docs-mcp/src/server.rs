@@ -1,8 +1,7 @@
 use crate::tools::{
     CheckPhaseTransitionTool, CreateDocumentTool, InitializeProjectTool, ListDocumentsTool,
     MetisTools, OpenVaultInObsidianTool, SearchDocumentsTool, TransitionPhaseTool,
-    UpdateBlockedByTool, UpdateDocumentContentTool, UpdateExitCriterionTool, ValidateDocumentTool,
-    ValidateExitCriteriaTool,
+    ValidateDocumentTool, ValidateExitCriteriaTool,
 };
 use crate::MetisServerConfig;
 use async_trait::async_trait;
@@ -21,8 +20,8 @@ use tracing::{debug, error, info, warn};
 pub struct MetisServerHandler {
     #[allow(dead_code)]
     config: Arc<MetisServerConfig>,
-    // Track active projects for background sync
-    active_projects: Arc<RwLock<HashMap<PathBuf, Arc<metis_core::SyncEngine>>>>,
+    // Track active projects for background sync  
+    active_projects: Arc<RwLock<HashMap<PathBuf, Arc<metis_docs_core::application::services::synchronization::SyncService>>>>,
 }
 
 impl MetisServerHandler {
@@ -346,121 +345,6 @@ impl ServerHandler for MetisServerHandler {
                 .map_err(rust_mcp_sdk::schema::schema_utils::CallToolError::new)?;
 
                 tool.call_tool().await
-            }
-            "update_document_content" => {
-                let tool: UpdateDocumentContentTool = serde_json::from_value(
-                    serde_json::Value::Object(request.params.arguments.unwrap_or_default()),
-                )
-                .map_err(rust_mcp_sdk::schema::schema_utils::CallToolError::new)?;
-
-                let project_path = PathBuf::from(&tool.project_path);
-                let document_path = project_path.join(&tool.document_path);
-
-                // Use metis-core update function
-                match metis_core::update_document_content(
-                    &document_path,
-                    &tool.section_heading,
-                    &tool.new_content,
-                )
-                .await
-                {
-                    Ok(()) => {
-                        let response = serde_json::json!({
-                            "message": format!("Successfully updated section '{}' in document", tool.section_heading),
-                            "document_path": document_path,
-                            "section_heading": tool.section_heading,
-                            "updated": true
-                        });
-                        Ok(CallToolResult::text_content(vec![TextContent::from(
-                            serde_json::to_string_pretty(&response)
-                                .map_err(rust_mcp_sdk::schema::schema_utils::CallToolError::new)?,
-                        )]))
-                    }
-                    Err(e) => {
-                        let error_response = serde_json::json!({
-                            "error": format!("Failed to update document content: {}", e)
-                        });
-                        Ok(CallToolResult::text_content(vec![TextContent::from(
-                            serde_json::to_string_pretty(&error_response)
-                                .map_err(rust_mcp_sdk::schema::schema_utils::CallToolError::new)?,
-                        )]))
-                    }
-                }
-            }
-            "update_exit_criterion" => {
-                let tool: UpdateExitCriterionTool = serde_json::from_value(
-                    serde_json::Value::Object(request.params.arguments.unwrap_or_default()),
-                )
-                .map_err(rust_mcp_sdk::schema::schema_utils::CallToolError::new)?;
-
-                let project_path = PathBuf::from(&tool.project_path);
-                let document_path = project_path.join(&tool.document_path);
-
-                // Use metis-core update function
-                match metis_core::update_exit_criterion(
-                    &document_path,
-                    &tool.criterion_title,
-                    tool.completed,
-                )
-                .await
-                {
-                    Ok(()) => {
-                        let response = serde_json::json!({
-                            "message": format!("Successfully updated exit criterion to {}", if tool.completed { "completed" } else { "incomplete" }),
-                            "document_path": document_path,
-                            "criterion_title": tool.criterion_title,
-                            "completed": tool.completed,
-                            "updated": true
-                        });
-                        Ok(CallToolResult::text_content(vec![TextContent::from(
-                            serde_json::to_string_pretty(&response)
-                                .map_err(rust_mcp_sdk::schema::schema_utils::CallToolError::new)?,
-                        )]))
-                    }
-                    Err(e) => {
-                        let error_response = serde_json::json!({
-                            "error": format!("Failed to update exit criterion: {}", e)
-                        });
-                        Ok(CallToolResult::text_content(vec![TextContent::from(
-                            serde_json::to_string_pretty(&error_response)
-                                .map_err(rust_mcp_sdk::schema::schema_utils::CallToolError::new)?,
-                        )]))
-                    }
-                }
-            }
-            "update_blocked_by" => {
-                let tool: UpdateBlockedByTool = serde_json::from_value(serde_json::Value::Object(
-                    request.params.arguments.unwrap_or_default(),
-                ))
-                .map_err(rust_mcp_sdk::schema::schema_utils::CallToolError::new)?;
-
-                let project_path = PathBuf::from(&tool.project_path);
-                let document_path = project_path.join(&tool.document_path);
-
-                // Use metis-core update function
-                match metis_core::update_blocked_by(&document_path, tool.blocked_by.clone()).await {
-                    Ok(()) => {
-                        let response = serde_json::json!({
-                            "message": "Successfully updated blocked_by relationships",
-                            "document_path": document_path,
-                            "blocked_by": tool.blocked_by,
-                            "updated": true
-                        });
-                        Ok(CallToolResult::text_content(vec![TextContent::from(
-                            serde_json::to_string_pretty(&response)
-                                .map_err(rust_mcp_sdk::schema::schema_utils::CallToolError::new)?,
-                        )]))
-                    }
-                    Err(e) => {
-                        let error_response = serde_json::json!({
-                            "error": format!("Failed to update blocked_by: {}", e)
-                        });
-                        Ok(CallToolResult::text_content(vec![TextContent::from(
-                            serde_json::to_string_pretty(&error_response)
-                                .map_err(rust_mcp_sdk::schema::schema_utils::CallToolError::new)?,
-                        )]))
-                    }
-                }
             }
             "transition_phase" => {
                 let tool: TransitionPhaseTool = serde_json::from_value(serde_json::Value::Object(

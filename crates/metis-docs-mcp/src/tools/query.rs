@@ -1,5 +1,8 @@
 use chrono::{DateTime, Utc};
-use metis_core::{Document, DocumentStore, DocumentType, SearchResult};
+use metis_docs_core::{
+    Application, Database, DocumentType,
+    dal::database::models::Document,
+};
 use rust_mcp_sdk::{
     macros::{mcp_tool, JsonSchema},
     schema::{schema_utils::CallToolError, CallToolResult, TextContent},
@@ -12,57 +15,40 @@ use std::str::FromStr;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DocumentSummary {
     pub id: String,
+    pub title: String,
+    pub document_type: String,
+    pub phase: String,
     pub filepath: String,
-    pub document_type: DocumentType,
-    pub level: DocumentType,
-    pub status: String,
     pub parent_id: Option<String>,
+    pub frontmatter_json: serde_json::Value,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub content_hash: String,
-    pub frontmatter: serde_json::Value,
-    pub exit_criteria_met: bool,
-    pub file_size: Option<i64>,
-    pub file_modified_at: Option<f64>,
+    pub archived: bool,
 }
 
 impl From<Document> for DocumentSummary {
     fn from(doc: Document) -> Self {
+        // Parse frontmatter JSON
+        let frontmatter: serde_json::Value = serde_json::from_str(&doc.frontmatter_json)
+            .unwrap_or_else(|_| serde_json::json!({}));
+        
         Self {
             id: doc.id,
-            filepath: doc.filepath,
+            title: doc.title,
             document_type: doc.document_type,
-            level: doc.level,
-            status: doc.status,
+            phase: doc.phase,
+            filepath: doc.filepath,
             parent_id: doc.parent_id,
+            frontmatter_json: frontmatter,
             created_at: doc.created_at,
             updated_at: doc.updated_at,
             content_hash: doc.content_hash,
-            frontmatter: doc.frontmatter,
-            exit_criteria_met: doc.exit_criteria_met,
-            file_size: doc.file_size,
-            file_modified_at: doc.file_modified_at,
+            archived: doc.archived,
         }
     }
 }
 
-/// Search result summary without content field for search operations
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SearchResultSummary {
-    pub document: DocumentSummary,
-    pub rank: f64,
-    pub snippet: String,
-}
-
-impl From<SearchResult> for SearchResultSummary {
-    fn from(result: SearchResult) -> Self {
-        Self {
-            document: DocumentSummary::from(result.document),
-            rank: result.rank,
-            snippet: result.snippet,
-        }
-    }
-}
 
 #[mcp_tool(
     name = "list_documents",
@@ -90,81 +76,44 @@ pub struct ListDocumentsTool {
 impl ListDocumentsTool {
     pub async fn call_tool(&self) -> std::result::Result<CallToolResult, CallToolError> {
         let project_path = PathBuf::from(&self.project_path);
-        let db_path = project_path.join(".metis.db");
+        let db_path = project_path.join("metis.db");
 
-        match DocumentStore::new(db_path.to_str().unwrap()).await {
-            Ok(store) => {
-                let query_service = store.query_service();
-
-                // Parse document type filter if provided
-                let doc_type_filter = if let Some(type_str) = &self.document_type {
-                    match DocumentType::from_str(type_str) {
-                        Ok(doc_type) => Some(doc_type),
-                        Err(_) => return Ok(CallToolResult::text_content(
-                            vec![TextContent::from(serde_json::to_string_pretty(&serde_json::json!({
-                                "error": format!("Invalid document type '{}'. Must be: vision, strategy, initiative, task, adr", type_str)
-                            })).map_err(CallToolError::new)?)]
-                        ))
-                    }
-                } else {
-                    None
-                };
-
-                // Query documents
-                let documents =
-                    if let Some(doc_type) = doc_type_filter {
-                        match query_service.find_documents_by_type(doc_type).await {
-                            Ok(docs) => docs,
+        match Database::new(db_path.to_str().unwrap()) {
+            Ok(db) => {
+                let mut app = Application::new(db);
+                
+                // Query documents using the Application's database service
+                let documents = app.with_database(|db_service| {
+                    // Get all documents from the repository
+                    let mut all_docs = Vec::new();
+                    
+                    // Filter by type if specified
+                    if let Some(type_str) = &self.document_type {
+                        match db_service.find_by_type(type_str) {
+                            Ok(docs) => all_docs.extend(docs),
                             Err(e) => {
-                                return Ok(CallToolResult::text_content(vec![TextContent::from(
-                                    serde_json::to_string_pretty(&serde_json::json!({
-                                        "error": format!("Failed to query documents: {}", e)
-                                    }))
-                                    .map_err(CallToolError::new)?,
-                                )]))
+                                eprintln!("Failed to find documents by type: {}", e);
                             }
                         }
-                    } else if let Some(phase) = &self.phase {
-                        match query_service.find_documents_by_phase(phase).await {
-                        Ok(docs) => docs,
-                        Err(e) => return Ok(CallToolResult::text_content(
-                            vec![TextContent::from(serde_json::to_string_pretty(&serde_json::json!({
-                                "error": format!("Failed to query documents by phase: {}", e)
-                            })).map_err(CallToolError::new)?)]
-                        ))
-                    }
                     } else {
-                        // List all documents - use a generic query approach
-                        match query_service
-                            .find_documents_by_type(DocumentType::Vision)
-                            .await
-                        {
-                            Ok(mut all_docs) => {
-                                // Get documents of other types and combine
-                                for doc_type in [
-                                    DocumentType::Strategy,
-                                    DocumentType::Initiative,
-                                    DocumentType::Task,
-                                    DocumentType::Adr,
-                                ] {
-                                    if let Ok(docs) =
-                                        query_service.find_documents_by_type(doc_type).await
-                                    {
-                                        all_docs.extend(docs);
-                                    }
-                                }
-                                all_docs
-                            }
-                            Err(e) => {
-                                return Ok(CallToolResult::text_content(vec![TextContent::from(
-                                    serde_json::to_string_pretty(&serde_json::json!({
-                                        "error": format!("Failed to query documents: {}", e)
-                                    }))
-                                    .map_err(CallToolError::new)?,
-                                )]))
+                        // Get all document types
+                        for doc_type in ["vision", "strategy", "initiative", "task", "adr"] {
+                            if let Ok(docs) = db_service.find_by_type(doc_type) {
+                                all_docs.extend(docs);
                             }
                         }
-                    };
+                    }
+                    
+                    // Filter by phase if specified
+                    if let Some(phase_filter) = &self.phase {
+                        all_docs.retain(|doc| doc.phase.eq_ignore_ascii_case(phase_filter));
+                    }
+                    
+                    // Filter out archived documents
+                    all_docs.retain(|doc| !doc.archived);
+                    
+                    all_docs
+                });
 
                 // Apply limit if specified and convert to summaries
                 let limited_docs: Vec<DocumentSummary> = if let Some(limit) = self.limit {
@@ -180,7 +129,11 @@ impl ListDocumentsTool {
                 let response = serde_json::json!({
                     "message": format!("Found {} documents", limited_docs.len()),
                     "documents": limited_docs,
-                    "project_path": self.project_path
+                    "project_path": self.project_path,
+                    "filters": {
+                        "document_type": self.document_type,
+                        "phase": self.phase
+                    }
                 });
 
                 Ok(CallToolResult::text_content(vec![TextContent::from(
@@ -226,71 +179,66 @@ pub struct SearchDocumentsTool {
 impl SearchDocumentsTool {
     pub async fn call_tool(&self) -> std::result::Result<CallToolResult, CallToolError> {
         let project_path = PathBuf::from(&self.project_path);
-        let db_path = project_path.join(".metis.db");
+        let db_path = project_path.join("metis.db");
 
-        match DocumentStore::new(db_path.to_str().unwrap()).await {
-            Ok(store) => {
-                let query_service = store.query_service();
-
-                // Perform the search with a reasonable default limit
-                let limit = self.limit.unwrap_or(100) as usize;
-                match query_service.search_content(&self.query, limit).await {
-                    Ok(documents) => {
-                        // Filter by document type if specified
-                        let filtered_docs = if let Some(type_str) = &self.document_type {
-                            match DocumentType::from_str(type_str) {
-                                Ok(doc_type) => {
-                                    documents.into_iter()
-                                        .filter(|doc| doc.document.document_type == doc_type)
-                                        .collect()
-                                }
-                                Err(_) => return Ok(CallToolResult::text_content(
-                                    vec![TextContent::from(serde_json::to_string_pretty(&serde_json::json!({
-                                        "error": format!("Invalid document type '{}'. Must be: vision, strategy, initiative, task, adr", type_str)
-                                    })).map_err(CallToolError::new)?)]
-                                ))
+        match Database::new(db_path.to_str().unwrap()) {
+            Ok(db) => {
+                let mut app = Application::new(db);
+                
+                // For now, we'll implement a simple search by loading documents and searching their content
+                // In the future, this should use a proper full-text search implementation
+                let documents = app.with_database(|db_service| {
+                    let mut all_docs = Vec::new();
+                    
+                    // Get all document types or filtered by type
+                    if let Some(type_str) = &self.document_type {
+                        if let Ok(docs) = db_service.find_by_type(type_str) {
+                            all_docs.extend(docs);
+                        }
+                    } else {
+                        for doc_type in ["vision", "strategy", "initiative", "task", "adr"] {
+                            if let Ok(docs) = db_service.find_by_type(doc_type) {
+                                all_docs.extend(docs);
                             }
-                        } else {
-                            documents
-                        };
-
-                        // Apply limit if specified and convert to summaries
-                        let limited_docs: Vec<SearchResultSummary> = if let Some(limit) = self.limit
-                        {
-                            filtered_docs
-                                .into_iter()
-                                .take(limit as usize)
-                                .map(SearchResultSummary::from)
-                                .collect()
-                        } else {
-                            filtered_docs
-                                .into_iter()
-                                .map(SearchResultSummary::from)
-                                .collect()
-                        };
-
-                        let response = serde_json::json!({
-                            "message": format!("Found {} documents matching '{}'", limited_docs.len(), self.query),
-                            "documents": limited_docs,
-                            "query": self.query,
-                            "project_path": self.project_path
-                        });
-
-                        Ok(CallToolResult::text_content(vec![TextContent::from(
-                            serde_json::to_string_pretty(&response).map_err(CallToolError::new)?,
-                        )]))
+                        }
                     }
-                    Err(e) => {
-                        let error_response = serde_json::json!({
-                            "error": format!("Search failed: {}", e)
-                        });
+                    
+                    // Filter out archived documents
+                    all_docs.retain(|doc| !doc.archived);
+                    
+                    // Simple search: check if query appears in title or content
+                    let query_lower = self.query.to_lowercase();
+                    all_docs.retain(|doc| {
+                        doc.title.to_lowercase().contains(&query_lower) ||
+                        doc.content.as_ref().map_or(false, |content| 
+                            content.to_lowercase().contains(&query_lower)
+                        )
+                    });
+                    
+                    all_docs
+                });
 
-                        Ok(CallToolResult::text_content(vec![TextContent::from(
-                            serde_json::to_string_pretty(&error_response)
-                                .map_err(CallToolError::new)?,
-                        )]))
-                    }
-                }
+                // Apply limit if specified and convert to summaries
+                let limited_docs: Vec<DocumentSummary> = if let Some(limit) = self.limit {
+                    documents
+                        .into_iter()
+                        .take(limit as usize)
+                        .map(DocumentSummary::from)
+                        .collect()
+                } else {
+                    documents.into_iter().map(DocumentSummary::from).collect()
+                };
+
+                let response = serde_json::json!({
+                    "message": format!("Found {} documents matching '{}'", limited_docs.len(), self.query),
+                    "documents": limited_docs,
+                    "query": self.query,
+                    "project_path": self.project_path
+                });
+
+                Ok(CallToolResult::text_content(vec![TextContent::from(
+                    serde_json::to_string_pretty(&response).map_err(CallToolError::new)?,
+                )]))
             }
             Err(e) => {
                 let error_response = serde_json::json!({
