@@ -7,7 +7,10 @@ Metis is a hierarchical project management system built on the Flight Levels met
 ### 1. Installation
 
 ```bash
-# For command-line use
+# Install CLI and TUI (includes metis command and metis tui)
+cargo install metis-docs-cli
+
+# Install MCP server for AI assistants
 cargo install metis-docs-mcp
 
 # For GUI applications (Claude Desktop, etc.) that need system PATH access
@@ -16,10 +19,18 @@ sudo cargo install metis-docs-mcp --root /usr/local
 
 **Note**: GUI applications like Claude Desktop may not have access to your shell's PATH. If you get "ENOENT" errors when using the MCP server with GUI applications, use the second installation command to install to `/usr/local/bin` where GUI apps can find it.
 
-### 2. Start MCP Server
+### 2. Choose Your Interface
 
 ```bash
-metis-mcp
+# Terminal User Interface (recommended for interactive use)
+metis tui
+
+# Command Line Interface (for scripting and automation)
+metis init my-project
+metis create vision "My Vision"
+
+# MCP Server (for AI assistant integration)
+metis mcp
 ```
 
 ### 3. Configure Your AI Assistant
@@ -30,7 +41,7 @@ Add to your `claude_desktop_config.json`:
 {
   "mcpServers": {
     "metis": {
-      "command": "metis-mcp"
+      "command": "metis mcp"
     }
   }
 }
@@ -41,7 +52,7 @@ Add to your Cursor MCP configuration:
 ```json
 {
   "metis": {
-    "command": "metis-mcp"
+    "command": "metis mcp"
   }
 }
 ```
@@ -51,10 +62,10 @@ Add to your Cursor MCP configuration:
 Flight Levels is a methodology for organizing work across four levels:
 
 ```
-Vision (30,000 feet)       - Overall purpose and direction  
-└── Strategy (10,000 feet) - How to achieve the vision
-    └── Initiative (1,000 feet) - Concrete projects implementing strategies
-        └── Task (100 feet) - Individual work items
+Vision                      - Overall purpose and direction  
+└── Strategy                - How to achieve the vision
+    └── Initiative          - Concrete projects implementing strategies
+        └── Task            - Individual work items
 ```
 
 Each level has defined workflows:
@@ -62,6 +73,8 @@ Each level has defined workflows:
 - **Strategy**: shaping → design → ready → active → completed
 - **Initiative**: discovery → design → ready → decompose → active → completed  
 - **Task**: todo → doing → completed
+
+> Something to keep in mind, this methodology is best with large complex things - especially when working within smaller projects and teams you may find yourself working largely within Initiatives and Tasks with a few long lived "Strategy" documents. That's fine as your complexity increases you can adapt your personal usage.  
 
 ## The Metis Process: Vision to Execution
 
@@ -82,8 +95,8 @@ Metis provides 11 MCP tools for complete project management:
 
 | Tool | Purpose |
 |------|---------|
-| `initialize_project` | Set up a new Metis project by creating a `metis/` subdirectory with project structure |
-| `create_document` | Create new documents at any level (vision/strategy/initiative/task) |
+| `initialize_project` | Set up a new Metis project by creating a `.metis/` subdirectory with project structure |
+| `create_document` | Create new documents at any level (vision/strategy/initiative/task/adr) |
 | `validate_document` | Validate document structure and metadata |
 | `update_document_content` | Update any section of a document |
 | `update_exit_criterion` | Update specific exit criteria checkboxes |
@@ -91,7 +104,7 @@ Metis provides 11 MCP tools for complete project management:
 | `transition_phase` | Move documents through workflow phases |
 | `check_phase_transition` | Validate if a document can transition to a new phase |
 | `validate_exit_criteria` | Check completion status of exit criteria |
-| `list_documents` | Find documents by type, phase, or other criteria |
+| `list_documents` | Find all documents in a project |
 | `search_documents` | Full-text search across all documents |
 
 ## Common Workflows
@@ -121,20 +134,74 @@ After running `initialize_project`, your project will have this structure:
 
 ```
 your-project/
-└── metis/
+└── .metis/
     ├── vision.md        # Initial vision document
     ├── strategies/      # Strategy documents will be created here
-    ├── decisions/       # ADR (Architectural Decision Record) documents
-    └── .metis.db       # SQLite database with FTS index
+    ├── adrs/           # ADR (Architectural Decision Record) documents
+    └── metis.db        # SQLite database with FTS index
 ```
 
-The `initialize_project` tool creates a clean `metis/` subdirectory to keep all project files organized. Documents are created as individual markdown files and automatically indexed in the SQLite database for fast search.
+The `initialize_project` tool creates a clean `.metis/` subdirectory to keep all project files organized. Documents are created as individual markdown files and automatically indexed in the SQLite database for fast search.
+
+## Command Line Interface (CLI)
+
+Metis provides a comprehensive CLI for direct project management:
+
+```bash
+# Initialize a new project
+metis init my-project
+
+# Create documents
+metis create vision "Project Vision"
+metis create strategy "Core Strategy" --parent "Project Vision"
+metis create initiative "Implementation" --parent "Core Strategy"
+metis create task "Build Feature" --parent "Implementation"
+metis create adr "Database Choice"
+
+# Manage document lifecycle
+metis transition "Project Vision" --phase review
+metis validate "Project Vision"
+metis status  # Show project overview
+
+# Search and list documents
+metis list --type strategy
+metis search "database"
+
+# Launch interactive interfaces
+metis tui  # Terminal user interface
+metis mcp  # MCP server for AI assistants
+```
+
+## Terminal User Interface (TUI)
+
+Interactive kanban-style interface for visual project management:
+
+```bash
+metis tui
+```
+
+**Key Features:**
+- **Visual Board Layout**: See all documents organized by type (Vision, Strategy, Initiative, Task, ADR)
+- **Phase-based Columns**: Documents organized by their current phase
+- **Keyboard Navigation**: Arrow keys, Tab/Shift+Tab to navigate boards
+- **Quick Actions**: 
+  - `n` - Create new document
+  - `Ctrl+n` - Create child document
+  - `Enter` - View/edit document
+  - `t` - Transition phase
+  - `d` - Delete document
+  - `v` - View vision document
+  - `1-4` - Jump to specific boards
+
+**Workflow Integration**: The TUI automatically syncs with the file system, so changes made externally are reflected immediately.
 
 ## Technical Overview
 
-**Architecture**: Metis consists of two main components:
-- **metis-core**: Rust library handling document management, workflows, and database
-- **metis-mcp-server**: MCP server providing AI assistant integration
+**Architecture**: Metis consists of four main components:
+- **metis-docs-core**: Rust library handling document management, workflows, and database
+- **metis-docs-cli**: Command-line interface with full project management capabilities  
+- **metis-docs-tui**: Interactive terminal user interface for visual project management
+- **metis-docs-mcp**: MCP server providing AI assistant integration with 11 tools
 
 **Direct Path Approach**: Documents are stored as markdown files with YAML frontmatter, indexed in SQLite with FTS5 for fast search. No complex abstractions - what you see is what you get.
 
