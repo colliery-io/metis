@@ -1,6 +1,6 @@
 pub mod board;
-pub mod dialog;
 pub mod components;
+pub mod dialog;
 
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
@@ -20,12 +20,11 @@ pub fn draw(f: &mut Frame, app: &App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(3),  // Header
-            Constraint::Min(0),     // Main content
-            Constraint::Length(3),  // Footer
+            Constraint::Length(3), // Header
+            Constraint::Min(0),    // Main content
+            Constraint::Length(3), // Footer
         ])
         .split(f.area());
-
 
     // Header
     draw_header(f, app, chunks[0]);
@@ -43,7 +42,7 @@ pub fn draw(f: &mut Frame, app: &App) {
             } else {
                 draw_kanban_board(f, app, chunks[1]);
             }
-            
+
             // Overlays for modals
             if app.app_state() == &AppState::CreatingDocument {
                 draw_creation_dialog(f, app, f.area());
@@ -63,18 +62,25 @@ pub fn draw(f: &mut Frame, app: &App) {
 
 fn draw_header(f: &mut Frame, app: &App, area: Rect) {
     let title = if app.is_ready() {
-        format!("{} Board", match app.ui_state.current_board {
-            BoardType::Strategy => "Strategy",
-            BoardType::Initiative => "Initiative", 
-            BoardType::Task => "Task",
-            BoardType::Adr => "ADR",
-        })
+        format!(
+            "{} Board",
+            match app.ui_state.current_board {
+                BoardType::Strategy => "Strategy",
+                BoardType::Initiative => "Initiative",
+                BoardType::Task => "Task",
+                BoardType::Adr => "ADR",
+            }
+        )
     } else {
         "Initializing...".to_string()
     };
 
     let header = Paragraph::new(title)
-        .style(Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+        .style(
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        )
         .block(Block::default().borders(Borders::ALL))
         .alignment(Alignment::Center);
     f.render_widget(header, area);
@@ -90,7 +96,7 @@ fn draw_error(f: &mut Frame, error: &str, area: Rect) {
 
 fn draw_loading(f: &mut Frame, app: &App, area: Rect) {
     let mut status_lines = vec![];
-    
+
     if app.core_state.workspace_valid {
         status_lines.push(Line::from(vec![
             Span::styled("✓ ", Style::default().fg(Color::Green)),
@@ -102,7 +108,7 @@ fn draw_loading(f: &mut Frame, app: &App, area: Rect) {
             Span::raw("Checking workspace..."),
         ]));
     }
-    
+
     if app.core_state.sync_complete {
         status_lines.push(Line::from(vec![
             Span::styled("✓ ", Style::default().fg(Color::Green)),
@@ -128,13 +134,13 @@ fn draw_footer(f: &mut Frame, app: &App, area: Rect) {
         AppState::CreatingChildDocument => "Enter: Create | Escape: Cancel | Type to enter title",
         AppState::CreatingAdr => "Enter: Create ADR | Escape: Cancel | Type to enter title",
         AppState::EditingContent => "Ctrl+S: Save | Esc: Cancel | Type to edit document content",
-        AppState::Confirming => {
-            match app.ui_state.confirmation_type {
-                Some(crate::app::state::ConfirmationType::Delete) => "Y: Yes, delete | N: Cancel",
-                Some(crate::app::state::ConfirmationType::Transition) => "Y: Yes, transition | N: Cancel",
-                None => "Y: Yes | N: Cancel",
+        AppState::Confirming => match app.ui_state.confirmation_type {
+            Some(crate::app::state::ConfirmationType::Delete) => "Y: Yes, delete | N: Cancel",
+            Some(crate::app::state::ConfirmationType::Transition) => {
+                "Y: Yes, transition | N: Cancel"
             }
-        }
+            None => "Y: Yes | N: Cancel",
+        },
         _ => {
             if app.is_ready() {
                 "↑↓←→: Navigate | 1-4: Jump to board | v: Vision | Tab: Switch | Enter: Edit | n: New | Ctrl+n: Child | Ctrl+a: ADR | d: Del | t: Trans | q: Quit"
@@ -143,7 +149,7 @@ fn draw_footer(f: &mut Frame, app: &App, area: Rect) {
             }
         }
     };
-    
+
     let footer = Paragraph::new(footer_text)
         .style(Style::default().fg(Color::Gray))
         .block(Block::default().borders(Borders::ALL));
@@ -155,8 +161,8 @@ fn draw_content_edit_form(f: &mut Frame, app: &App, area: Rect) {
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
-                Constraint::Length(3),  // Title
-                Constraint::Min(1),     // Content editor
+                Constraint::Length(3), // Title
+                Constraint::Min(1),    // Content editor
             ])
             .split(area);
 
@@ -164,13 +170,21 @@ fn draw_content_edit_form(f: &mut Frame, app: &App, area: Rect) {
         let title = if app.ui_state.editing_vision_path.is_some() {
             "Editing Vision Document".to_string()
         } else if let Some(selected_item) = app.get_viewed_ticket() {
-            format!("Editing {}: {}", selected_item.doc_type(), selected_item.title())
+            format!(
+                "Editing {}: {}",
+                selected_item.doc_type(),
+                selected_item.title()
+            )
         } else {
             "Editing Document".to_string()
         };
-        
+
         let title_widget = Paragraph::new(title)
-            .style(Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+            .style(
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            )
             .block(Block::default().borders(Borders::ALL));
         f.render_widget(title_widget, chunks[0]);
 

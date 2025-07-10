@@ -1,12 +1,12 @@
-use super::traits::{Document, DocumentTemplate, DocumentValidationError};
-use super::types::{DocumentId, DocumentType, Phase, Tag};
-use super::metadata::DocumentMetadata;
 use super::content::DocumentContent;
 use super::helpers::FrontmatterParser;
-use std::path::Path;
-use gray_matter;
+use super::metadata::DocumentMetadata;
+use super::traits::{Document, DocumentTemplate, DocumentValidationError};
+use super::types::{DocumentId, DocumentType, Phase, Tag};
 use chrono::Utc;
-use tera::{Tera, Context};
+use gray_matter;
+use std::path::Path;
+use tera::{Context, Tera};
 
 /// Complexity level for initiatives
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -37,7 +37,10 @@ impl std::str::FromStr for Complexity {
             "M" => Ok(Complexity::M),
             "L" => Ok(Complexity::L),
             "XL" => Ok(Complexity::XL),
-            _ => Err(DocumentValidationError::InvalidContent(format!("Invalid complexity: {}", s))),
+            _ => Err(DocumentValidationError::InvalidContent(format!(
+                "Invalid complexity: {}",
+                s
+            ))),
         }
     }
 }
@@ -61,21 +64,24 @@ impl Initiative {
     ) -> Result<Self, DocumentValidationError> {
         // Create fresh metadata
         let metadata = DocumentMetadata::new();
-        
+
         // Render the content template
         let template_content = include_str!("content.md");
         let mut tera = Tera::default();
         tera.add_raw_template("initiative_content", template_content)
-            .map_err(|e| DocumentValidationError::InvalidContent(format!("Template error: {}", e)))?;
-        
+            .map_err(|e| {
+                DocumentValidationError::InvalidContent(format!("Template error: {}", e))
+            })?;
+
         let mut context = Context::new();
         context.insert("title", &title);
-        
-        let rendered_content = tera.render("initiative_content", &context)
-            .map_err(|e| DocumentValidationError::InvalidContent(format!("Template render error: {}", e)))?;
-        
+
+        let rendered_content = tera.render("initiative_content", &context).map_err(|e| {
+            DocumentValidationError::InvalidContent(format!("Template render error: {}", e))
+        })?;
+
         let content = DocumentContent::new(&rendered_content);
-        
+
         Ok(Self {
             core: super::traits::DocumentCore {
                 title,
@@ -89,8 +95,9 @@ impl Initiative {
             estimated_complexity,
         })
     }
-    
+
     /// Create an Initiative document from existing data (used when loading from file)
+    #[allow(clippy::too_many_arguments)]
     pub fn from_parts(
         title: String,
         metadata: DocumentMetadata,
@@ -115,11 +122,9 @@ impl Initiative {
         }
     }
 
-
     pub fn estimated_complexity(&self) -> Complexity {
         self.estimated_complexity
     }
-
 
     /// Get the next phase in the Initiative sequence
     fn next_phase_in_sequence(current: Phase) -> Option<Phase> {
@@ -131,10 +136,10 @@ impl Initiative {
             Decompose => Some(Active),
             Active => Some(Completed),
             Completed => None, // Final phase
-            _ => None, // Invalid phase for Initiative
+            _ => None,         // Invalid phase for Initiative
         }
     }
-    
+
     /// Update the phase tag in the document's tags
     fn update_phase_tag(&mut self, new_phase: Phase) {
         // Remove any existing phase tags
@@ -147,8 +152,9 @@ impl Initiative {
 
     /// Create an Initiative document by reading and parsing a file
     pub async fn from_file<P: AsRef<Path>>(path: P) -> Result<Self, DocumentValidationError> {
-        let raw_content = std::fs::read_to_string(path.as_ref())
-            .map_err(|e| DocumentValidationError::InvalidContent(format!("Failed to read file: {}", e)))?;
+        let raw_content = std::fs::read_to_string(path.as_ref()).map_err(|e| {
+            DocumentValidationError::InvalidContent(format!("Failed to read file: {}", e))
+        })?;
 
         Self::from_content(&raw_content)
     }
@@ -157,7 +163,7 @@ impl Initiative {
     pub fn from_content(raw_content: &str) -> Result<Self, DocumentValidationError> {
         // Parse frontmatter and content
         let parsed = gray_matter::Matter::<gray_matter::engine::YAML>::new().parse(raw_content);
-        
+
         // Extract frontmatter data
         let frontmatter = parsed.data.ok_or_else(|| {
             DocumentValidationError::MissingRequiredField("frontmatter".to_string())
@@ -166,7 +172,11 @@ impl Initiative {
         // Parse frontmatter into structured data
         let fm_map = match frontmatter {
             gray_matter::Pod::Hash(map) => map,
-            _ => return Err(DocumentValidationError::InvalidContent("Frontmatter must be a hash/map".to_string())),
+            _ => {
+                return Err(DocumentValidationError::InvalidContent(
+                    "Frontmatter must be a hash/map".to_string(),
+                ))
+            }
         };
 
         // Extract required fields
@@ -176,7 +186,8 @@ impl Initiative {
         // Parse timestamps
         let created_at = FrontmatterParser::extract_datetime(&fm_map, "created_at")?;
         let updated_at = FrontmatterParser::extract_datetime(&fm_map, "updated_at")?;
-        let exit_criteria_met = FrontmatterParser::extract_bool(&fm_map, "exit_criteria_met").unwrap_or(false);
+        let exit_criteria_met =
+            FrontmatterParser::extract_bool(&fm_map, "exit_criteria_met").unwrap_or(false);
 
         // Parse tags
         let tags = FrontmatterParser::extract_tags(&fm_map)?;
@@ -184,45 +195,61 @@ impl Initiative {
         // Verify this is actually an initiative document
         let level = FrontmatterParser::extract_string(&fm_map, "level")?;
         if level != "initiative" {
-            return Err(DocumentValidationError::InvalidContent(
-                format!("Expected level 'initiative', found '{}'", level)
-            ));
+            return Err(DocumentValidationError::InvalidContent(format!(
+                "Expected level 'initiative', found '{}'",
+                level
+            )));
         }
 
         // Extract initiative-specific fields
-        let parent_id = FrontmatterParser::extract_string(&fm_map, "parent").ok().map(DocumentId::from);
+        let parent_id = FrontmatterParser::extract_string(&fm_map, "parent")
+            .ok()
+            .map(DocumentId::from);
         let blocked_by = FrontmatterParser::extract_string_array(&fm_map, "blocked_by")
             .unwrap_or_default()
             .into_iter()
             .map(DocumentId::from)
             .collect();
-        
-        let estimated_complexity = FrontmatterParser::extract_string(&fm_map, "estimated_complexity")
-            .and_then(|s| s.parse::<Complexity>())?;
+
+        let estimated_complexity =
+            FrontmatterParser::extract_string(&fm_map, "estimated_complexity")
+                .and_then(|s| s.parse::<Complexity>())?;
 
         // Create metadata and content
-        let metadata = DocumentMetadata::from_frontmatter(created_at, updated_at, exit_criteria_met);
+        let metadata =
+            DocumentMetadata::from_frontmatter(created_at, updated_at, exit_criteria_met);
         let content = DocumentContent::from_markdown(&parsed.content);
 
-        Ok(Self::from_parts(title, metadata, content, parent_id, blocked_by, tags, archived, 
-                     estimated_complexity))
+        Ok(Self::from_parts(
+            title,
+            metadata,
+            content,
+            parent_id,
+            blocked_by,
+            tags,
+            archived,
+            estimated_complexity,
+        ))
     }
 
     /// Write the Initiative document to a file
     pub async fn to_file<P: AsRef<Path>>(&self, path: P) -> Result<(), DocumentValidationError> {
         let content = self.to_content()?;
-        std::fs::write(path.as_ref(), content)
-            .map_err(|e| DocumentValidationError::InvalidContent(format!("Failed to write file: {}", e)))
+        std::fs::write(path.as_ref(), content).map_err(|e| {
+            DocumentValidationError::InvalidContent(format!("Failed to write file: {}", e))
+        })
     }
 
     /// Convert the Initiative document to its markdown string representation using templates
     pub fn to_content(&self) -> Result<String, DocumentValidationError> {
         let mut tera = Tera::default();
-        
+
         // Add the frontmatter template to Tera
         tera.add_raw_template("frontmatter", self.frontmatter_template())
-            .map_err(|e| DocumentValidationError::InvalidContent(format!("Template error: {}", e)))?;
-        
+            .map_err(|e| {
+                DocumentValidationError::InvalidContent(format!("Template error: {}", e))
+            })?;
+
         // Create context with all document data
         let mut context = Context::new();
         context.insert("slug", &self.id().to_string());
@@ -230,34 +257,52 @@ impl Initiative {
         context.insert("created_at", &self.metadata().created_at.to_rfc3339());
         context.insert("updated_at", &self.metadata().updated_at.to_rfc3339());
         context.insert("archived", &self.archived().to_string());
-        context.insert("exit_criteria_met", &self.metadata().exit_criteria_met.to_string());
-        context.insert("parent_id", &self.parent_id().map(|id| id.to_string()).unwrap_or_default());
-        let blocked_by_list: Vec<String> = self.blocked_by().iter().map(|id| id.to_string()).collect();
+        context.insert(
+            "exit_criteria_met",
+            &self.metadata().exit_criteria_met.to_string(),
+        );
+        context.insert(
+            "parent_id",
+            &self
+                .parent_id()
+                .map(|id| id.to_string())
+                .unwrap_or_default(),
+        );
+        let blocked_by_list: Vec<String> =
+            self.blocked_by().iter().map(|id| id.to_string()).collect();
         context.insert("blocked_by", &blocked_by_list);
-        context.insert("estimated_complexity", &self.estimated_complexity.to_string());
-        
+        context.insert(
+            "estimated_complexity",
+            &self.estimated_complexity.to_string(),
+        );
+
         // Convert tags to strings
         let tag_strings: Vec<String> = self.tags().iter().map(|tag| tag.to_str()).collect();
         context.insert("tags", &tag_strings);
-        
+
         // Render frontmatter
-        let frontmatter = tera.render("frontmatter", &context)
-            .map_err(|e| DocumentValidationError::InvalidContent(format!("Frontmatter render error: {}", e)))?;
-        
+        let frontmatter = tera.render("frontmatter", &context).map_err(|e| {
+            DocumentValidationError::InvalidContent(format!("Frontmatter render error: {}", e))
+        })?;
+
         // Use the actual content body
         let content_body = &self.content().body;
-        
+
         // Use actual acceptance criteria if present, otherwise empty string
         let acceptance_criteria = if let Some(ac) = &self.content().acceptance_criteria {
             format!("\n\n## Acceptance Criteria\n\n{}", ac)
         } else {
             String::new()
         };
-        
-        // Combine everything
-        Ok(format!("---\n{}\n---\n\n{}{}", frontmatter.trim_end(), content_body, acceptance_criteria))
-    }
 
+        // Combine everything
+        Ok(format!(
+            "---\n{}\n---\n\n{}{}",
+            frontmatter.trim_end(),
+            content_body,
+            acceptance_criteria
+        ))
+    }
 }
 
 impl Document for Initiative {
@@ -286,14 +331,14 @@ impl Document for Initiative {
     fn can_transition_to(&self, phase: Phase) -> bool {
         if let Ok(current_phase) = self.phase() {
             use Phase::*;
-            match (current_phase, phase) {
-                (Discovery, Design) => true,
-                (Design, Ready) => true,
-                (Ready, Decompose) => true,
-                (Decompose, Active) => true,
-                (Active, Completed) => true,
-                _ => false,
-            }
+            matches!(
+                (current_phase, phase),
+                (Discovery, Design)
+                    | (Design, Ready)
+                    | (Ready, Decompose)
+                    | (Decompose, Active)
+                    | (Active, Completed)
+            )
         } else {
             false // Can't transition if we can't determine current phase
         }
@@ -353,16 +398,19 @@ impl Document for Initiative {
         include_str!("acceptance_criteria.md")
     }
 
-    fn transition_phase(&mut self, target_phase: Option<Phase>) -> Result<Phase, DocumentValidationError> {
+    fn transition_phase(
+        &mut self,
+        target_phase: Option<Phase>,
+    ) -> Result<Phase, DocumentValidationError> {
         let current_phase = self.phase()?;
-        
+
         let new_phase = match target_phase {
             Some(phase) => {
                 // Validate the transition is allowed
                 if !self.can_transition_to(phase) {
-                    return Err(DocumentValidationError::InvalidPhaseTransition { 
-                        from: current_phase, 
-                        to: phase 
+                    return Err(DocumentValidationError::InvalidPhaseTransition {
+                        from: current_phase,
+                        to: phase,
                     });
                 }
                 phase
@@ -375,7 +423,7 @@ impl Document for Initiative {
                 }
             }
         };
-        
+
         self.update_phase_tag(new_phase);
         Ok(new_phase)
     }
@@ -427,7 +475,7 @@ We will implement this step by step.
 "##;
 
         let initiative = Initiative::from_content(content).unwrap();
-        
+
         assert_eq!(initiative.title(), "Test Initiative");
         assert_eq!(initiative.document_type(), DocumentType::Initiative);
         assert!(!initiative.archived());
@@ -435,19 +483,25 @@ We will implement this step by step.
         assert_eq!(initiative.phase().unwrap(), Phase::Discovery);
         assert_eq!(initiative.estimated_complexity(), Complexity::L);
         assert!(initiative.content().has_acceptance_criteria());
-        
+
         // Round-trip test: write to file and read back
         let temp_dir = tempdir().unwrap();
         let file_path = temp_dir.path().join("test-initiative.md");
-        
+
         initiative.to_file(&file_path).await.unwrap();
         let loaded_initiative = Initiative::from_file(&file_path).await.unwrap();
-        
+
         assert_eq!(loaded_initiative.title(), initiative.title());
-        assert_eq!(loaded_initiative.phase().unwrap(), initiative.phase().unwrap());
+        assert_eq!(
+            loaded_initiative.phase().unwrap(),
+            initiative.phase().unwrap()
+        );
         assert_eq!(loaded_initiative.content().body, initiative.content().body);
         assert_eq!(loaded_initiative.archived(), initiative.archived());
-        assert_eq!(loaded_initiative.estimated_complexity(), initiative.estimated_complexity());
+        assert_eq!(
+            loaded_initiative.estimated_complexity(),
+            initiative.estimated_complexity()
+        );
         assert_eq!(loaded_initiative.tags().len(), initiative.tags().len());
     }
 
@@ -460,7 +514,6 @@ We will implement this step by step.
         assert_eq!("s".parse::<Complexity>().unwrap(), Complexity::S); // Case insensitive
         assert!("invalid".parse::<Complexity>().is_err());
     }
-
 
     #[test]
     fn test_initiative_invalid_level() {
@@ -497,24 +550,31 @@ exit_criteria_met: false
             "Test Initiative".to_string(),
             Some(DocumentId::from("parent-strategy")),
             vec![],
-            vec![Tag::Label("initiative".to_string()), Tag::Phase(Phase::Discovery)],
+            vec![
+                Tag::Label("initiative".to_string()),
+                Tag::Phase(Phase::Discovery),
+            ],
             false,
             Complexity::M,
-        ).expect("Failed to create initiative");
+        )
+        .expect("Failed to create initiative");
 
         assert!(initiative.validate().is_ok());
-        
+
         // Round-trip test: write to file and read back
         let temp_dir = tempdir().unwrap();
         let file_path = temp_dir.path().join("test-initiative.md");
-        
+
         initiative.to_file(&file_path).await.unwrap();
         let loaded_initiative = Initiative::from_file(&file_path).await.unwrap();
-        
+
         assert_eq!(loaded_initiative.title(), initiative.title());
-        assert_eq!(loaded_initiative.estimated_complexity(), initiative.estimated_complexity());
+        assert_eq!(
+            loaded_initiative.estimated_complexity(),
+            initiative.estimated_complexity()
+        );
         assert!(loaded_initiative.validate().is_ok());
-        
+
         // Test validation failure - no parent
         let initiative_no_parent = Initiative::new(
             "Test Initiative".to_string(),
@@ -523,8 +583,9 @@ exit_criteria_met: false
             vec![Tag::Phase(Phase::Discovery)],
             false,
             Complexity::M,
-        ).expect("Failed to create initiative");
-        
+        )
+        .expect("Failed to create initiative");
+
         assert!(initiative_no_parent.validate().is_err());
     }
 
@@ -537,20 +598,24 @@ exit_criteria_met: false
             vec![Tag::Phase(Phase::Discovery)],
             false,
             Complexity::M,
-        ).expect("Failed to create initiative");
+        )
+        .expect("Failed to create initiative");
 
         assert!(initiative.can_transition_to(Phase::Design));
         assert!(!initiative.can_transition_to(Phase::Active));
         assert!(!initiative.can_transition_to(Phase::Completed));
-        
+
         // Round-trip test: write to file and read back
         let temp_dir = tempdir().unwrap();
         let file_path = temp_dir.path().join("test-initiative.md");
-        
+
         initiative.to_file(&file_path).await.unwrap();
         let loaded_initiative = Initiative::from_file(&file_path).await.unwrap();
-        
-        assert_eq!(loaded_initiative.phase().unwrap(), initiative.phase().unwrap());
+
+        assert_eq!(
+            loaded_initiative.phase().unwrap(),
+            initiative.phase().unwrap()
+        );
         assert!(loaded_initiative.can_transition_to(Phase::Design));
         assert!(!loaded_initiative.can_transition_to(Phase::Active));
         assert!(!loaded_initiative.can_transition_to(Phase::Completed));

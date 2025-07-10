@@ -64,7 +64,13 @@ impl DatabaseService {
     }
 
     /// Create a parent-child relationship
-    pub fn create_relationship(&mut self, parent_id: &str, child_id: &str, parent_filepath: &str, child_filepath: &str) -> Result<()> {
+    pub fn create_relationship(
+        &mut self,
+        parent_id: &str,
+        child_id: &str,
+        parent_filepath: &str,
+        child_filepath: &str,
+    ) -> Result<()> {
         let relationship = DocumentRelationship {
             parent_id: parent_id.to_string(),
             child_id: child_id.to_string(),
@@ -90,7 +96,7 @@ impl DatabaseService {
         // This would need a custom query in the repository
         // For now, we'll use find_by_type for each type
         let mut pairs = Vec::new();
-        
+
         for doc_type in [
             DocumentType::Vision,
             DocumentType::Strategy,
@@ -103,7 +109,7 @@ impl DatabaseService {
                 pairs.push((doc.id, doc.filepath));
             }
         }
-        
+
         Ok(pairs)
     }
 }
@@ -112,7 +118,6 @@ impl DatabaseService {
 mod tests {
     use super::*;
     use crate::dal::Database;
-    
 
     fn setup_service() -> DatabaseService {
         let db = Database::new(":memory:").expect("Failed to create test database");
@@ -139,38 +144,43 @@ mod tests {
     #[test]
     fn test_database_service_crud() {
         let mut service = setup_service();
-        
+
         // Create
         let new_doc = create_test_document();
         let created = service.create_document(new_doc).expect("Failed to create");
         assert_eq!(created.id, "test-doc-1");
-        
+
         // Read
-        let found = service.find_by_id("test-doc-1")
+        let found = service
+            .find_by_id("test-doc-1")
             .expect("Failed to find")
             .expect("Document not found");
         assert_eq!(found.filepath, "/test/doc.md");
-        
+
         // Update
         let mut updated_doc = found.clone();
         updated_doc.title = "Updated Title".to_string();
-        let updated = service.update_document("/test/doc.md", &updated_doc)
+        let updated = service
+            .update_document("/test/doc.md", &updated_doc)
             .expect("Failed to update");
         assert_eq!(updated.title, "Updated Title");
-        
+
         // Delete
-        let deleted = service.delete_document("/test/doc.md")
+        let deleted = service
+            .delete_document("/test/doc.md")
             .expect("Failed to delete");
         assert!(deleted);
-        
+
         // Verify deleted
-        assert!(!service.document_exists("/test/doc.md").expect("Failed to check existence"));
+        assert!(!service
+            .document_exists("/test/doc.md")
+            .expect("Failed to check existence"));
     }
 
     #[test]
     fn test_database_service_relationships() {
         let mut service = setup_service();
-        
+
         // Create parent and child documents
         let parent = NewDocument {
             id: "parent-1".to_string(),
@@ -178,28 +188,36 @@ mod tests {
             document_type: "strategy".to_string(),
             ..create_test_document()
         };
-        
+
         let child = NewDocument {
             id: "child-1".to_string(),
             filepath: "/child.md".to_string(),
             document_type: "initiative".to_string(),
             ..create_test_document()
         };
-        
-        service.create_document(parent).expect("Failed to create parent");
-        service.create_document(child).expect("Failed to create child");
-        
+
+        service
+            .create_document(parent)
+            .expect("Failed to create parent");
+        service
+            .create_document(child)
+            .expect("Failed to create child");
+
         // Create relationship
-        service.create_relationship("parent-1", "child-1", "/parent.md", "/child.md")
+        service
+            .create_relationship("parent-1", "child-1", "/parent.md", "/child.md")
             .expect("Failed to create relationship");
-        
+
         // Test find children
-        let children = service.find_children("parent-1").expect("Failed to find children");
+        let children = service
+            .find_children("parent-1")
+            .expect("Failed to find children");
         assert_eq!(children.len(), 1);
         assert_eq!(children[0].id, "child-1");
-        
+
         // Test find parent
-        let parent = service.find_parent("child-1")
+        let parent = service
+            .find_parent("child-1")
             .expect("Failed to find parent")
             .expect("Parent not found");
         assert_eq!(parent.id, "parent-1");

@@ -5,13 +5,17 @@ edition.workspace = true
 description = "MCP server for Metis documentation management system"
 license.workspace = true
 authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
 
 [[bin]]
 name = "metis-mcp"
 path = "src/main.rs"
 
 [dependencies]
-metis-docs-core = { path = "../metis-docs-core" }
+metis-docs-core = { path = "../metis-docs-core", version = "0.2.0" }
 
 # Shared dependencies
 tokio = { workspace = true }

@@ -19,7 +19,7 @@ impl FilesystemService {
         if let Some(parent) = path.as_ref().parent() {
             fs::create_dir_all(parent).map_err(MetisError::Io)?;
         }
-        
+
         fs::write(path, content).map_err(MetisError::Io)
     }
 
@@ -64,14 +64,13 @@ impl FilesystemService {
     /// List all markdown files in a directory recursively
     pub fn find_markdown_files<P: AsRef<Path>>(dir: P) -> Result<Vec<String>> {
         use walkdir::WalkDir;
-        
+
         let mut files = Vec::new();
-        
+
         for entry in WalkDir::new(dir).follow_links(true) {
-            let entry = entry.map_err(|e| MetisError::Io(std::io::Error::other(
-                format!("Walk error: {}", e)
-            )))?;
-            
+            let entry = entry
+                .map_err(|e| MetisError::Io(std::io::Error::other(format!("Walk error: {}", e))))?;
+
             if entry.file_type().is_file() {
                 if let Some(path_str) = entry.path().to_str() {
                     if path_str.ends_with(".md") {
@@ -80,7 +79,7 @@ impl FilesystemService {
                 }
             }
         }
-        
+
         Ok(files)
     }
 }
@@ -89,22 +88,21 @@ impl FilesystemService {
 mod tests {
     use super::*;
     use tempfile::tempdir;
-    
 
     #[test]
     fn test_write_and_read_file() {
         let temp_dir = tempdir().expect("Failed to create temp dir");
         let file_path = temp_dir.path().join("test.md");
-        
+
         let content = "# Test Document\n\nThis is test content.";
-        
+
         // Write file
         FilesystemService::write_file(&file_path, content).expect("Failed to write file");
-        
+
         // Read file
         let read_content = FilesystemService::read_file(&file_path).expect("Failed to read file");
         assert_eq!(content, read_content);
-        
+
         // Check if file exists
         assert!(FilesystemService::file_exists(&file_path));
     }
@@ -112,22 +110,23 @@ mod tests {
     #[test]
     fn test_compute_hashes() {
         let content = "# Test Document\n\nThis is test content.";
-        
+
         // Test content hash
         let hash1 = FilesystemService::compute_content_hash(content);
         let hash2 = FilesystemService::compute_content_hash(content);
         assert_eq!(hash1, hash2); // Same content should produce same hash
-        
+
         let different_content = "# Different Document\n\nThis is different content.";
         let hash3 = FilesystemService::compute_content_hash(different_content);
         assert_ne!(hash1, hash3); // Different content should produce different hash
-        
+
         // Test file hash
         let temp_dir = tempdir().expect("Failed to create temp dir");
         let file_path = temp_dir.path().join("test.md");
         FilesystemService::write_file(&file_path, content).expect("Failed to write file");
-        
-        let file_hash = FilesystemService::compute_file_hash(&file_path).expect("Failed to compute file hash");
+
+        let file_hash =
+            FilesystemService::compute_file_hash(&file_path).expect("Failed to compute file hash");
         assert_eq!(hash1, file_hash); // File hash should match content hash
     }
 
@@ -135,17 +134,17 @@ mod tests {
     fn test_file_operations() {
         let temp_dir = tempdir().expect("Failed to create temp dir");
         let file_path = temp_dir.path().join("subdir").join("test.md");
-        
+
         let content = "# Test Document";
-        
+
         // Write file (should create subdirectory)
         FilesystemService::write_file(&file_path, content).expect("Failed to write file");
         assert!(FilesystemService::file_exists(&file_path));
-        
+
         // Get modification time
         let mtime = FilesystemService::get_file_mtime(&file_path).expect("Failed to get mtime");
         assert!(mtime > 0.0);
-        
+
         // Delete file
         FilesystemService::delete_file(&file_path).expect("Failed to delete file");
         assert!(!FilesystemService::file_exists(&file_path));
@@ -155,27 +154,27 @@ mod tests {
     fn test_find_markdown_files() {
         let temp_dir = tempdir().expect("Failed to create temp dir");
         let base_path = temp_dir.path();
-        
+
         // Create some test files
         let files = vec![
             "doc1.md",
-            "subdir/doc2.md", 
+            "subdir/doc2.md",
             "subdir/nested/doc3.md",
             "not_markdown.txt",
         ];
-        
+
         for file in &files {
             let file_path = base_path.join(file);
             FilesystemService::write_file(&file_path, "# Test").expect("Failed to write file");
         }
-        
+
         // Find markdown files
         let found_files = FilesystemService::find_markdown_files(base_path)
             .expect("Failed to find markdown files");
-        
+
         // Should find 3 .md files, not the .txt file
         assert_eq!(found_files.len(), 3);
-        
+
         // All found files should end with .md
         for file in &found_files {
             assert!(file.ends_with(".md"));

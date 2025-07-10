@@ -17,8 +17,8 @@ pub use domain::documents::{
     initiative::{Complexity, Initiative},
     strategy::{RiskLevel, Strategy},
     task::Task,
-    vision::Vision,
     traits::{Document, DocumentValidationError},
     types::{DocumentId, DocumentType, Phase, Tag},
+    vision::Vision,
 };
 pub use error::{MetisError, Result};

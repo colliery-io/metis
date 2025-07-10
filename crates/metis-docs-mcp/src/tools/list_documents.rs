@@ -1,9 +1,9 @@
+use metis_core::Database;
 use rust_mcp_sdk::{
     macros::{mcp_tool, JsonSchema},
     schema::{schema_utils::CallToolError, CallToolResult, TextContent},
 };
 use serde::{Deserialize, Serialize};
-use metis_core::Database;
 use std::path::Path;
 
 #[mcp_tool(
@@ -23,37 +23,41 @@ pub struct ListDocumentsTool {
 impl ListDocumentsTool {
     pub async fn call_tool(&self) -> std::result::Result<CallToolResult, CallToolError> {
         let metis_dir = Path::new(&self.project_path);
-        
+
         // Validate metis workspace exists
         if !metis_dir.exists() || !metis_dir.is_dir() {
             return Err(CallToolError::new(std::io::Error::new(
                 std::io::ErrorKind::NotFound,
-                format!("Metis workspace not found at {}", metis_dir.display())
+                format!("Metis workspace not found at {}", metis_dir.display()),
             )));
         }
-        
+
         // Connect to database
         let db_path = metis_dir.join("metis.db");
         if !db_path.exists() {
             return Err(CallToolError::new(std::io::Error::new(
                 std::io::ErrorKind::NotFound,
-                format!("Database not found at {}. Run initialize_project first.", db_path.display())
+                format!(
+                    "Database not found at {}. Run initialize_project first.",
+                    db_path.display()
+                ),
             )));
         }
-        
-        let db = Database::new(db_path.to_str().unwrap())
-            .map_err(|e| CallToolError::new(std::io::Error::new(
+
+        let db = Database::new(db_path.to_str().unwrap()).map_err(|e| {
+            CallToolError::new(std::io::Error::new(
                 std::io::ErrorKind::Other,
-                format!("Database connection failed: {}", e)
-            )))?;
+                format!("Database connection failed: {}", e),
+            ))
+        })?;
         let mut repo = db.into_repository();
-        
+
         // List all documents
         let documents = self.list_all_documents(&mut repo)?;
-        
+
         // Use all documents (no filtering)
         let limited_documents = documents;
-        
+
         // Convert to response format
         let document_list: Vec<serde_json::Value> = limited_documents
             .iter()
@@ -61,7 +65,7 @@ impl ListDocumentsTool {
                 let updated = chrono::DateTime::from_timestamp(doc.updated_at as i64, 0)
                     .map(|dt| dt.format("%Y-%m-%d %H:%M").to_string())
                     .unwrap_or_else(|| "Unknown".to_string());
-                    
+
                 serde_json::json!({
                     "id": doc.id,
                     "title": doc.title,
@@ -73,7 +77,7 @@ impl ListDocumentsTool {
                 })
             })
             .collect();
-        
+
         let response = serde_json::json!({
             "documents": document_list,
             "total_count": limited_documents.len()
@@ -83,23 +87,31 @@ impl ListDocumentsTool {
             serde_json::to_string_pretty(&response).map_err(CallToolError::new)?,
         )]))
     }
-    
-    fn list_all_documents(&self, repo: &mut metis_core::dal::database::repository::DocumentRepository) -> Result<Vec<metis_core::dal::database::models::Document>, CallToolError> {
+
+    fn list_all_documents(
+        &self,
+        repo: &mut metis_core::dal::database::repository::DocumentRepository,
+    ) -> Result<Vec<metis_core::dal::database::models::Document>, CallToolError> {
         let mut all_docs = Vec::new();
-        
+
         // Collect all document types
         for doc_type in ["vision", "strategy", "initiative", "task", "adr"] {
-            let mut docs = repo.find_by_type(doc_type)
-                .map_err(|e| CallToolError::new(std::io::Error::new(
+            let mut docs = repo.find_by_type(doc_type).map_err(|e| {
+                CallToolError::new(std::io::Error::new(
                     std::io::ErrorKind::Other,
-                    format!("Failed to query {} documents: {}", doc_type, e)
-                )))?;
+                    format!("Failed to query {} documents: {}", doc_type, e),
+                ))
+            })?;
             all_docs.append(&mut docs);
         }
-        
+
         // Sort by updated_at descending
-        all_docs.sort_by(|a, b| b.updated_at.partial_cmp(&a.updated_at).unwrap_or(std::cmp::Ordering::Equal));
-        
+        all_docs.sort_by(|a, b| {
+            b.updated_at
+                .partial_cmp(&a.updated_at)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+
         Ok(all_docs)
     }
 }

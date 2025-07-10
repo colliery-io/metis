@@ -1,7 +1,7 @@
-mod strategy;
-mod initiative;
-mod task;
 mod adr;
+mod initiative;
+mod strategy;
+mod task;
 
 use crate::commands::SyncCommand;
 use anyhow::Result;
@@ -62,12 +62,12 @@ impl CreateCommand {
                 adr::create_new_adr(title).await?;
             }
         }
-        
+
         // Auto-sync after creating documents to update the database index
         println!("\nSyncing workspace...");
         let sync_cmd = SyncCommand {};
         sync_cmd.execute().await?;
-        
+
         Ok(())
     }
 }

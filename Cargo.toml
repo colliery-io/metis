@@ -8,10 +8,14 @@ members = [
 resolver = "2"
 
 [workspace.package]
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 license = "Apache-2.0"
 authors = ["Dylan Storey <contact@collier.io>"]
+repository = "https://github.com/dstorey/metis"
+homepage = "https://github.com/dstorey/metis"
+keywords = ["mcp", "documentation", "project-management", "flight-levels", "ai"]
+categories = ["command-line-utilities", "development-tools"]
 
 [workspace.dependencies]
 # Shared dependencies used by multiple crates

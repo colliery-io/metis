@@ -1,13 +1,13 @@
 pub mod state;
 
-
-
-use anyhow::Result;
+use crate::app::state::ConfirmationType;
+use crate::error::*;
 use crate::models::*;
 use crate::services::*;
-use crate::error::*;
-use metis_core::{Strategy, Initiative, Task, Adr, Document, domain::documents::types::DocumentType};
-use crate::app::state::ConfirmationType;
+use anyhow::Result;
+use metis_core::{
+    domain::documents::types::DocumentType, Adr, Document, Initiative, Strategy, Task,
+};
 
 /// Extract numerical part from ADR ID (e.g., "001-some-title" -> 1)
 fn extract_adr_number(id: &str) -> u32 {
@@ -23,7 +23,7 @@ fn extract_adr_number(id: &str) -> u32 {
 /// Get column index for strategy board based on phase
 /// Columns: shaping(0), design(1), ready(2), active(3), completed(4)
 fn get_strategy_column_index(strategy: &Strategy) -> usize {
-    use metis_core::{Document, domain::documents::types::Phase};
+    use metis_core::{domain::documents::types::Phase, Document};
     match strategy.phase() {
         Ok(Phase::Shaping) => 0,
         Ok(Phase::Design) => 1,
@@ -37,7 +37,7 @@ fn get_strategy_column_index(strategy: &Strategy) -> usize {
 /// Get column index for initiative board based on phase
 /// Columns: discovery(0), design(1), ready(2), decompose(3), active(4), completed(5)
 fn get_initiative_column_index(initiative: &Initiative) -> usize {
-    use metis_core::{Document, domain::documents::types::Phase};
+    use metis_core::{domain::documents::types::Phase, Document};
     match initiative.phase() {
         Ok(Phase::Discovery) => 0,
         Ok(Phase::Design) => 1,
@@ -52,7 +52,7 @@ fn get_initiative_column_index(initiative: &Initiative) -> usize {
 /// Get column index for task board based on phase
 /// Columns: todo(0), active(1), blocked(2), completed(3)
 fn get_task_column_index(task: &Task) -> usize {
-    use metis_core::{Document, domain::documents::types::Phase};
+    use metis_core::{domain::documents::types::Phase, Document};
     match task.phase() {
         Ok(Phase::Todo) => 0,
         Ok(Phase::Active) => 1,
@@ -65,7 +65,7 @@ fn get_task_column_index(task: &Task) -> usize {
 /// Get column index for ADR board based on phase
 /// Columns: draft(0), discussion(1), decided(2), superseded(3)
 fn get_adr_column_index(adr: &Adr) -> usize {
-    use metis_core::{Document, domain::documents::types::Phase};
+    use metis_core::{domain::documents::types::Phase, Document};
     match adr.phase() {
         Ok(Phase::Draft) => 0,
         Ok(Phase::Discussion) => 1,
@@ -110,18 +110,18 @@ impl App {
         match self.workspace_service.check_workspace().await {
             Ok(Some(workspace_dir)) => {
                 self.core_state.set_workspace(workspace_dir.clone());
-                
+
                 // Initialize services
                 self.document_service = Some(DocumentService::new(workspace_dir.clone()));
                 self.sync_service = Some(SyncService::new(workspace_dir.clone()));
                 self.transition_service = Some(TransitionService::new(workspace_dir));
-                
+
                 // 2. Perform database synchronization
                 if let Some(sync_service) = &self.sync_service {
                     match sync_service.sync_database().await {
                         Ok(_) => {
                             self.core_state.set_sync_complete();
-                            
+
                             // 3. Load documents into boards
                             self.load_documents().await?;
                         }
@@ -132,13 +132,14 @@ impl App {
                 }
             }
             Ok(None) => {
-                self.error_handler.handle_error(AppError::WorkspaceError("No workspace found".to_string()));
+                self.error_handler
+                    .handle_error(AppError::WorkspaceError("No workspace found".to_string()));
             }
             Err(e) => {
                 self.error_handler.handle_error(AppError::from(e));
             }
         }
-        
+
         Ok(())
     }
 
@@ -195,17 +196,21 @@ impl App {
                         // Set viewing state to simulate selecting the vision document
                         // We'll use a special board type and position that doesn't exist
                         self.ui_state.viewing_ticket = Some((BoardType::Strategy, 999, 999));
-                        
+
                         // Go directly to edit mode
                         self.start_content_editing_for_vision(vision_path);
                     }
                     Err(e) => {
-                        self.error_handler.handle_error(AppError::IoError(format!("Failed to read vision document: {}", e)));
+                        self.error_handler.handle_error(AppError::IoError(format!(
+                            "Failed to read vision document: {}",
+                            e
+                        )));
                     }
                 }
             } else {
                 self.error_handler.handle_error(AppError::DocumentError(
-                    "No vision document found. Create one with 'metis create vision' first.".to_string()
+                    "No vision document found. Create one with 'metis create vision' first."
+                        .to_string(),
                 ));
             }
         }
@@ -213,7 +218,7 @@ impl App {
 
     fn start_content_editing_for_vision(&mut self, vision_path: std::path::PathBuf) {
         self.ui_state.set_app_state(AppState::EditingContent);
-        
+
         // Load vision content
         if let Ok(content) = std::fs::read_to_string(&vision_path) {
             // Create and initialize textarea
@@ -221,15 +226,15 @@ impl App {
             textarea.set_block(
                 ratatui::widgets::Block::default()
                     .borders(ratatui::widgets::Borders::ALL)
-                    .title("Vision Document Editor")
+                    .title("Vision Document Editor"),
             );
-            
+
             // Set the content
             for line in content.lines() {
                 textarea.insert_str(line);
                 textarea.insert_newline();
             }
-            
+
             self.ui_state.strategy_editor = Some(textarea);
             // Store the vision file path for saving
             self.ui_state.editing_vision_path = Some(vision_path);
@@ -244,7 +249,8 @@ impl App {
     pub fn move_selection_right(&mut self) {
         let current_board = self.ui_state.current_board;
         let board = self.ui_state.get_current_board();
-        self.selection_state.move_selection_right(current_board, board.columns.len());
+        self.selection_state
+            .move_selection_right(current_board, board.columns.len());
     }
 
     pub fn move_selection_up(&mut self) {
@@ -261,7 +267,8 @@ impl App {
         } else {
             0
         };
-        self.selection_state.move_selection_down(current_board, max_items);
+        self.selection_state
+            .move_selection_down(current_board, max_items);
     }
 
     // Document management methods
@@ -304,7 +311,7 @@ impl App {
         let current_board = self.ui_state.current_board;
         let (col_idx, item_idx) = self.selection_state.get_current_selection(current_board);
         let board = self.ui_state.get_current_board();
-        
+
         if col_idx < board.columns.len() && item_idx < board.columns[col_idx].items.len() {
             Some(&board.columns[col_idx].items[item_idx])
         } else {
@@ -320,7 +327,6 @@ impl App {
         self.start_content_editing();
     }
 
-
     pub fn get_viewed_ticket(&self) -> Option<&KanbanItem> {
         if let Some((board_type, col_idx, item_idx)) = self.ui_state.viewing_ticket {
             let board = match board_type {
@@ -329,7 +335,7 @@ impl App {
                 BoardType::Task => &self.ui_state.task_board,
                 BoardType::Adr => &self.ui_state.adr_board,
             };
-            
+
             if col_idx < board.columns.len() && item_idx < board.columns[col_idx].items.len() {
                 Some(&board.columns[col_idx].items[item_idx])
             } else {
@@ -343,16 +349,20 @@ impl App {
     // Input handling
     pub fn handle_key_event(&mut self, key: crossterm::event::KeyEvent) {
         use tui_input::backend::crossterm::EventHandler;
-        self.ui_state.input_title.handle_event(&crossterm::event::Event::Key(key));
+        self.ui_state
+            .input_title
+            .handle_event(&crossterm::event::Event::Key(key));
     }
 
     pub async fn create_new_document(&mut self) -> Result<()> {
         let title = self.ui_state.input_title.value().to_string();
         if title.trim().is_empty() {
-            self.error_handler.handle_error(AppError::UserInputError("Title cannot be empty".to_string()));
+            self.error_handler.handle_error(AppError::UserInputError(
+                "Title cannot be empty".to_string(),
+            ));
             return Ok(());
         }
-        
+
         if let Some(document_service) = &self.document_service {
             let doc_type = match self.ui_state.current_board {
                 BoardType::Strategy => DocumentType::Strategy,
@@ -360,13 +370,14 @@ impl App {
                 BoardType::Task => DocumentType::Task,
                 BoardType::Adr => DocumentType::Adr,
             };
-            
-            match document_service.create_document(
-                doc_type,
-                title,
-                None, // description
-                None, // parent_id
-            ).await {
+
+            match document_service
+                .create_document(
+                    doc_type, title, None, // description
+                    None, // parent_id
+                )
+                .await
+            {
                 Ok(_) => {
                     self.ui_state.set_app_state(AppState::Normal);
                     self.ui_state.reset_input();
@@ -381,17 +392,19 @@ impl App {
                 }
             }
         }
-        
+
         Ok(())
     }
 
     pub async fn create_child_document(&mut self) -> Result<()> {
         let title = self.ui_state.input_title.value().to_string();
         if title.trim().is_empty() {
-            self.error_handler.handle_error(AppError::UserInputError("Title cannot be empty".to_string()));
+            self.error_handler.handle_error(AppError::UserInputError(
+                "Title cannot be empty".to_string(),
+            ));
             return Ok(());
         }
-        
+
         if let Some(parent_item) = self.get_selected_item() {
             if let Some(document_service) = &self.document_service {
                 // Determine child document type based on parent
@@ -399,13 +412,15 @@ impl App {
                     DocumentType::Strategy => DocumentType::Initiative,
                     DocumentType::Initiative => DocumentType::Task,
                     _ => {
-                        self.error_handler.handle_error(AppError::ValidationError("Cannot create child for this document type".to_string()));
+                        self.error_handler.handle_error(AppError::ValidationError(
+                            "Cannot create child for this document type".to_string(),
+                        ));
                         return Ok(());
                     }
                 };
-                
+
                 let parent_id = parent_item.id();
-                
+
                 // For tasks, we need to call create_child_task with special handling
                 match child_doc_type {
                     DocumentType::Task => {
@@ -413,11 +428,14 @@ impl App {
                         // Get strategy_id from the initiative's parent
                         if let DocumentObject::Initiative(ref initiative) = &parent_item.document {
                             if let Some(strategy_id) = initiative.parent_id() {
-                                match document_service.create_child_task(
-                                    title,
-                                    strategy_id.to_string(),
-                                    parent_id.to_string(),
-                                ).await {
+                                match document_service
+                                    .create_child_task(
+                                        title,
+                                        strategy_id.to_string(),
+                                        parent_id.to_string(),
+                                    )
+                                    .await
+                                {
                                     Ok(_) => {
                                         self.ui_state.set_app_state(AppState::Normal);
                                         self.ui_state.reset_input();
@@ -432,20 +450,27 @@ impl App {
                                     }
                                 }
                             } else {
-                                self.error_handler.handle_error(AppError::ValidationError("Initiative has no parent strategy".to_string()));
+                                self.error_handler.handle_error(AppError::ValidationError(
+                                    "Initiative has no parent strategy".to_string(),
+                                ));
                             }
                         } else {
-                            self.error_handler.handle_error(AppError::ValidationError("Selected item is not an initiative".to_string()));
+                            self.error_handler.handle_error(AppError::ValidationError(
+                                "Selected item is not an initiative".to_string(),
+                            ));
                         }
                     }
                     _ => {
                         // For other document types, use regular creation
-                        match document_service.create_document(
-                            child_doc_type,
-                            title,
-                            None, // description
-                            Some(parent_id.to_string()),
-                        ).await {
+                        match document_service
+                            .create_document(
+                                child_doc_type,
+                                title,
+                                None, // description
+                                Some(parent_id.to_string()),
+                            )
+                            .await
+                        {
                             Ok(_) => {
                                 self.ui_state.set_app_state(AppState::Normal);
                                 self.ui_state.reset_input();
@@ -463,14 +488,17 @@ impl App {
                 }
             }
         }
-        
+
         Ok(())
     }
 
     pub async fn delete_selected_document(&mut self) -> Result<()> {
         if let Some(selected_item) = self.get_selected_item() {
             if let Some(document_service) = &self.document_service {
-                match document_service.delete_document(&selected_item.file_path).await {
+                match document_service
+                    .delete_document(&selected_item.file_path)
+                    .await
+                {
                     Ok(_) => {
                         // Sync database and reload documents
                         if let Some(sync_service) = &self.sync_service {
@@ -484,14 +512,17 @@ impl App {
                 }
             }
         }
-        
+
         Ok(())
     }
 
     pub async fn transition_selected_document(&mut self) -> Result<()> {
         if let Some(selected_item) = self.get_selected_item() {
             if let Some(transition_service) = &self.transition_service {
-                match transition_service.transition_to_next_phase(selected_item.id()).await {
+                match transition_service
+                    .transition_to_next_phase(selected_item.id())
+                    .await
+                {
                     Ok(_) => {
                         // Sync database and reload documents
                         if let Some(sync_service) = &self.sync_service {
@@ -505,14 +536,14 @@ impl App {
                 }
             }
         }
-        
+
         Ok(())
     }
 
     pub async fn load_documents(&mut self) -> Result<()> {
         if let Some(document_service) = &self.document_service {
             let mut documents = document_service.load_documents_from_database().await?;
-            
+
             // Sort documents by type and number for ADRs
             documents.sort_by(|a, b| {
                 match (&a.document_type, &b.document_type) {
@@ -522,21 +553,23 @@ impl App {
                         let b_num = extract_adr_number(&b.id);
                         a_num.cmp(&b_num)
                     }
-                    _ => a.title.cmp(&b.title) // Other documents sort by title
+                    _ => a.title.cmp(&b.title), // Other documents sort by title
                 }
             });
-            
+
             // Clear existing boards
             self.ui_state.strategy_board = KanbanBoard::create_strategy_board();
             self.ui_state.initiative_board = KanbanBoard::create_initiative_board();
             self.ui_state.task_board = KanbanBoard::create_task_board();
             self.ui_state.adr_board = KanbanBoard::create_adr_board();
-            
+
             // Load documents into appropriate boards
             for doc in documents {
                 match doc.document_type {
                     DocumentType::Strategy => {
-                        if let Ok(strategy) = Strategy::from_file(std::path::Path::new(&doc.filepath)).await {
+                        if let Ok(strategy) =
+                            Strategy::from_file(std::path::Path::new(&doc.filepath)).await
+                        {
                             let column_index = get_strategy_column_index(&strategy);
                             let item = KanbanItem {
                                 document: DocumentObject::Strategy(strategy),
@@ -545,12 +578,16 @@ impl App {
                                 file_path: doc.filepath,
                             };
                             if column_index < self.ui_state.strategy_board.columns.len() {
-                                self.ui_state.strategy_board.columns[column_index].items.push(item);
+                                self.ui_state.strategy_board.columns[column_index]
+                                    .items
+                                    .push(item);
                             }
                         }
                     }
                     DocumentType::Initiative => {
-                        if let Ok(initiative) = Initiative::from_file(std::path::Path::new(&doc.filepath)).await {
+                        if let Ok(initiative) =
+                            Initiative::from_file(std::path::Path::new(&doc.filepath)).await
+                        {
                             let column_index = get_initiative_column_index(&initiative);
                             let item = KanbanItem {
                                 document: DocumentObject::Initiative(initiative),
@@ -559,12 +596,15 @@ impl App {
                                 file_path: doc.filepath,
                             };
                             if column_index < self.ui_state.initiative_board.columns.len() {
-                                self.ui_state.initiative_board.columns[column_index].items.push(item);
+                                self.ui_state.initiative_board.columns[column_index]
+                                    .items
+                                    .push(item);
                             }
                         }
                     }
                     DocumentType::Task => {
-                        if let Ok(task) = Task::from_file(std::path::Path::new(&doc.filepath)).await {
+                        if let Ok(task) = Task::from_file(std::path::Path::new(&doc.filepath)).await
+                        {
                             let column_index = get_task_column_index(&task);
                             let item = KanbanItem {
                                 document: DocumentObject::Task(task),
@@ -573,12 +613,16 @@ impl App {
                                 file_path: doc.filepath,
                             };
                             if column_index < self.ui_state.task_board.columns.len() {
-                                self.ui_state.task_board.columns[column_index].items.push(item);
+                                self.ui_state.task_board.columns[column_index]
+                                    .items
+                                    .push(item);
                             }
                         }
                     }
                     DocumentType::Adr => {
-                        if let Ok(adr) = metis_core::Adr::from_file(std::path::Path::new(&doc.filepath)).await {
+                        if let Ok(adr) =
+                            metis_core::Adr::from_file(std::path::Path::new(&doc.filepath)).await
+                        {
                             let column_index = get_adr_column_index(&adr);
                             let item = KanbanItem {
                                 document: DocumentObject::Adr(adr),
@@ -587,7 +631,9 @@ impl App {
                                 file_path: doc.filepath,
                             };
                             if column_index < self.ui_state.adr_board.columns.len() {
-                                self.ui_state.adr_board.columns[column_index].items.push(item);
+                                self.ui_state.adr_board.columns[column_index]
+                                    .items
+                                    .push(item);
                             }
                         }
                     }
@@ -597,13 +643,13 @@ impl App {
                 }
             }
         }
-        
+
         Ok(())
     }
 
     pub fn start_content_editing(&mut self) {
         self.ui_state.set_app_state(AppState::EditingContent);
-        
+
         // Initialize text editor with current document content
         if let Some(selected_item) = self.get_viewed_ticket() {
             let content = match &selected_item.document {
@@ -624,21 +670,21 @@ impl App {
                     adr.content().full_content()
                 }
             };
-            
+
             // Create and initialize textarea
             let mut textarea = tui_textarea::TextArea::default();
             textarea.set_block(
                 ratatui::widgets::Block::default()
                     .borders(ratatui::widgets::Borders::ALL)
-                    .title("Content Editor")
+                    .title("Content Editor"),
             );
-            
+
             // Set the content
             for line in content.lines() {
                 textarea.insert_str(line);
                 textarea.insert_newline();
             }
-            
+
             self.ui_state.strategy_editor = Some(textarea);
         }
     }
@@ -654,7 +700,7 @@ impl App {
         if let Some(ref textarea) = self.ui_state.strategy_editor {
             // Get current content from textarea
             let new_content = textarea.lines().join("\n");
-            
+
             // Check if we're editing a vision document
             if let Some(ref vision_path) = self.ui_state.editing_vision_path {
                 // Save vision document directly
@@ -663,13 +709,19 @@ impl App {
                         // Vision saved successfully
                     }
                     Err(e) => {
-                        self.error_handler.handle_error(AppError::IoError(format!("Failed to save vision: {}", e)));
+                        self.error_handler.handle_error(AppError::IoError(format!(
+                            "Failed to save vision: {}",
+                            e
+                        )));
                     }
                 }
             } else if let Some(selected_item) = self.get_viewed_ticket() {
                 // Save regular document using document service
                 if let Some(document_service) = &self.document_service {
-                    match document_service.save_document_content(&selected_item.file_path, &new_content).await {
+                    match document_service
+                        .save_document_content(&selected_item.file_path, &new_content)
+                        .await
+                    {
                         Ok(_) => {
                             // Sync database and reload documents
                             if let Some(sync_service) = &self.sync_service {
@@ -684,16 +736,17 @@ impl App {
                 }
             }
         }
-        
+
         Ok(())
     }
-
 
     pub async fn create_adr_from_ticket(&mut self) -> Result<()> {
         // Get the title from user input
         let title = self.ui_state.input_title.value().to_string();
         if title.trim().is_empty() {
-            self.error_handler.handle_error(AppError::UserInputError("ADR title cannot be empty".to_string()));
+            self.error_handler.handle_error(AppError::UserInputError(
+                "ADR title cannot be empty".to_string(),
+            ));
             return Ok(());
         }
 
@@ -703,15 +756,27 @@ impl App {
             match &selected_item.document {
                 DocumentObject::Strategy(strategy) => {
                     use metis_core::Document;
-                    Some(format!("Context from strategy '{}': {}", strategy.title(), strategy.content().full_content()))
+                    Some(format!(
+                        "Context from strategy '{}': {}",
+                        strategy.title(),
+                        strategy.content().full_content()
+                    ))
                 }
                 DocumentObject::Initiative(initiative) => {
                     use metis_core::Document;
-                    Some(format!("Context from initiative '{}': {}", initiative.title(), initiative.content().full_content()))
+                    Some(format!(
+                        "Context from initiative '{}': {}",
+                        initiative.title(),
+                        initiative.content().full_content()
+                    ))
                 }
                 DocumentObject::Task(task) => {
                     use metis_core::Document;
-                    Some(format!("Context from task '{}': {}", task.title(), task.content().full_content()))
+                    Some(format!(
+                        "Context from task '{}': {}",
+                        task.title(),
+                        task.content().full_content()
+                    ))
                 }
                 DocumentObject::Adr(_) => None, // Cannot create ADR from ADR
             }
@@ -738,5 +803,4 @@ impl App {
 
         Ok(())
     }
-
 }

@@ -1,9 +1,9 @@
+use metis_core::application::services::document::DocumentValidationService;
 use rust_mcp_sdk::{
     macros::{mcp_tool, JsonSchema},
     schema::{schema_utils::CallToolError, CallToolResult, TextContent},
 };
 use serde::{Deserialize, Serialize};
-use metis_core::application::services::document::DocumentValidationService;
 use std::path::Path;
 
 #[mcp_tool(
@@ -25,30 +25,33 @@ pub struct ValidateDocumentTool {
 impl ValidateDocumentTool {
     pub async fn call_tool(&self) -> std::result::Result<CallToolResult, CallToolError> {
         let metis_dir = Path::new(&self.project_path);
-        
+
         // Validate metis workspace exists
         if !metis_dir.exists() || !metis_dir.is_dir() {
             return Err(CallToolError::new(std::io::Error::new(
                 std::io::ErrorKind::NotFound,
-                format!("Metis workspace not found at {}. Run initialize_project first.", metis_dir.display())
+                format!(
+                    "Metis workspace not found at {}. Run initialize_project first.",
+                    metis_dir.display()
+                ),
             )));
         }
-        
+
         // Construct the full document path
         // The document_path is relative to the metis workspace
         let full_document_path = metis_dir.join(&self.document_path);
-        
+
         if !full_document_path.exists() {
             return Err(CallToolError::new(std::io::Error::new(
                 std::io::ErrorKind::NotFound,
-                format!("Document not found at {}", full_document_path.display())
+                format!("Document not found at {}", full_document_path.display()),
             )));
         }
-        
+
         // Use the validation service
         let service = DocumentValidationService::new();
         let result = service.validate_document(&full_document_path).await;
-        
+
         match result {
             Ok(validation_result) => {
                 let response = serde_json::json!({

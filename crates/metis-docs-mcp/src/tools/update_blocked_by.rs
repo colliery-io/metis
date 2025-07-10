@@ -27,36 +27,41 @@ pub struct UpdateBlockedByTool {
 impl UpdateBlockedByTool {
     pub async fn call_tool(&self) -> std::result::Result<CallToolResult, CallToolError> {
         let metis_dir = Path::new(&self.project_path);
-        
+
         // Validate metis workspace exists
         if !metis_dir.exists() || !metis_dir.is_dir() {
             return Err(CallToolError::new(std::io::Error::new(
                 std::io::ErrorKind::NotFound,
-                format!("Metis workspace not found at {}. Run initialize_project first.", metis_dir.display())
+                format!(
+                    "Metis workspace not found at {}. Run initialize_project first.",
+                    metis_dir.display()
+                ),
             )));
         }
-        
+
         // Construct the full document path
         let full_document_path = metis_dir.join(&self.document_path);
-        
+
         if !full_document_path.exists() {
             return Err(CallToolError::new(std::io::Error::new(
                 std::io::ErrorKind::NotFound,
-                format!("Document not found at {}", full_document_path.display())
+                format!("Document not found at {}", full_document_path.display()),
             )));
         }
-        
+
         // Read the current document content
-        let content = fs::read_to_string(&full_document_path).await
+        let content = fs::read_to_string(&full_document_path)
+            .await
             .map_err(|e| CallToolError::new(e))?;
-        
+
         // Update the blocked_by field in the frontmatter
         let updated_content = self.update_blocked_by_frontmatter(&content)?;
-        
+
         // Write the updated content back to the file
-        fs::write(&full_document_path, updated_content).await
+        fs::write(&full_document_path, updated_content)
+            .await
             .map_err(|e| CallToolError::new(e))?;
-        
+
         let response = serde_json::json!({
             "success": true,
             "document_path": self.document_path,
@@ -72,21 +77,21 @@ impl UpdateBlockedByTool {
             serde_json::to_string_pretty(&response).map_err(CallToolError::new)?,
         )]))
     }
-    
+
     fn update_blocked_by_frontmatter(&self, content: &str) -> Result<String, CallToolError> {
         let lines: Vec<&str> = content.lines().collect();
         let mut result_lines = Vec::new();
         let mut in_frontmatter = false;
         let mut found_blocked_by = false;
         let mut frontmatter_ended = false;
-        
+
         for (i, line) in lines.iter().enumerate() {
             if i == 0 && line.trim() == "---" {
                 in_frontmatter = true;
                 result_lines.push(line.to_string());
                 continue;
             }
-            
+
             if in_frontmatter && line.trim() == "---" {
                 // End of frontmatter
                 if !found_blocked_by {
@@ -98,7 +103,7 @@ impl UpdateBlockedByTool {
                 frontmatter_ended = true;
                 continue;
             }
-            
+
             if in_frontmatter {
                 let trimmed = line.trim();
                 if trimmed.starts_with("blocked_by:") {
@@ -113,17 +118,17 @@ impl UpdateBlockedByTool {
                 result_lines.push(line.to_string());
             }
         }
-        
+
         if !frontmatter_ended {
             return Err(CallToolError::new(std::io::Error::new(
                 std::io::ErrorKind::InvalidData,
-                "Document does not have valid YAML frontmatter"
+                "Document does not have valid YAML frontmatter",
             )));
         }
-        
+
         Ok(result_lines.join("\n"))
     }
-    
+
     fn add_blocked_by_field(&self, result_lines: &mut Vec<String>) {
         if self.blocked_by.is_empty() {
             result_lines.push("blocked_by: []".to_string());

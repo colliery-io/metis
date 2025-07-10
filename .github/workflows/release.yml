@@ -31,7 +31,7 @@ jobs:
 
       - name: Publish metis-docs-core to crates.io
         run: |
-          cd crates/metis-core
+          cd crates/metis-docs-core
           cargo publish --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
         continue-on-error: true # Allow failure if already published
 
@@ -40,6 +40,24 @@ jobs:
 
       - name: Publish metis-docs-mcp to crates.io
         run: |
-          cd crates/metis-mcp-server
+          cd crates/metis-docs-mcp
+          cargo publish --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        continue-on-error: true # Allow failure if already published
+
+      - name: Wait for crates.io index update
+        run: sleep 30
+
+      - name: Publish metis-docs-cli to crates.io
+        run: |
+          cd crates/metis-docs-cli
+          cargo publish --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        continue-on-error: true # Allow failure if already published
+
+      - name: Wait for crates.io index update
+        run: sleep 30
+
+      - name: Publish metis-docs-tui to crates.io
+        run: |
+          cd crates/metis-docs-tui
           cargo publish --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
         continue-on-error: true # Allow failure if already published

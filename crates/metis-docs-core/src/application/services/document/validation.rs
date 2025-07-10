@@ -1,6 +1,6 @@
 use crate::domain::documents::types::DocumentType;
-use crate::{Vision, Strategy, Initiative, Task, Adr, MetisError};
 use crate::Result;
+use crate::{Adr, Initiative, MetisError, Strategy, Task, Vision};
 use std::path::Path;
 
 /// Service for validating documents and detecting their types
@@ -21,9 +21,12 @@ impl DocumentValidationService {
     }
 
     /// Validate a document file and detect its type
-    pub async fn validate_document<P: AsRef<Path>>(&self, file_path: P) -> Result<ValidationResult> {
+    pub async fn validate_document<P: AsRef<Path>>(
+        &self,
+        file_path: P,
+    ) -> Result<ValidationResult> {
         let file_path = file_path.as_ref();
-        
+
         // Check if file exists
         if !file_path.exists() {
             return Err(MetisError::NotFound("File does not exist".to_string()));
@@ -35,7 +38,7 @@ impl DocumentValidationService {
 
         // Try to parse as each document type and collect results
         let mut validation_results = Vec::new();
-        
+
         // Try Vision
         match Vision::from_file(file_path).await {
             Ok(_vision) => {
@@ -53,7 +56,7 @@ impl DocumentValidationService {
                 });
             }
         }
-        
+
         // Try Strategy
         match Strategy::from_file(file_path).await {
             Ok(_strategy) => {
@@ -71,7 +74,7 @@ impl DocumentValidationService {
                 });
             }
         }
-        
+
         // Try Initiative
         match Initiative::from_file(file_path).await {
             Ok(_initiative) => {
@@ -89,7 +92,7 @@ impl DocumentValidationService {
                 });
             }
         }
-        
+
         // Try Task
         match Task::from_file(file_path).await {
             Ok(_task) => {
@@ -107,7 +110,7 @@ impl DocumentValidationService {
                 });
             }
         }
-        
+
         // Try ADR
         match Adr::from_file(file_path).await {
             Ok(_adr) => {
@@ -125,7 +128,7 @@ impl DocumentValidationService {
                 });
             }
         }
-        
+
         // Find the first valid result
         if let Some(valid_result) = validation_results.iter().find(|r| r.is_valid) {
             return Ok(ValidationResult {
@@ -134,13 +137,13 @@ impl DocumentValidationService {
                 errors: vec![],
             });
         }
-        
+
         // If no valid results, return combined errors
         let all_errors: Vec<String> = validation_results
             .into_iter()
             .flat_map(|r| r.errors)
             .collect();
-        
+
         Ok(ValidationResult {
             document_type: DocumentType::Vision, // Default, since we couldn't determine
             is_valid: false,
@@ -151,13 +154,14 @@ impl DocumentValidationService {
     /// Validate a document and return just the document type (simpler interface)
     pub async fn detect_document_type<P: AsRef<Path>>(&self, file_path: P) -> Result<DocumentType> {
         let result = self.validate_document(file_path).await?;
-        
+
         if result.is_valid {
             Ok(result.document_type)
         } else {
-            Err(MetisError::InvalidDocument(
-                format!("Could not determine document type: {}", result.errors.join("; "))
-            ))
+            Err(MetisError::InvalidDocument(format!(
+                "Could not determine document type: {}",
+                result.errors.join("; ")
+            )))
         }
     }
 
@@ -168,44 +172,35 @@ impl DocumentValidationService {
         expected_type: DocumentType,
     ) -> Result<bool> {
         let file_path = file_path.as_ref();
-        
+
         match expected_type {
-            DocumentType::Vision => {
-                match Vision::from_file(file_path).await {
-                    Ok(_) => Ok(true),
-                    Err(_) => Ok(false),
-                }
-            }
-            DocumentType::Strategy => {
-                match Strategy::from_file(file_path).await {
-                    Ok(_) => Ok(true),
-                    Err(_) => Ok(false),
-                }
-            }
-            DocumentType::Initiative => {
-                match Initiative::from_file(file_path).await {
-                    Ok(_) => Ok(true),
-                    Err(_) => Ok(false),
-                }
-            }
-            DocumentType::Task => {
-                match Task::from_file(file_path).await {
-                    Ok(_) => Ok(true),
-                    Err(_) => Ok(false),
-                }
-            }
-            DocumentType::Adr => {
-                match Adr::from_file(file_path).await {
-                    Ok(_) => Ok(true),
-                    Err(_) => Ok(false),
-                }
-            }
+            DocumentType::Vision => match Vision::from_file(file_path).await {
+                Ok(_) => Ok(true),
+                Err(_) => Ok(false),
+            },
+            DocumentType::Strategy => match Strategy::from_file(file_path).await {
+                Ok(_) => Ok(true),
+                Err(_) => Ok(false),
+            },
+            DocumentType::Initiative => match Initiative::from_file(file_path).await {
+                Ok(_) => Ok(true),
+                Err(_) => Ok(false),
+            },
+            DocumentType::Task => match Task::from_file(file_path).await {
+                Ok(_) => Ok(true),
+                Err(_) => Ok(false),
+            },
+            DocumentType::Adr => match Adr::from_file(file_path).await {
+                Ok(_) => Ok(true),
+                Err(_) => Ok(false),
+            },
         }
     }
 
     /// Check if a document is valid without loading the full document
     pub async fn is_valid_document<P: AsRef<Path>>(&self, file_path: P) -> bool {
-        self.validate_document(file_path).await
+        self.validate_document(file_path)
+            .await
             .map(|result| result.is_valid)
             .unwrap_or(false)
     }
@@ -220,14 +215,14 @@ impl Default for DocumentValidationService {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::tempdir;
     use std::fs;
+    use tempfile::tempdir;
 
     #[tokio::test]
     async fn test_validate_valid_vision_document() {
         let temp_dir = tempdir().unwrap();
         let file_path = temp_dir.path().join("vision.md");
-        
+
         // Create a valid vision document
         let vision_content = r##"---
 id: test-vision
@@ -250,7 +245,7 @@ This is a test vision document.
 
         let service = DocumentValidationService::new();
         let result = service.validate_document(&file_path).await.unwrap();
-        
+
         assert!(result.is_valid);
         assert_eq!(result.document_type, DocumentType::Vision);
         assert!(result.errors.is_empty());
@@ -260,7 +255,7 @@ This is a test vision document.
     async fn test_validate_invalid_document() {
         let temp_dir = tempdir().unwrap();
         let file_path = temp_dir.path().join("invalid.md");
-        
+
         // Create an invalid document
         let invalid_content = r##"# Invalid Document
 
@@ -270,7 +265,7 @@ This has no frontmatter.
 
         let service = DocumentValidationService::new();
         let result = service.validate_document(&file_path).await.unwrap();
-        
+
         assert!(!result.is_valid);
         assert!(!result.errors.is_empty());
     }
@@ -279,7 +274,7 @@ This has no frontmatter.
     async fn test_detect_document_type() {
         let temp_dir = tempdir().unwrap();
         let file_path = temp_dir.path().join("vision.md");
-        
+
         // Create a valid vision document
         let vision_content = r##"---
 id: test-vision
@@ -302,7 +297,7 @@ This is a test vision document.
 
         let service = DocumentValidationService::new();
         let doc_type = service.detect_document_type(&file_path).await.unwrap();
-        
+
         assert_eq!(doc_type, DocumentType::Vision);
     }
 
@@ -310,7 +305,7 @@ This is a test vision document.
     async fn test_validate_document_as_type() {
         let temp_dir = tempdir().unwrap();
         let file_path = temp_dir.path().join("vision.md");
-        
+
         // Create a valid vision document
         let vision_content = r##"---
 id: test-vision
@@ -332,19 +327,25 @@ This is a test vision document.
         fs::write(&file_path, vision_content).unwrap();
 
         let service = DocumentValidationService::new();
-        
+
         // Should be valid as vision
-        assert!(service.validate_document_as_type(&file_path, DocumentType::Vision).await.unwrap());
-        
+        assert!(service
+            .validate_document_as_type(&file_path, DocumentType::Vision)
+            .await
+            .unwrap());
+
         // Should not be valid as strategy
-        assert!(!service.validate_document_as_type(&file_path, DocumentType::Strategy).await.unwrap());
+        assert!(!service
+            .validate_document_as_type(&file_path, DocumentType::Strategy)
+            .await
+            .unwrap());
     }
 
     #[tokio::test]
     async fn test_validate_nonexistent_file() {
         let service = DocumentValidationService::new();
         let result = service.validate_document("/nonexistent/file.md").await;
-        
+
         assert!(result.is_err());
         assert!(matches!(result.unwrap_err(), MetisError::NotFound(_)));
     }

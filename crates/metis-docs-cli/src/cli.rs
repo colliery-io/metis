@@ -2,7 +2,10 @@ use anyhow::Result;
 use clap::{Parser, Subcommand};
 use tracing_subscriber::filter::LevelFilter;
 
-use crate::commands::{InitCommand, SyncCommand, CreateCommand, SearchCommand, TransitionCommand, ListCommand, StatusCommand, ArchiveCommand, ValidateCommand, TuiCommand, McpCommand};
+use crate::commands::{
+    ArchiveCommand, CreateCommand, InitCommand, ListCommand, McpCommand, SearchCommand,
+    StatusCommand, SyncCommand, TransitionCommand, TuiCommand, ValidateCommand,
+};
 
 #[derive(Parser)]
 #[command(name = "metis")]
@@ -78,10 +81,13 @@ impl Cli {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::commands::{CreateCommand, TransitionCommand, ArchiveCommand, SyncCommand, ListCommand, StatusCommand, SearchCommand, ValidateCommand};
     use crate::commands::create::CreateCommands;
-    use tempfile::tempdir;
+    use crate::commands::{
+        ArchiveCommand, CreateCommand, ListCommand, SearchCommand, StatusCommand, SyncCommand,
+        TransitionCommand, ValidateCommand,
+    };
     use std::fs;
+    use tempfile::tempdir;
 
     #[tokio::test]
     async fn test_comprehensive_cli_workflow() {
@@ -95,11 +101,20 @@ mod tests {
         let init_cmd = InitCommand {
             name: Some("Integration Test Project".to_string()),
         };
-        init_cmd.execute().await.expect("Failed to initialize project");
+        init_cmd
+            .execute()
+            .await
+            .expect("Failed to initialize project");
 
         let metis_dir = temp_dir.path().join(".metis");
-        assert!(metis_dir.exists(), "Metis directory should exist after init");
-        assert!(metis_dir.join("vision.md").exists(), "Vision document should be created");
+        assert!(
+            metis_dir.exists(),
+            "Metis directory should exist after init"
+        );
+        assert!(
+            metis_dir.join("vision.md").exists(),
+            "Vision document should be created"
+        );
 
         // 2. Sync the workspace to populate database
         let sync_cmd = SyncCommand {};
@@ -110,35 +125,47 @@ mod tests {
             document_type: CreateCommands::Strategy {
                 title: "Test Strategy for Integration".to_string(),
                 vision: Some("integration-test-project".to_string()),
-            }
+            },
         };
-        create_strategy_cmd.execute().await.expect("Failed to create strategy");
+        create_strategy_cmd
+            .execute()
+            .await
+            .expect("Failed to create strategy");
 
         // 4. Create an initiative under the strategy
         let create_initiative_cmd = CreateCommand {
             document_type: CreateCommands::Initiative {
                 title: "Test Initiative".to_string(),
                 strategy: "test-strategy-for-integration".to_string(),
-            }
+            },
         };
-        create_initiative_cmd.execute().await.expect("Failed to create initiative");
+        create_initiative_cmd
+            .execute()
+            .await
+            .expect("Failed to create initiative");
 
         // 5. Create a task under the initiative
         let create_task_cmd = CreateCommand {
             document_type: CreateCommands::Task {
                 title: "Test Task".to_string(),
                 initiative: "test-initiative".to_string(),
-            }
+            },
         };
-        create_task_cmd.execute().await.expect("Failed to create task");
+        create_task_cmd
+            .execute()
+            .await
+            .expect("Failed to create task");
 
         // 6. Create an ADR
         let create_adr_cmd = CreateCommand {
             document_type: CreateCommands::Adr {
                 title: "Test Architecture Decision".to_string(),
-            }
+            },
         };
-        create_adr_cmd.execute().await.expect("Failed to create ADR");
+        create_adr_cmd
+            .execute()
+            .await
+            .expect("Failed to create ADR");
 
         // Find the created ADR (it will have a number prefix)
         let adrs_dir = metis_dir.join("adrs");
@@ -151,7 +178,10 @@ mod tests {
 
         // 7. Sync after creating documents
         let sync_cmd2 = SyncCommand {};
-        sync_cmd2.execute().await.expect("Failed to sync after creating documents");
+        sync_cmd2
+            .execute()
+            .await
+            .expect("Failed to sync after creating documents");
 
         // 8. Transition the vision to review phase
         let transition_vision_cmd = TransitionCommand {
@@ -159,7 +189,10 @@ mod tests {
             document_type: Some("vision".to_string()),
             phase: Some("review".to_string()),
         };
-        transition_vision_cmd.execute().await.expect("Failed to transition vision");
+        transition_vision_cmd
+            .execute()
+            .await
+            .expect("Failed to transition vision");
 
         // 9. Transition the strategy through its phases: Shaping → Design → Ready → Active
         let transition_strategy_to_design_cmd = TransitionCommand {
@@ -167,21 +200,30 @@ mod tests {
             document_type: Some("strategy".to_string()),
             phase: Some("design".to_string()),
         };
-        transition_strategy_to_design_cmd.execute().await.expect("Failed to transition strategy to design");
+        transition_strategy_to_design_cmd
+            .execute()
+            .await
+            .expect("Failed to transition strategy to design");
 
         let transition_strategy_to_ready_cmd = TransitionCommand {
             document_id: "test-strategy-for-integration".to_string(),
             document_type: Some("strategy".to_string()),
             phase: Some("ready".to_string()),
         };
-        transition_strategy_to_ready_cmd.execute().await.expect("Failed to transition strategy to ready");
+        transition_strategy_to_ready_cmd
+            .execute()
+            .await
+            .expect("Failed to transition strategy to ready");
 
         let transition_strategy_to_active_cmd = TransitionCommand {
             document_id: "test-strategy-for-integration".to_string(),
             document_type: Some("strategy".to_string()),
             phase: Some("active".to_string()),
         };
-        transition_strategy_to_active_cmd.execute().await.expect("Failed to transition strategy to active");
+        transition_strategy_to_active_cmd
+            .execute()
+            .await
+            .expect("Failed to transition strategy to active");
 
         // 10. Transition the task through its phases: Todo → Active → Completed
         let transition_task_to_active_cmd = TransitionCommand {
@@ -189,21 +231,30 @@ mod tests {
             document_type: Some("task".to_string()),
             phase: Some("active".to_string()),
         };
-        transition_task_to_active_cmd.execute().await.expect("Failed to transition task to active");
+        transition_task_to_active_cmd
+            .execute()
+            .await
+            .expect("Failed to transition task to active");
 
         let transition_task_to_completed_cmd = TransitionCommand {
             document_id: "test-task".to_string(),
             document_type: Some("task".to_string()),
             phase: Some("completed".to_string()),
         };
-        transition_task_to_completed_cmd.execute().await.expect("Failed to transition task to completed");
+        transition_task_to_completed_cmd
+            .execute()
+            .await
+            .expect("Failed to transition task to completed");
 
         // 11. Archive the completed task
         let archive_task_cmd = ArchiveCommand {
             document_id: "test-task".to_string(),
             document_type: Some("task".to_string()),
         };
-        archive_task_cmd.execute().await.expect("Failed to archive task");
+        archive_task_cmd
+            .execute()
+            .await
+            .expect("Failed to archive task");
 
         // 12. List all documents to verify they exist
         let list_cmd = ListCommand {
@@ -225,13 +276,19 @@ mod tests {
             query: "test".to_string(),
             limit: 10,
         };
-        search_cmd.execute().await.expect("Failed to search documents");
+        search_cmd
+            .execute()
+            .await
+            .expect("Failed to search documents");
 
         // 15. Validate a document file
         let validate_cmd = ValidateCommand {
             file_path: metis_dir.join("vision.md"),
         };
-        validate_cmd.execute().await.expect("Failed to validate document");
+        validate_cmd
+            .execute()
+            .await
+            .expect("Failed to validate document");
 
         // Restore original directory
         if let Some(original) = original_dir {

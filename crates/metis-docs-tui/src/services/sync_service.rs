@@ -1,9 +1,6 @@
 use anyhow::Result;
+use metis_core::{application::Application, dal::Database};
 use std::path::PathBuf;
-use metis_core::{
-    application::Application,
-    dal::Database,
-};
 
 /// Service for database synchronization operations
 pub struct SyncService {
@@ -20,11 +17,10 @@ impl SyncService {
         let db = Database::new(&db_path.to_string_lossy())
             .map_err(|e| anyhow::anyhow!("Database error: {}", e))?;
         let app = Application::new(db);
-        
+
         match app.sync_directory(&self.workspace_dir).await {
             Ok(_) => Ok(()),
             Err(e) => Err(anyhow::anyhow!("Sync failed: {}", e)),
         }
     }
-
 }

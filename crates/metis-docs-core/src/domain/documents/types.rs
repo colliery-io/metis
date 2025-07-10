@@ -102,7 +102,7 @@ impl fmt::Display for DocumentType {
 
 impl FromStr for DocumentType {
     type Err = String;
-    
+
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
             "vision" => Ok(DocumentType::Vision),
@@ -122,18 +122,18 @@ pub enum Phase {
     Draft,
     Review,
     Published,
-    
+
     // ADR phases
     Discussion,
     Decided,
     Superseded,
-    
+
     // General phases
     Todo,
     Active,
     Blocked,
     Completed,
-    
+
     // Strategy/Initiative phases
     Shaping,
     Design,
@@ -228,8 +228,8 @@ impl std::str::FromStr for Tag {
                 "discovery" => Ok(Tag::Phase(Phase::Discovery)),
                 _ => Err(()), // Unknown phase
             }
-        } else if s.starts_with("#") {
-            Ok(Tag::Label(s[1..].to_string())) // Remove "#"
+        } else if let Some(stripped) = s.strip_prefix("#") {
+            Ok(Tag::Label(stripped.to_string())) // Remove "#"
         } else {
             Ok(Tag::Label(s.to_string()))
         }
@@ -292,12 +292,30 @@ mod tests {
 
     #[test]
     fn test_tag_parsing() {
-        assert_eq!("#phase/draft".parse::<Tag>().unwrap(), Tag::Phase(Phase::Draft));
-        assert_eq!("#phase/active".parse::<Tag>().unwrap(), Tag::Phase(Phase::Active));
-        assert_eq!("#phase/discovery".parse::<Tag>().unwrap(), Tag::Phase(Phase::Discovery));
-        assert_eq!("#vision".parse::<Tag>().unwrap(), Tag::Label("vision".to_string()));
-        assert_eq!("#strategy".parse::<Tag>().unwrap(), Tag::Label("strategy".to_string()));
-        assert_eq!("urgent".parse::<Tag>().unwrap(), Tag::Label("urgent".to_string()));
+        assert_eq!(
+            "#phase/draft".parse::<Tag>().unwrap(),
+            Tag::Phase(Phase::Draft)
+        );
+        assert_eq!(
+            "#phase/active".parse::<Tag>().unwrap(),
+            Tag::Phase(Phase::Active)
+        );
+        assert_eq!(
+            "#phase/discovery".parse::<Tag>().unwrap(),
+            Tag::Phase(Phase::Discovery)
+        );
+        assert_eq!(
+            "#vision".parse::<Tag>().unwrap(),
+            Tag::Label("vision".to_string())
+        );
+        assert_eq!(
+            "#strategy".parse::<Tag>().unwrap(),
+            Tag::Label("strategy".to_string())
+        );
+        assert_eq!(
+            "urgent".parse::<Tag>().unwrap(),
+            Tag::Label("urgent".to_string())
+        );
     }
 
     #[test]
@@ -305,7 +323,10 @@ mod tests {
         assert_eq!(Tag::Phase(Phase::Draft).to_str(), "#phase/draft");
         assert_eq!(Tag::Phase(Phase::Active).to_str(), "#phase/active");
         assert_eq!(Tag::Label("vision".to_string()).to_str(), "#vision");
-        assert_eq!(Tag::Label("#already-has-hash".to_string()).to_str(), "#already-has-hash");
+        assert_eq!(
+            Tag::Label("#already-has-hash".to_string()).to_str(),
+            "#already-has-hash"
+        );
     }
 
     #[test]

@@ -1,7 +1,17 @@
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 
-#[derive(Queryable, Selectable, Insertable, AsChangeset, QueryableByName, Debug, Clone, Serialize, Deserialize)]
+#[derive(
+    Queryable,
+    Selectable,
+    Insertable,
+    AsChangeset,
+    QueryableByName,
+    Debug,
+    Clone,
+    Serialize,
+    Deserialize,
+)]
 #[diesel(table_name = crate::dal::database::schema::documents)]
 #[diesel(check_for_backend(diesel::sqlite::Sqlite))]
 pub struct Document {

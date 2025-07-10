@@ -2,6 +2,7 @@ use std::fmt;
 
 /// Application-specific error types
 #[derive(Debug, Clone)]
+#[allow(clippy::enum_variant_names)]
 pub enum AppError {
     WorkspaceError(String),
     DocumentError(String),
@@ -43,10 +44,13 @@ impl From<metis_core::MetisError> for AppError {
         match err {
             metis_core::MetisError::Database(e) => AppError::DatabaseError(e.to_string()),
             metis_core::MetisError::FileSystem(msg) => AppError::IoError(msg),
-            metis_core::MetisError::DocumentNotFound { id } => AppError::DocumentError(format!("Document not found: {}", id)),
-            metis_core::MetisError::InvalidPhaseTransition { .. } => AppError::ValidationError(err.to_string()),
+            metis_core::MetisError::DocumentNotFound { id } => {
+                AppError::DocumentError(format!("Document not found: {}", id))
+            }
+            metis_core::MetisError::InvalidPhaseTransition { .. } => {
+                AppError::ValidationError(err.to_string())
+            }
             _ => AppError::DocumentError(err.to_string()),
         }
     }
 }
-

@@ -52,10 +52,6 @@ impl UiState {
         }
     }
 
-
-
-
-
     pub fn reset_input(&mut self) {
         self.input_title = Input::default();
         self.input_description = String::new();

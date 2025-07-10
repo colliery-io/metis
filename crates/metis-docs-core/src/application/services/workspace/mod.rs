@@ -3,5 +3,5 @@ pub mod initialization;
 pub mod transition;
 
 pub use archive::ArchiveService;
-pub use initialization::{WorkspaceInitializationService, WorkspaceInitializationResult};
+pub use initialization::{WorkspaceInitializationResult, WorkspaceInitializationService};
 pub use transition::PhaseTransitionService;

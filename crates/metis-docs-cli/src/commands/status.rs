@@ -33,77 +33,82 @@ impl StatusCommand {
             anyhow::bail!("Not in a Metis workspace. Run 'metis init' to create one.");
         }
         let metis_dir = metis_dir.unwrap();
-        
+
         // 2. Connect to database
         let db_path = metis_dir.join("metis.db");
         let db = Database::new(db_path.to_str().unwrap())
             .map_err(|e| anyhow::anyhow!("Database connection failed: {}", e))?;
         let mut repo = db.into_repository();
-        
+
         // 3. Get all documents (excluding archived by default)
         let documents = self.get_status_documents(&mut repo).await?;
-        
+
         // 4. Display results
         if documents.is_empty() {
             println!("No documents found in workspace.");
             return Ok(());
         }
-        
+
         self.display_status(&documents);
-        
+
         Ok(())
     }
-    
-    async fn get_status_documents(&self, repo: &mut metis_core::dal::database::repository::DocumentRepository) -> MetisResult<Vec<metis_core::dal::database::models::Document>> {
+
+    async fn get_status_documents(
+        &self,
+        repo: &mut metis_core::dal::database::repository::DocumentRepository,
+    ) -> MetisResult<Vec<metis_core::dal::database::models::Document>> {
         // Get all document types
         let mut all_docs = Vec::new();
-        
+
         for doc_type in ["vision", "strategy", "initiative", "task", "adr"] {
             let mut docs = repo.find_by_type(doc_type)?;
             all_docs.append(&mut docs);
         }
-        
+
         // Filter out archived documents unless requested
         if !self.include_archived {
             all_docs.retain(|doc| !doc.archived);
         }
-        
+
         // Sort by actionability: blocked first, then by phase priority, then by updated date
         all_docs.sort_by(|a, b| {
             // First, prioritize by actionability
             let a_priority = self.get_action_priority(a);
             let b_priority = self.get_action_priority(b);
-            
+
             match a_priority.cmp(&b_priority) {
                 std::cmp::Ordering::Equal => {
                     // If same priority, sort by most recently updated
-                    b.updated_at.partial_cmp(&a.updated_at).unwrap_or(std::cmp::Ordering::Equal)
+                    b.updated_at
+                        .partial_cmp(&a.updated_at)
+                        .unwrap_or(std::cmp::Ordering::Equal)
                 }
-                other => other
+                other => other,
             }
         });
-        
+
         Ok(all_docs)
     }
-    
+
     fn get_action_priority(&self, doc: &metis_core::dal::database::models::Document) -> u8 {
         // Lower numbers = higher priority (more actionable)
         match doc.phase.as_str() {
-            "blocked" => 0,        // Most urgent - things blocking other work
-            "todo" => 1,           // Ready to start
-            "discussion" => 2,     // Needs decision
-            "active" => 3,         // Currently being worked on
-            "discovery" | "shaping" | "design" => 4,  // Needs planning/refinement
-            "ready" | "decompose" => 5,  // Staged for work
-            "review" => 6,         // Waiting for review
-            "decided" | "published" | "completed" => 7,  // Done but recent
-            _ => 8,                // Other states
+            "blocked" => 0,                          // Most urgent - things blocking other work
+            "todo" => 1,                             // Ready to start
+            "discussion" => 2,                       // Needs decision
+            "active" => 3,                           // Currently being worked on
+            "discovery" | "shaping" | "design" => 4, // Needs planning/refinement
+            "ready" | "decompose" => 5,              // Staged for work
+            "review" => 6,                           // Waiting for review
+            "decided" | "published" | "completed" => 7, // Done but recent
+            _ => 8,                                  // Other states
         }
     }
-    
+
     fn display_status(&self, documents: &[metis_core::dal::database::models::Document]) {
         println!("\nWORKSPACE STATUS\n");
-        
+
         // Convert documents to table rows
         let rows: Vec<StatusRow> = documents
             .iter()
@@ -117,22 +122,22 @@ impl StatusCommand {
                     .unwrap_or_else(|| "Unknown".to_string()),
             })
             .collect();
-        
+
         // Create and display table
         let table = Table::new(rows);
         println!("{}", table);
-        
+
         println!("\nTotal: {} documents", documents.len());
-        
+
         // Summary insights
         self.display_insights(documents);
     }
-    
+
     fn extract_blocked_by_info(&self, doc: &metis_core::dal::database::models::Document) -> String {
         if doc.phase != "blocked" {
             return String::new();
         }
-        
+
         // Parse frontmatter JSON to get blocked_by information
         if let Ok(frontmatter) = serde_json::from_str::<serde_json::Value>(&doc.frontmatter_json) {
             if let Some(blocked_by) = frontmatter.get("blocked_by") {
@@ -142,21 +147,21 @@ impl StatusCommand {
                         .filter_map(|v| v.as_str())
                         .map(|s| s.to_string())
                         .collect();
-                    
+
                     if !blocking_docs.is_empty() {
                         return self.truncate_string(&blocking_docs.join(", "), 18);
                     }
                 }
             }
         }
-        
+
         "Unknown".to_string()
     }
-    
+
     fn format_relative_time(&self, dt: chrono::DateTime<chrono::Utc>) -> String {
         let now = chrono::Utc::now();
         let diff = now.signed_duration_since(dt);
-        
+
         if diff.num_days() > 0 {
             if diff.num_days() == 1 {
                 "1 day ago".to_string()
@@ -183,12 +188,12 @@ impl StatusCommand {
             "Just now".to_string()
         }
     }
-    
+
     fn display_insights(&self, documents: &[metis_core::dal::database::models::Document]) {
         let blocked_count = documents.iter().filter(|d| d.phase == "blocked").count();
         let todo_count = documents.iter().filter(|d| d.phase == "todo").count();
         let active_count = documents.iter().filter(|d| d.phase == "active").count();
-        
+
         if blocked_count > 0 || todo_count > 0 {
             println!("ACTIONABLE ITEMS:");
             if blocked_count > 0 {
@@ -202,7 +207,7 @@ impl StatusCommand {
             }
         }
     }
-    
+
     fn truncate_string(&self, s: &str, max_len: usize) -> String {
         if s.len() <= max_len {
             s.to_string()
@@ -215,67 +220,72 @@ impl StatusCommand {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::tempdir;
     use crate::commands::InitCommand;
-    
+    use tempfile::tempdir;
+
     #[tokio::test]
     async fn test_status_command_no_workspace() {
         let temp_dir = tempdir().unwrap();
         let original_dir = std::env::current_dir().ok();
-        
+
         // Change to temp directory without workspace
         if std::env::set_current_dir(temp_dir.path()).is_err() {
             return; // Skip test if we can't change directory
         }
-        
+
         let cmd = StatusCommand {
             include_archived: false,
         };
-        
+
         let result = cmd.execute().await;
-        
+
         // Always restore original directory first
         if let Some(original) = original_dir {
             let _ = std::env::set_current_dir(&original);
         }
-        
+
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Not in a Metis workspace"));
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Not in a Metis workspace"));
     }
-    
+
     #[tokio::test]
     async fn test_status_command_empty_workspace() {
         let temp_dir = tempdir().unwrap();
         let original_dir = std::env::current_dir().ok();
-        
+
         // Change to temp directory
         std::env::set_current_dir(temp_dir.path()).unwrap();
-        
+
         // Create workspace
         let init_cmd = InitCommand {
             name: Some("Test Project".to_string()),
         };
         init_cmd.execute().await.unwrap();
-        
+
         let cmd = StatusCommand {
             include_archived: false,
         };
-        
+
         let result = cmd.execute().await;
-        
+
         // Always restore original directory first
         if let Some(original) = original_dir {
             let _ = std::env::set_current_dir(&original);
         }
-        
+
         // Should succeed and show at least the vision document created by init
         assert!(result.is_ok());
     }
-    
+
     #[test]
     fn test_action_priority() {
-        let cmd = StatusCommand { include_archived: false };
-        
+        let cmd = StatusCommand {
+            include_archived: false,
+        };
+
         // Create mock documents with different phases
         let blocked_doc = metis_core::dal::database::models::Document {
             filepath: "/test.md".to_string(),
@@ -291,17 +301,17 @@ mod tests {
             content: None,
             phase: "blocked".to_string(),
         };
-        
+
         let todo_doc = metis_core::dal::database::models::Document {
             phase: "todo".to_string(),
             ..blocked_doc.clone()
         };
-        
+
         let completed_doc = metis_core::dal::database::models::Document {
             phase: "completed".to_string(),
             ..blocked_doc.clone()
         };
-        
+
         // Blocked should have highest priority (lowest number)
         assert!(cmd.get_action_priority(&blocked_doc) < cmd.get_action_priority(&todo_doc));
         assert!(cmd.get_action_priority(&todo_doc) < cmd.get_action_priority(&completed_doc));

@@ -1,12 +1,11 @@
+use metis_core::{
+    application::services::workspace::PhaseTransitionService, domain::documents::types::Phase,
+};
 use rust_mcp_sdk::{
     macros::{mcp_tool, JsonSchema},
     schema::{schema_utils::CallToolError, CallToolResult, TextContent},
 };
 use serde::{Deserialize, Serialize};
-use metis_core::{
-    application::services::workspace::PhaseTransitionService,
-    domain::documents::types::Phase,
-};
 use std::path::Path;
 
 #[mcp_tool(
@@ -32,25 +31,30 @@ pub struct TransitionPhaseTool {
 impl TransitionPhaseTool {
     pub async fn call_tool(&self) -> std::result::Result<CallToolResult, CallToolError> {
         let metis_dir = Path::new(&self.project_path);
-        
+
         // Validate metis workspace exists
         if !metis_dir.exists() || !metis_dir.is_dir() {
             return Err(CallToolError::new(std::io::Error::new(
                 std::io::ErrorKind::NotFound,
-                format!("Metis workspace not found at {}. Run initialize_project first.", metis_dir.display())
+                format!(
+                    "Metis workspace not found at {}. Run initialize_project first.",
+                    metis_dir.display()
+                ),
             )));
         }
-        
+
         // Parse the target phase
         let target_phase = self.parse_phase(&self.new_phase)?;
-        
+
         // Create the phase transition service
         let transition_service = PhaseTransitionService::new(metis_dir);
-        
+
         // Perform the transition
-        let result = transition_service.transition_document(&self.document_id, target_phase).await
+        let result = transition_service
+            .transition_document(&self.document_id, target_phase)
+            .await
             .map_err(|e| CallToolError::new(e))?;
-        
+
         let response = serde_json::json!({
             "success": true,
             "document_id": result.document_id,
@@ -65,7 +69,7 @@ impl TransitionPhaseTool {
             serde_json::to_string_pretty(&response).map_err(CallToolError::new)?,
         )]))
     }
-    
+
     fn parse_phase(&self, phase_str: &str) -> Result<Phase, CallToolError> {
         match phase_str.to_lowercase().as_str() {
             "draft" => Ok(Phase::Draft),
@@ -85,7 +89,7 @@ impl TransitionPhaseTool {
             "discovery" => Ok(Phase::Discovery),
             _ => Err(CallToolError::new(std::io::Error::new(
                 std::io::ErrorKind::InvalidInput,
-                format!("Unknown phase: {}", phase_str)
+                format!("Unknown phase: {}", phase_str),
             ))),
         }
     }

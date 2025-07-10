@@ -1,12 +1,12 @@
+use metis_core::{
+    application::services::workspace::PhaseTransitionService,
+    domain::documents::{traits::Document, types::Phase},
+};
 use rust_mcp_sdk::{
     macros::{mcp_tool, JsonSchema},
     schema::{schema_utils::CallToolError, CallToolResult, TextContent},
 };
 use serde::{Deserialize, Serialize};
-use metis_core::{
-    application::services::workspace::PhaseTransitionService,
-    domain::documents::{types::Phase, traits::Document},
-};
 use std::path::Path;
 
 #[mcp_tool(
@@ -30,60 +30,73 @@ pub struct CheckPhaseTransitionTool {
 impl CheckPhaseTransitionTool {
     pub async fn call_tool(&self) -> std::result::Result<CallToolResult, CallToolError> {
         let metis_dir = Path::new(&self.project_path);
-        
+
         // Validate metis workspace exists
         if !metis_dir.exists() || !metis_dir.is_dir() {
             return Err(CallToolError::new(std::io::Error::new(
                 std::io::ErrorKind::NotFound,
-                format!("Metis workspace not found at {}. Run initialize_project first.", metis_dir.display())
+                format!(
+                    "Metis workspace not found at {}. Run initialize_project first.",
+                    metis_dir.display()
+                ),
             )));
         }
-        
+
         // Parse the target phase
         let target_phase = self.parse_phase(&self.target_phase)?;
-        
+
         // Create the phase transition service
         let _transition_service = PhaseTransitionService::new(metis_dir);
-        
+
         // Try to validate the transition - this will tell us if it's possible
         // We first need to find the document and get its current phase
-        let discovery_service = metis_core::application::services::document::DocumentDiscoveryService::new(metis_dir);
-        let discovery_result = discovery_service.find_document_by_id(&self.document_id).await
+        let discovery_service =
+            metis_core::application::services::document::DocumentDiscoveryService::new(metis_dir);
+        let discovery_result = discovery_service
+            .find_document_by_id(&self.document_id)
+            .await
             .map_err(|e| CallToolError::new(e))?;
-        
+
         // Load current phase (reusing the same logic as the transition service)
-        let current_phase = self.get_current_phase(&discovery_result.file_path, discovery_result.document_type).await
+        let current_phase = self
+            .get_current_phase(&discovery_result.file_path, discovery_result.document_type)
+            .await
             .map_err(|e| CallToolError::new(e))?;
-        
+
         // Check if the transition would be valid by attempting validation
         let can_transition = match discovery_result.document_type {
             metis_core::domain::documents::types::DocumentType::Vision => {
-                let vision = metis_core::Vision::from_file(&discovery_result.file_path).await
+                let vision = metis_core::Vision::from_file(&discovery_result.file_path)
+                    .await
                     .map_err(|e| CallToolError::new(e))?;
                 vision.can_transition_to(target_phase)
             }
             metis_core::domain::documents::types::DocumentType::Strategy => {
-                let strategy = metis_core::Strategy::from_file(&discovery_result.file_path).await
+                let strategy = metis_core::Strategy::from_file(&discovery_result.file_path)
+                    .await
                     .map_err(|e| CallToolError::new(e))?;
                 strategy.can_transition_to(target_phase)
             }
             metis_core::domain::documents::types::DocumentType::Initiative => {
-                let initiative = metis_core::Initiative::from_file(&discovery_result.file_path).await
+                let initiative = metis_core::Initiative::from_file(&discovery_result.file_path)
+                    .await
                     .map_err(|e| CallToolError::new(e))?;
                 initiative.can_transition_to(target_phase)
             }
             metis_core::domain::documents::types::DocumentType::Task => {
-                let task = metis_core::Task::from_file(&discovery_result.file_path).await
+                let task = metis_core::Task::from_file(&discovery_result.file_path)
+                    .await
                     .map_err(|e| CallToolError::new(e))?;
                 task.can_transition_to(target_phase)
             }
             metis_core::domain::documents::types::DocumentType::Adr => {
-                let adr = metis_core::Adr::from_file(&discovery_result.file_path).await
+                let adr = metis_core::Adr::from_file(&discovery_result.file_path)
+                    .await
                     .map_err(|e| CallToolError::new(e))?;
                 adr.can_transition_to(target_phase)
             }
         };
-        
+
         let response = serde_json::json!({
             "can_transition": can_transition,
             "document_id": self.document_id,
@@ -102,7 +115,7 @@ impl CheckPhaseTransitionTool {
             serde_json::to_string_pretty(&response).map_err(CallToolError::new)?,
         )]))
     }
-    
+
     fn parse_phase(&self, phase_str: &str) -> Result<Phase, CallToolError> {
         match phase_str.to_lowercase().as_str() {
             "draft" => Ok(Phase::Draft),
@@ -122,12 +135,16 @@ impl CheckPhaseTransitionTool {
             "discovery" => Ok(Phase::Discovery),
             _ => Err(CallToolError::new(std::io::Error::new(
                 std::io::ErrorKind::InvalidInput,
-                format!("Unknown phase: {}", phase_str)
+                format!("Unknown phase: {}", phase_str),
             ))),
         }
     }
-    
-    async fn get_current_phase(&self, file_path: &Path, doc_type: metis_core::domain::documents::types::DocumentType) -> Result<Phase, metis_core::MetisError> {
+
+    async fn get_current_phase(
+        &self,
+        file_path: &Path,
+        doc_type: metis_core::domain::documents::types::DocumentType,
+    ) -> Result<Phase, metis_core::MetisError> {
         use metis_core::domain::documents::types::DocumentType;
         match doc_type {
             DocumentType::Vision => {

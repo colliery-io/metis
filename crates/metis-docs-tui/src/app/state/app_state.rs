@@ -29,7 +29,6 @@ impl CoreAppState {
     pub fn set_sync_complete(&mut self) {
         self.sync_complete = true;
     }
-
 }
 
 impl Default for CoreAppState {

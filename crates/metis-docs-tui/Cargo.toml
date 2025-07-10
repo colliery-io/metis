@@ -5,6 +5,10 @@ edition.workspace = true
 description = "Terminal User Interface for Metis document management system"
 license.workspace = true
 authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
 
 [[bin]]
 name = "metis-tui"
@@ -26,7 +30,7 @@ tracing-subscriber = { workspace = true }
 chrono = { workspace = true }
 
 # Local dependencies
-metis-docs-core = { path = "../metis-docs-core" }
+metis-docs-core = { path = "../metis-docs-core", version = "0.2.0" }
 
 # TUI-specific dependencies
 ratatui = "0.28"

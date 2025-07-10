@@ -22,7 +22,7 @@ impl HelloWorldTool {
     pub async fn call_tool(&self) -> std::result::Result<CallToolResult, CallToolError> {
         let name = self.name.as_deref().unwrap_or("World");
         let message = format!("Hello, {}!", name);
-        
+
         let response = serde_json::json!({
             "message": message,
             "timestamp": chrono::Utc::now().to_rfc3339()

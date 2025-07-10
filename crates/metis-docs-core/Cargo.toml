@@ -5,6 +5,10 @@ edition.workspace = true
 description = "Core library for Flight Levels documentation management system"
 license.workspace = true
 authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
 
 [dependencies]
 # Shared dependencies

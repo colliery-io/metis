@@ -1,11 +1,11 @@
-use crate::domain::documents::types::{DocumentType, DocumentId, Phase, Tag};
-use crate::domain::documents::traits::Document;
-use crate::domain::documents::strategy::RiskLevel;
 use crate::domain::documents::initiative::Complexity;
-use crate::{Vision, Strategy, Initiative, Task, Adr, MetisError};
+use crate::domain::documents::strategy::RiskLevel;
+use crate::domain::documents::traits::Document;
+use crate::domain::documents::types::{DocumentId, DocumentType, Phase, Tag};
 use crate::Result;
-use std::path::{Path, PathBuf};
+use crate::{Adr, Initiative, MetisError, Strategy, Task, Vision};
 use std::fs;
+use std::path::{Path, PathBuf};
 
 /// Service for creating new documents with proper defaults and validation
 pub struct DocumentCreationService {
@@ -42,11 +42,11 @@ impl DocumentCreationService {
     pub async fn create_vision(&self, config: DocumentCreationConfig) -> Result<CreationResult> {
         // Vision documents go directly in the workspace root
         let file_path = self.workspace_dir.join("vision.md");
-        
+
         // Check if vision already exists
         if file_path.exists() {
-            return Err(MetisError::ValidationFailed { 
-                message: "Vision document already exists".to_string() 
+            return Err(MetisError::ValidationFailed {
+                message: "Vision document already exists".to_string(),
             });
         }
 
@@ -61,16 +61,18 @@ impl DocumentCreationService {
             config.title.clone(),
             tags,
             false, // not archived
-        ).map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
+        )
+        .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
 
         // Create parent directory if needed
         if let Some(parent) = file_path.parent() {
-            fs::create_dir_all(parent)
-                .map_err(|e| MetisError::FileSystem(e.to_string()))?;
+            fs::create_dir_all(parent).map_err(|e| MetisError::FileSystem(e.to_string()))?;
         }
 
         // Write to file
-        vision.to_file(&file_path).await
+        vision
+            .to_file(&file_path)
+            .await
             .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
 
         Ok(CreationResult {
@@ -89,8 +91,8 @@ impl DocumentCreationService {
 
         // Check if strategy already exists
         if file_path.exists() {
-            return Err(MetisError::ValidationFailed { 
-                message: format!("Strategy with ID '{}' already exists", strategy_id) 
+            return Err(MetisError::ValidationFailed {
+                message: format!("Strategy with ID '{}' already exists", strategy_id),
             });
         }
 
@@ -106,17 +108,19 @@ impl DocumentCreationService {
             config.parent_id,
             Vec::new(), // blocked_by
             tags,
-            false, // not archived
+            false,             // not archived
             RiskLevel::Medium, // default risk level
-            Vec::new(), // stakeholders - empty by default
-        ).map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
+            Vec::new(),        // stakeholders - empty by default
+        )
+        .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
 
         // Create parent directory
-        fs::create_dir_all(&strategy_dir)
-            .map_err(|e| MetisError::FileSystem(e.to_string()))?;
+        fs::create_dir_all(&strategy_dir).map_err(|e| MetisError::FileSystem(e.to_string()))?;
 
         // Write to file
-        strategy.to_file(&file_path).await
+        strategy
+            .to_file(&file_path)
+            .await
             .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
 
         Ok(CreationResult {
@@ -127,10 +131,15 @@ impl DocumentCreationService {
     }
 
     /// Create a new initiative document
-    pub async fn create_initiative(&self, config: DocumentCreationConfig, strategy_id: &str) -> Result<CreationResult> {
+    pub async fn create_initiative(
+        &self,
+        config: DocumentCreationConfig,
+        strategy_id: &str,
+    ) -> Result<CreationResult> {
         // Generate initiative ID from title
         let initiative_id = self.generate_id_from_title(&config.title);
-        let initiative_dir = self.workspace_dir
+        let initiative_dir = self
+            .workspace_dir
             .join("strategies")
             .join(strategy_id)
             .join("initiatives")
@@ -139,18 +148,22 @@ impl DocumentCreationService {
 
         // Check if initiative already exists
         if file_path.exists() {
-            return Err(MetisError::ValidationFailed { 
-                message: format!("Initiative with ID '{}' already exists", initiative_id) 
+            return Err(MetisError::ValidationFailed {
+                message: format!("Initiative with ID '{}' already exists", initiative_id),
             });
         }
 
         // Validate parent strategy exists
-        let strategy_file = self.workspace_dir
+        let strategy_file = self
+            .workspace_dir
             .join("strategies")
             .join(strategy_id)
             .join("strategy.md");
         if !strategy_file.exists() {
-            return Err(MetisError::NotFound(format!("Parent strategy '{}' not found", strategy_id)));
+            return Err(MetisError::NotFound(format!(
+                "Parent strategy '{}' not found",
+                strategy_id
+            )));
         }
 
         // Create initiative with defaults
@@ -162,19 +175,23 @@ impl DocumentCreationService {
 
         let initiative = Initiative::new(
             config.title.clone(),
-            config.parent_id.or_else(|| Some(DocumentId::from(strategy_id))),
+            config
+                .parent_id
+                .or_else(|| Some(DocumentId::from(strategy_id))),
             Vec::new(), // blocked_by
             tags,
-            false, // not archived
+            false,         // not archived
             Complexity::M, // default complexity
-        ).map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
+        )
+        .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
 
         // Create parent directory
-        fs::create_dir_all(&initiative_dir)
-            .map_err(|e| MetisError::FileSystem(e.to_string()))?;
+        fs::create_dir_all(&initiative_dir).map_err(|e| MetisError::FileSystem(e.to_string()))?;
 
         // Write to file
-        initiative.to_file(&file_path).await
+        initiative
+            .to_file(&file_path)
+            .await
             .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
 
         Ok(CreationResult {
@@ -185,10 +202,16 @@ impl DocumentCreationService {
     }
 
     /// Create a new task document
-    pub async fn create_task(&self, config: DocumentCreationConfig, strategy_id: &str, initiative_id: &str) -> Result<CreationResult> {
+    pub async fn create_task(
+        &self,
+        config: DocumentCreationConfig,
+        strategy_id: &str,
+        initiative_id: &str,
+    ) -> Result<CreationResult> {
         // Generate task ID from title
         let task_id = self.generate_id_from_title(&config.title);
-        let initiative_dir = self.workspace_dir
+        let initiative_dir = self
+            .workspace_dir
             .join("strategies")
             .join(strategy_id)
             .join("initiatives")
@@ -197,15 +220,18 @@ impl DocumentCreationService {
 
         // Check if task already exists
         if file_path.exists() {
-            return Err(MetisError::ValidationFailed { 
-                message: format!("Task with ID '{}' already exists", task_id) 
+            return Err(MetisError::ValidationFailed {
+                message: format!("Task with ID '{}' already exists", task_id),
             });
         }
 
         // Validate parent initiative exists
         let initiative_file = initiative_dir.join("initiative.md");
         if !initiative_file.exists() {
-            return Err(MetisError::NotFound(format!("Parent initiative '{}' not found", initiative_id)));
+            return Err(MetisError::NotFound(format!(
+                "Parent initiative '{}' not found",
+                initiative_id
+            )));
         }
 
         // Create task with defaults
@@ -217,12 +243,15 @@ impl DocumentCreationService {
 
         let task = Task::new(
             config.title.clone(),
-            config.parent_id.or_else(|| Some(DocumentId::from(initiative_id))),
+            config
+                .parent_id
+                .or_else(|| Some(DocumentId::from(initiative_id))),
             Some(initiative_id.to_string()), // parent title for template
-            Vec::new(), // blocked_by
+            Vec::new(),                      // blocked_by
             tags,
             false, // not archived
-        ).map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
+        )
+        .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
 
         // Create parent directory if needed
         if !initiative_dir.exists() {
@@ -231,7 +260,8 @@ impl DocumentCreationService {
         }
 
         // Write to file
-        task.to_file(&file_path).await
+        task.to_file(&file_path)
+            .await
             .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
 
         Ok(CreationResult {
@@ -252,8 +282,8 @@ impl DocumentCreationService {
 
         // Check if ADR already exists
         if file_path.exists() {
-            return Err(MetisError::ValidationFailed { 
-                message: format!("ADR with filename '{}' already exists", adr_filename) 
+            return Err(MetisError::ValidationFailed {
+                message: format!("ADR with filename '{}' already exists", adr_filename),
             });
         }
 
@@ -268,18 +298,19 @@ impl DocumentCreationService {
             adr_number,
             config.title.clone(),
             String::new(), // decision_maker - will be set when transitioning to decided
-            None, // decision_date - will be set when transitioning to decided
+            None,          // decision_date - will be set when transitioning to decided
             config.parent_id,
             tags,
             false, // not archived
-        ).map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
+        )
+        .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
 
         // Create parent directory
-        fs::create_dir_all(&adrs_dir)
-            .map_err(|e| MetisError::FileSystem(e.to_string()))?;
+        fs::create_dir_all(&adrs_dir).map_err(|e| MetisError::FileSystem(e.to_string()))?;
 
         // Write to file
-        adr.to_file(&file_path).await
+        adr.to_file(&file_path)
+            .await
             .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
 
         Ok(CreationResult {
@@ -298,17 +329,16 @@ impl DocumentCreationService {
     /// Get the next ADR number by examining existing ADRs
     fn get_next_adr_number(&self) -> Result<u32> {
         let adrs_dir = self.workspace_dir.join("adrs");
-        
+
         if !adrs_dir.exists() {
             return Ok(1);
         }
 
         let mut max_number = 0;
-        for entry in fs::read_dir(&adrs_dir)
-            .map_err(|e| MetisError::FileSystem(e.to_string()))? {
+        for entry in fs::read_dir(&adrs_dir).map_err(|e| MetisError::FileSystem(e.to_string()))? {
             let entry = entry.map_err(|e| MetisError::FileSystem(e.to_string()))?;
             let filename = entry.file_name().to_string_lossy().to_string();
-            
+
             if filename.ends_with(".md") {
                 // Parse number from filename like "001-title.md"
                 if let Some(number_str) = filename.split('-').next() {
@@ -344,10 +374,10 @@ mod tests {
         };
 
         let result = service.create_vision(config).await.unwrap();
-        
+
         assert_eq!(result.document_type, DocumentType::Vision);
         assert!(result.file_path.exists());
-        
+
         // Verify we can read it back
         let vision = Vision::from_file(&result.file_path).await.unwrap();
         assert_eq!(vision.title(), "Test Vision");
@@ -369,10 +399,10 @@ mod tests {
         };
 
         let result = service.create_strategy(config).await.unwrap();
-        
+
         assert_eq!(result.document_type, DocumentType::Strategy);
         assert!(result.file_path.exists());
-        
+
         // Verify we can read it back
         let strategy = Strategy::from_file(&result.file_path).await.unwrap();
         assert_eq!(strategy.title(), "Test Strategy");
@@ -385,7 +415,7 @@ mod tests {
         fs::create_dir_all(&workspace_dir).unwrap();
 
         let service = DocumentCreationService::new(&workspace_dir);
-        
+
         // First create a parent strategy
         let strategy_config = DocumentCreationConfig {
             title: "Parent Strategy".to_string(),
@@ -406,11 +436,14 @@ mod tests {
             phase: None,
         };
 
-        let result = service.create_initiative(initiative_config, &strategy_id).await.unwrap();
-        
+        let result = service
+            .create_initiative(initiative_config, &strategy_id)
+            .await
+            .unwrap();
+
         assert_eq!(result.document_type, DocumentType::Initiative);
         assert!(result.file_path.exists());
-        
+
         // Verify we can read it back
         let initiative = Initiative::from_file(&result.file_path).await.unwrap();
         assert_eq!(initiative.title(), "Test Initiative");
@@ -420,12 +453,21 @@ mod tests {
     async fn test_generate_id_from_title() {
         let temp_dir = tempdir().unwrap();
         let workspace_dir = temp_dir.path().join(".metis");
-        
+
         let service = DocumentCreationService::new(&workspace_dir);
-        
-        assert_eq!(service.generate_id_from_title("Test Strategy"), "test-strategy");
-        assert_eq!(service.generate_id_from_title("My Complex Title!"), "my-complex-title");
-        assert_eq!(service.generate_id_from_title("Multiple   Spaces"), "multiple-spaces");
+
+        assert_eq!(
+            service.generate_id_from_title("Test Strategy"),
+            "test-strategy"
+        );
+        assert_eq!(
+            service.generate_id_from_title("My Complex Title!"),
+            "my-complex-title"
+        );
+        assert_eq!(
+            service.generate_id_from_title("Multiple   Spaces"),
+            "multiple-spaces"
+        );
     }
 
     #[tokio::test]
@@ -436,14 +478,14 @@ mod tests {
         fs::create_dir_all(&adrs_dir).unwrap();
 
         let service = DocumentCreationService::new(&workspace_dir);
-        
+
         // Should start at 1 when no ADRs exist
         assert_eq!(service.get_next_adr_number().unwrap(), 1);
-        
+
         // Create some ADR files
         fs::write(adrs_dir.join("001-first-adr.md"), "content").unwrap();
         fs::write(adrs_dir.join("002-second-adr.md"), "content").unwrap();
-        
+
         // Should return 3 as next number
         assert_eq!(service.get_next_adr_number().unwrap(), 3);
     }

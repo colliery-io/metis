@@ -1,12 +1,12 @@
-use super::traits::{Document, DocumentTemplate, DocumentValidationError};
-use super::types::{DocumentId, DocumentType, Phase, Tag};
-use super::metadata::DocumentMetadata;
 use super::content::DocumentContent;
 use super::helpers::FrontmatterParser;
-use std::path::Path;
-use gray_matter;
+use super::metadata::DocumentMetadata;
+use super::traits::{Document, DocumentTemplate, DocumentValidationError};
+use super::types::{DocumentId, DocumentType, Phase, Tag};
 use chrono::Utc;
-use tera::{Tera, Context};
+use gray_matter;
+use std::path::Path;
+use tera::{Context, Tera};
 
 /// An ADR (Architecture Decision Record) documents architectural decisions
 #[derive(Debug)]
@@ -30,22 +30,25 @@ impl Adr {
     ) -> Result<Self, DocumentValidationError> {
         // Create fresh metadata
         let metadata = DocumentMetadata::new();
-        
+
         // Render the content template
         let template_content = include_str!("content.md");
         let mut tera = Tera::default();
         tera.add_raw_template("adr_content", template_content)
-            .map_err(|e| DocumentValidationError::InvalidContent(format!("Template error: {}", e)))?;
-        
+            .map_err(|e| {
+                DocumentValidationError::InvalidContent(format!("Template error: {}", e))
+            })?;
+
         let mut context = Context::new();
         context.insert("number", &number);
         context.insert("title", &title);
-        
-        let rendered_content = tera.render("adr_content", &context)
-            .map_err(|e| DocumentValidationError::InvalidContent(format!("Template render error: {}", e)))?;
-        
+
+        let rendered_content = tera.render("adr_content", &context).map_err(|e| {
+            DocumentValidationError::InvalidContent(format!("Template render error: {}", e))
+        })?;
+
         let content = DocumentContent::new(&rendered_content);
-        
+
         Ok(Self {
             core: super::traits::DocumentCore {
                 title,
@@ -61,8 +64,9 @@ impl Adr {
             decision_date,
         })
     }
-    
+
     /// Create an ADR document from existing data (used when loading from file)
+    #[allow(clippy::too_many_arguments)]
     pub fn from_parts(
         number: u32,
         title: String,
@@ -104,8 +108,9 @@ impl Adr {
 
     /// Create an ADR document by reading and parsing a file
     pub async fn from_file<P: AsRef<Path>>(path: P) -> Result<Self, DocumentValidationError> {
-        let raw_content = std::fs::read_to_string(path.as_ref())
-            .map_err(|e| DocumentValidationError::InvalidContent(format!("Failed to read file: {}", e)))?;
+        let raw_content = std::fs::read_to_string(path.as_ref()).map_err(|e| {
+            DocumentValidationError::InvalidContent(format!("Failed to read file: {}", e))
+        })?;
 
         Self::from_content(&raw_content)
     }
@@ -114,7 +119,7 @@ impl Adr {
     pub fn from_content(raw_content: &str) -> Result<Self, DocumentValidationError> {
         // Parse frontmatter and content
         let parsed = gray_matter::Matter::<gray_matter::engine::YAML>::new().parse(raw_content);
-        
+
         // Extract frontmatter data
         let frontmatter = parsed.data.ok_or_else(|| {
             DocumentValidationError::MissingRequiredField("frontmatter".to_string())
@@ -123,7 +128,11 @@ impl Adr {
         // Parse frontmatter into structured data
         let fm_map = match frontmatter {
             gray_matter::Pod::Hash(map) => map,
-            _ => return Err(DocumentValidationError::InvalidContent("Frontmatter must be a hash/map".to_string())),
+            _ => {
+                return Err(DocumentValidationError::InvalidContent(
+                    "Frontmatter must be a hash/map".to_string(),
+                ))
+            }
         };
 
         // Extract required fields
@@ -133,7 +142,8 @@ impl Adr {
         // Parse timestamps
         let created_at = FrontmatterParser::extract_datetime(&fm_map, "created_at")?;
         let updated_at = FrontmatterParser::extract_datetime(&fm_map, "updated_at")?;
-        let exit_criteria_met = FrontmatterParser::extract_bool(&fm_map, "exit_criteria_met").unwrap_or(false);
+        let exit_criteria_met =
+            FrontmatterParser::extract_bool(&fm_map, "exit_criteria_met").unwrap_or(false);
 
         // Parse tags
         let tags = FrontmatterParser::extract_tags(&fm_map)?;
@@ -141,23 +151,37 @@ impl Adr {
         // Verify this is actually an ADR document
         let level = FrontmatterParser::extract_string(&fm_map, "level")?;
         if level != "adr" {
-            return Err(DocumentValidationError::InvalidContent(
-                format!("Expected level 'adr', found '{}'", level)
-            ));
+            return Err(DocumentValidationError::InvalidContent(format!(
+                "Expected level 'adr', found '{}'",
+                level
+            )));
         }
 
         // Extract ADR-specific fields
         let number = FrontmatterParser::extract_integer(&fm_map, "number")? as u32;
-        let decision_maker = FrontmatterParser::extract_string(&fm_map, "decision_maker").unwrap_or_default();
+        let decision_maker =
+            FrontmatterParser::extract_string(&fm_map, "decision_maker").unwrap_or_default();
         let decision_date = FrontmatterParser::extract_datetime(&fm_map, "decision_date").ok();
-        let parent_id = FrontmatterParser::extract_string(&fm_map, "parent").ok().map(DocumentId::from);
+        let parent_id = FrontmatterParser::extract_string(&fm_map, "parent")
+            .ok()
+            .map(DocumentId::from);
 
         // Create metadata and content
-        let metadata = DocumentMetadata::from_frontmatter(created_at, updated_at, exit_criteria_met);
+        let metadata =
+            DocumentMetadata::from_frontmatter(created_at, updated_at, exit_criteria_met);
         let content = DocumentContent::from_markdown(&parsed.content);
 
-        Ok(Self::from_parts(number, title, decision_maker, decision_date, metadata, content, 
-                     parent_id, tags, archived))
+        Ok(Self::from_parts(
+            number,
+            title,
+            decision_maker,
+            decision_date,
+            metadata,
+            content,
+            parent_id,
+            tags,
+            archived,
+        ))
     }
 
     /// Get the next phase in the ADR sequence
@@ -168,10 +192,10 @@ impl Adr {
             Discussion => Some(Decided),
             Decided => Some(Superseded),
             Superseded => None, // Final phase
-            _ => None, // Invalid phase for ADR
+            _ => None,          // Invalid phase for ADR
         }
     }
-    
+
     /// Update the phase tag in the document's tags
     fn update_phase_tag(&mut self, new_phase: Phase) {
         // Remove any existing phase tags
@@ -185,18 +209,21 @@ impl Adr {
     /// Write the ADR document to a file
     pub async fn to_file<P: AsRef<Path>>(&self, path: P) -> Result<(), DocumentValidationError> {
         let content = self.to_content()?;
-        std::fs::write(path.as_ref(), content)
-            .map_err(|e| DocumentValidationError::InvalidContent(format!("Failed to write file: {}", e)))
+        std::fs::write(path.as_ref(), content).map_err(|e| {
+            DocumentValidationError::InvalidContent(format!("Failed to write file: {}", e))
+        })
     }
 
     /// Convert the ADR document to its markdown string representation using templates
     pub fn to_content(&self) -> Result<String, DocumentValidationError> {
         let mut tera = Tera::default();
-        
+
         // Add the frontmatter template to Tera
         tera.add_raw_template("frontmatter", self.frontmatter_template())
-            .map_err(|e| DocumentValidationError::InvalidContent(format!("Template error: {}", e)))?;
-        
+            .map_err(|e| {
+                DocumentValidationError::InvalidContent(format!("Template error: {}", e))
+            })?;
+
         // Create context with all document data
         let mut context = Context::new();
         context.insert("slug", &DocumentId::title_to_slug(self.title()));
@@ -204,35 +231,55 @@ impl Adr {
         context.insert("created_at", &self.metadata().created_at.to_rfc3339());
         context.insert("updated_at", &self.metadata().updated_at.to_rfc3339());
         context.insert("archived", &self.archived().to_string());
-        context.insert("exit_criteria_met", &self.metadata().exit_criteria_met.to_string());
-        context.insert("parent_id", &self.parent_id().map(|id| id.to_string()).unwrap_or_default());
+        context.insert(
+            "exit_criteria_met",
+            &self.metadata().exit_criteria_met.to_string(),
+        );
+        context.insert(
+            "parent_id",
+            &self
+                .parent_id()
+                .map(|id| id.to_string())
+                .unwrap_or_default(),
+        );
         context.insert("number", &self.number);
         context.insert("formatted_number", &format!("{:03}", self.number));
         context.insert("decision_maker", &self.decision_maker);
-        context.insert("decision_date", &self.decision_date.map(|d| d.to_rfc3339()).unwrap_or_default());
-        
+        context.insert(
+            "decision_date",
+            &self
+                .decision_date
+                .map(|d| d.to_rfc3339())
+                .unwrap_or_default(),
+        );
+
         // Convert tags to strings
         let tag_strings: Vec<String> = self.tags().iter().map(|tag| tag.to_str()).collect();
         context.insert("tags", &tag_strings);
-        
+
         // Render frontmatter
-        let frontmatter = tera.render("frontmatter", &context)
-            .map_err(|e| DocumentValidationError::InvalidContent(format!("Frontmatter render error: {}", e)))?;
-        
+        let frontmatter = tera.render("frontmatter", &context).map_err(|e| {
+            DocumentValidationError::InvalidContent(format!("Frontmatter render error: {}", e))
+        })?;
+
         // Use the actual content body
         let content_body = &self.content().body;
-        
+
         // Use actual acceptance criteria if present, otherwise empty string
         let acceptance_criteria = if let Some(ac) = &self.content().acceptance_criteria {
             format!("\n\n## Acceptance Criteria\n\n{}", ac)
         } else {
             String::new()
         };
-        
-        // Combine everything
-        Ok(format!("---\n{}\n---\n\n{}{}", frontmatter.trim_end(), content_body, acceptance_criteria))
-    }
 
+        // Combine everything
+        Ok(format!(
+            "---\n{}\n---\n\n{}{}",
+            frontmatter.trim_end(),
+            content_body,
+            acceptance_criteria
+        ))
+    }
 }
 
 impl Document for Adr {
@@ -265,12 +312,10 @@ impl Document for Adr {
     fn can_transition_to(&self, phase: Phase) -> bool {
         if let Ok(current_phase) = self.phase() {
             use Phase::*;
-            match (current_phase, phase) {
-                (Draft, Discussion) => true,
-                (Discussion, Decided) => true,
-                (Decided, Superseded) => true,
-                _ => false,
-            }
+            matches!(
+                (current_phase, phase),
+                (Draft, Discussion) | (Discussion, Decided) | (Decided, Superseded)
+            )
         } else {
             false // Can't transition if we can't determine current phase
         }
@@ -335,16 +380,19 @@ impl Document for Adr {
         include_str!("acceptance_criteria.md")
     }
 
-    fn transition_phase(&mut self, target_phase: Option<Phase>) -> Result<Phase, DocumentValidationError> {
+    fn transition_phase(
+        &mut self,
+        target_phase: Option<Phase>,
+    ) -> Result<Phase, DocumentValidationError> {
         let current_phase = self.phase()?;
-        
+
         let new_phase = match target_phase {
             Some(phase) => {
                 // Validate the transition is allowed
                 if !self.can_transition_to(phase) {
-                    return Err(DocumentValidationError::InvalidPhaseTransition { 
-                        from: current_phase, 
-                        to: phase 
+                    return Err(DocumentValidationError::InvalidPhaseTransition {
+                        from: current_phase,
+                        to: phase,
                     });
                 }
                 phase
@@ -357,7 +405,7 @@ impl Document for Adr {
                 }
             }
         };
-        
+
         self.update_phase_tag(new_phase);
         Ok(new_phase)
     }
@@ -409,7 +457,7 @@ This will allow us to leverage a large ecosystem.
 "##;
 
         let adr = Adr::from_content(content).unwrap();
-        
+
         assert_eq!(adr.title(), "Use React for Frontend");
         assert_eq!(adr.document_type(), DocumentType::Adr);
         assert!(!adr.archived());
@@ -419,7 +467,6 @@ This will allow us to leverage a large ecosystem.
         assert_eq!(adr.decision_maker(), "Architecture Team");
         assert_eq!(adr.id().to_string(), "001-use-react-for-frontend");
     }
-
 
     #[test]
     fn test_adr_special_id_format() {
@@ -431,7 +478,8 @@ This will allow us to leverage a large ecosystem.
             None,
             vec![Tag::Phase(Phase::Decided)],
             false,
-        ).unwrap();
+        )
+        .unwrap();
 
         assert_eq!(adr.id().to_string(), "042-use-docker-for-containerization");
         assert_eq!(adr.number(), 42);
@@ -478,10 +526,11 @@ exit_criteria_met: false
             None,
             vec![Tag::Phase(Phase::Decided)],
             false,
-        ).unwrap();
+        )
+        .unwrap();
 
         assert!(adr.validate().is_ok());
-        
+
         // Test validation failure - empty decision maker
         let adr_no_decision_maker = Adr::new(
             1,
@@ -491,8 +540,9 @@ exit_criteria_met: false
             None,
             vec![Tag::Phase(Phase::Decided)],
             false,
-        ).unwrap();
-        
+        )
+        .unwrap();
+
         assert!(adr_no_decision_maker.validate().is_err());
     }
 
@@ -506,7 +556,8 @@ exit_criteria_met: false
             None,
             vec![Tag::Phase(Phase::Decided)],
             false,
-        ).unwrap();
+        )
+        .unwrap();
 
         assert_eq!(adr.blocked_by().len(), 0);
         assert!(adr.validate().is_ok());
@@ -522,7 +573,8 @@ exit_criteria_met: false
             None,
             vec![Tag::Phase(Phase::Discussion)],
             false,
-        ).unwrap();
+        )
+        .unwrap();
 
         assert!(discussion_adr.can_transition_to(Phase::Decided));
         assert!(!discussion_adr.can_transition_to(Phase::Active));
@@ -536,7 +588,8 @@ exit_criteria_met: false
             None,
             vec![Tag::Phase(Phase::Decided)],
             false,
-        ).unwrap();
+        )
+        .unwrap();
 
         assert!(decided_adr.can_transition_to(Phase::Superseded));
         assert!(!decided_adr.can_transition_to(Phase::Discussion));
@@ -552,7 +605,8 @@ exit_criteria_met: false
             None,
             vec![Tag::Phase(Phase::Decided)],
             false,
-        ).unwrap();
+        )
+        .unwrap();
 
         let adr42 = Adr::new(
             42,
@@ -562,7 +616,8 @@ exit_criteria_met: false
             None,
             vec![Tag::Phase(Phase::Decided)],
             false,
-        ).unwrap();
+        )
+        .unwrap();
 
         let adr999 = Adr::new(
             999,
@@ -572,7 +627,8 @@ exit_criteria_met: false
             None,
             vec![Tag::Phase(Phase::Decided)],
             false,
-        ).unwrap();
+        )
+        .unwrap();
 
         assert_eq!(adr1.id().to_string(), "001-first-decision");
         assert_eq!(adr42.id().to_string(), "042-another-decision");
@@ -589,7 +645,8 @@ exit_criteria_met: false
             None,
             vec![Tag::Phase(Phase::Draft)],
             false,
-        ).unwrap();
+        )
+        .unwrap();
 
         // Auto-transition from Draft should go to Discussion
         let new_phase = adr.transition_phase(None).unwrap();
@@ -622,7 +679,8 @@ exit_criteria_met: false
             None,
             vec![Tag::Phase(Phase::Discussion)],
             false,
-        ).unwrap();
+        )
+        .unwrap();
 
         // Explicit transition from Discussion to Decided
         let new_phase = adr.transition_phase(Some(Phase::Decided)).unwrap();
@@ -645,7 +703,8 @@ exit_criteria_met: false
             None,
             vec![Tag::Phase(Phase::Draft)],
             false,
-        ).unwrap();
+        )
+        .unwrap();
 
         // Invalid transition from Draft to Decided (must go through Discussion)
         let result = adr.transition_phase(Some(Phase::Decided));
@@ -657,7 +716,7 @@ exit_criteria_met: false
             }
             _ => panic!("Expected InvalidPhaseTransition error"),
         }
-        
+
         // Should still be in Draft phase
         assert_eq!(adr.phase().unwrap(), Phase::Draft);
     }
@@ -673,25 +732,31 @@ exit_criteria_met: false
             None,
             vec![Tag::Phase(Phase::Draft)],
             false,
-        ).unwrap();
-        
+        )
+        .unwrap();
+
         // Then update its content to have specific test content
-        adr.core_mut().content = DocumentContent::new("## Context\n\nOriginal context\n\n## Decision\n\nOriginal decision");
+        adr.core_mut().content = DocumentContent::new(
+            "## Context\n\nOriginal context\n\n## Decision\n\nOriginal decision",
+        );
 
         // Replace existing section
-        adr.update_section("Updated context information", "Context", false).unwrap();
+        adr.update_section("Updated context information", "Context", false)
+            .unwrap();
         let content = adr.content().body.clone();
         assert!(content.contains("## Context\n\nUpdated context information"));
         assert!(!content.contains("Original context"));
 
         // Append to existing section
-        adr.update_section("Additional decision rationale", "Decision", true).unwrap();
+        adr.update_section("Additional decision rationale", "Decision", true)
+            .unwrap();
         let content = adr.content().body.clone();
         assert!(content.contains("Original decision"));
         assert!(content.contains("Additional decision rationale"));
 
         // Add new section
-        adr.update_section("Impact analysis details", "Consequences", false).unwrap();
+        adr.update_section("Impact analysis details", "Consequences", false)
+            .unwrap();
         let content = adr.content().body.clone();
         assert!(content.contains("## Consequences\n\nImpact analysis details"));
     }

@@ -1,11 +1,11 @@
-use super::traits::{Document, DocumentTemplate, DocumentValidationError};
-use super::types::{DocumentId, DocumentType, Phase, Tag};
-use super::metadata::DocumentMetadata;
 use super::content::DocumentContent;
 use super::helpers::FrontmatterParser;
-use std::path::Path;
+use super::metadata::DocumentMetadata;
+use super::traits::{Document, DocumentTemplate, DocumentValidationError};
+use super::types::{DocumentId, DocumentType, Phase, Tag};
 use gray_matter;
-use tera::{Tera, Context};
+use std::path::Path;
+use tera::{Context, Tera};
 
 /// A Vision document represents the high-level direction and goals
 #[derive(Debug)]
@@ -22,34 +22,37 @@ impl Vision {
     ) -> Result<Self, DocumentValidationError> {
         // Create fresh metadata
         let metadata = DocumentMetadata::new();
-        
+
         // Render the content template
         let template_content = include_str!("content.md");
         let mut tera = Tera::default();
         tera.add_raw_template("vision_content", template_content)
-            .map_err(|e| DocumentValidationError::InvalidContent(format!("Template error: {}", e)))?;
-        
+            .map_err(|e| {
+                DocumentValidationError::InvalidContent(format!("Template error: {}", e))
+            })?;
+
         let mut context = Context::new();
         context.insert("title", &title);
-        
-        let rendered_content = tera.render("vision_content", &context)
-            .map_err(|e| DocumentValidationError::InvalidContent(format!("Template render error: {}", e)))?;
-        
+
+        let rendered_content = tera.render("vision_content", &context).map_err(|e| {
+            DocumentValidationError::InvalidContent(format!("Template render error: {}", e))
+        })?;
+
         let content = DocumentContent::new(&rendered_content);
-        
+
         Ok(Self {
             core: super::traits::DocumentCore {
                 title,
                 metadata,
                 content,
-                parent_id: None, // Visions have no parents
+                parent_id: None,        // Visions have no parents
                 blocked_by: Vec::new(), // Visions cannot be blocked
                 tags,
                 archived,
             },
         })
     }
-    
+
     /// Create a Vision document from existing data (used when loading from file)
     pub fn from_parts(
         title: String,
@@ -63,7 +66,7 @@ impl Vision {
                 title,
                 metadata,
                 content,
-                parent_id: None, // Visions have no parents
+                parent_id: None,        // Visions have no parents
                 blocked_by: Vec::new(), // Visions cannot be blocked
                 tags,
                 archived,
@@ -73,8 +76,9 @@ impl Vision {
 
     /// Create a Vision document by reading and parsing a file
     pub async fn from_file<P: AsRef<Path>>(path: P) -> Result<Self, DocumentValidationError> {
-        let raw_content = std::fs::read_to_string(path.as_ref())
-            .map_err(|e| DocumentValidationError::InvalidContent(format!("Failed to read file: {}", e)))?;
+        let raw_content = std::fs::read_to_string(path.as_ref()).map_err(|e| {
+            DocumentValidationError::InvalidContent(format!("Failed to read file: {}", e))
+        })?;
 
         Self::from_content(&raw_content)
     }
@@ -83,7 +87,7 @@ impl Vision {
     pub fn from_content(raw_content: &str) -> Result<Self, DocumentValidationError> {
         // Parse frontmatter and content
         let parsed = gray_matter::Matter::<gray_matter::engine::YAML>::new().parse(raw_content);
-        
+
         // Extract frontmatter data
         let frontmatter = parsed.data.ok_or_else(|| {
             DocumentValidationError::MissingRequiredField("frontmatter".to_string())
@@ -92,7 +96,11 @@ impl Vision {
         // Parse frontmatter into structured data
         let fm_map = match frontmatter {
             gray_matter::Pod::Hash(map) => map,
-            _ => return Err(DocumentValidationError::InvalidContent("Frontmatter must be a hash/map".to_string())),
+            _ => {
+                return Err(DocumentValidationError::InvalidContent(
+                    "Frontmatter must be a hash/map".to_string(),
+                ))
+            }
         };
 
         // Extract required fields
@@ -102,7 +110,8 @@ impl Vision {
         // Parse timestamps
         let created_at = FrontmatterParser::extract_datetime(&fm_map, "created_at")?;
         let updated_at = FrontmatterParser::extract_datetime(&fm_map, "updated_at")?;
-        let exit_criteria_met = FrontmatterParser::extract_bool(&fm_map, "exit_criteria_met").unwrap_or(false);
+        let exit_criteria_met =
+            FrontmatterParser::extract_bool(&fm_map, "exit_criteria_met").unwrap_or(false);
 
         // Parse tags
         let tags = FrontmatterParser::extract_tags(&fm_map)?;
@@ -110,19 +119,19 @@ impl Vision {
         // Verify this is actually a vision document
         let level = FrontmatterParser::extract_string(&fm_map, "level")?;
         if level != "vision" {
-            return Err(DocumentValidationError::InvalidContent(
-                format!("Expected level 'vision', found '{}'", level)
-            ));
+            return Err(DocumentValidationError::InvalidContent(format!(
+                "Expected level 'vision', found '{}'",
+                level
+            )));
         }
 
         // Create metadata and content
-        let metadata = DocumentMetadata::from_frontmatter(created_at, updated_at, exit_criteria_met);
+        let metadata =
+            DocumentMetadata::from_frontmatter(created_at, updated_at, exit_criteria_met);
         let content = DocumentContent::from_markdown(&parsed.content);
 
         Ok(Self::from_parts(title, metadata, content, tags, archived))
     }
-
-
 
     /// Get the next phase in the Vision sequence
     fn next_phase_in_sequence(current: Phase) -> Option<Phase> {
@@ -131,10 +140,10 @@ impl Vision {
             Draft => Some(Review),
             Review => Some(Published),
             Published => None, // Final phase
-            _ => None, // Invalid phase for Vision
+            _ => None,         // Invalid phase for Vision
         }
     }
-    
+
     /// Update the phase tag in the document's tags
     fn update_phase_tag(&mut self, new_phase: Phase) {
         // Remove any existing phase tags
@@ -148,18 +157,21 @@ impl Vision {
     /// Write the Vision document to a file
     pub async fn to_file<P: AsRef<Path>>(&self, path: P) -> Result<(), DocumentValidationError> {
         let content = self.to_content()?;
-        std::fs::write(path.as_ref(), content)
-            .map_err(|e| DocumentValidationError::InvalidContent(format!("Failed to write file: {}", e)))
+        std::fs::write(path.as_ref(), content).map_err(|e| {
+            DocumentValidationError::InvalidContent(format!("Failed to write file: {}", e))
+        })
     }
 
     /// Convert the Vision document to its markdown string representation using templates
     pub fn to_content(&self) -> Result<String, DocumentValidationError> {
         let mut tera = Tera::default();
-        
+
         // Add the frontmatter template to Tera
         tera.add_raw_template("frontmatter", self.frontmatter_template())
-            .map_err(|e| DocumentValidationError::InvalidContent(format!("Template error: {}", e)))?;
-        
+            .map_err(|e| {
+                DocumentValidationError::InvalidContent(format!("Template error: {}", e))
+            })?;
+
         // Create context with all document data
         let mut context = Context::new();
         context.insert("slug", &self.id().to_string());
@@ -167,28 +179,37 @@ impl Vision {
         context.insert("created_at", &self.metadata().created_at.to_rfc3339());
         context.insert("updated_at", &self.metadata().updated_at.to_rfc3339());
         context.insert("archived", &self.archived().to_string());
-        context.insert("exit_criteria_met", &self.metadata().exit_criteria_met.to_string());
-        
+        context.insert(
+            "exit_criteria_met",
+            &self.metadata().exit_criteria_met.to_string(),
+        );
+
         // Convert tags to strings
         let tag_strings: Vec<String> = self.tags().iter().map(|tag| tag.to_str()).collect();
         context.insert("tags", &tag_strings);
-        
+
         // Render frontmatter
-        let frontmatter = tera.render("frontmatter", &context)
-            .map_err(|e| DocumentValidationError::InvalidContent(format!("Frontmatter render error: {}", e)))?;
-        
+        let frontmatter = tera.render("frontmatter", &context).map_err(|e| {
+            DocumentValidationError::InvalidContent(format!("Frontmatter render error: {}", e))
+        })?;
+
         // Use the actual content body
         let content_body = &self.content().body;
-        
+
         // Use actual acceptance criteria if present, otherwise empty string
         let acceptance_criteria = if let Some(ac) = &self.content().acceptance_criteria {
             format!("\n\n## Acceptance Criteria\n\n{}", ac)
         } else {
             String::new()
         };
-        
+
         // Combine everything
-        Ok(format!("---\n{}\n---\n\n{}{}", frontmatter.trim_end(), content_body, acceptance_criteria))
+        Ok(format!(
+            "---\n{}\n---\n\n{}{}",
+            frontmatter.trim_end(),
+            content_body,
+            acceptance_criteria
+        ))
     }
 }
 
@@ -218,11 +239,7 @@ impl Document for Vision {
     fn can_transition_to(&self, phase: Phase) -> bool {
         if let Ok(current_phase) = self.phase() {
             use Phase::*;
-            match (current_phase, phase) {
-                (Draft, Review) => true,
-                (Review, Published) => true,
-                _ => false,
-            }
+            matches!((current_phase, phase), (Draft, Review) | (Review, Published))
         } else {
             false // Can't transition if we can't determine current phase
         }
@@ -287,16 +304,19 @@ impl Document for Vision {
         include_str!("acceptance_criteria.md")
     }
 
-    fn transition_phase(&mut self, target_phase: Option<Phase>) -> Result<Phase, DocumentValidationError> {
+    fn transition_phase(
+        &mut self,
+        target_phase: Option<Phase>,
+    ) -> Result<Phase, DocumentValidationError> {
         let current_phase = self.phase()?;
-        
+
         let new_phase = match target_phase {
             Some(phase) => {
                 // Validate the transition is allowed
                 if !self.can_transition_to(phase) {
-                    return Err(DocumentValidationError::InvalidPhaseTransition { 
-                        from: current_phase, 
-                        to: phase 
+                    return Err(DocumentValidationError::InvalidPhaseTransition {
+                        from: current_phase,
+                        to: phase,
                     });
                 }
                 phase
@@ -309,7 +329,7 @@ impl Document for Vision {
                 }
             }
         };
-        
+
         self.update_phase_tag(new_phase);
         Ok(new_phase)
     }
@@ -363,28 +383,27 @@ We want to be there.
 "##;
 
         let vision = Vision::from_content(content).unwrap();
-        
+
         assert_eq!(vision.title(), "Test Vision");
         assert_eq!(vision.document_type(), DocumentType::Vision);
         assert!(!vision.archived());
         assert_eq!(vision.tags().len(), 2);
         assert_eq!(vision.phase().unwrap(), Phase::Draft);
         assert!(vision.content().has_acceptance_criteria());
-        
+
         // Round-trip test: write to file and read back
         let temp_dir = tempdir().unwrap();
         let file_path = temp_dir.path().join("test-vision.md");
-        
+
         vision.to_file(&file_path).await.unwrap();
         let loaded_vision = Vision::from_file(&file_path).await.unwrap();
-        
+
         assert_eq!(loaded_vision.title(), vision.title());
         assert_eq!(loaded_vision.phase().unwrap(), vision.phase().unwrap());
         assert_eq!(loaded_vision.content().body, vision.content().body);
         assert_eq!(loaded_vision.archived(), vision.archived());
         assert_eq!(loaded_vision.tags().len(), vision.tags().len());
     }
-
 
     #[test]
     fn test_vision_invalid_level() {
@@ -463,26 +482,26 @@ exit_criteria_met: false
 
         let vision = Vision::from_content(content).unwrap();
         let tags = vision.tags();
-        
+
         assert_eq!(tags.len(), 4);
         assert!(tags.contains(&Tag::Label("vision".to_string())));
         assert!(tags.contains(&Tag::Phase(Phase::Review)));
         assert!(tags.contains(&Tag::Label("high-priority".to_string())));
         assert!(tags.contains(&Tag::Label("urgent".to_string())));
-        
+
         assert_eq!(vision.phase().unwrap(), Phase::Review);
-        
+
         // Round-trip test: write to file and read back
         let temp_dir = tempdir().unwrap();
         let file_path = temp_dir.path().join("test-vision.md");
-        
+
         vision.to_file(&file_path).await.unwrap();
         let loaded_vision = Vision::from_file(&file_path).await.unwrap();
-        
+
         assert_eq!(loaded_vision.title(), vision.title());
         assert_eq!(loaded_vision.phase().unwrap(), vision.phase().unwrap());
         assert_eq!(loaded_vision.tags().len(), vision.tags().len());
-        
+
         // Verify specific tags survived the round-trip
         let loaded_tags = loaded_vision.tags();
         assert!(loaded_tags.contains(&Tag::Label("vision".to_string())));
@@ -497,22 +516,23 @@ exit_criteria_met: false
             "Test Vision".to_string(),
             vec![Tag::Label("vision".to_string()), Tag::Phase(Phase::Draft)],
             false,
-        ).expect("Failed to create vision");
+        )
+        .expect("Failed to create vision");
 
         assert!(vision.validate().is_ok());
         assert_eq!(vision.parent_id(), None);
         assert_eq!(vision.blocked_by().len(), 0);
-        
+
         // Round-trip test: write to file and read back
         let temp_dir = tempdir().unwrap();
         let file_path = temp_dir.path().join("test-vision.md");
-        
+
         // Write to file
         vision.to_file(&file_path).await.unwrap();
-        
+
         // Read back from file
         let loaded_vision = Vision::from_file(&file_path).await.unwrap();
-        
+
         // Verify all fields match
         assert_eq!(loaded_vision.title(), vision.title());
         assert_eq!(loaded_vision.phase().unwrap(), vision.phase().unwrap());
@@ -527,19 +547,20 @@ exit_criteria_met: false
             "Test Vision".to_string(),
             vec![Tag::Phase(Phase::Draft)],
             false,
-        ).expect("Failed to create vision");
+        )
+        .expect("Failed to create vision");
 
         assert!(vision.can_transition_to(Phase::Review));
         assert!(!vision.can_transition_to(Phase::Published));
         assert!(!vision.can_transition_to(Phase::Active));
-        
+
         // Round-trip test: write to file and read back
         let temp_dir = tempdir().unwrap();
         let file_path = temp_dir.path().join("test-vision.md");
-        
+
         vision.to_file(&file_path).await.unwrap();
         let loaded_vision = Vision::from_file(&file_path).await.unwrap();
-        
+
         assert_eq!(loaded_vision.title(), vision.title());
         assert_eq!(loaded_vision.phase().unwrap(), vision.phase().unwrap());
         assert!(loaded_vision.can_transition_to(Phase::Review));
@@ -553,13 +574,14 @@ exit_criteria_met: false
             "Test Vision".to_string(),
             vec![Tag::Phase(Phase::Draft)],
             false,
-        ).expect("Failed to create vision");
+        )
+        .expect("Failed to create vision");
 
         // Auto-transition from Draft should go to Review
         let new_phase = vision.transition_phase(None).unwrap();
         assert_eq!(new_phase, Phase::Review);
         assert_eq!(vision.phase().unwrap(), Phase::Review);
-        
+
         // Round-trip test after first transition
         let temp_dir = tempdir().unwrap();
         let file_path = temp_dir.path().join("test-vision.md");
@@ -571,7 +593,7 @@ exit_criteria_met: false
         let new_phase = loaded_vision.transition_phase(None).unwrap();
         assert_eq!(new_phase, Phase::Published);
         assert_eq!(loaded_vision.phase().unwrap(), Phase::Published);
-        
+
         // Round-trip test after second transition
         loaded_vision.to_file(&file_path).await.unwrap();
         let mut loaded_vision2 = Vision::from_file(&file_path).await.unwrap();
@@ -581,7 +603,7 @@ exit_criteria_met: false
         let new_phase = loaded_vision2.transition_phase(None).unwrap();
         assert_eq!(new_phase, Phase::Published);
         assert_eq!(loaded_vision2.phase().unwrap(), Phase::Published);
-        
+
         // Final round-trip test
         loaded_vision2.to_file(&file_path).await.unwrap();
         let loaded_vision3 = Vision::from_file(&file_path).await.unwrap();
@@ -594,13 +616,14 @@ exit_criteria_met: false
             "Test Vision".to_string(),
             vec![Tag::Phase(Phase::Draft)],
             false,
-        ).expect("Failed to create vision");
+        )
+        .expect("Failed to create vision");
 
         // Explicit transition from Draft to Review
         let new_phase = vision.transition_phase(Some(Phase::Review)).unwrap();
         assert_eq!(new_phase, Phase::Review);
         assert_eq!(vision.phase().unwrap(), Phase::Review);
-        
+
         // Round-trip test after first transition
         let temp_dir = tempdir().unwrap();
         let file_path = temp_dir.path().join("test-vision.md");
@@ -609,10 +632,12 @@ exit_criteria_met: false
         assert_eq!(loaded_vision.phase().unwrap(), Phase::Review);
 
         // Explicit transition from Review to Published
-        let new_phase = loaded_vision.transition_phase(Some(Phase::Published)).unwrap();
+        let new_phase = loaded_vision
+            .transition_phase(Some(Phase::Published))
+            .unwrap();
         assert_eq!(new_phase, Phase::Published);
         assert_eq!(loaded_vision.phase().unwrap(), Phase::Published);
-        
+
         // Final round-trip test
         loaded_vision.to_file(&file_path).await.unwrap();
         let loaded_vision2 = Vision::from_file(&file_path).await.unwrap();
@@ -625,7 +650,8 @@ exit_criteria_met: false
             "Test Vision".to_string(),
             vec![Tag::Phase(Phase::Draft)],
             false,
-        ).expect("Failed to create vision");
+        )
+        .expect("Failed to create vision");
 
         // Invalid transition from Draft to Published (must go through Review)
         let result = vision.transition_phase(Some(Phase::Published));
@@ -637,10 +663,10 @@ exit_criteria_met: false
             }
             _ => panic!("Expected InvalidPhaseTransition error"),
         }
-        
+
         // Should still be in Draft phase
         assert_eq!(vision.phase().unwrap(), Phase::Draft);
-        
+
         // Round-trip test to ensure vision is still valid after failed transition
         let temp_dir = tempdir().unwrap();
         let file_path = temp_dir.path().join("test-vision.md");
@@ -656,34 +682,43 @@ exit_criteria_met: false
             "Test Vision".to_string(),
             vec![Tag::Phase(Phase::Draft)],
             false,
-        ).expect("Failed to create vision");
-        
+        )
+        .expect("Failed to create vision");
+
         // Then update its content to have specific test content
-        vision.core_mut().content = DocumentContent::new("## Purpose\n\nOriginal purpose\n\n## Current State\n\nOriginal state");
+        vision.core_mut().content = DocumentContent::new(
+            "## Purpose\n\nOriginal purpose\n\n## Current State\n\nOriginal state",
+        );
 
         // Replace existing section
-        vision.update_section("Updated purpose content", "Purpose", false).unwrap();
+        vision
+            .update_section("Updated purpose content", "Purpose", false)
+            .unwrap();
         let content = vision.content().body.clone();
         assert!(content.contains("## Purpose\n\nUpdated purpose content"));
         assert!(!content.contains("Original purpose"));
 
         // Append to existing section
-        vision.update_section("Additional state info", "Current State", true).unwrap();
+        vision
+            .update_section("Additional state info", "Current State", true)
+            .unwrap();
         let content = vision.content().body.clone();
         assert!(content.contains("Original state"));
         assert!(content.contains("Additional state info"));
 
         // Add new section
-        vision.update_section("Future vision details", "Future State", false).unwrap();
+        vision
+            .update_section("Future vision details", "Future State", false)
+            .unwrap();
         let content = vision.content().body.clone();
         assert!(content.contains("## Future State\n\nFuture vision details"));
-        
+
         // Round-trip test to ensure all updates persist
         let temp_dir = tempdir().unwrap();
         let file_path = temp_dir.path().join("test-vision.md");
         vision.to_file(&file_path).await.unwrap();
         let loaded_vision = Vision::from_file(&file_path).await.unwrap();
-        
+
         let loaded_content = loaded_vision.content().body.clone();
         assert!(loaded_content.contains("## Purpose\n\nUpdated purpose content"));
         assert!(loaded_content.contains("Original state"));

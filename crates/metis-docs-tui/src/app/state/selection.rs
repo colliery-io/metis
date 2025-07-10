@@ -28,7 +28,6 @@ impl SelectionState {
         }
     }
 
-
     pub fn get_current_selection_mut(&mut self, board_type: BoardType) -> &mut (usize, usize) {
         match board_type {
             BoardType::Strategy => &mut self.strategy_selection,

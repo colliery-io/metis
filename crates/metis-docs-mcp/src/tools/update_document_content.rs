@@ -29,36 +29,41 @@ pub struct UpdateDocumentContentTool {
 impl UpdateDocumentContentTool {
     pub async fn call_tool(&self) -> std::result::Result<CallToolResult, CallToolError> {
         let metis_dir = Path::new(&self.project_path);
-        
+
         // Validate metis workspace exists
         if !metis_dir.exists() || !metis_dir.is_dir() {
             return Err(CallToolError::new(std::io::Error::new(
                 std::io::ErrorKind::NotFound,
-                format!("Metis workspace not found at {}. Run initialize_project first.", metis_dir.display())
+                format!(
+                    "Metis workspace not found at {}. Run initialize_project first.",
+                    metis_dir.display()
+                ),
             )));
         }
-        
+
         // Construct the full document path
         let full_document_path = metis_dir.join(&self.document_path);
-        
+
         if !full_document_path.exists() {
             return Err(CallToolError::new(std::io::Error::new(
                 std::io::ErrorKind::NotFound,
-                format!("Document not found at {}", full_document_path.display())
+                format!("Document not found at {}", full_document_path.display()),
             )));
         }
-        
+
         // Read the current document content
-        let content = fs::read_to_string(&full_document_path).await
+        let content = fs::read_to_string(&full_document_path)
+            .await
             .map_err(|e| CallToolError::new(e))?;
-        
+
         // Update the section content
         let updated_content = self.update_section_content(&content)?;
-        
+
         // Write the updated content back to the file
-        fs::write(&full_document_path, updated_content).await
+        fs::write(&full_document_path, updated_content)
+            .await
             .map_err(|e| CallToolError::new(e))?;
-        
+
         let response = serde_json::json!({
             "success": true,
             "document_path": self.document_path,
@@ -71,29 +76,29 @@ impl UpdateDocumentContentTool {
             serde_json::to_string_pretty(&response).map_err(CallToolError::new)?,
         )]))
     }
-    
+
     fn update_section_content(&self, content: &str) -> Result<String, CallToolError> {
         let lines: Vec<&str> = content.lines().collect();
         let mut result_lines = Vec::new();
         let mut in_target_section = false;
         let mut found_section = false;
-        
+
         let target_heading = format!("## {}", self.section_heading);
-        
+
         for line in lines {
             if line.trim() == target_heading.trim() {
                 // Found the target section
                 found_section = true;
                 in_target_section = true;
                 result_lines.push(line);
-                
+
                 // Add the new content after the heading
                 result_lines.push("");
                 result_lines.push(&self.new_content);
                 result_lines.push("");
                 continue;
             }
-            
+
             if in_target_section {
                 // Check if we've reached the next section (another ## heading)
                 if line.trim().starts_with("## ") {
@@ -108,14 +113,17 @@ impl UpdateDocumentContentTool {
                 result_lines.push(line);
             }
         }
-        
+
         if !found_section {
             return Err(CallToolError::new(std::io::Error::new(
                 std::io::ErrorKind::NotFound,
-                format!("Section heading '{}' not found in document", self.section_heading)
+                format!(
+                    "Section heading '{}' not found in document",
+                    self.section_heading
+                ),
             )));
         }
-        
+
         Ok(result_lines.join("\n"))
     }
 }

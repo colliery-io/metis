@@ -21,7 +21,10 @@ impl Application {
     where
         F: FnOnce(&mut services::DatabaseService) -> R,
     {
-        let repository = self.database.repository().expect("Failed to get database repository");
+        let repository = self
+            .database
+            .repository()
+            .expect("Failed to get database repository");
         let mut service = services::DatabaseService::new(repository);
         f(&mut service)
     }
@@ -31,14 +34,20 @@ impl Application {
     where
         F: FnOnce(&mut services::SyncService) -> R,
     {
-        let repository = self.database.repository().expect("Failed to get database repository");
+        let repository = self
+            .database
+            .repository()
+            .expect("Failed to get database repository");
         let mut db_service = services::DatabaseService::new(repository);
         let mut sync_service = services::SyncService::new(&mut db_service);
         f(&mut sync_service)
     }
 
     /// Convenience method to sync a directory
-    pub async fn sync_directory<P: AsRef<Path>>(self, dir_path: P) -> Result<Vec<services::synchronization::SyncResult>> {
+    pub async fn sync_directory<P: AsRef<Path>>(
+        self,
+        dir_path: P,
+    ) -> Result<Vec<services::synchronization::SyncResult>> {
         let mut db_service = services::DatabaseService::new(self.database.into_repository());
         let mut sync_service = services::SyncService::new(&mut db_service);
         sync_service.sync_directory(dir_path).await

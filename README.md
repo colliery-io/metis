@@ -8,10 +8,10 @@ Metis is a hierarchical project management system built on the Flight Levels met
 
 ```bash
 # For command-line use
-cargo install metis-mcp-server
+cargo install metis-docs-mcp
 
 # For GUI applications (Claude Desktop, etc.) that need system PATH access
-sudo cargo install metis-mcp-server --root /usr/local
+sudo cargo install metis-docs-mcp --root /usr/local
 ```
 
 **Note**: GUI applications like Claude Desktop may not have access to your shell's PATH. If you get "ENOENT" errors when using the MCP server with GUI applications, use the second installation command to install to `/usr/local/bin` where GUI apps can find it.
@@ -19,7 +19,7 @@ sudo cargo install metis-mcp-server --root /usr/local
 ### 2. Start MCP Server
 
 ```bash
-metis-mcp-server
+metis-mcp
 ```
 
 ### 3. Configure Your AI Assistant
@@ -30,7 +30,7 @@ Add to your `claude_desktop_config.json`:
 {
   "mcpServers": {
     "metis": {
-      "command": "metis-mcp-server"
+      "command": "metis-mcp"
     }
   }
 }
@@ -41,7 +41,7 @@ Add to your Cursor MCP configuration:
 ```json
 {
   "metis": {
-    "command": "metis-mcp-server"
+    "command": "metis-mcp"
   }
 }
 ```
@@ -173,8 +173,8 @@ Metis uses direct project paths - no global environment variables required. Each
 ## Troubleshooting
 
 ### MCP Server Won't Start
-- **"ENOENT" errors in GUI apps**: GUI applications like Claude Desktop don't inherit your shell's PATH. Install with `sudo cargo install metis-mcp-server --root /usr/local` to place the binary where GUI apps can find it
-- Ensure `metis-mcp-server` is in your PATH after `cargo install`
+- **"ENOENT" errors in GUI apps**: GUI applications like Claude Desktop don't inherit your shell's PATH. Install with `sudo cargo install metis-docs-mcp --root /usr/local` to place the binary where GUI apps can find it
+- Ensure `metis-mcp` is in your PATH after `cargo install`
 - Check AI assistant MCP configuration matches examples above
 - Restart AI assistant after configuration changes
 
@@ -185,12 +185,12 @@ Metis uses direct project paths - no global environment variables required. Each
 
 ### AI Assistant Can't Find Tools  
 - Verify MCP server is configured correctly in AI assistant
-- Check command path is correct (`metis-mcp-server`)
+- Check command path is correct (`metis-mcp`)
 - Restart AI assistant to reload MCP configuration
 
 ### Compilation Errors During Install
 - Ensure you have a recent Rust version: `rustup update`
-- Try: `cargo install metis-mcp-server --force` to reinstall
+- Try: `cargo install metis-docs-mcp --force` to reinstall
 
 ## License & Contributing
 

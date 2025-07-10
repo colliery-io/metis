@@ -31,36 +31,41 @@ pub struct UpdateExitCriterionTool {
 impl UpdateExitCriterionTool {
     pub async fn call_tool(&self) -> std::result::Result<CallToolResult, CallToolError> {
         let metis_dir = Path::new(&self.project_path);
-        
+
         // Validate metis workspace exists
         if !metis_dir.exists() || !metis_dir.is_dir() {
             return Err(CallToolError::new(std::io::Error::new(
                 std::io::ErrorKind::NotFound,
-                format!("Metis workspace not found at {}. Run initialize_project first.", metis_dir.display())
+                format!(
+                    "Metis workspace not found at {}. Run initialize_project first.",
+                    metis_dir.display()
+                ),
             )));
         }
-        
+
         // Construct the full document path
         let full_document_path = metis_dir.join(&self.document_path);
-        
+
         if !full_document_path.exists() {
             return Err(CallToolError::new(std::io::Error::new(
                 std::io::ErrorKind::NotFound,
-                format!("Document not found at {}", full_document_path.display())
+                format!("Document not found at {}", full_document_path.display()),
             )));
         }
-        
+
         // Read the current document content
-        let content = fs::read_to_string(&full_document_path).await
+        let content = fs::read_to_string(&full_document_path)
+            .await
             .map_err(|e| CallToolError::new(e))?;
-        
+
         // Update the exit criterion
         let updated_content = self.update_exit_criterion(&content)?;
-        
+
         // Write the updated content back to the file
-        fs::write(&full_document_path, updated_content).await
+        fs::write(&full_document_path, updated_content)
+            .await
             .map_err(|e| CallToolError::new(e))?;
-        
+
         let response = serde_json::json!({
             "success": true,
             "document_path": self.document_path,
@@ -68,7 +73,7 @@ impl UpdateExitCriterionTool {
             "completed": self.completed,
             "notes": self.notes,
             "message": format!(
-                "Successfully {} exit criterion '{}'", 
+                "Successfully {} exit criterion '{}'",
                 if self.completed { "completed" } else { "unchecked" },
                 self.criterion_title
             )
@@ -78,15 +83,15 @@ impl UpdateExitCriterionTool {
             serde_json::to_string_pretty(&response).map_err(CallToolError::new)?,
         )]))
     }
-    
+
     fn update_exit_criterion(&self, content: &str) -> Result<String, CallToolError> {
         let lines: Vec<&str> = content.lines().collect();
         let mut result_lines = Vec::new();
         let mut found_criterion = false;
-        
+
         for line in lines {
             let trimmed = line.trim();
-            
+
             // Look for markdown checkbox patterns
             if trimmed.starts_with("- [") {
                 if let Some(checkbox_end) = trimmed.find(']') {
@@ -97,19 +102,21 @@ impl UpdateExitCriterionTool {
                         } else {
                             ""
                         };
-                        
+
                         // Check if this is the criterion we want to update
-                        if criterion_text.contains(&self.criterion_title) || 
-                           criterion_text.trim() == self.criterion_title.trim() {
+                        if criterion_text.contains(&self.criterion_title)
+                            || criterion_text.trim() == self.criterion_title.trim()
+                        {
                             found_criterion = true;
-                            
+
                             // Preserve the original indentation
                             let indentation = &line[..line.len() - line.trim_start().len()];
-                            
+
                             // Create the updated checkbox
                             let checkbox_mark = if self.completed { "x" } else { " " };
-                            let mut updated_line = format!("{}− [{}] {}", indentation, checkbox_mark, criterion_text);
-                            
+                            let mut updated_line =
+                                format!("{}− [{}] {}", indentation, checkbox_mark, criterion_text);
+
                             // Add notes if provided and completing the criterion
                             if self.completed && self.notes.is_some() {
                                 let notes = self.notes.as_ref().unwrap();
@@ -117,7 +124,7 @@ impl UpdateExitCriterionTool {
                                     updated_line = format!("{} ({})", updated_line, notes);
                                 }
                             }
-                            
+
                             result_lines.push(updated_line);
                         } else {
                             result_lines.push(line.to_string());
@@ -132,14 +139,17 @@ impl UpdateExitCriterionTool {
                 result_lines.push(line.to_string());
             }
         }
-        
+
         if !found_criterion {
             return Err(CallToolError::new(std::io::Error::new(
                 std::io::ErrorKind::NotFound,
-                format!("Exit criterion '{}' not found in document", self.criterion_title)
+                format!(
+                    "Exit criterion '{}' not found in document",
+                    self.criterion_title
+                ),
             )));
         }
-        
+
         Ok(result_lines.join("\n"))
     }
 }

@@ -1,8 +1,8 @@
-use crate::domain::documents::types::{DocumentType, Phase};
-use crate::domain::documents::traits::Document;
 use crate::application::services::document::DocumentDiscoveryService;
-use crate::{Vision, Strategy, Initiative, Task, Adr, MetisError};
+use crate::domain::documents::traits::Document;
+use crate::domain::documents::types::{DocumentType, Phase};
 use crate::Result;
+use crate::{Adr, Initiative, MetisError, Strategy, Task, Vision};
 use std::path::{Path, PathBuf};
 
 /// Service for managing document phase transitions
@@ -25,26 +25,38 @@ impl PhaseTransitionService {
     pub fn new<P: AsRef<Path>>(workspace_dir: P) -> Self {
         let workspace_dir = workspace_dir.as_ref().to_path_buf();
         let discovery_service = DocumentDiscoveryService::new(&workspace_dir);
-        
-        Self {
-            discovery_service,
-        }
+
+        Self { discovery_service }
     }
 
     /// Transition a document to a specific phase
-    pub async fn transition_document(&self, document_id: &str, target_phase: Phase) -> Result<TransitionResult> {
+    pub async fn transition_document(
+        &self,
+        document_id: &str,
+        target_phase: Phase,
+    ) -> Result<TransitionResult> {
         // Find the document
-        let discovery_result = self.discovery_service.find_document_by_id(document_id).await?;
-        
+        let discovery_result = self
+            .discovery_service
+            .find_document_by_id(document_id)
+            .await?;
+
         // Load the document and get current phase
-        let current_phase = self.get_current_phase(&discovery_result.file_path, discovery_result.document_type).await?;
-        
+        let current_phase = self
+            .get_current_phase(&discovery_result.file_path, discovery_result.document_type)
+            .await?;
+
         // Validate the transition
         self.validate_transition(discovery_result.document_type, current_phase, target_phase)?;
-        
+
         // Perform the transition
-        self.perform_transition(&discovery_result.file_path, discovery_result.document_type, target_phase).await?;
-        
+        self.perform_transition(
+            &discovery_result.file_path,
+            discovery_result.document_type,
+            target_phase,
+        )
+        .await?;
+
         Ok(TransitionResult {
             document_id: document_id.to_string(),
             document_type: discovery_result.document_type,
@@ -57,17 +69,27 @@ impl PhaseTransitionService {
     /// Transition a document to the next phase in its natural sequence
     pub async fn transition_to_next_phase(&self, document_id: &str) -> Result<TransitionResult> {
         // Find the document
-        let discovery_result = self.discovery_service.find_document_by_id(document_id).await?;
-        
+        let discovery_result = self
+            .discovery_service
+            .find_document_by_id(document_id)
+            .await?;
+
         // Load the document and get current phase
-        let current_phase = self.get_current_phase(&discovery_result.file_path, discovery_result.document_type).await?;
-        
+        let current_phase = self
+            .get_current_phase(&discovery_result.file_path, discovery_result.document_type)
+            .await?;
+
         // Determine next phase
         let next_phase = self.get_next_phase(discovery_result.document_type, current_phase)?;
-        
+
         // Perform the transition
-        self.perform_transition(&discovery_result.file_path, discovery_result.document_type, next_phase).await?;
-        
+        self.perform_transition(
+            &discovery_result.file_path,
+            discovery_result.document_type,
+            next_phase,
+        )
+        .await?;
+
         Ok(TransitionResult {
             document_id: document_id.to_string(),
             document_type: discovery_result.document_type,
@@ -81,27 +103,32 @@ impl PhaseTransitionService {
     async fn get_current_phase(&self, file_path: &Path, doc_type: DocumentType) -> Result<Phase> {
         match doc_type {
             DocumentType::Vision => {
-                let vision = Vision::from_file(file_path).await
+                let vision = Vision::from_file(file_path)
+                    .await
                     .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
                 Ok(vision.phase()?)
             }
             DocumentType::Strategy => {
-                let strategy = Strategy::from_file(file_path).await
+                let strategy = Strategy::from_file(file_path)
+                    .await
                     .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
                 Ok(strategy.phase()?)
             }
             DocumentType::Initiative => {
-                let initiative = Initiative::from_file(file_path).await
+                let initiative = Initiative::from_file(file_path)
+                    .await
                     .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
                 Ok(initiative.phase()?)
             }
             DocumentType::Task => {
-                let task = Task::from_file(file_path).await
+                let task = Task::from_file(file_path)
+                    .await
                     .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
                 Ok(task.phase()?)
             }
             DocumentType::Adr => {
-                let adr = Adr::from_file(file_path).await
+                let adr = Adr::from_file(file_path)
+                    .await
                     .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
                 Ok(adr.phase()?)
             }
@@ -109,66 +136,89 @@ impl PhaseTransitionService {
     }
 
     /// Perform the actual phase transition
-    async fn perform_transition(&self, file_path: &Path, doc_type: DocumentType, target_phase: Phase) -> Result<()> {
+    async fn perform_transition(
+        &self,
+        file_path: &Path,
+        doc_type: DocumentType,
+        target_phase: Phase,
+    ) -> Result<()> {
         match doc_type {
             DocumentType::Vision => {
-                let mut vision = Vision::from_file(file_path).await
+                let mut vision = Vision::from_file(file_path)
+                    .await
                     .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
-                vision.transition_phase(Some(target_phase))
-                    .map_err(|_e| MetisError::InvalidPhaseTransition {
+                vision.transition_phase(Some(target_phase)).map_err(|_e| {
+                    MetisError::InvalidPhaseTransition {
                         from: vision.phase().unwrap_or(Phase::Draft).to_string(),
                         to: target_phase.to_string(),
                         doc_type: "vision".to_string(),
-                    })?;
-                vision.to_file(file_path).await
+                    }
+                })?;
+                vision
+                    .to_file(file_path)
+                    .await
                     .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
             }
             DocumentType::Strategy => {
-                let mut strategy = Strategy::from_file(file_path).await
+                let mut strategy = Strategy::from_file(file_path)
+                    .await
                     .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
-                strategy.transition_phase(Some(target_phase))
+                strategy
+                    .transition_phase(Some(target_phase))
                     .map_err(|_e| MetisError::InvalidPhaseTransition {
                         from: strategy.phase().unwrap_or(Phase::Shaping).to_string(),
                         to: target_phase.to_string(),
                         doc_type: "strategy".to_string(),
                     })?;
-                strategy.to_file(file_path).await
+                strategy
+                    .to_file(file_path)
+                    .await
                     .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
             }
             DocumentType::Initiative => {
-                let mut initiative = Initiative::from_file(file_path).await
+                let mut initiative = Initiative::from_file(file_path)
+                    .await
                     .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
-                initiative.transition_phase(Some(target_phase))
+                initiative
+                    .transition_phase(Some(target_phase))
                     .map_err(|_e| MetisError::InvalidPhaseTransition {
                         from: initiative.phase().unwrap_or(Phase::Discovery).to_string(),
                         to: target_phase.to_string(),
                         doc_type: "initiative".to_string(),
                     })?;
-                initiative.to_file(file_path).await
+                initiative
+                    .to_file(file_path)
+                    .await
                     .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
             }
             DocumentType::Task => {
-                let mut task = Task::from_file(file_path).await
+                let mut task = Task::from_file(file_path)
+                    .await
                     .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
-                task.transition_phase(Some(target_phase))
-                    .map_err(|_e| MetisError::InvalidPhaseTransition {
+                task.transition_phase(Some(target_phase)).map_err(|_e| {
+                    MetisError::InvalidPhaseTransition {
                         from: task.phase().unwrap_or(Phase::Todo).to_string(),
                         to: target_phase.to_string(),
                         doc_type: "task".to_string(),
-                    })?;
-                task.to_file(file_path).await
+                    }
+                })?;
+                task.to_file(file_path)
+                    .await
                     .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
             }
             DocumentType::Adr => {
-                let mut adr = Adr::from_file(file_path).await
+                let mut adr = Adr::from_file(file_path)
+                    .await
                     .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
-                adr.transition_phase(Some(target_phase))
-                    .map_err(|_e| MetisError::InvalidPhaseTransition {
+                adr.transition_phase(Some(target_phase)).map_err(|_e| {
+                    MetisError::InvalidPhaseTransition {
                         from: adr.phase().unwrap_or(Phase::Draft).to_string(),
                         to: target_phase.to_string(),
                         doc_type: "adr".to_string(),
-                    })?;
-                adr.to_file(file_path).await
+                    }
+                })?;
+                adr.to_file(file_path)
+                    .await
                     .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
             }
         }
@@ -176,9 +226,14 @@ impl PhaseTransitionService {
     }
 
     /// Validate that a phase transition is allowed
-    fn validate_transition(&self, doc_type: DocumentType, from_phase: Phase, to_phase: Phase) -> Result<()> {
+    fn validate_transition(
+        &self,
+        doc_type: DocumentType,
+        from_phase: Phase,
+        to_phase: Phase,
+    ) -> Result<()> {
         let valid_transitions = self.get_valid_transitions(doc_type, from_phase);
-        
+
         if !valid_transitions.contains(&to_phase) {
             return Err(MetisError::InvalidPhaseTransition {
                 from: from_phase.to_string(),
@@ -186,118 +241,102 @@ impl PhaseTransitionService {
                 doc_type: doc_type.to_string(),
             });
         }
-        
+
         Ok(())
     }
 
     /// Get valid transitions from a given phase for a document type
     fn get_valid_transitions(&self, doc_type: DocumentType, from_phase: Phase) -> Vec<Phase> {
         match doc_type {
-            DocumentType::Vision => {
-                match from_phase {
-                    Phase::Draft => vec![Phase::Review],
-                    Phase::Review => vec![Phase::Draft, Phase::Published],
-                    Phase::Published => vec![Phase::Review],
-                    _ => vec![],
-                }
-            }
-            DocumentType::Strategy => {
-                match from_phase {
-                    Phase::Shaping => vec![Phase::Design],
-                    Phase::Design => vec![Phase::Shaping, Phase::Ready],
-                    Phase::Ready => vec![Phase::Design, Phase::Active],
-                    Phase::Active => vec![Phase::Ready, Phase::Completed],
-                    Phase::Completed => vec![],
-                    _ => vec![],
-                }
-            }
-            DocumentType::Initiative => {
-                match from_phase {
-                    Phase::Discovery => vec![Phase::Design],
-                    Phase::Design => vec![Phase::Discovery, Phase::Ready],
-                    Phase::Ready => vec![Phase::Design, Phase::Decompose],
-                    Phase::Decompose => vec![Phase::Ready, Phase::Active],
-                    Phase::Active => vec![Phase::Decompose, Phase::Completed],
-                    Phase::Completed => vec![],
-                    _ => vec![],
-                }
-            }
-            DocumentType::Task => {
-                match from_phase {
-                    Phase::Todo => vec![Phase::Active, Phase::Blocked],
-                    Phase::Active => vec![Phase::Todo, Phase::Completed, Phase::Blocked],
-                    Phase::Blocked => vec![Phase::Todo, Phase::Active],
-                    Phase::Completed => vec![],
-                    _ => vec![],
-                }
-            }
-            DocumentType::Adr => {
-                match from_phase {
-                    Phase::Draft => vec![Phase::Discussion],
-                    Phase::Discussion => vec![Phase::Draft, Phase::Decided],
-                    Phase::Decided => vec![],
-                    _ => vec![],
-                }
-            }
+            DocumentType::Vision => match from_phase {
+                Phase::Draft => vec![Phase::Review],
+                Phase::Review => vec![Phase::Draft, Phase::Published],
+                Phase::Published => vec![Phase::Review],
+                _ => vec![],
+            },
+            DocumentType::Strategy => match from_phase {
+                Phase::Shaping => vec![Phase::Design],
+                Phase::Design => vec![Phase::Shaping, Phase::Ready],
+                Phase::Ready => vec![Phase::Design, Phase::Active],
+                Phase::Active => vec![Phase::Ready, Phase::Completed],
+                Phase::Completed => vec![],
+                _ => vec![],
+            },
+            DocumentType::Initiative => match from_phase {
+                Phase::Discovery => vec![Phase::Design],
+                Phase::Design => vec![Phase::Discovery, Phase::Ready],
+                Phase::Ready => vec![Phase::Design, Phase::Decompose],
+                Phase::Decompose => vec![Phase::Ready, Phase::Active],
+                Phase::Active => vec![Phase::Decompose, Phase::Completed],
+                Phase::Completed => vec![],
+                _ => vec![],
+            },
+            DocumentType::Task => match from_phase {
+                Phase::Todo => vec![Phase::Active, Phase::Blocked],
+                Phase::Active => vec![Phase::Todo, Phase::Completed, Phase::Blocked],
+                Phase::Blocked => vec![Phase::Todo, Phase::Active],
+                Phase::Completed => vec![],
+                _ => vec![],
+            },
+            DocumentType::Adr => match from_phase {
+                Phase::Draft => vec![Phase::Discussion],
+                Phase::Discussion => vec![Phase::Draft, Phase::Decided],
+                Phase::Decided => vec![],
+                _ => vec![],
+            },
         }
     }
 
     /// Get the next phase in the natural sequence for a document type
     fn get_next_phase(&self, doc_type: DocumentType, current_phase: Phase) -> Result<Phase> {
         match doc_type {
-            DocumentType::Vision => {
-                match current_phase {
-                    Phase::Draft => Ok(Phase::Review),
-                    Phase::Review => Ok(Phase::Published),
-                    Phase::Published => Err(MetisError::InvalidPhaseTransition {
-                        from: current_phase.to_string(),
-                        to: "none".to_string(),
-                        doc_type: "vision".to_string(),
-                    }),
-                    _ => Err(MetisError::InvalidPhaseTransition {
-                        from: current_phase.to_string(),
-                        to: "unknown".to_string(),
-                        doc_type: "vision".to_string(),
-                    }),
-                }
-            }
-            DocumentType::Strategy => {
-                match current_phase {
-                    Phase::Shaping => Ok(Phase::Design),
-                    Phase::Design => Ok(Phase::Ready),
-                    Phase::Ready => Ok(Phase::Active),
-                    Phase::Active => Ok(Phase::Completed),
-                    Phase::Completed => Err(MetisError::InvalidPhaseTransition {
-                        from: current_phase.to_string(),
-                        to: "none".to_string(),
-                        doc_type: "strategy".to_string(),
-                    }),
-                    _ => Err(MetisError::InvalidPhaseTransition {
-                        from: current_phase.to_string(),
-                        to: "unknown".to_string(),
-                        doc_type: "strategy".to_string(),
-                    }),
-                }
-            }
-            DocumentType::Initiative => {
-                match current_phase {
-                    Phase::Discovery => Ok(Phase::Design),
-                    Phase::Design => Ok(Phase::Ready),
-                    Phase::Ready => Ok(Phase::Decompose),
-                    Phase::Decompose => Ok(Phase::Active),
-                    Phase::Active => Ok(Phase::Completed),
-                    Phase::Completed => Err(MetisError::InvalidPhaseTransition {
-                        from: current_phase.to_string(),
-                        to: "none".to_string(),
-                        doc_type: "initiative".to_string(),
-                    }),
-                    _ => Err(MetisError::InvalidPhaseTransition {
-                        from: current_phase.to_string(),
-                        to: "unknown".to_string(),
-                        doc_type: "initiative".to_string(),
-                    }),
-                }
-            }
+            DocumentType::Vision => match current_phase {
+                Phase::Draft => Ok(Phase::Review),
+                Phase::Review => Ok(Phase::Published),
+                Phase::Published => Err(MetisError::InvalidPhaseTransition {
+                    from: current_phase.to_string(),
+                    to: "none".to_string(),
+                    doc_type: "vision".to_string(),
+                }),
+                _ => Err(MetisError::InvalidPhaseTransition {
+                    from: current_phase.to_string(),
+                    to: "unknown".to_string(),
+                    doc_type: "vision".to_string(),
+                }),
+            },
+            DocumentType::Strategy => match current_phase {
+                Phase::Shaping => Ok(Phase::Design),
+                Phase::Design => Ok(Phase::Ready),
+                Phase::Ready => Ok(Phase::Active),
+                Phase::Active => Ok(Phase::Completed),
+                Phase::Completed => Err(MetisError::InvalidPhaseTransition {
+                    from: current_phase.to_string(),
+                    to: "none".to_string(),
+                    doc_type: "strategy".to_string(),
+                }),
+                _ => Err(MetisError::InvalidPhaseTransition {
+                    from: current_phase.to_string(),
+                    to: "unknown".to_string(),
+                    doc_type: "strategy".to_string(),
+                }),
+            },
+            DocumentType::Initiative => match current_phase {
+                Phase::Discovery => Ok(Phase::Design),
+                Phase::Design => Ok(Phase::Ready),
+                Phase::Ready => Ok(Phase::Decompose),
+                Phase::Decompose => Ok(Phase::Active),
+                Phase::Active => Ok(Phase::Completed),
+                Phase::Completed => Err(MetisError::InvalidPhaseTransition {
+                    from: current_phase.to_string(),
+                    to: "none".to_string(),
+                    doc_type: "initiative".to_string(),
+                }),
+                _ => Err(MetisError::InvalidPhaseTransition {
+                    from: current_phase.to_string(),
+                    to: "unknown".to_string(),
+                    doc_type: "initiative".to_string(),
+                }),
+            },
             DocumentType::Task => {
                 match current_phase {
                     Phase::Todo => Ok(Phase::Active),
@@ -315,32 +354,40 @@ impl PhaseTransitionService {
                     }),
                 }
             }
-            DocumentType::Adr => {
-                match current_phase {
-                    Phase::Draft => Ok(Phase::Discussion),
-                    Phase::Discussion => Ok(Phase::Decided),
-                    Phase::Decided => Err(MetisError::InvalidPhaseTransition {
-                        from: current_phase.to_string(),
-                        to: "none".to_string(),
-                        doc_type: "adr".to_string(),
-                    }),
-                    _ => Err(MetisError::InvalidPhaseTransition {
-                        from: current_phase.to_string(),
-                        to: "unknown".to_string(),
-                        doc_type: "adr".to_string(),
-                    }),
-                }
-            }
+            DocumentType::Adr => match current_phase {
+                Phase::Draft => Ok(Phase::Discussion),
+                Phase::Discussion => Ok(Phase::Decided),
+                Phase::Decided => Err(MetisError::InvalidPhaseTransition {
+                    from: current_phase.to_string(),
+                    to: "none".to_string(),
+                    doc_type: "adr".to_string(),
+                }),
+                _ => Err(MetisError::InvalidPhaseTransition {
+                    from: current_phase.to_string(),
+                    to: "unknown".to_string(),
+                    doc_type: "adr".to_string(),
+                }),
+            },
         }
     }
 
     /// Check if a phase transition is valid without performing it
-    pub fn is_valid_transition(&self, doc_type: DocumentType, from_phase: Phase, to_phase: Phase) -> bool {
-        self.validate_transition(doc_type, from_phase, to_phase).is_ok()
+    pub fn is_valid_transition(
+        &self,
+        doc_type: DocumentType,
+        from_phase: Phase,
+        to_phase: Phase,
+    ) -> bool {
+        self.validate_transition(doc_type, from_phase, to_phase)
+            .is_ok()
     }
 
     /// Get all valid transitions for a document type and phase
-    pub fn get_valid_transitions_for(&self, doc_type: DocumentType, from_phase: Phase) -> Vec<Phase> {
+    pub fn get_valid_transitions_for(
+        &self,
+        doc_type: DocumentType,
+        from_phase: Phase,
+    ) -> Vec<Phase> {
         self.get_valid_transitions(doc_type, from_phase)
     }
 }
@@ -348,10 +395,10 @@ impl PhaseTransitionService {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::application::services::document::DocumentCreationService;
     use crate::application::services::document::creation::DocumentCreationConfig;
-    use tempfile::tempdir;
+    use crate::application::services::document::DocumentCreationService;
     use std::fs;
+    use tempfile::tempdir;
 
     #[tokio::test]
     async fn test_transition_vision_to_next_phase() {
@@ -372,7 +419,10 @@ mod tests {
 
         // Transition to next phase
         let transition_service = PhaseTransitionService::new(&workspace_dir);
-        let transition_result = transition_service.transition_to_next_phase(&creation_result.document_id.to_string()).await.unwrap();
+        let transition_result = transition_service
+            .transition_to_next_phase(&creation_result.document_id.to_string())
+            .await
+            .unwrap();
 
         assert_eq!(transition_result.from_phase, Phase::Draft);
         assert_eq!(transition_result.to_phase, Phase::Review);
@@ -400,19 +450,31 @@ mod tests {
         let document_id = creation_result.document_id.to_string();
 
         // Transition through the strategy phases
-        let result1 = transition_service.transition_to_next_phase(&document_id).await.unwrap();
+        let result1 = transition_service
+            .transition_to_next_phase(&document_id)
+            .await
+            .unwrap();
         assert_eq!(result1.from_phase, Phase::Shaping);
         assert_eq!(result1.to_phase, Phase::Design);
 
-        let result2 = transition_service.transition_to_next_phase(&document_id).await.unwrap();
+        let result2 = transition_service
+            .transition_to_next_phase(&document_id)
+            .await
+            .unwrap();
         assert_eq!(result2.from_phase, Phase::Design);
         assert_eq!(result2.to_phase, Phase::Ready);
 
-        let result3 = transition_service.transition_to_next_phase(&document_id).await.unwrap();
+        let result3 = transition_service
+            .transition_to_next_phase(&document_id)
+            .await
+            .unwrap();
         assert_eq!(result3.from_phase, Phase::Ready);
         assert_eq!(result3.to_phase, Phase::Active);
 
-        let result4 = transition_service.transition_to_next_phase(&document_id).await.unwrap();
+        let result4 = transition_service
+            .transition_to_next_phase(&document_id)
+            .await
+            .unwrap();
         assert_eq!(result4.from_phase, Phase::Active);
         assert_eq!(result4.to_phase, Phase::Completed);
     }
@@ -436,10 +498,10 @@ mod tests {
 
         // Transition directly to Review phase
         let transition_service = PhaseTransitionService::new(&workspace_dir);
-        let transition_result = transition_service.transition_document(
-            &creation_result.document_id.to_string(),
-            Phase::Review
-        ).await.unwrap();
+        let transition_result = transition_service
+            .transition_document(&creation_result.document_id.to_string(), Phase::Review)
+            .await
+            .unwrap();
 
         assert_eq!(transition_result.from_phase, Phase::Draft);
         assert_eq!(transition_result.to_phase, Phase::Review);
@@ -464,31 +526,39 @@ mod tests {
 
         // Try to transition directly to Published (should fail)
         let transition_service = PhaseTransitionService::new(&workspace_dir);
-        let result = transition_service.transition_document(
-            &creation_result.document_id.to_string(),
-            Phase::Published
-        ).await;
+        let result = transition_service
+            .transition_document(&creation_result.document_id.to_string(), Phase::Published)
+            .await;
 
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), MetisError::InvalidPhaseTransition { .. }));
+        assert!(matches!(
+            result.unwrap_err(),
+            MetisError::InvalidPhaseTransition { .. }
+        ));
     }
 
     #[tokio::test]
     async fn test_get_valid_transitions() {
         let temp_dir = tempdir().unwrap();
         let workspace_dir = temp_dir.path().join(".metis");
-        
+
         let transition_service = PhaseTransitionService::new(&workspace_dir);
-        
+
         // Test vision transitions
-        let vision_draft_transitions = transition_service.get_valid_transitions_for(DocumentType::Vision, Phase::Draft);
+        let vision_draft_transitions =
+            transition_service.get_valid_transitions_for(DocumentType::Vision, Phase::Draft);
         assert_eq!(vision_draft_transitions, vec![Phase::Review]);
-        
-        let vision_review_transitions = transition_service.get_valid_transitions_for(DocumentType::Vision, Phase::Review);
-        assert_eq!(vision_review_transitions, vec![Phase::Draft, Phase::Published]);
-        
+
+        let vision_review_transitions =
+            transition_service.get_valid_transitions_for(DocumentType::Vision, Phase::Review);
+        assert_eq!(
+            vision_review_transitions,
+            vec![Phase::Draft, Phase::Published]
+        );
+
         // Test strategy transitions
-        let strategy_shaping_transitions = transition_service.get_valid_transitions_for(DocumentType::Strategy, Phase::Shaping);
+        let strategy_shaping_transitions =
+            transition_service.get_valid_transitions_for(DocumentType::Strategy, Phase::Shaping);
         assert_eq!(strategy_shaping_transitions, vec![Phase::Design]);
     }
 
@@ -496,15 +566,31 @@ mod tests {
     async fn test_is_valid_transition() {
         let temp_dir = tempdir().unwrap();
         let workspace_dir = temp_dir.path().join(".metis");
-        
+
         let transition_service = PhaseTransitionService::new(&workspace_dir);
-        
+
         // Valid transitions
-        assert!(transition_service.is_valid_transition(DocumentType::Vision, Phase::Draft, Phase::Review));
-        assert!(transition_service.is_valid_transition(DocumentType::Strategy, Phase::Shaping, Phase::Design));
-        
+        assert!(transition_service.is_valid_transition(
+            DocumentType::Vision,
+            Phase::Draft,
+            Phase::Review
+        ));
+        assert!(transition_service.is_valid_transition(
+            DocumentType::Strategy,
+            Phase::Shaping,
+            Phase::Design
+        ));
+
         // Invalid transitions
-        assert!(!transition_service.is_valid_transition(DocumentType::Vision, Phase::Draft, Phase::Published));
-        assert!(!transition_service.is_valid_transition(DocumentType::Strategy, Phase::Shaping, Phase::Active));
+        assert!(!transition_service.is_valid_transition(
+            DocumentType::Vision,
+            Phase::Draft,
+            Phase::Published
+        ));
+        assert!(!transition_service.is_valid_transition(
+            DocumentType::Strategy,
+            Phase::Shaping,
+            Phase::Active
+        ));
     }
 }

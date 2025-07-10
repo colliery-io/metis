@@ -4,22 +4,19 @@ use crossterm::{
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use ratatui::{
-    backend::CrosstermBackend,
-    Terminal,
-};
+use ratatui::{backend::CrosstermBackend, Terminal};
 use std::io;
 
-mod models;
 mod app;
-mod ui;
-mod services;
 mod error;
+mod models;
+mod services;
+mod ui;
 
-use app::App;
-use models::AppState;
 use app::state::ConfirmationType;
+use app::App;
 use error::AppError;
+use models::AppState;
 
 /// Run the TUI application
 pub async fn run() -> Result<()> {
@@ -32,7 +29,7 @@ pub async fn run() -> Result<()> {
 
     // Create and initialize app
     let mut app = App::new();
-    
+
     // Run the app with initialization
     let res = run_app(&mut terminal, &mut app).await;
 
@@ -65,7 +62,8 @@ async fn run_app<B: ratatui::backend::Backend>(
         // Handle initialization
         if !initialization_done {
             if let Err(e) = app.initialize().await {
-                app.error_handler.handle_with_context(AppError::from(e), "Initialization");
+                app.error_handler
+                    .handle_with_context(AppError::from(e), "Initialization");
             }
             initialization_done = true;
         }
@@ -174,7 +172,10 @@ async fn run_app<B: ratatui::backend::Backend>(
                             }
                             KeyCode::Enter => {
                                 if let Err(e) = app.create_new_document().await {
-                                    app.error_handler.handle_with_context(AppError::from(e), "Document creation");
+                                    app.error_handler.handle_with_context(
+                                        AppError::from(e),
+                                        "Document creation",
+                                    );
                                 }
                             }
                             _ => {
@@ -190,7 +191,10 @@ async fn run_app<B: ratatui::backend::Backend>(
                             }
                             KeyCode::Enter => {
                                 if let Err(e) = app.create_child_document().await {
-                                    app.error_handler.handle_with_context(AppError::from(e), "Child document creation");
+                                    app.error_handler.handle_with_context(
+                                        AppError::from(e),
+                                        "Child document creation",
+                                    );
                                 }
                             }
                             _ => {
@@ -206,7 +210,8 @@ async fn run_app<B: ratatui::backend::Backend>(
                             }
                             KeyCode::Enter => {
                                 if let Err(e) = app.create_adr_from_ticket().await {
-                                    app.error_handler.handle_with_context(AppError::from(e), "ADR creation");
+                                    app.error_handler
+                                        .handle_with_context(AppError::from(e), "ADR creation");
                                 }
                             }
                             _ => {
@@ -215,30 +220,34 @@ async fn run_app<B: ratatui::backend::Backend>(
                             }
                         }
                     }
-                    AppState::Confirming => {
-                        match key.code {
-                            KeyCode::Char('y') | KeyCode::Char('Y') => {
-                                match app.ui_state.confirmation_type {
-                                    Some(ConfirmationType::Delete) => {
-                                        if let Err(e) = app.delete_selected_document().await {
-                                            app.error_handler.handle_with_context(AppError::from(e), "Document deletion");
-                                        }
+                    AppState::Confirming => match key.code {
+                        KeyCode::Char('y') | KeyCode::Char('Y') => {
+                            match app.ui_state.confirmation_type {
+                                Some(ConfirmationType::Delete) => {
+                                    if let Err(e) = app.delete_selected_document().await {
+                                        app.error_handler.handle_with_context(
+                                            AppError::from(e),
+                                            "Document deletion",
+                                        );
                                     }
-                                    Some(ConfirmationType::Transition) => {
-                                        if let Err(e) = app.transition_selected_document().await {
-                                            app.error_handler.handle_with_context(AppError::from(e), "Document transition");
-                                        }
-                                    }
-                                    None => {}
                                 }
-                                app.cancel_confirmation();
+                                Some(ConfirmationType::Transition) => {
+                                    if let Err(e) = app.transition_selected_document().await {
+                                        app.error_handler.handle_with_context(
+                                            AppError::from(e),
+                                            "Document transition",
+                                        );
+                                    }
+                                }
+                                None => {}
                             }
-                            KeyCode::Char('n') | KeyCode::Char('N') | KeyCode::Esc => {
-                                app.cancel_confirmation();
-                            }
-                            _ => {}
+                            app.cancel_confirmation();
                         }
-                    }
+                        KeyCode::Char('n') | KeyCode::Char('N') | KeyCode::Esc => {
+                            app.cancel_confirmation();
+                        }
+                        _ => {}
+                    },
                     AppState::EditingContent => {
                         match key.code {
                             KeyCode::Esc => {
@@ -246,7 +255,8 @@ async fn run_app<B: ratatui::backend::Backend>(
                             }
                             KeyCode::Char('s') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                                 if let Err(e) = app.save_content_edit().await {
-                                    app.error_handler.handle_with_context(AppError::from(e), "Document save");
+                                    app.error_handler
+                                        .handle_with_context(AppError::from(e), "Document save");
                                 }
                                 app.cancel_content_editing();
                             }

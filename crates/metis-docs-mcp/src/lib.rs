@@ -1,3 +1,6 @@
+#![allow(clippy::redundant_closure)]
+#![allow(clippy::io_other_error)]
+
 pub mod config;
 pub mod error;
 pub mod error_utils;

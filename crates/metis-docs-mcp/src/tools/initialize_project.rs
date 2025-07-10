@@ -1,9 +1,9 @@
+use metis_core::application::services::workspace::initialization::WorkspaceInitializationService;
 use rust_mcp_sdk::{
     macros::{mcp_tool, JsonSchema},
     schema::{schema_utils::CallToolError, CallToolResult, TextContent},
 };
 use serde::{Deserialize, Serialize};
-use metis_core::application::services::workspace::initialization::WorkspaceInitializationService;
 use std::path::Path;
 
 #[mcp_tool(
@@ -23,17 +23,19 @@ pub struct InitializeProjectTool {
 impl InitializeProjectTool {
     pub async fn call_tool(&self) -> std::result::Result<CallToolResult, CallToolError> {
         let project_path = Path::new(&self.project_path);
-        
+
         // Derive project name from the directory name
         let project_name = project_path
             .file_name()
             .and_then(|name| name.to_str())
             .unwrap_or("Metis Project");
-        
+
         // Use the WorkspaceInitializationService to handle all the setup
-        let result = WorkspaceInitializationService::initialize_workspace(project_path, project_name).await
-            .map_err(|e| CallToolError::new(e))?;
-        
+        let result =
+            WorkspaceInitializationService::initialize_workspace(project_path, project_name)
+                .await
+                .map_err(|e| CallToolError::new(e))?;
+
         let response = serde_json::json!({
             "success": true,
             "message": format!("Initialized Metis workspace at {}", result.metis_dir.display()),
