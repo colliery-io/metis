@@ -5,7 +5,6 @@ use std::fmt;
 pub enum AppError {
     WorkspaceError(String),
     DocumentError(String),
-    SyncError(String),
     ValidationError(String),
     IoError(String),
     DatabaseError(String),
@@ -17,7 +16,6 @@ impl fmt::Display for AppError {
         match self {
             AppError::WorkspaceError(msg) => write!(f, "Workspace Error: {}", msg),
             AppError::DocumentError(msg) => write!(f, "Document Error: {}", msg),
-            AppError::SyncError(msg) => write!(f, "Sync Error: {}", msg),
             AppError::ValidationError(msg) => write!(f, "Validation Error: {}", msg),
             AppError::IoError(msg) => write!(f, "IO Error: {}", msg),
             AppError::DatabaseError(msg) => write!(f, "Database Error: {}", msg),
@@ -52,5 +50,3 @@ impl From<metis_core::MetisError> for AppError {
     }
 }
 
-/// Result type alias for application operations
-pub type AppResult<T> = Result<T, AppError>;

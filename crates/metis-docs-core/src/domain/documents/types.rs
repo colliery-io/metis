@@ -208,8 +208,8 @@ impl std::str::FromStr for Tag {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s.starts_with("#phase/") {
-            let phase_str = &s[7..]; // Remove "#phase/"
+        if let Some(phase_str) = s.strip_prefix("#phase/") {
+            // Remove "#phase/"
             match phase_str {
                 "draft" => Ok(Tag::Phase(Phase::Draft)),
                 "review" => Ok(Tag::Phase(Phase::Review)),

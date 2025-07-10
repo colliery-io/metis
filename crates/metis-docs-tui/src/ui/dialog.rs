@@ -36,8 +36,8 @@ pub fn draw_creation_dialog(f: &mut Frame, app: &App, area: Rect) {
     let y = (area.height.saturating_sub(dialog_height)) / 2;
     
     let dialog_area = Rect {
-        x: x,
-        y: y,
+        x,
+        y,
         width: dialog_width,
         height: dialog_height,
     };
@@ -97,7 +97,7 @@ pub fn draw_creation_dialog(f: &mut Frame, app: &App, area: Rect) {
     f.render_widget(instructions, dialog_chunks[4]);
 }
 
-pub fn draw_delete_confirmation_dialog(f: &mut Frame, app: &App, area: Rect) {
+pub fn draw_confirmation_dialog(f: &mut Frame, app: &App, area: Rect) {
     // Create a centered dialog
     let dialog_width = 50;
     let dialog_height = 8;
@@ -105,8 +105,8 @@ pub fn draw_delete_confirmation_dialog(f: &mut Frame, app: &App, area: Rect) {
     let y = (area.height.saturating_sub(dialog_height)) / 2;
     
     let dialog_area = Rect {
-        x: x,
-        y: y,
+        x,
+        y,
         width: dialog_width,
         height: dialog_height,
     };
@@ -132,25 +132,40 @@ pub fn draw_delete_confirmation_dialog(f: &mut Frame, app: &App, area: Rect) {
         .margin(2)
         .split(dialog_area);
     
+    // Get confirmation details based on type
+    let (title_text, title_color, message_text, instructions_text) = match app.ui_state.confirmation_type {
+        Some(crate::app::state::ConfirmationType::Delete) => {
+            let message = if let Some(selected_item) = &app.get_selected_item() {
+                format!("Are you sure you want to delete:\n\n\"{}\"", selected_item.title())
+            } else {
+                "Are you sure you want to delete this document?".to_string()
+            };
+            ("Delete Document", Color::Red, message, "Y: Yes, delete | N: Cancel")
+        }
+        Some(crate::app::state::ConfirmationType::Transition) => {
+            let message = if let Some(selected_item) = &app.get_selected_item() {
+                format!("Are you sure you want to transition:\n\n\"{}\" to the next phase?", selected_item.title())
+            } else {
+                "Are you sure you want to transition this document?".to_string()
+            };
+            ("Transition Document", Color::Yellow, message, "Y: Yes, transition | N: Cancel")
+        }
+        None => ("Confirm Action", Color::White, "Are you sure?".to_string(), "Y: Yes | N: Cancel")
+    };
+    
     // Dialog title
-    let title = Paragraph::new("Delete Document")
-        .style(Style::default().fg(Color::Red).add_modifier(Modifier::BOLD));
+    let title = Paragraph::new(title_text)
+        .style(Style::default().fg(title_color).add_modifier(Modifier::BOLD));
     f.render_widget(title, dialog_chunks[0]);
     
     // Confirmation message
-    let message = if let Some(selected_item) = &app.get_selected_item() {
-        format!("Are you sure you want to delete:\n\n\"{}\"", selected_item.title())
-    } else {
-        "Are you sure you want to delete this document?".to_string()
-    };
-    
-    let message_widget = Paragraph::new(message)
+    let message_widget = Paragraph::new(message_text)
         .style(Style::default().fg(Color::White))
         .wrap(Wrap { trim: true });
     f.render_widget(message_widget, dialog_chunks[2]);
     
     // Instructions
-    let instructions = Paragraph::new("Y: Yes, delete | N: Cancel")
+    let instructions = Paragraph::new(instructions_text)
         .style(Style::default().fg(Color::Gray));
     f.render_widget(instructions, dialog_chunks[4]);
 }
@@ -219,6 +234,79 @@ pub fn draw_child_creation_dialog(f: &mut Frame, app: &App, area: Rect) {
 
     // Instructions
     let instructions = format!("Enter: Create {} | Esc: Cancel | Type to enter title", child_type);
+    let instructions_widget = Paragraph::new(instructions)
+        .style(Style::default().fg(Color::Gray))
+        .alignment(Alignment::Center)
+        .wrap(Wrap { trim: true });
+    f.render_widget(instructions_widget, chunks[4]);
+
+    // Border
+    let border = Block::default()
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(Color::Cyan));
+    f.render_widget(border, popup_area);
+}
+
+pub fn draw_adr_creation_dialog(f: &mut Frame, app: &App, area: Rect) {
+    let popup_area = centered_rect(60, 40, area);
+    f.render_widget(Clear, popup_area);
+    
+    // Get context from currently selected item
+    let context_info = if let Some(selected_item) = app.get_selected_item() {
+        format!("Creating ADR with context from {} '{}'", 
+            match selected_item.doc_type() {
+                DocumentType::Strategy => "strategy",
+                DocumentType::Initiative => "initiative", 
+                DocumentType::Task => "task",
+                _ => "document",
+            },
+            selected_item.title()
+        )
+    } else {
+        "Creating standalone ADR".to_string()
+    };
+    
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(1), // Title
+            Constraint::Length(2), // Context info
+            Constraint::Length(5), // Input field
+            Constraint::Length(1), // Spacer
+            Constraint::Min(1),    // Instructions
+        ])
+        .split(popup_area.inner(Margin { horizontal: 1, vertical: 1 }));
+
+    // Title
+    let title_widget = Paragraph::new("Create Architecture Decision Record (ADR)")
+        .style(Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+        .alignment(Alignment::Center);
+    f.render_widget(title_widget, chunks[0]);
+
+    // Context info
+    let context_widget = Paragraph::new(context_info)
+        .style(Style::default().fg(Color::Gray))
+        .wrap(Wrap { trim: true });
+    f.render_widget(context_widget, chunks[1]);
+
+    // Input field
+    let input_block = Block::default()
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(Color::Cyan))
+        .title("ADR Title");
+    
+    let input_widget = Paragraph::new(app.ui_state.input_title.value())
+        .block(input_block)
+        .style(Style::default().fg(Color::White));
+    f.render_widget(input_widget, chunks[2]);
+
+    // Show cursor
+    let cursor_x = chunks[2].x + app.ui_state.input_title.visual_cursor() as u16 + 1;
+    let cursor_y = chunks[2].y + 1;
+    f.set_cursor_position((cursor_x, cursor_y));
+
+    // Instructions
+    let instructions = "Enter: Create ADR | Esc: Cancel | Type to enter title";
     let instructions_widget = Paragraph::new(instructions)
         .style(Style::default().fg(Color::Gray))
         .alignment(Alignment::Center)

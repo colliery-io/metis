@@ -4,7 +4,7 @@ use metis_core::{
     Strategy, Vision, Document,
     Tag, Phase,
     domain::documents::{
-        types::{DocumentId, DocumentType},
+        types::DocumentId,
         strategy::RiskLevel,
     },
 };
@@ -96,6 +96,7 @@ async fn get_vision_document_id(workspace_dir: &Path, vision_slug: &str) -> Resu
 #[cfg(test)]
 mod tests {
     use super::*;
+    use metis_core::DocumentType;
     use tempfile::tempdir;
     use std::fs;
     use crate::commands::InitCommand;

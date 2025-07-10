@@ -1,5 +1,5 @@
 use crate::Result;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 /// Service for recursive document deletion
 /// 
@@ -9,12 +9,12 @@ use std::path::{Path, PathBuf};
 /// 3. For tasks: delete the file
 /// 4. Caller can sync to update database
 pub struct DeletionService {
-    workspace_dir: PathBuf,
+   
 }
 
 impl DeletionService {
-    pub fn new(workspace_dir: PathBuf) -> Self {
-        Self { workspace_dir }
+    pub fn new() -> Self {
+        Self {}
     }
 
     /// Delete a document and all its children recursively
@@ -120,10 +120,11 @@ pub struct DeletionResult {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::PathBuf;
     use tempfile::tempdir;
     use std::fs;
     use crate::application::services::document::{DocumentCreationService, creation::DocumentCreationConfig};
-    use crate::{Vision, Strategy, Initiative, Task};
+    
     use crate::dal::Database;
     use crate::application::Application;
 
@@ -138,7 +139,7 @@ mod tests {
         // Initialize database
         let db_path = workspace_dir.join("metis.db");
         let db = Database::new(&db_path.to_string_lossy()).unwrap();
-        let mut app = Application::new(db);
+        let app = Application::new(db);
         
         // Create vision (required as root)
         let creation_service = DocumentCreationService::new(&metis_dir);
@@ -157,18 +158,11 @@ mod tests {
         (temp_dir, metis_dir)
     }
 
-    #[tokio::test]
-    async fn test_deletion_service_creation() {
-        let (_temp_dir, workspace_dir) = setup_test_workspace().await;
-        let service = DeletionService::new(workspace_dir.clone());
-        
-        assert_eq!(service.workspace_dir, workspace_dir);
-    }
 
     #[tokio::test]
     async fn test_delete_single_document_no_children() {
         let (_temp_dir, workspace_dir) = setup_test_workspace().await;
-        let service = DeletionService::new(workspace_dir.clone());
+        let service = DeletionService::new();
         
         // Create a test document (task - just a file)
         let doc_path = workspace_dir.join("test.md");
@@ -223,7 +217,7 @@ mod tests {
         assert!(task_result.file_path.exists());
         
         // Delete the strategy
-        let deletion_service = DeletionService::new(workspace_dir.clone());
+        let deletion_service = DeletionService::new();
         let result = deletion_service.delete_document_recursive(&strategy_result.file_path.to_string_lossy()).await.unwrap();
         
         // Verify entire strategy folder was deleted
@@ -235,7 +229,7 @@ mod tests {
         
         // Should have deleted all files and directories
         assert!(result.deleted_files.len() >= 3); // at least strategy.md + initiative.md + task.md
-        assert!(result.cleaned_directories.len() >= 1); // at least the strategy folder
+        assert!(!result.cleaned_directories.is_empty()); // at least the strategy folder
     }
 
     #[tokio::test]
@@ -283,7 +277,7 @@ mod tests {
         let task2_result = creation_service.create_task(task2_config, &strategy_result.document_id.to_string(), &initiative_result.document_id.to_string()).await.unwrap();
         
         // Delete the initiative
-        let deletion_service = DeletionService::new(workspace_dir.clone());
+        let deletion_service = DeletionService::new();
         let result = deletion_service.delete_document_recursive(&initiative_result.file_path.to_string_lossy()).await.unwrap();
         
         // Verify initiative folder was deleted
@@ -298,13 +292,13 @@ mod tests {
         
         // Should have deleted all files in the initiative folder
         assert!(result.deleted_files.len() >= 3); // at least initiative.md + task1.md + task2.md
-        assert!(result.cleaned_directories.len() >= 1); // at least the initiative folder
+        assert!(!result.cleaned_directories.is_empty()); // at least the initiative folder
     }
 
     #[tokio::test]
     async fn test_delete_nonexistent_document() {
         let (_temp_dir, workspace_dir) = setup_test_workspace().await;
-        let service = DeletionService::new(workspace_dir.clone());
+        let service = DeletionService::new();
         
         let nonexistent_path = workspace_dir.join("nonexistent.md");
         
@@ -349,7 +343,7 @@ mod tests {
         let task_result = creation_service.create_task(task_config, &strategy_result.document_id.to_string(), &initiative_result.document_id.to_string()).await.unwrap();
         
         // Delete just the task
-        let deletion_service = DeletionService::new(workspace_dir.clone());
+        let deletion_service = DeletionService::new();
         let result = deletion_service.delete_document_recursive(&task_result.file_path.to_string_lossy()).await.unwrap();
         
         // Task should be deleted
@@ -367,7 +361,7 @@ mod tests {
     #[tokio::test]
     async fn test_delete_document_no_folder() {
         let (_temp_dir, workspace_dir) = setup_test_workspace().await;
-        let service = DeletionService::new(workspace_dir.clone());
+        let service = DeletionService::new();
         
         // Create a document without an associated folder
         let doc_path = workspace_dir.join("document.md");

@@ -2,6 +2,12 @@ use crate::models::{AppState, BoardType, KanbanBoard};
 use tui_input::Input;
 use tui_textarea::TextArea;
 
+#[derive(Debug, Clone)]
+pub enum ConfirmationType {
+    Delete,
+    Transition,
+}
+
 /// UI-specific state that controls the user interface
 #[derive(Debug)]
 pub struct UiState {
@@ -10,11 +16,13 @@ pub struct UiState {
     pub strategy_board: KanbanBoard,
     pub initiative_board: KanbanBoard,
     pub task_board: KanbanBoard,
-    pub error_message: Option<String>,
+    pub adr_board: KanbanBoard,
     pub input_title: Input,
     pub input_description: String,
     pub viewing_ticket: Option<(BoardType, usize, usize)>,
     pub strategy_editor: Option<TextArea<'static>>,
+    pub confirmation_type: Option<ConfirmationType>,
+    pub editing_vision_path: Option<std::path::PathBuf>,
 }
 
 impl UiState {
@@ -25,11 +33,13 @@ impl UiState {
             strategy_board: KanbanBoard::create_strategy_board(),
             initiative_board: KanbanBoard::create_initiative_board(),
             task_board: KanbanBoard::create_task_board(),
-            error_message: None,
+            adr_board: KanbanBoard::create_adr_board(),
             input_title: Input::default(),
             input_description: String::new(),
             viewing_ticket: None,
             strategy_editor: None,
+            confirmation_type: None,
+            editing_vision_path: None,
         }
     }
 
@@ -38,24 +48,13 @@ impl UiState {
             BoardType::Strategy => &self.strategy_board,
             BoardType::Initiative => &self.initiative_board,
             BoardType::Task => &self.task_board,
+            BoardType::Adr => &self.adr_board,
         }
     }
 
-    pub fn get_current_board_mut(&mut self) -> &mut KanbanBoard {
-        match self.current_board {
-            BoardType::Strategy => &mut self.strategy_board,
-            BoardType::Initiative => &mut self.initiative_board,
-            BoardType::Task => &mut self.task_board,
-        }
-    }
 
-    pub fn set_error(&mut self, message: String) {
-        self.error_message = Some(message);
-    }
 
-    pub fn clear_error(&mut self) {
-        self.error_message = None;
-    }
+
 
     pub fn reset_input(&mut self) {
         self.input_title = Input::default();
@@ -70,15 +69,17 @@ impl UiState {
         self.current_board = match self.current_board {
             BoardType::Strategy => BoardType::Initiative,
             BoardType::Initiative => BoardType::Task,
-            BoardType::Task => BoardType::Strategy,
+            BoardType::Task => BoardType::Adr,
+            BoardType::Adr => BoardType::Strategy,
         };
     }
 
     pub fn previous_board(&mut self) {
         self.current_board = match self.current_board {
-            BoardType::Strategy => BoardType::Task,
+            BoardType::Strategy => BoardType::Adr,
             BoardType::Initiative => BoardType::Strategy,
             BoardType::Task => BoardType::Initiative,
+            BoardType::Adr => BoardType::Task,
         };
     }
 }

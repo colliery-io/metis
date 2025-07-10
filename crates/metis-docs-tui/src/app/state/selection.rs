@@ -1,4 +1,4 @@
-use crate::models::{BoardType, KanbanItem};
+use crate::models::BoardType;
 
 /// Selection state management for navigation within boards
 #[derive(Debug, Clone)]
@@ -6,6 +6,7 @@ pub struct SelectionState {
     pub strategy_selection: (usize, usize),
     pub initiative_selection: (usize, usize),
     pub task_selection: (usize, usize),
+    pub adr_selection: (usize, usize),
 }
 
 impl SelectionState {
@@ -14,6 +15,7 @@ impl SelectionState {
             strategy_selection: (0, 0),
             initiative_selection: (0, 0),
             task_selection: (0, 0),
+            adr_selection: (0, 0),
         }
     }
 
@@ -22,26 +24,21 @@ impl SelectionState {
             BoardType::Strategy => self.strategy_selection,
             BoardType::Initiative => self.initiative_selection,
             BoardType::Task => self.task_selection,
+            BoardType::Adr => self.adr_selection,
         }
     }
 
-    pub fn set_selection(&mut self, board_type: BoardType, column: usize, item: usize) {
-        match board_type {
-            BoardType::Strategy => self.strategy_selection = (column, item),
-            BoardType::Initiative => self.initiative_selection = (column, item),
-            BoardType::Task => self.task_selection = (column, item),
-        }
-    }
 
     pub fn get_current_selection_mut(&mut self, board_type: BoardType) -> &mut (usize, usize) {
         match board_type {
             BoardType::Strategy => &mut self.strategy_selection,
             BoardType::Initiative => &mut self.initiative_selection,
             BoardType::Task => &mut self.task_selection,
+            BoardType::Adr => &mut self.adr_selection,
         }
     }
 
-    pub fn move_selection_up(&mut self, board_type: BoardType, max_items: usize) {
+    pub fn move_selection_up(&mut self, board_type: BoardType) {
         let selection = self.get_current_selection_mut(board_type);
         if selection.1 > 0 {
             selection.1 -= 1;
@@ -55,7 +52,7 @@ impl SelectionState {
         }
     }
 
-    pub fn move_selection_left(&mut self, board_type: BoardType, max_columns: usize) {
+    pub fn move_selection_left(&mut self, board_type: BoardType) {
         let selection = self.get_current_selection_mut(board_type);
         if selection.0 > 0 {
             selection.0 -= 1;

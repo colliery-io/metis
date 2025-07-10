@@ -115,7 +115,7 @@ mod tests {
     fn test_extract_bool() {
         let map = create_test_map();
         
-        assert_eq!(FrontmatterParser::extract_bool(&map, "bool_field").unwrap(), true);
+        assert!(FrontmatterParser::extract_bool(&map, "bool_field").unwrap());
         
         // Test missing field
         assert!(FrontmatterParser::extract_bool(&map, "missing_field").is_err());

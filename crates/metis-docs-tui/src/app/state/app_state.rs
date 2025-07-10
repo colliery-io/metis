@@ -30,10 +30,6 @@ impl CoreAppState {
         self.sync_complete = true;
     }
 
-    pub fn invalidate_workspace(&mut self) {
-        self.workspace_valid = false;
-        self.sync_complete = false;
-    }
 }
 
 impl Default for CoreAppState {

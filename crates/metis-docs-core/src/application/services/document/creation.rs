@@ -1,7 +1,5 @@
 use crate::domain::documents::types::{DocumentType, DocumentId, Phase, Tag};
 use crate::domain::documents::traits::Document;
-use crate::domain::documents::metadata::DocumentMetadata;
-use crate::domain::documents::content::DocumentContent;
 use crate::domain::documents::strategy::RiskLevel;
 use crate::domain::documents::initiative::Complexity;
 use crate::{Vision, Strategy, Initiative, Task, Adr, MetisError};
@@ -244,7 +242,7 @@ impl DocumentCreationService {
     }
 
     /// Create a new ADR document
-    pub async fn create_adr(&self, config: DocumentCreationConfig, context: &str, options: Vec<String>) -> Result<CreationResult> {
+    pub async fn create_adr(&self, config: DocumentCreationConfig) -> Result<CreationResult> {
         // Find the next ADR number
         let adr_number = self.get_next_adr_number()?;
         let adr_slug = self.generate_id_from_title(&config.title);

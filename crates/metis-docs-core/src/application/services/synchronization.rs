@@ -274,7 +274,8 @@ mod tests {
     }
 
     fn create_test_document_content() -> String {
-        let content = "---\n".to_string() +
+        
+        "---\n".to_string() +
             "title: Test Document\n" +
             "level: vision\n" +
             "created_at: \"2021-01-01T00:00:00Z\"\n" +
@@ -285,8 +286,7 @@ mod tests {
             "  - \"#phase/draft\"\n" +
             "---\n\n" +
             "# Test Document\n\n" +
-            "Test content.\n";
-        content
+            "Test content.\n"
     }
 
     #[tokio::test]
@@ -331,7 +331,7 @@ mod tests {
         
         // Modify file
         let modified_content = &create_test_document_content().replace("Test content.", "Modified content.");
-        FilesystemService::write_file(&file_path, &modified_content).expect("Failed to write");
+        FilesystemService::write_file(&file_path, modified_content).expect("Failed to write");
         
         let result = sync_service.sync_file(&file_path).await.expect("Failed to sync");
         assert_eq!(result, SyncResult::Updated { filepath: path_str.clone() });
@@ -363,7 +363,7 @@ mod tests {
             let content = &create_test_document_content()
                 .replace("Test Document", &format!("Test Document {}", id))
                 .replace("test-doc-1", id);
-            FilesystemService::write_file(&full_path, &content).expect("Failed to write");
+            FilesystemService::write_file(&full_path, content).expect("Failed to write");
         }
         
         // Sync directory

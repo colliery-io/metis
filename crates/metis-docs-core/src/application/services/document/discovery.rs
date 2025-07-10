@@ -159,9 +159,9 @@ impl DocumentDiscoveryService {
                             let task_path = task_entry
                                 .map_err(|e| MetisError::FileSystem(e.to_string()))?
                                 .path();
-                            if task_path.is_file() && task_path.extension().map_or(false, |ext| ext == "md") {
+                            if task_path.is_file() && task_path.extension().is_some_and(|ext| ext == "md") {
                                 // Skip initiative.md
-                                if task_path.file_name().map_or(false, |name| name == "initiative.md") {
+                                if task_path.file_name().is_some_and(|name| name == "initiative.md") {
                                     continue;
                                 }
                                 
@@ -188,7 +188,7 @@ impl DocumentDiscoveryService {
                     let adr_path = entry
                         .map_err(|e| MetisError::FileSystem(e.to_string()))?
                         .path();
-                    if adr_path.is_file() && adr_path.extension().map_or(false, |ext| ext == "md") {
+                    if adr_path.is_file() && adr_path.extension().is_some_and(|ext| ext == "md") {
                         if let Ok(adr) = Adr::from_file(&adr_path).await {
                             if adr.id().to_string() == document_id {
                                 return Ok(adr_path);
@@ -300,8 +300,8 @@ impl DocumentDiscoveryService {
                                     let task_path = task_entry
                                         .map_err(|e| MetisError::FileSystem(e.to_string()))?
                                         .path();
-                                    if task_path.is_file() && task_path.extension().map_or(false, |ext| ext == "md") {
-                                        if task_path.file_name().map_or(false, |name| name == "initiative.md") {
+                                    if task_path.is_file() && task_path.extension().is_some_and(|ext| ext == "md") {
+                                        if task_path.file_name().is_some_and(|name| name == "initiative.md") {
                                             continue;
                                         }
                                         documents.push(task_path);
@@ -321,7 +321,7 @@ impl DocumentDiscoveryService {
                         let adr_path = entry
                             .map_err(|e| MetisError::FileSystem(e.to_string()))?
                             .path();
-                        if adr_path.is_file() && adr_path.extension().map_or(false, |ext| ext == "md") {
+                        if adr_path.is_file() && adr_path.extension().is_some_and(|ext| ext == "md") {
                             documents.push(adr_path);
                         }
                     }

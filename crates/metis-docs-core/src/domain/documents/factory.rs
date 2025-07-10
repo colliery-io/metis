@@ -113,8 +113,8 @@ impl DocumentFactory {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::tempdir;
-    use std::fs;
+    
+    
 
     #[test]
     fn test_extract_document_type() {

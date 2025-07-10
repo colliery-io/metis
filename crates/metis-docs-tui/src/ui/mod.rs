@@ -1,8 +1,6 @@
 pub mod board;
 pub mod dialog;
 pub mod components;
-pub mod detail;
-pub mod edit;
 
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
@@ -17,9 +15,6 @@ use crate::models::*;
 
 pub use board::*;
 pub use dialog::*;
-pub use components::*;
-pub use detail::*;
-pub use edit::*;
 
 pub fn draw(f: &mut Frame, app: &App) {
     let chunks = Layout::default()
@@ -37,10 +32,7 @@ pub fn draw(f: &mut Frame, app: &App) {
 
     // Main content
     match app.app_state() {
-        AppState::EditingDocument => {
-            draw_edit_form(f, app, chunks[1]);
-        }
-        AppState::EditingStrategy => {
+        AppState::EditingContent => {
             draw_content_edit_form(f, app, chunks[1]);
         }
         _ => {
@@ -57,8 +49,10 @@ pub fn draw(f: &mut Frame, app: &App) {
                 draw_creation_dialog(f, app, f.area());
             } else if app.app_state() == &AppState::CreatingChildDocument {
                 draw_child_creation_dialog(f, app, f.area());
-            } else if app.app_state() == &AppState::ConfirmingDelete {
-                draw_delete_confirmation_dialog(f, app, f.area());
+            } else if app.app_state() == &AppState::CreatingAdr {
+                draw_adr_creation_dialog(f, app, f.area());
+            } else if app.app_state() == &AppState::Confirming {
+                draw_confirmation_dialog(f, app, f.area());
             }
         }
     }
@@ -73,6 +67,7 @@ fn draw_header(f: &mut Frame, app: &App, area: Rect) {
             BoardType::Strategy => "Strategy",
             BoardType::Initiative => "Initiative", 
             BoardType::Task => "Task",
+            BoardType::Adr => "ADR",
         })
     } else {
         "Initializing...".to_string()
@@ -131,12 +126,18 @@ fn draw_footer(f: &mut Frame, app: &App, area: Rect) {
     let footer_text = match app.app_state() {
         AppState::CreatingDocument => "Enter: Create | Escape: Cancel | Type to enter title",
         AppState::CreatingChildDocument => "Enter: Create | Escape: Cancel | Type to enter title",
-        AppState::EditingDocument => "Tab/Shift+Tab: Switch fields | Ctrl+S: Save | Esc: Cancel | Type to edit",
-        AppState::EditingStrategy => "Ctrl+S: Save | Esc: Cancel | Type to edit document content",
-        AppState::ConfirmingDelete => "Y: Yes, delete | N: Cancel",
+        AppState::CreatingAdr => "Enter: Create ADR | Escape: Cancel | Type to enter title",
+        AppState::EditingContent => "Ctrl+S: Save | Esc: Cancel | Type to edit document content",
+        AppState::Confirming => {
+            match app.ui_state.confirmation_type {
+                Some(crate::app::state::ConfirmationType::Delete) => "Y: Yes, delete | N: Cancel",
+                Some(crate::app::state::ConfirmationType::Transition) => "Y: Yes, transition | N: Cancel",
+                None => "Y: Yes | N: Cancel",
+            }
+        }
         _ => {
             if app.is_ready() {
-                "↑↓←→: Navigate | Tab: Switch boards | Enter: Edit | n: New | Ctrl+n: New Child | d: Delete | q: Quit"
+                "↑↓←→: Navigate | 1-4: Jump to board | v: Vision | Tab: Switch | Enter: Edit | n: New | Ctrl+n: Child | Ctrl+a: ADR | d: Del | t: Trans | q: Quit"
             } else {
                 "q: Quit"
             }
@@ -160,8 +161,10 @@ fn draw_content_edit_form(f: &mut Frame, app: &App, area: Rect) {
             .split(area);
 
         // Title
-        let title = if let Some(selected_item) = app.get_viewed_ticket() {
-            format!("Editing {}: {}", selected_item.doc_type().to_string(), selected_item.title())
+        let title = if app.ui_state.editing_vision_path.is_some() {
+            "Editing Vision Document".to_string()
+        } else if let Some(selected_item) = app.get_viewed_ticket() {
+            format!("Editing {}: {}", selected_item.doc_type(), selected_item.title())
         } else {
             "Editing Document".to_string()
         };

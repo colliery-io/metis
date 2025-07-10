@@ -20,15 +20,6 @@ impl DocumentObject {
             DocumentObject::Adr(doc) => doc,
         }
     }
-    
-    pub fn as_document_mut(&mut self) -> &mut dyn Document {
-        match self {
-            DocumentObject::Strategy(doc) => doc,
-            DocumentObject::Initiative(doc) => doc,
-            DocumentObject::Task(doc) => doc,
-            DocumentObject::Adr(doc) => doc,
-        }
-    }
 }
 
 #[derive(Debug)]
@@ -52,11 +43,6 @@ impl KanbanItem {
         self.document.as_document().document_type()
     }
     
-    pub fn phase(&self) -> String {
-        self.document.as_document().phase()
-            .map(|p| p.to_string())
-            .unwrap_or_else(|_| "Unknown".to_string())
-    }
     
     pub fn blocked_by(&self) -> Vec<String> {
         self.document.as_document().blocked_by()
@@ -73,7 +59,6 @@ impl KanbanItem {
 
 #[derive(Debug)]
 pub struct KanbanBoard {
-    pub title: String,
     pub columns: Vec<KanbanColumn>,
 }
 
@@ -88,6 +73,7 @@ pub enum BoardType {
     Strategy,
     Initiative,
     Task,
+    Adr,
 }
 
 #[derive(Debug, PartialEq)]
@@ -95,31 +81,15 @@ pub enum AppState {
     Normal,
     CreatingDocument,
     CreatingChildDocument,
-    EditingDocument,
-    EditingStrategy,
-    ConfirmingDelete,
+    CreatingAdr,
+    EditingContent,
+    Confirming,
 }
 
-#[derive(Debug, Clone)]
-pub enum EditField {
-    Title,
-    Description,
-    // Add more fields as needed
-}
-
-#[derive(Debug, Clone)]
-pub struct EditState {
-    pub current_field: EditField,
-    pub title: String,
-    pub description: String,
-    pub original_item_id: String,
-    pub original_item_title: String,
-}
 
 impl KanbanBoard {
     pub fn create_strategy_board() -> Self {
         Self {
-            title: "Strategies".to_string(),
             columns: vec![
                 KanbanColumn { title: "shaping".to_string(), items: vec![] },
                 KanbanColumn { title: "design".to_string(), items: vec![] },
@@ -132,7 +102,6 @@ impl KanbanBoard {
 
     pub fn create_initiative_board() -> Self {
         Self {
-            title: "Initiatives".to_string(),
             columns: vec![
                 KanbanColumn { title: "discovery".to_string(), items: vec![] },
                 KanbanColumn { title: "design".to_string(), items: vec![] },
@@ -146,12 +115,22 @@ impl KanbanBoard {
 
     pub fn create_task_board() -> Self {
         Self {
-            title: "Tasks".to_string(),
             columns: vec![
                 KanbanColumn { title: "todo".to_string(), items: vec![] },
                 KanbanColumn { title: "active".to_string(), items: vec![] },
                 KanbanColumn { title: "blocked".to_string(), items: vec![] },
                 KanbanColumn { title: "completed".to_string(), items: vec![] },
+            ],
+        }
+    }
+
+    pub fn create_adr_board() -> Self {
+        Self {
+            columns: vec![
+                KanbanColumn { title: "draft".to_string(), items: vec![] },
+                KanbanColumn { title: "discussion".to_string(), items: vec![] },
+                KanbanColumn { title: "decided".to_string(), items: vec![] },
+                KanbanColumn { title: "superseded".to_string(), items: vec![] },
             ],
         }
     }

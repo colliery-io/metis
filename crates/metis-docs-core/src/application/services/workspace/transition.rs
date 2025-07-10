@@ -7,7 +7,6 @@ use std::path::{Path, PathBuf};
 
 /// Service for managing document phase transitions
 pub struct PhaseTransitionService {
-    workspace_dir: PathBuf,
     discovery_service: DocumentDiscoveryService,
 }
 
@@ -28,7 +27,6 @@ impl PhaseTransitionService {
         let discovery_service = DocumentDiscoveryService::new(&workspace_dir);
         
         Self {
-            workspace_dir,
             discovery_service,
         }
     }
@@ -117,7 +115,7 @@ impl PhaseTransitionService {
                 let mut vision = Vision::from_file(file_path).await
                     .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
                 vision.transition_phase(Some(target_phase))
-                    .map_err(|e| MetisError::InvalidPhaseTransition {
+                    .map_err(|_e| MetisError::InvalidPhaseTransition {
                         from: vision.phase().unwrap_or(Phase::Draft).to_string(),
                         to: target_phase.to_string(),
                         doc_type: "vision".to_string(),
@@ -129,7 +127,7 @@ impl PhaseTransitionService {
                 let mut strategy = Strategy::from_file(file_path).await
                     .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
                 strategy.transition_phase(Some(target_phase))
-                    .map_err(|e| MetisError::InvalidPhaseTransition {
+                    .map_err(|_e| MetisError::InvalidPhaseTransition {
                         from: strategy.phase().unwrap_or(Phase::Shaping).to_string(),
                         to: target_phase.to_string(),
                         doc_type: "strategy".to_string(),
@@ -141,7 +139,7 @@ impl PhaseTransitionService {
                 let mut initiative = Initiative::from_file(file_path).await
                     .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
                 initiative.transition_phase(Some(target_phase))
-                    .map_err(|e| MetisError::InvalidPhaseTransition {
+                    .map_err(|_e| MetisError::InvalidPhaseTransition {
                         from: initiative.phase().unwrap_or(Phase::Discovery).to_string(),
                         to: target_phase.to_string(),
                         doc_type: "initiative".to_string(),
@@ -153,7 +151,7 @@ impl PhaseTransitionService {
                 let mut task = Task::from_file(file_path).await
                     .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
                 task.transition_phase(Some(target_phase))
-                    .map_err(|e| MetisError::InvalidPhaseTransition {
+                    .map_err(|_e| MetisError::InvalidPhaseTransition {
                         from: task.phase().unwrap_or(Phase::Todo).to_string(),
                         to: target_phase.to_string(),
                         doc_type: "task".to_string(),
@@ -165,7 +163,7 @@ impl PhaseTransitionService {
                 let mut adr = Adr::from_file(file_path).await
                     .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
                 adr.transition_phase(Some(target_phase))
-                    .map_err(|e| MetisError::InvalidPhaseTransition {
+                    .map_err(|_e| MetisError::InvalidPhaseTransition {
                         from: adr.phase().unwrap_or(Phase::Draft).to_string(),
                         to: target_phase.to_string(),
                         doc_type: "adr".to_string(),

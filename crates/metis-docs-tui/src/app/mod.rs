@@ -1,12 +1,79 @@
 pub mod state;
-pub mod navigation;
-pub mod document;
+
+
 
 use anyhow::Result;
 use crate::models::*;
 use crate::services::*;
 use crate::error::*;
-use metis_core::{Strategy, Initiative, Task, Document, domain::documents::types::DocumentType};
+use metis_core::{Strategy, Initiative, Task, Adr, Document, domain::documents::types::DocumentType};
+use crate::app::state::ConfirmationType;
+
+/// Extract numerical part from ADR ID (e.g., "001-some-title" -> 1)
+fn extract_adr_number(id: &str) -> u32 {
+    if let Some(dash_pos) = id.find('-') {
+        if let Ok(num) = id[..dash_pos].parse::<u32>() {
+            return num;
+        }
+    }
+    // Fallback: if parsing fails, return 0 to sort to beginning
+    0
+}
+
+/// Get column index for strategy board based on phase
+/// Columns: shaping(0), design(1), ready(2), active(3), completed(4)
+fn get_strategy_column_index(strategy: &Strategy) -> usize {
+    use metis_core::{Document, domain::documents::types::Phase};
+    match strategy.phase() {
+        Ok(Phase::Shaping) => 0,
+        Ok(Phase::Design) => 1,
+        Ok(Phase::Ready) => 2,
+        Ok(Phase::Active) => 3,
+        Ok(Phase::Completed) => 4,
+        _ => 0, // Default to first column if phase is unknown
+    }
+}
+
+/// Get column index for initiative board based on phase
+/// Columns: discovery(0), design(1), ready(2), decompose(3), active(4), completed(5)
+fn get_initiative_column_index(initiative: &Initiative) -> usize {
+    use metis_core::{Document, domain::documents::types::Phase};
+    match initiative.phase() {
+        Ok(Phase::Discovery) => 0,
+        Ok(Phase::Design) => 1,
+        Ok(Phase::Ready) => 2,
+        Ok(Phase::Decompose) => 3,
+        Ok(Phase::Active) => 4,
+        Ok(Phase::Completed) => 5,
+        _ => 0, // Default to first column if phase is unknown
+    }
+}
+
+/// Get column index for task board based on phase
+/// Columns: todo(0), active(1), blocked(2), completed(3)
+fn get_task_column_index(task: &Task) -> usize {
+    use metis_core::{Document, domain::documents::types::Phase};
+    match task.phase() {
+        Ok(Phase::Todo) => 0,
+        Ok(Phase::Active) => 1,
+        Ok(Phase::Blocked) => 2,
+        Ok(Phase::Completed) => 3,
+        _ => 0, // Default to first column if phase is unknown
+    }
+}
+
+/// Get column index for ADR board based on phase
+/// Columns: draft(0), discussion(1), decided(2), superseded(3)
+fn get_adr_column_index(adr: &Adr) -> usize {
+    use metis_core::{Document, domain::documents::types::Phase};
+    match adr.phase() {
+        Ok(Phase::Draft) => 0,
+        Ok(Phase::Discussion) => 1,
+        Ok(Phase::Decided) => 2,
+        Ok(Phase::Superseded) => 3,
+        _ => 0, // Default to first column if phase is unknown
+    }
+}
 
 pub struct App {
     // Core application state
@@ -15,14 +82,13 @@ pub struct App {
     pub ui_state: state::UiState,
     // Selection state
     pub selection_state: state::SelectionState,
-    // Editing state
-    pub editing_state: state::EditingState,
     // Error handler
     pub error_handler: ErrorHandler,
     // Services
     pub workspace_service: WorkspaceService,
     pub document_service: Option<DocumentService>,
     pub sync_service: Option<SyncService>,
+    pub transition_service: Option<TransitionService>,
 }
 
 impl App {
@@ -31,11 +97,11 @@ impl App {
             core_state: state::CoreAppState::new(),
             ui_state: state::UiState::new(),
             selection_state: state::SelectionState::new(),
-            editing_state: state::EditingState::new(),
             error_handler: ErrorHandler::new(),
             workspace_service: WorkspaceService::new(),
             document_service: None,
             sync_service: None,
+            transition_service: None,
         }
     }
 
@@ -47,7 +113,8 @@ impl App {
                 
                 // Initialize services
                 self.document_service = Some(DocumentService::new(workspace_dir.clone()));
-                self.sync_service = Some(SyncService::new(workspace_dir));
+                self.sync_service = Some(SyncService::new(workspace_dir.clone()));
+                self.transition_service = Some(TransitionService::new(workspace_dir));
                 
                 // 2. Perform database synchronization
                 if let Some(sync_service) = &self.sync_service {
@@ -101,10 +168,77 @@ impl App {
         self.ui_state.previous_board();
     }
 
+    pub fn jump_to_strategy_board(&mut self) {
+        self.ui_state.current_board = BoardType::Strategy;
+    }
+
+    pub fn jump_to_initiative_board(&mut self) {
+        self.ui_state.current_board = BoardType::Initiative;
+    }
+
+    pub fn jump_to_task_board(&mut self) {
+        self.ui_state.current_board = BoardType::Task;
+    }
+
+    pub fn jump_to_adr_board(&mut self) {
+        self.ui_state.current_board = BoardType::Adr;
+    }
+
+    pub fn view_vision_document(&mut self) {
+        // Look for vision.md in the workspace
+        if let Some(workspace_dir) = &self.core_state.workspace_dir {
+            let vision_path = workspace_dir.join("vision.md");
+            if vision_path.exists() {
+                // Create a temporary KanbanItem for the vision document
+                match std::fs::read_to_string(&vision_path) {
+                    Ok(_) => {
+                        // Set viewing state to simulate selecting the vision document
+                        // We'll use a special board type and position that doesn't exist
+                        self.ui_state.viewing_ticket = Some((BoardType::Strategy, 999, 999));
+                        
+                        // Go directly to edit mode
+                        self.start_content_editing_for_vision(vision_path);
+                    }
+                    Err(e) => {
+                        self.error_handler.handle_error(AppError::IoError(format!("Failed to read vision document: {}", e)));
+                    }
+                }
+            } else {
+                self.error_handler.handle_error(AppError::DocumentError(
+                    "No vision document found. Create one with 'metis create vision' first.".to_string()
+                ));
+            }
+        }
+    }
+
+    fn start_content_editing_for_vision(&mut self, vision_path: std::path::PathBuf) {
+        self.ui_state.set_app_state(AppState::EditingContent);
+        
+        // Load vision content
+        if let Ok(content) = std::fs::read_to_string(&vision_path) {
+            // Create and initialize textarea
+            let mut textarea = tui_textarea::TextArea::default();
+            textarea.set_block(
+                ratatui::widgets::Block::default()
+                    .borders(ratatui::widgets::Borders::ALL)
+                    .title("Vision Document Editor")
+            );
+            
+            // Set the content
+            for line in content.lines() {
+                textarea.insert_str(line);
+                textarea.insert_newline();
+            }
+            
+            self.ui_state.strategy_editor = Some(textarea);
+            // Store the vision file path for saving
+            self.ui_state.editing_vision_path = Some(vision_path);
+        }
+    }
+
     pub fn move_selection_left(&mut self) {
         let current_board = self.ui_state.current_board;
-        let board = self.ui_state.get_current_board();
-        self.selection_state.move_selection_left(current_board, board.columns.len());
+        self.selection_state.move_selection_left(current_board);
     }
 
     pub fn move_selection_right(&mut self) {
@@ -115,14 +249,7 @@ impl App {
 
     pub fn move_selection_up(&mut self) {
         let current_board = self.ui_state.current_board;
-        let (col_idx, _) = self.selection_state.get_current_selection(current_board);
-        let board = self.ui_state.get_current_board();
-        let max_items = if col_idx < board.columns.len() {
-            board.columns[col_idx].items.len()
-        } else {
-            0
-        };
-        self.selection_state.move_selection_up(current_board, max_items);
+        self.selection_state.move_selection_up(current_board);
     }
 
     pub fn move_selection_down(&mut self) {
@@ -148,16 +275,28 @@ impl App {
         self.ui_state.reset_input();
     }
 
+    pub fn start_adr_creation(&mut self) {
+        self.ui_state.set_app_state(AppState::CreatingAdr);
+        self.ui_state.reset_input();
+    }
+
     pub fn cancel_document_creation(&mut self) {
         self.ui_state.set_app_state(AppState::Normal);
         self.ui_state.reset_input();
     }
 
     pub fn start_delete_confirmation(&mut self) {
-        self.ui_state.set_app_state(AppState::ConfirmingDelete);
+        self.ui_state.confirmation_type = Some(ConfirmationType::Delete);
+        self.ui_state.set_app_state(AppState::Confirming);
     }
 
-    pub fn cancel_delete_confirmation(&mut self) {
+    pub fn start_transition_confirmation(&mut self) {
+        self.ui_state.confirmation_type = Some(ConfirmationType::Transition);
+        self.ui_state.set_app_state(AppState::Confirming);
+    }
+
+    pub fn cancel_confirmation(&mut self) {
+        self.ui_state.confirmation_type = None;
         self.ui_state.set_app_state(AppState::Normal);
     }
 
@@ -181,10 +320,6 @@ impl App {
         self.start_content_editing();
     }
 
-    pub fn close_ticket_view(&mut self) {
-        self.ui_state.viewing_ticket = None;
-        self.ui_state.set_app_state(AppState::Normal);
-    }
 
     pub fn get_viewed_ticket(&self) -> Option<&KanbanItem> {
         if let Some((board_type, col_idx, item_idx)) = self.ui_state.viewing_ticket {
@@ -192,6 +327,7 @@ impl App {
                 BoardType::Strategy => &self.ui_state.strategy_board,
                 BoardType::Initiative => &self.ui_state.initiative_board,
                 BoardType::Task => &self.ui_state.task_board,
+                BoardType::Adr => &self.ui_state.adr_board,
             };
             
             if col_idx < board.columns.len() && item_idx < board.columns[col_idx].items.len() {
@@ -222,6 +358,7 @@ impl App {
                 BoardType::Strategy => DocumentType::Strategy,
                 BoardType::Initiative => DocumentType::Initiative,
                 BoardType::Task => DocumentType::Task,
+                BoardType::Adr => DocumentType::Adr,
             };
             
             match document_service.create_document(
@@ -351,52 +488,107 @@ impl App {
         Ok(())
     }
 
+    pub async fn transition_selected_document(&mut self) -> Result<()> {
+        if let Some(selected_item) = self.get_selected_item() {
+            if let Some(transition_service) = &self.transition_service {
+                match transition_service.transition_to_next_phase(selected_item.id()).await {
+                    Ok(_) => {
+                        // Sync database and reload documents
+                        if let Some(sync_service) = &self.sync_service {
+                            let _ = sync_service.sync_database().await;
+                        }
+                        self.load_documents().await?;
+                    }
+                    Err(e) => {
+                        self.error_handler.handle_error(AppError::from(e));
+                    }
+                }
+            }
+        }
+        
+        Ok(())
+    }
+
     pub async fn load_documents(&mut self) -> Result<()> {
         if let Some(document_service) = &self.document_service {
-            let documents = document_service.load_documents_from_database().await?;
+            let mut documents = document_service.load_documents_from_database().await?;
+            
+            // Sort documents by type and number for ADRs
+            documents.sort_by(|a, b| {
+                match (&a.document_type, &b.document_type) {
+                    (DocumentType::Adr, DocumentType::Adr) => {
+                        // For ADRs, extract number from ID and sort numerically
+                        let a_num = extract_adr_number(&a.id);
+                        let b_num = extract_adr_number(&b.id);
+                        a_num.cmp(&b_num)
+                    }
+                    _ => a.title.cmp(&b.title) // Other documents sort by title
+                }
+            });
             
             // Clear existing boards
             self.ui_state.strategy_board = KanbanBoard::create_strategy_board();
             self.ui_state.initiative_board = KanbanBoard::create_initiative_board();
             self.ui_state.task_board = KanbanBoard::create_task_board();
+            self.ui_state.adr_board = KanbanBoard::create_adr_board();
             
             // Load documents into appropriate boards
             for doc in documents {
                 match doc.document_type {
                     DocumentType::Strategy => {
-                        // For now, just add to draft column (index 0)
-                        // In a real implementation, we'd check the phase
-                        // Load the actual strategy from file
                         if let Ok(strategy) = Strategy::from_file(std::path::Path::new(&doc.filepath)).await {
+                            let column_index = get_strategy_column_index(&strategy);
                             let item = KanbanItem {
                                 document: DocumentObject::Strategy(strategy),
                                 prelude: doc.title.clone(),
                                 risk_complexity: None,
                                 file_path: doc.filepath,
                             };
-                            self.ui_state.strategy_board.columns[0].items.push(item);
+                            if column_index < self.ui_state.strategy_board.columns.len() {
+                                self.ui_state.strategy_board.columns[column_index].items.push(item);
+                            }
                         }
                     }
                     DocumentType::Initiative => {
                         if let Ok(initiative) = Initiative::from_file(std::path::Path::new(&doc.filepath)).await {
+                            let column_index = get_initiative_column_index(&initiative);
                             let item = KanbanItem {
                                 document: DocumentObject::Initiative(initiative),
                                 prelude: doc.title.clone(),
                                 risk_complexity: None,
                                 file_path: doc.filepath,
                             };
-                            self.ui_state.initiative_board.columns[0].items.push(item);
+                            if column_index < self.ui_state.initiative_board.columns.len() {
+                                self.ui_state.initiative_board.columns[column_index].items.push(item);
+                            }
                         }
                     }
                     DocumentType::Task => {
                         if let Ok(task) = Task::from_file(std::path::Path::new(&doc.filepath)).await {
+                            let column_index = get_task_column_index(&task);
                             let item = KanbanItem {
                                 document: DocumentObject::Task(task),
                                 prelude: doc.title.clone(),
                                 risk_complexity: None,
                                 file_path: doc.filepath,
                             };
-                            self.ui_state.task_board.columns[0].items.push(item);
+                            if column_index < self.ui_state.task_board.columns.len() {
+                                self.ui_state.task_board.columns[column_index].items.push(item);
+                            }
+                        }
+                    }
+                    DocumentType::Adr => {
+                        if let Ok(adr) = metis_core::Adr::from_file(std::path::Path::new(&doc.filepath)).await {
+                            let column_index = get_adr_column_index(&adr);
+                            let item = KanbanItem {
+                                document: DocumentObject::Adr(adr),
+                                prelude: doc.title.clone(),
+                                risk_complexity: None,
+                                file_path: doc.filepath,
+                            };
+                            if column_index < self.ui_state.adr_board.columns.len() {
+                                self.ui_state.adr_board.columns[column_index].items.push(item);
+                            }
                         }
                     }
                     _ => {
@@ -410,7 +602,7 @@ impl App {
     }
 
     pub fn start_content_editing(&mut self) {
-        self.ui_state.set_app_state(AppState::EditingStrategy);
+        self.ui_state.set_app_state(AppState::EditingContent);
         
         // Initialize text editor with current document content
         if let Some(selected_item) = self.get_viewed_ticket() {
@@ -455,15 +647,27 @@ impl App {
         self.ui_state.set_app_state(AppState::Normal);
         self.ui_state.strategy_editor = None;
         self.ui_state.viewing_ticket = None;
+        self.ui_state.editing_vision_path = None;
     }
 
     pub async fn save_content_edit(&mut self) -> Result<()> {
-        if let Some(selected_item) = self.get_viewed_ticket() {
-            if let Some(ref textarea) = self.ui_state.strategy_editor {
-                // Get current content from textarea
-                let new_content = textarea.lines().join("\n");
-                
-                // Save the content using document service
+        if let Some(ref textarea) = self.ui_state.strategy_editor {
+            // Get current content from textarea
+            let new_content = textarea.lines().join("\n");
+            
+            // Check if we're editing a vision document
+            if let Some(ref vision_path) = self.ui_state.editing_vision_path {
+                // Save vision document directly
+                match tokio::fs::write(vision_path, &new_content).await {
+                    Ok(_) => {
+                        // Vision saved successfully
+                    }
+                    Err(e) => {
+                        self.error_handler.handle_error(AppError::IoError(format!("Failed to save vision: {}", e)));
+                    }
+                }
+            } else if let Some(selected_item) = self.get_viewed_ticket() {
+                // Save regular document using document service
                 if let Some(document_service) = &self.document_service {
                     match document_service.save_document_content(&selected_item.file_path, &new_content).await {
                         Ok(_) => {
@@ -484,28 +688,55 @@ impl App {
         Ok(())
     }
 
-    pub fn cancel_editing(&mut self) {
-        self.editing_state.stop_editing();
-        self.ui_state.set_app_state(AppState::Normal);
+
+    pub async fn create_adr_from_ticket(&mut self) -> Result<()> {
+        // Get the title from user input
+        let title = self.ui_state.input_title.value().to_string();
+        if title.trim().is_empty() {
+            self.error_handler.handle_error(AppError::UserInputError("ADR title cannot be empty".to_string()));
+            return Ok(());
+        }
+
+        // Get the currently selected ticket for context
+        let context = if let Some(selected_item) = self.get_selected_item() {
+            // Allow ADR creation from strategies, initiatives, and tasks
+            match &selected_item.document {
+                DocumentObject::Strategy(strategy) => {
+                    use metis_core::Document;
+                    Some(format!("Context from strategy '{}': {}", strategy.title(), strategy.content().full_content()))
+                }
+                DocumentObject::Initiative(initiative) => {
+                    use metis_core::Document;
+                    Some(format!("Context from initiative '{}': {}", initiative.title(), initiative.content().full_content()))
+                }
+                DocumentObject::Task(task) => {
+                    use metis_core::Document;
+                    Some(format!("Context from task '{}': {}", task.title(), task.content().full_content()))
+                }
+                DocumentObject::Adr(_) => None, // Cannot create ADR from ADR
+            }
+        } else {
+            None // No context if no ticket selected
+        };
+
+        if let Some(document_service) = &self.document_service {
+            match document_service.create_adr(title, context).await {
+                Ok(_file_path) => {
+                    self.ui_state.set_app_state(AppState::Normal);
+                    self.ui_state.reset_input();
+                    // Sync database and reload documents
+                    if let Some(sync_service) = &self.sync_service {
+                        let _ = sync_service.sync_database().await;
+                    }
+                    self.load_documents().await?;
+                }
+                Err(e) => {
+                    self.error_handler.handle_error(AppError::from(e));
+                }
+            }
+        }
+
+        Ok(())
     }
 
-    pub fn edit_next_field(&mut self) {
-        self.editing_state.next_field();
-    }
-
-    pub fn edit_previous_field(&mut self) {
-        self.editing_state.previous_field();
-    }
-
-    pub fn save_edit(&mut self) {
-        // TODO: Implement save logic
-    }
-
-    pub fn edit_handle_backspace(&mut self) {
-        // TODO: Implement backspace handling
-    }
-
-    pub fn edit_handle_input(&mut self, _c: char) {
-        // TODO: Implement input handling
-    }
 }

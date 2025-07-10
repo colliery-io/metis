@@ -112,7 +112,7 @@ impl DatabaseService {
 mod tests {
     use super::*;
     use crate::dal::Database;
-    use tempfile::tempdir;
+    
 
     fn setup_service() -> DatabaseService {
         let db = Database::new(":memory:").expect("Failed to create test database");

@@ -71,7 +71,7 @@ fn get_next_adr_number(workspace_dir: &Path) -> Result<u32> {
         let entry = entry?;
         let path = entry.path();
         
-        if path.is_file() && path.extension().map_or(false, |ext| ext == "md") {
+        if path.is_file() && path.extension().is_some_and(|ext| ext == "md") {
             if let Some(filename) = path.file_stem().and_then(|name| name.to_str()) {
                 // Parse number from filename like "0001-title" or "001-title"
                 if let Some(dash_pos) = filename.find('-') {
@@ -183,7 +183,7 @@ mod tests {
         let adr_files: Vec<_> = fs::read_dir(&adrs_base)
             .unwrap()
             .filter_map(|entry| entry.ok())
-            .filter(|entry| entry.path().is_file() && entry.path().extension().map_or(false, |ext| ext == "md"))
+            .filter(|entry| entry.path().is_file() && entry.path().extension().is_some_and(|ext| ext == "md"))
             .collect();
         
         assert_eq!(adr_files.len(), 1, "Expected exactly one ADR file");

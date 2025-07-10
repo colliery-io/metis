@@ -38,7 +38,7 @@ impl Application {
     }
 
     /// Convenience method to sync a directory
-    pub async fn sync_directory<P: AsRef<Path>>(mut self, dir_path: P) -> Result<Vec<services::synchronization::SyncResult>> {
+    pub async fn sync_directory<P: AsRef<Path>>(self, dir_path: P) -> Result<Vec<services::synchronization::SyncResult>> {
         let mut db_service = services::DatabaseService::new(self.database.into_repository());
         let mut sync_service = services::SyncService::new(&mut db_service);
         sync_service.sync_directory(dir_path).await

@@ -27,17 +27,4 @@ impl SyncService {
         }
     }
 
-    pub async fn is_sync_needed(&self) -> Result<bool> {
-        // This is a simplified check - in reality you'd want to compare
-        // file modification times with database timestamps
-        let db_path = self.workspace_dir.join("metis.db");
-        
-        if !db_path.exists() {
-            return Ok(true);
-        }
-
-        // For now, assume sync is always needed
-        // TODO: Implement proper sync detection logic
-        Ok(true)
-    }
 }

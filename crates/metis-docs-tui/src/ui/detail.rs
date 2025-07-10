@@ -97,9 +97,7 @@ fn draw_metadata_section(f: &mut Frame, ticket: &KanbanItem, area: Rect) {
         Line::from(vec![
             Span::styled("Type: ", Style::default().fg(Color::Gray)),
             Span::styled(format!("{:?}", ticket.doc_type()), Style::default().fg(Color::White)),
-            Span::raw("  "),
-            Span::styled("Phase: ", Style::default().fg(Color::Gray)),
-            Span::styled(ticket.phase(), Style::default().fg(Color::White)),
+            Span::raw("  ")
         ]),
     ];
 

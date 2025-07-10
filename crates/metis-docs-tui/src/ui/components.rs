@@ -29,7 +29,7 @@ pub fn draw_ticket(f: &mut Frame, item: &KanbanItem, area: Rect, is_selected: bo
     // Line 1: Risk/Complexity + ID + Title
     let mut title_line = vec![
         Span::styled(format!(" [{}] ", item.id()), meta_style),
-        Span::styled(format!("{}", item.title()), base_style),
+        Span::styled(item.title().to_string(), base_style),
     ];
 
     if let Some(ref risk_complexity) = item.risk_complexity {
@@ -81,31 +81,4 @@ pub fn draw_ticket(f: &mut Frame, item: &KanbanItem, area: Rect, is_selected: bo
         .wrap(Wrap { trim: true });
     
     f.render_widget(paragraph, area);
-}
-
-/// Helper function to create styled spans with consistent coloring
-pub fn styled_span(text: &str, is_selected: bool) -> Span {
-    if is_selected {
-        Span::styled(text, Style::default().fg(Color::Black).bg(Color::Yellow))
-    } else {
-        Span::styled(text, Style::default().fg(Color::White))
-    }
-}
-
-/// Helper function to create metadata styled spans
-pub fn meta_span(text: &str, is_selected: bool) -> Span {
-    if is_selected {
-        Span::styled(text, Style::default().fg(Color::Black).bg(Color::Yellow))
-    } else {
-        Span::styled(text, Style::default().fg(Color::Gray))
-    }
-}
-
-/// Helper function to create error/warning styled spans
-pub fn error_span(text: &str, is_selected: bool) -> Span {
-    if is_selected {
-        Span::styled(text, Style::default().fg(Color::Red).bg(Color::Yellow))
-    } else {
-        Span::styled(text, Style::default().fg(Color::Red))
-    }
 }

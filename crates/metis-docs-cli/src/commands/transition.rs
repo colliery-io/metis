@@ -102,7 +102,7 @@ mod tests {
         let original_dir = std::env::current_dir().ok();
         
         // Change to temp directory without workspace
-        if let Err(_) = std::env::set_current_dir(temp_dir.path()) {
+        if std::env::set_current_dir(temp_dir.path()).is_err() {
             return; // Skip test if we can't change directory
         }
         

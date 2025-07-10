@@ -25,18 +25,6 @@ impl WorkspaceService {
         }
     }
 
-    pub fn validate_workspace(&self, workspace_dir: &PathBuf) -> Result<()> {
-        if !workspace_dir.exists() {
-            return Err(anyhow::anyhow!("Workspace directory does not exist"));
-        }
-
-        let db_path = workspace_dir.join("metis.db");
-        if !db_path.exists() {
-            return Err(anyhow::anyhow!("Database file missing from workspace"));
-        }
-
-        Ok(())
-    }
 }
 
 impl Default for WorkspaceService {

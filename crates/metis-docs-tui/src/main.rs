@@ -18,8 +18,8 @@ mod error;
 
 use app::App;
 use models::AppState;
+use app::state::ConfirmationType;
 use error::AppError;
-use metis_core::domain::documents::types::DocumentType;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -118,9 +118,45 @@ async fn run_app<B: ratatui::backend::Backend>(
                                     }
                                 }
                             }
+                            KeyCode::Char('a') => {
+                                if app.is_ready() && key.modifiers.contains(KeyModifiers::CONTROL) {
+                                    // Ctrl+A: Start ADR creation dialog
+                                    app.start_adr_creation();
+                                }
+                            }
                             KeyCode::Char('d') | KeyCode::Char('D') => {
                                 if app.is_ready() && app.get_selected_item().is_some() {
                                     app.start_delete_confirmation();
+                                }
+                            }
+                            KeyCode::Char('t') | KeyCode::Char('T') => {
+                                if app.is_ready() && app.get_selected_item().is_some() {
+                                    app.start_transition_confirmation();
+                                }
+                            }
+                            KeyCode::Char('1') => {
+                                if app.is_ready() {
+                                    app.jump_to_strategy_board();
+                                }
+                            }
+                            KeyCode::Char('2') => {
+                                if app.is_ready() {
+                                    app.jump_to_initiative_board();
+                                }
+                            }
+                            KeyCode::Char('3') => {
+                                if app.is_ready() {
+                                    app.jump_to_task_board();
+                                }
+                            }
+                            KeyCode::Char('4') => {
+                                if app.is_ready() {
+                                    app.jump_to_adr_board();
+                                }
+                            }
+                            KeyCode::Char('v') | KeyCode::Char('V') => {
+                                if app.is_ready() {
+                                    app.view_vision_document();
                                 }
                             }
                             KeyCode::Enter => {
@@ -163,44 +199,47 @@ async fn run_app<B: ratatui::backend::Backend>(
                             }
                         }
                     }
-                    AppState::ConfirmingDelete => {
-                        match key.code {
-                            KeyCode::Char('y') | KeyCode::Char('Y') => {
-                                if let Err(e) = app.delete_selected_document().await {
-                                    app.error_handler.handle_with_context(AppError::from(e), "Document deletion");
-                                }
-                                app.cancel_delete_confirmation();
-                            }
-                            KeyCode::Char('n') | KeyCode::Char('N') | KeyCode::Esc => {
-                                app.cancel_delete_confirmation();
-                            }
-                            _ => {}
-                        }
-                    }
-                    AppState::EditingDocument => {
+                    AppState::CreatingAdr => {
                         match key.code {
                             KeyCode::Esc => {
-                                app.cancel_editing();
+                                app.cancel_document_creation();
                             }
-                            KeyCode::Tab => {
-                                app.edit_next_field();
+                            KeyCode::Enter => {
+                                if let Err(e) = app.create_adr_from_ticket().await {
+                                    app.error_handler.handle_with_context(AppError::from(e), "ADR creation");
+                                }
                             }
-                            KeyCode::BackTab => {
-                                app.edit_previous_field();
+                            _ => {
+                                // Let tui-input handle all other key events
+                                app.handle_key_event(key);
                             }
-                            KeyCode::Char('s') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                                app.save_edit();
+                        }
+                    }
+                    AppState::Confirming => {
+                        match key.code {
+                            KeyCode::Char('y') | KeyCode::Char('Y') => {
+                                match app.ui_state.confirmation_type {
+                                    Some(ConfirmationType::Delete) => {
+                                        if let Err(e) = app.delete_selected_document().await {
+                                            app.error_handler.handle_with_context(AppError::from(e), "Document deletion");
+                                        }
+                                    }
+                                    Some(ConfirmationType::Transition) => {
+                                        if let Err(e) = app.transition_selected_document().await {
+                                            app.error_handler.handle_with_context(AppError::from(e), "Document transition");
+                                        }
+                                    }
+                                    None => {}
+                                }
+                                app.cancel_confirmation();
                             }
-                            KeyCode::Backspace => {
-                                app.edit_handle_backspace();
-                            }
-                            KeyCode::Char(c) => {
-                                app.edit_handle_input(c);
+                            KeyCode::Char('n') | KeyCode::Char('N') | KeyCode::Esc => {
+                                app.cancel_confirmation();
                             }
                             _ => {}
                         }
                     }
-                    AppState::EditingStrategy => {
+                    AppState::EditingContent => {
                         match key.code {
                             KeyCode::Esc => {
                                 app.cancel_content_editing();

@@ -10,7 +10,6 @@ use metis_core::{
     dal::Database,
     domain::documents::types::DocumentType,
 };
-use crate::models::KanbanItem;
 
 /// Service for document operations
 pub struct DocumentService {
@@ -62,7 +61,7 @@ impl DocumentService {
                 }
             }
             DocumentType::Adr => {
-                creation_service.create_adr(config, "", vec![]).await?
+                creation_service.create_adr(config).await?
             }
         };
 
@@ -70,7 +69,7 @@ impl DocumentService {
     }
 
     pub async fn delete_document(&self, file_path: &str) -> Result<()> {
-        let deletion_service = DeletionService::new(self.workspace_dir.clone());
+        let deletion_service = DeletionService::new();
         deletion_service.delete_document_recursive(file_path).await?;
         Ok(())
     }
@@ -91,25 +90,11 @@ impl DocumentService {
         }
         
         Ok(documents.into_iter().map(|doc| {
-            // Parse parent_id from frontmatter_json
-            let parent_id = if let Ok(frontmatter) = serde_json::from_str::<serde_json::Value>(&doc.frontmatter_json) {
-                frontmatter.get("parent_id")
-                    .and_then(|v| v.as_str())
-                    .map(|s| s.to_string())
-            } else {
-                None
-            };
-            
             crate::models::DatabaseDocument {
                 id: doc.id,
                 title: doc.title,
-                description: None,
                 document_type: DocumentType::from_str(&doc.document_type).unwrap(),
-                phase: doc.phase,
                 filepath: doc.filepath,
-                parent_id,
-                created_at: doc.created_at.to_string(),
-                updated_at: doc.updated_at.to_string(),
             }
         }).collect())
     }
@@ -137,5 +122,20 @@ impl DocumentService {
 
         let result = creation_service.create_task(config, &strategy_id, &initiative_id).await?;
         Ok(result.document_id.to_string())
+    }
+
+    pub async fn create_adr(&self, title: String, context: Option<String>) -> Result<PathBuf> {
+        let creation_service = DocumentCreationService::new(&self.workspace_dir);
+        
+        let config = DocumentCreationConfig {
+            title,
+            description: context,
+            parent_id: None, // ADRs are top-level documents
+            tags: vec![],
+            phase: None, // Will default to draft
+        };
+
+        let result = creation_service.create_adr(config).await?;
+        Ok(result.file_path)
     }
 }

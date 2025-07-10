@@ -68,8 +68,7 @@ impl FilesystemService {
         let mut files = Vec::new();
         
         for entry in WalkDir::new(dir).follow_links(true) {
-            let entry = entry.map_err(|e| MetisError::Io(std::io::Error::new(
-                std::io::ErrorKind::Other,
+            let entry = entry.map_err(|e| MetisError::Io(std::io::Error::other(
                 format!("Walk error: {}", e)
             )))?;
             
@@ -90,7 +89,7 @@ impl FilesystemService {
 mod tests {
     use super::*;
     use tempfile::tempdir;
-    use std::path::PathBuf;
+    
 
     #[test]
     fn test_write_and_read_file() {

@@ -132,12 +132,10 @@ fn prompt_for_complexity() -> Result<Complexity> {
         return Ok(Complexity::M);
     }
     
-    let complexities = vec![
-        ("S - Small (1-3 days)", Complexity::S),
+    let complexities = [("S - Small (1-3 days)", Complexity::S),
         ("M - Medium (1-2 weeks)", Complexity::M),
         ("L - Large (2-4 weeks)", Complexity::L),
-        ("XL - Extra Large (1+ months)", Complexity::XL),
-    ];
+        ("XL - Extra Large (1+ months)", Complexity::XL)];
     
     let selection = Select::new()
         .with_prompt("Select initiative complexity")

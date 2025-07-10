@@ -139,7 +139,7 @@ mod tests {
         let adr_files: Vec<_> = fs::read_dir(&adrs_dir)
             .unwrap()
             .filter_map(|entry| entry.ok())
-            .filter(|entry| entry.path().extension().map_or(false, |ext| ext == "md"))
+            .filter(|entry| entry.path().extension().is_some_and(|ext| ext == "md"))
             .collect();
         assert!(!adr_files.is_empty(), "ADR file should be created");
 

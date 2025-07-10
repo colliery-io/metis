@@ -116,9 +116,9 @@ impl ArchiveService {
                     let task_path = entry
                         .map_err(|e| MetisError::FileSystem(e.to_string()))?
                         .path();
-                    if task_path.is_file() && task_path.extension().map_or(false, |ext| ext == "md") {
+                    if task_path.is_file() && task_path.extension().is_some_and(|ext| ext == "md") {
                         // Skip initiative.md itself
-                        if task_path.file_name().map_or(false, |name| name == "initiative.md") {
+                        if task_path.file_name().is_some_and(|name| name == "initiative.md") {
                             continue;
                         }
 
@@ -333,12 +333,12 @@ impl ArchiveService {
 
             if path.is_dir() {
                 Box::pin(self.scan_archived_directory(&path, results)).await?;
-            } else if path.is_file() && path.extension().map_or(false, |ext| ext == "md") {
+            } else if path.is_file() && path.extension().is_some_and(|ext| ext == "md") {
                 // Try to determine document type and extract info
                 if let Ok(doc_type) = self.determine_document_type(&path).await {
                     if let Ok(document_id) = self.get_document_id(&path, doc_type).await {
                         // Calculate original path
-                        let archived_relative = path.strip_prefix(&self.workspace_dir.join("archived"))
+                        let archived_relative = path.strip_prefix(self.workspace_dir.join("archived"))
                             .map_err(|e| MetisError::FileSystem(e.to_string()))?;
                         let original_path = self.workspace_dir.join(archived_relative);
 
