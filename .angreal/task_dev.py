@@ -11,7 +11,7 @@ import angreal
 )
 def run_tests():
     """Run all tests in the workspace by testing each crate independently."""
-    crates = ['metis-docs-core', 'metis-docs-cli']
+    crates = ['metis-docs-core', 'metis-docs-cli', 'metis-docs-mcp']
     
     for crate in crates:
         try:
@@ -91,21 +91,23 @@ def run_core_tests():
 
 @angreal.command(
     name='coverage',
-    about='Generate coverage report using tarpaulin for the workspace',
+    about='Generate coverage report using tarpaulin for all workspace crates',
     when_to_use=['To measure test coverage', 'Before releases', 'To identify untested code'],
     when_not_to_use=['During rapid development cycles', 'When tarpaulin is not installed']
 )
 def generate_coverage():
-    """Generate coverage report using cargo tarpaulin for the workspace."""
+    """Generate coverage report using cargo tarpaulin for all workspace crates."""
     try:
-        # Run tarpaulin for the workspace
+        # Run tarpaulin for the workspace including all crates
         result = subprocess.run([
             'cargo', 'tarpaulin', 
             '--out', 'Html', 
-            '--workspace',  # Include all workspace crates
+            '--workspace',  # Include all workspace crates (core, cli, mcp)
+            '--exclude-files', 'target/*',  # Exclude build artifacts
             '--', '--test-threads=1'  # Ensure thread safety
         ], check=True)
-        print("Coverage report generated successfully")
+        print("Coverage report generated successfully for all workspace crates")
+        print("Report saved to tarpaulin-report.html")
         return result.returncode
     except subprocess.CalledProcessError as e:
         print(f"Coverage generation failed with exit code {e.returncode}")
@@ -142,3 +144,5 @@ def run_checks():
     
     print("All quality checks passed!")
     return 0
+
+

@@ -10,6 +10,10 @@ authors.workspace = true
 name = "metis-tui"
 path = "src/main.rs"
 
+[lib]
+name = "metis_docs_tui"
+path = "src/lib.rs"
+
 [dependencies]
 # Workspace dependencies
 tokio = { workspace = true }

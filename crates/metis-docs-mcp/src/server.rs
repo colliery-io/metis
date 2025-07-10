@@ -1,4 +1,4 @@
-use crate::tools::{HelloWorldTool, MetisTools};
+use crate::tools::{HelloWorldTool, MetisTools, InitializeProjectTool, ListDocumentsTool, SearchDocumentsTool, CreateDocumentTool, ValidateDocumentTool, TransitionPhaseTool, CheckPhaseTransitionTool, ValidateExitCriteriaTool, UpdateDocumentContentTool, UpdateExitCriterionTool, UpdateBlockedByTool};
 use crate::MetisServerConfig;
 use async_trait::async_trait;
 use rust_mcp_sdk::{
@@ -42,13 +42,67 @@ impl ServerHandler for MetisServerHandler {
         request: CallToolRequest,
         _server: &dyn McpServer,
     ) -> Result<CallToolResult, rust_mcp_sdk::schema::schema_utils::CallToolError> {
+        let args = serde_json::Value::Object(request.params.arguments.unwrap_or_default());
+        
         match request.params.name.as_str() {
             "hello_world" => {
-                let tool: HelloWorldTool = serde_json::from_value(
-                    serde_json::Value::Object(request.params.arguments.unwrap_or_default()),
-                )
-                .map_err(rust_mcp_sdk::schema::schema_utils::CallToolError::new)?;
-
+                let tool: HelloWorldTool = serde_json::from_value(args)
+                    .map_err(rust_mcp_sdk::schema::schema_utils::CallToolError::new)?;
+                tool.call_tool().await
+            }
+            "initialize_project" => {
+                let tool: InitializeProjectTool = serde_json::from_value(args)
+                    .map_err(rust_mcp_sdk::schema::schema_utils::CallToolError::new)?;
+                tool.call_tool().await
+            }
+            "list_documents" => {
+                let tool: ListDocumentsTool = serde_json::from_value(args)
+                    .map_err(rust_mcp_sdk::schema::schema_utils::CallToolError::new)?;
+                tool.call_tool().await
+            }
+            "search_documents" => {
+                let tool: SearchDocumentsTool = serde_json::from_value(args)
+                    .map_err(rust_mcp_sdk::schema::schema_utils::CallToolError::new)?;
+                tool.call_tool().await
+            }
+            "create_document" => {
+                let tool: CreateDocumentTool = serde_json::from_value(args)
+                    .map_err(rust_mcp_sdk::schema::schema_utils::CallToolError::new)?;
+                tool.call_tool().await
+            }
+            "validate_document" => {
+                let tool: ValidateDocumentTool = serde_json::from_value(args)
+                    .map_err(rust_mcp_sdk::schema::schema_utils::CallToolError::new)?;
+                tool.call_tool().await
+            }
+            "transition_phase" => {
+                let tool: TransitionPhaseTool = serde_json::from_value(args)
+                    .map_err(rust_mcp_sdk::schema::schema_utils::CallToolError::new)?;
+                tool.call_tool().await
+            }
+            "check_phase_transition" => {
+                let tool: CheckPhaseTransitionTool = serde_json::from_value(args)
+                    .map_err(rust_mcp_sdk::schema::schema_utils::CallToolError::new)?;
+                tool.call_tool().await
+            }
+            "validate_exit_criteria" => {
+                let tool: ValidateExitCriteriaTool = serde_json::from_value(args)
+                    .map_err(rust_mcp_sdk::schema::schema_utils::CallToolError::new)?;
+                tool.call_tool().await
+            }
+            "update_document_content" => {
+                let tool: UpdateDocumentContentTool = serde_json::from_value(args)
+                    .map_err(rust_mcp_sdk::schema::schema_utils::CallToolError::new)?;
+                tool.call_tool().await
+            }
+            "update_exit_criterion" => {
+                let tool: UpdateExitCriterionTool = serde_json::from_value(args)
+                    .map_err(rust_mcp_sdk::schema::schema_utils::CallToolError::new)?;
+                tool.call_tool().await
+            }
+            "update_blocked_by" => {
+                let tool: UpdateBlockedByTool = serde_json::from_value(args)
+                    .map_err(rust_mcp_sdk::schema::schema_utils::CallToolError::new)?;
                 tool.call_tool().await
             }
             _ => Err(

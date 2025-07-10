@@ -2,7 +2,7 @@ use anyhow::Result;
 use clap::{Parser, Subcommand};
 use tracing_subscriber::filter::LevelFilter;
 
-use crate::commands::{InitCommand, SyncCommand, CreateCommand, SearchCommand, TransitionCommand, ListCommand, StatusCommand, ArchiveCommand, ValidateCommand};
+use crate::commands::{InitCommand, SyncCommand, CreateCommand, SearchCommand, TransitionCommand, ListCommand, StatusCommand, ArchiveCommand, ValidateCommand, TuiCommand, McpCommand};
 
 #[derive(Parser)]
 #[command(name = "metis")]
@@ -37,6 +37,10 @@ pub enum Commands {
     Archive(ArchiveCommand),
     /// Validate a document file
     Validate(ValidateCommand),
+    /// Launch the interactive TUI interface
+    Tui(TuiCommand),
+    /// Launch the MCP server for external integrations
+    Mcp(McpCommand),
 }
 
 impl Cli {
@@ -65,6 +69,8 @@ impl Cli {
             Commands::Status(cmd) => cmd.execute().await,
             Commands::Archive(cmd) => cmd.execute().await,
             Commands::Validate(cmd) => cmd.execute().await,
+            Commands::Tui(cmd) => cmd.execute().await,
+            Commands::Mcp(cmd) => cmd.execute().await,
         }
     }
 }

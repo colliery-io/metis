@@ -59,20 +59,24 @@ impl SearchCommand {
     
     fn display_table(&self, documents: &[Document]) -> Result<()> {
         // Print header
-        println!("{:<15} {:<12} {:<40} {:<20}", 
-                 "ID", "Type", "Title", "Updated");
-        println!("{}", "-".repeat(87));
+        println!("{:<50} {:<12} {:<120}", 
+                 "ID", "Type", "Path");
+        println!("{}", "-".repeat(182));
         
         for doc in documents {
-            let id = truncate(&doc.id, 14);
+            let id = truncate(&doc.id, 49);
             let doc_type = truncate(&doc.document_type, 11);
-            let title = truncate(&doc.title, 39);
             
-            // Convert timestamp to readable date - for now just show the timestamp
-            let updated = format!("{:.0}", doc.updated_at);
+            // Extract relative path from .metis directory
+            let relative_path = if let Some(metis_pos) = doc.filepath.find(".metis/") {
+                &doc.filepath[metis_pos + 7..] // Skip ".metis/"
+            } else {
+                &doc.filepath
+            };
+            let path = truncate(relative_path, 119);
             
-            println!("{:<15} {:<12} {:<40} {:<20}", 
-                     id, doc_type, title, updated);
+            println!("{:<50} {:<12} {:<120}", 
+                     id, doc_type, path);
         }
         
         println!("\nFound {} document(s) for \"{}\"", documents.len(), self.query);

@@ -7,6 +7,8 @@ pub mod list;
 pub mod status;
 pub mod archive;
 pub mod validate;
+pub mod tui;
+pub mod mcp;
 
 pub use init::InitCommand;
 pub use sync::SyncCommand;
@@ -17,3 +19,5 @@ pub use list::ListCommand;
 pub use status::StatusCommand;
 pub use archive::ArchiveCommand;
 pub use validate::ValidateCommand;
+pub use tui::TuiCommand;
+pub use mcp::McpCommand;

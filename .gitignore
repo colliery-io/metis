@@ -24,3 +24,11 @@ Thumbs.db
 *.db
 *.db-shm
 *.db-wal
+
+# Coverage reports
+tarpaulin-report.html
+cobertura.xml
+lcov.info
+
+# Build artifacts
+**/*.orig
