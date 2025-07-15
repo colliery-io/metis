@@ -143,7 +143,7 @@ fn draw_footer(f: &mut Frame, app: &App, area: Rect) {
         },
         _ => {
             if app.is_ready() {
-                "↑↓←→: Navigate | 1-4: Jump to board | v: Vision | Tab: Switch | Enter: Edit | n: New | Ctrl+n: Child | Ctrl+a: ADR | d: Del | t: Trans | q: Quit"
+                "↑↓←→: Navigate | 1-4: Jump to board | v: Vision | Tab: Switch | Enter: Edit | n: New | Ctrl+n: Child | Ctrl+a: ADR | d: Del | r: Archive | t: Trans | q: Quit"
             } else {
                 "q: Quit"
             }

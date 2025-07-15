@@ -6,6 +6,7 @@ use crate::models::*;
 use crate::services::*;
 use anyhow::Result;
 use metis_core::{
+    application::services::workspace::ArchiveService,
     domain::documents::types::DocumentType, Adr, Document, Initiative, Strategy, Task,
 };
 
@@ -516,6 +517,28 @@ impl App {
         Ok(())
     }
 
+    pub async fn archive_selected_document(&mut self) -> Result<()> {
+        if let Some(selected_item) = self.get_selected_item() {
+            if let Some(workspace_dir) = &self.core_state.workspace_dir {
+                let archive_service = ArchiveService::new(workspace_dir);
+                match archive_service.archive_document(&selected_item.id()).await {
+                    Ok(_archive_result) => {
+                        // Sync database and reload documents
+                        if let Some(sync_service) = &self.sync_service {
+                            let _ = sync_service.sync_database().await;
+                        }
+                        self.load_documents().await?;
+                    }
+                    Err(e) => {
+                        self.error_handler.handle_error(AppError::from(e));
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
+
     pub async fn transition_selected_document(&mut self) -> Result<()> {
         if let Some(selected_item) = self.get_selected_item() {
             if let Some(transition_service) = &self.transition_service {
@@ -544,16 +567,39 @@ impl App {
         if let Some(document_service) = &self.document_service {
             let mut documents = document_service.load_documents_from_database().await?;
 
-            // Sort documents by type and number for ADRs
+            // Sort documents by type first, then by appropriate criteria
             documents.sort_by(|a, b| {
-                match (&a.document_type, &b.document_type) {
-                    (DocumentType::Adr, DocumentType::Adr) => {
-                        // For ADRs, extract number from ID and sort numerically
-                        let a_num = extract_adr_number(&a.id);
-                        let b_num = extract_adr_number(&b.id);
-                        a_num.cmp(&b_num)
+                use std::cmp::Ordering;
+                
+                // Helper function to get document type order
+                let type_order = |doc_type: &DocumentType| -> u8 {
+                    match doc_type {
+                        DocumentType::Vision => 0,
+                        DocumentType::Strategy => 1,
+                        DocumentType::Initiative => 2,
+                        DocumentType::Task => 3,
+                        DocumentType::Adr => 4,
                     }
-                    _ => a.title.cmp(&b.title), // Other documents sort by title
+                };
+                
+                // First compare by document type
+                let a_type_order = type_order(&a.document_type);
+                let b_type_order = type_order(&b.document_type);
+                
+                match a_type_order.cmp(&b_type_order) {
+                    Ordering::Equal => {
+                        // Same document type, use type-specific sorting
+                        match (&a.document_type, &b.document_type) {
+                            (DocumentType::Adr, DocumentType::Adr) => {
+                                // For ADRs, extract number from ID and sort numerically
+                                let a_num = extract_adr_number(&a.id);
+                                let b_num = extract_adr_number(&b.id);
+                                a_num.cmp(&b_num)
+                            }
+                            _ => a.title.cmp(&b.title), // Other documents sort by title
+                        }
+                    }
+                    other => other, // Different types, use type ordering
                 }
             });
 

@@ -157,6 +157,16 @@ async fn run_app<B: ratatui::backend::Backend>(
                                     app.view_vision_document();
                                 }
                             }
+                            KeyCode::Char('r') | KeyCode::Char('R') => {
+                                if app.is_ready() && app.get_selected_item().is_some() {
+                                    if let Err(e) = app.archive_selected_document().await {
+                                        app.error_handler.handle_with_context(
+                                            AppError::from(e),
+                                            "Archive operation",
+                                        );
+                                    }
+                                }
+                            }
                             KeyCode::Enter => {
                                 if app.is_ready() {
                                     app.view_selected_ticket();
