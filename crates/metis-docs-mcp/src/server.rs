@@ -1,5 +1,5 @@
 use crate::tools::{
-    CheckPhaseTransitionTool, CreateDocumentTool, HelloWorldTool, InitializeProjectTool,
+    CreateDocumentTool, InitializeProjectTool,
     ListDocumentsTool, MetisTools, SearchDocumentsTool, TransitionPhaseTool, UpdateBlockedByTool,
     UpdateDocumentContentTool, UpdateExitCriterionTool, ValidateDocumentTool,
     ValidateExitCriteriaTool,
@@ -50,11 +50,6 @@ impl ServerHandler for MetisServerHandler {
         let args = serde_json::Value::Object(request.params.arguments.unwrap_or_default());
 
         match request.params.name.as_str() {
-            "hello_world" => {
-                let tool: HelloWorldTool = serde_json::from_value(args)
-                    .map_err(rust_mcp_sdk::schema::schema_utils::CallToolError::new)?;
-                tool.call_tool().await
-            }
             "initialize_project" => {
                 let tool: InitializeProjectTool = serde_json::from_value(args)
                     .map_err(rust_mcp_sdk::schema::schema_utils::CallToolError::new)?;
@@ -82,11 +77,6 @@ impl ServerHandler for MetisServerHandler {
             }
             "transition_phase" => {
                 let tool: TransitionPhaseTool = serde_json::from_value(args)
-                    .map_err(rust_mcp_sdk::schema::schema_utils::CallToolError::new)?;
-                tool.call_tool().await
-            }
-            "check_phase_transition" => {
-                let tool: CheckPhaseTransitionTool = serde_json::from_value(args)
                     .map_err(rust_mcp_sdk::schema::schema_utils::CallToolError::new)?;
                 tool.call_tool().await
             }

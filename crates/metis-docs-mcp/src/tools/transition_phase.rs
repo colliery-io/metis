@@ -10,7 +10,7 @@ use std::path::Path;
 
 #[mcp_tool(
     name = "transition_phase",
-    description = "Transition a document to a new phase",
+    description = "Transition a document to a new phase. If phase is not provided, transitions to the next valid phase automatically",
     idempotent_hint = false,
     destructive_hint = false,
     open_world_hint = false,
@@ -22,8 +22,8 @@ pub struct TransitionPhaseTool {
     pub project_path: String,
     /// Document ID to transition  
     pub document_id: String,
-    /// New phase to transition to
-    pub new_phase: String,
+    /// Phase to transition to (optional - if not provided, transitions to next phase)
+    pub phase: Option<String>,
     /// Force transition even if exit criteria aren't met
     pub force: Option<bool>,
 }
@@ -43,17 +43,24 @@ impl TransitionPhaseTool {
             )));
         }
 
-        // Parse the target phase
-        let target_phase = self.parse_phase(&self.new_phase)?;
-
         // Create the phase transition service
         let transition_service = PhaseTransitionService::new(metis_dir);
 
         // Perform the transition
-        let result = transition_service
-            .transition_document(&self.document_id, target_phase)
-            .await
-            .map_err(|e| CallToolError::new(e))?;
+        let result = if let Some(phase_str) = &self.phase {
+            // Transition to specific phase
+            let target_phase = self.parse_phase(phase_str)?;
+            transition_service
+                .transition_document(&self.document_id, target_phase)
+                .await
+                .map_err(|e| CallToolError::new(e))?
+        } else {
+            // Auto-transition to next phase
+            transition_service
+                .transition_to_next_phase(&self.document_id)
+                .await
+                .map_err(|e| CallToolError::new(e))?
+        };
 
         let response = serde_json::json!({
             "success": true,

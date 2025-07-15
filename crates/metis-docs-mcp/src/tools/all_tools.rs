@@ -1,6 +1,6 @@
 use super::{
-    check_phase_transition::CheckPhaseTransitionTool, create_document::CreateDocumentTool,
-    hello::HelloWorldTool, initialize_project::InitializeProjectTool,
+    create_document::CreateDocumentTool,
+    initialize_project::InitializeProjectTool,
     list_documents::ListDocumentsTool, search_documents::SearchDocumentsTool,
     transition_phase::TransitionPhaseTool, update_blocked_by::UpdateBlockedByTool,
     update_document_content::UpdateDocumentContentTool,
@@ -13,14 +13,12 @@ use rust_mcp_sdk::tool_box;
 tool_box!(
     MetisTools,
     [
-        HelloWorldTool,
         InitializeProjectTool,
         ListDocumentsTool,
         SearchDocumentsTool,
         CreateDocumentTool,
         ValidateDocumentTool,
         TransitionPhaseTool,
-        CheckPhaseTransitionTool,
         ValidateExitCriteriaTool,
         UpdateDocumentContentTool,
         UpdateExitCriterionTool,

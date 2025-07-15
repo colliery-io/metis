@@ -1,7 +1,5 @@
 pub mod all_tools;
-pub mod check_phase_transition;
 pub mod create_document;
-pub mod hello;
 pub mod initialize_project;
 pub mod list_documents;
 pub mod search_documents;
@@ -13,9 +11,7 @@ pub mod validate_document;
 pub mod validate_exit_criteria;
 
 pub use all_tools::MetisTools;
-pub use check_phase_transition::*;
 pub use create_document::*;
-pub use hello::*;
 pub use initialize_project::*;
 pub use list_documents::*;
 pub use search_documents::*;

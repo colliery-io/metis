@@ -13,7 +13,7 @@ use std::str::FromStr;
 
 #[mcp_tool(
     name = "create_document",
-    description = "Create a new Metis document (vision, strategy, initiative, task, adr)",
+    description = "Create a new Metis document (vision, strategy, initiative, task, adr). Parent documents should be referenced by their ID (kebab-case string)",
     idempotent_hint = false,
     destructive_hint = false,
     open_world_hint = false,
@@ -27,8 +27,8 @@ pub struct CreateDocumentTool {
     pub document_type: String,
     /// Title of the document
     pub title: String,
-    /// Parent document title (required for strategy, initiative, task)
-    pub parent_title: Option<String>,
+    /// Parent document ID (required for strategy, initiative, task)
+    pub parent_id: Option<String>,
     /// Risk level for strategies (low, medium, high)
     pub risk_level: Option<String>,
     /// Complexity for initiatives (xs, s, m, l, xl)
@@ -69,7 +69,9 @@ impl CreateDocumentTool {
         let config = DocumentCreationConfig {
             title: self.title.clone(),
             description: None,
-            parent_id: None, // Will be resolved from parent_title
+            parent_id: self.parent_id.as_ref().map(|id| {
+                metis_core::domain::documents::types::DocumentId::from(id.clone())
+            }),
             tags: vec![],
             phase: None, // Will use defaults
         };
@@ -77,7 +79,7 @@ impl CreateDocumentTool {
         // Create the document based on type
         let result = match doc_type {
             DocumentType::Vision => {
-                if self.parent_title.is_some() {
+                if self.parent_id.is_some() {
                     return Err(CallToolError::new(std::io::Error::new(
                         std::io::ErrorKind::InvalidInput,
                         "Vision documents cannot have a parent",
@@ -89,17 +91,16 @@ impl CreateDocumentTool {
                     .map_err(|e| CallToolError::new(e))?
             }
             DocumentType::Strategy => {
-                let _parent_id = self.parent_title.as_deref().unwrap_or(""); // Vision is optional for strategies
                 creation_service
                     .create_strategy(config)
                     .await
                     .map_err(|e| CallToolError::new(e))?
             }
             DocumentType::Initiative => {
-                let parent_id = self.parent_title.as_ref().ok_or_else(|| {
+                let parent_id = self.parent_id.as_ref().ok_or_else(|| {
                     CallToolError::new(std::io::Error::new(
                         std::io::ErrorKind::InvalidInput,
-                        "Initiative requires a parent strategy",
+                        "Initiative requires a parent strategy ID",
                     ))
                 })?;
                 creation_service
@@ -108,10 +109,10 @@ impl CreateDocumentTool {
                     .map_err(|e| CallToolError::new(e))?
             }
             DocumentType::Task => {
-                let parent_id = self.parent_title.as_ref().ok_or_else(|| {
+                let parent_id = self.parent_id.as_ref().ok_or_else(|| {
                     CallToolError::new(std::io::Error::new(
                         std::io::ErrorKind::InvalidInput,
-                        "Task requires a parent initiative",
+                        "Task requires a parent initiative ID",
                     ))
                 })?;
                 // For tasks, we need to resolve the strategy from the initiative
@@ -135,7 +136,7 @@ impl CreateDocumentTool {
             "document_type": self.document_type,
             "title": self.title,
             "file_path": result.file_path.to_string_lossy(),
-            "parent_title": self.parent_title,
+            "parent_id": self.parent_id,
             "auto_synced": true
         });
 

@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1] - 2025-07-15
+
+### Changed
+- **BREAKING**: MCP server tool argument names updated for consistency with CLI/TUI:
+  - `create_document`: Changed `parent_title` to `parent_id` to match CLI/TUI patterns
+  - `transition_phase`: Changed `new_phase` to `phase` (optional) with auto-transition support
+- Removed `check_phase_transition` tool as redundant with `transition_phase`
+- Removed `hello_world` tool to streamline the API surface
+
+### Fixed
+- MCP tool arguments now consistently use document IDs instead of titles for parent references
+- Auto-transition logic added to `transition_phase` tool when phase is not specified
+
 ## [0.2.0] - 2025-07-10
 
 ### Added

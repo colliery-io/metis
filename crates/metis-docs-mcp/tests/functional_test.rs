@@ -55,7 +55,7 @@ async fn test_full_document_lifecycle() {
         project_path: metis_path.clone(),
         document_type: "strategy".to_string(),
         title: "Test Strategy".to_string(),
-        parent_title: Some(project_name.to_string()),
+        parent_id: Some(project_name.to_string()),
         risk_level: Some("medium".to_string()),
         complexity: None,
         stakeholders: Some(vec!["dev_team".to_string()]),
@@ -121,14 +121,7 @@ async fn test_phase_transition_workflow() {
         .trim_matches('-')
         .to_string();
 
-    let check_transition = CheckPhaseTransitionTool {
-        project_path: metis_path.clone(),
-        document_id: vision_id,
-        target_phase: "review".to_string(),
-    };
-
-    let result = check_transition.call_tool().await;
-    assert!(result.is_ok(), "Check phase transition should succeed");
+    // Check phase transition removed - use transition_phase tool instead
 
     // Validate exit criteria for the vision
     let validate_exit = ValidateExitCriteriaTool {
