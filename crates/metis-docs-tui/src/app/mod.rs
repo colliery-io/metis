@@ -849,4 +849,16 @@ impl App {
 
         Ok(())
     }
+
+    pub async fn sync_and_reload(&mut self) -> Result<()> {
+        // Perform database synchronization
+        if let Some(sync_service) = &self.sync_service {
+            sync_service.sync_database().await?;
+        }
+        
+        // Reload documents into boards
+        self.load_documents().await?;
+        
+        Ok(())
+    }
 }

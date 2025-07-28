@@ -1,4 +1,5 @@
 use super::{
+    archive_document::ArchiveDocumentTool,
     create_document::CreateDocumentTool,
     initialize_project::InitializeProjectTool,
     list_documents::ListDocumentsTool, search_documents::SearchDocumentsTool,
@@ -22,6 +23,7 @@ tool_box!(
         ValidateExitCriteriaTool,
         UpdateDocumentContentTool,
         UpdateExitCriterionTool,
-        UpdateBlockedByTool
+        UpdateBlockedByTool,
+        ArchiveDocumentTool
     ]
 );

@@ -99,6 +99,56 @@ impl<'a> SyncService<'a> {
         })
     }
 
+    /// Extract document ID from file without keeping the document object around
+    fn extract_document_id<P: AsRef<Path>>(file_path: P) -> Result<String> {
+        // Read file content to extract frontmatter and get document ID
+        let raw_content = std::fs::read_to_string(file_path.as_ref()).map_err(|e| {
+            MetisError::ValidationFailed {
+                message: format!("Failed to read file: {}", e),
+            }
+        })?;
+
+        // Parse frontmatter to get document ID
+        use gray_matter::{engine::YAML, Matter};
+        let matter = Matter::<YAML>::new();
+        let result = matter.parse(&raw_content);
+        
+        // Extract ID from frontmatter
+        if let Some(frontmatter) = result.data {
+            let fm_map = match frontmatter {
+                gray_matter::Pod::Hash(map) => map,
+                _ => {
+                    return Err(MetisError::ValidationFailed {
+                        message: "Frontmatter must be a hash/map".to_string(),
+                    });
+                }
+            };
+            
+            if let Some(gray_matter::Pod::String(id_str)) = fm_map.get("id") {
+                return Ok(id_str.clone());
+            }
+        }
+        
+        Err(MetisError::ValidationFailed {
+            message: "Document missing ID in frontmatter".to_string(),
+        })
+    }
+
+    /// Update a document that has been moved to a new path
+    async fn update_moved_document<P: AsRef<Path>>(
+        &mut self,
+        existing_doc: &Document,
+        new_file_path: P,
+    ) -> Result<()> {
+        // Delete the old database entry first (to handle foreign key constraints)
+        self.db_service.delete_document(&existing_doc.filepath)?;
+        
+        // Import the document at the new path
+        self.import_from_file(&new_file_path).await?;
+        
+        Ok(())
+    }
+
     /// Synchronize a single file between filesystem and database using directional methods
     pub async fn sync_file<P: AsRef<Path>>(&mut self, file_path: P) -> Result<SyncResult> {
         let path_str = file_path.as_ref().to_string_lossy().to_string();
@@ -106,14 +156,29 @@ impl<'a> SyncService<'a> {
         // Check if file exists on filesystem
         let file_exists = FilesystemService::file_exists(&file_path);
 
-        // Check if document exists in database
-        let db_doc = self.db_service.find_by_filepath(&path_str)?;
+        // Check if document exists in database at this filepath
+        let db_doc_by_path = self.db_service.find_by_filepath(&path_str)?;
 
-        match (file_exists, db_doc) {
-            // File exists, not in database - import it
+        match (file_exists, db_doc_by_path) {
+            // File exists, not in database at this path - need to check if it's a moved document
             (true, None) => {
-                self.import_from_file(&file_path).await?;
-                Ok(SyncResult::Imported { filepath: path_str })
+                // Extract the document ID without creating full document object
+                let document_id = Self::extract_document_id(&file_path)?;
+                
+                // Check if a document with this ID exists at a different path
+                if let Some(existing_doc) = self.db_service.find_by_id(&document_id)? {
+                    // Document moved - update the existing record
+                    let old_path = existing_doc.filepath.clone();
+                    self.update_moved_document(&existing_doc, &file_path).await?;
+                    Ok(SyncResult::Moved { 
+                        from: old_path, 
+                        to: path_str 
+                    })
+                } else {
+                    // Truly new document - import it
+                    self.import_from_file(&file_path).await?;
+                    Ok(SyncResult::Imported { filepath: path_str })
+                }
             }
 
             // File doesn't exist, but in database - remove from database
@@ -224,6 +289,7 @@ pub enum SyncResult {
     UpToDate { filepath: String },
     NotFound { filepath: String },
     Error { filepath: String, error: String },
+    Moved { from: String, to: String },
 }
 
 impl SyncResult {
@@ -236,6 +302,7 @@ impl SyncResult {
             | SyncResult::UpToDate { filepath }
             | SyncResult::NotFound { filepath }
             | SyncResult::Error { filepath, .. } => filepath,
+            SyncResult::Moved { to, .. } => to,
         }
     }
 
@@ -243,7 +310,7 @@ impl SyncResult {
     pub fn is_change(&self) -> bool {
         matches!(
             self,
-            SyncResult::Imported { .. } | SyncResult::Updated { .. } | SyncResult::Deleted { .. }
+            SyncResult::Imported { .. } | SyncResult::Updated { .. } | SyncResult::Deleted { .. } | SyncResult::Moved { .. }
         )
     }
 
@@ -276,6 +343,7 @@ mod tests {
 
     fn create_test_document_content() -> String {
         "---\n".to_string()
+            + "id: test-document\n"
             + "title: Test Document\n"
             + "level: vision\n"
             + "created_at: \"2021-01-01T00:00:00Z\"\n"
@@ -410,7 +478,7 @@ mod tests {
             let full_path = temp_dir.path().join(file_path);
             let content = &create_test_document_content()
                 .replace("Test Document", &format!("Test Document {}", id))
-                .replace("test-doc-1", id);
+                .replace("test-document", id);
             FilesystemService::write_file(&full_path, content).expect("Failed to write");
         }
 

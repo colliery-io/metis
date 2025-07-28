@@ -98,11 +98,13 @@ impl DocumentService {
 
         Ok(documents
             .into_iter()
+            .filter(|doc| !doc.archived) // Filter out archived documents
             .map(|doc| crate::models::DatabaseDocument {
                 id: doc.id,
                 title: doc.title,
                 document_type: DocumentType::from_str(&doc.document_type).unwrap(),
                 filepath: doc.filepath,
+                archived: doc.archived,
             })
             .collect())
     }

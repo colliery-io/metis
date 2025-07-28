@@ -9,4 +9,5 @@ pub struct DatabaseDocument {
     pub title: String,
     pub document_type: metis_core::domain::documents::types::DocumentType,
     pub filepath: String,
+    pub archived: bool,
 }

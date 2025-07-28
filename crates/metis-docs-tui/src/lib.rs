@@ -167,6 +167,17 @@ async fn run_app<B: ratatui::backend::Backend>(
                                     }
                                 }
                             }
+                            KeyCode::Char('y') | KeyCode::Char('Y') => {
+                                if app.is_ready() {
+                                    // Y: Sync database and reload
+                                    if let Err(e) = app.sync_and_reload().await {
+                                        app.error_handler.handle_with_context(
+                                            AppError::from(e),
+                                            "Sync operation",
+                                        );
+                                    }
+                                }
+                            }
                             KeyCode::Enter => {
                                 if app.is_ready() {
                                     app.view_selected_ticket();

@@ -1,27 +1,21 @@
 ---
-id: strategy-mcp-interface
+id: mcp-interface-for-agent
 level: strategy
 title: "MCP Interface for Agent Integration Strategy"
-status: completed
-created_at: 2025-07-03T15:00:00Z
-updated_at: 2025-07-04T21:15:00Z
-archived: false
+created_at: 2025-07-03T15:00:00+00:00
+updated_at: 2025-07-04T21:15:00+00:00
 parent: metis-vision
-blocked_by: 
+blocked_by: []
+archived: true
+
 tags:
   - "#strategy"
-  # - "#phase/shaping"
-  # - "#phase/design"
-  # - "#phase/ready"
-  # - "#phase/active"
   - "#phase/completed"
+
+
 exit_criteria_met: true
-success_metrics: []
 risk_level: medium
-stakeholders: 
-  - "Engineering"
-  - "AI Agents"
-review_date: 2025-12-31
+stakeholders: [Engineering, AI Agents]
 ---
 
 # MCP Interface for Agent Integration Strategy

@@ -73,6 +73,13 @@ impl SyncCommand {
                     println!("✗ Error syncing {}: {}", filepath, error);
                     errors += 1;
                 }
+                metis_core::application::services::synchronization::SyncResult::Moved {
+                    from,
+                    to,
+                } => {
+                    println!("↻ Moved: {} → {}", from, to);
+                    updated += 1;
+                }
             }
         }
 

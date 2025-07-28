@@ -1,4 +1,5 @@
 pub mod all_tools;
+pub mod archive_document;
 pub mod create_document;
 pub mod initialize_project;
 pub mod list_documents;
@@ -11,6 +12,7 @@ pub mod validate_document;
 pub mod validate_exit_criteria;
 
 pub use all_tools::MetisTools;
+pub use archive_document::*;
 pub use create_document::*;
 pub use initialize_project::*;
 pub use list_documents::*;
