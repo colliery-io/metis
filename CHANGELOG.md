@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.2] - 2025-07-28
+
+### Added
+- TUI sync functionality: Press 'Y' to sync database and reload boards
+- `archive_document` tool to MCP server for programmatic archiving
+- Document move detection in sync process to handle relocated files
+
+### Fixed
+- **CRITICAL**: Database constraint violations when syncing after archiving documents
+- Archived documents no longer appear in TUI board displays
+- Sync process now properly handles document moves without ID conflicts
+- CLI sync command displays moved document operations with "↻ Moved" indicator
+
+### Changed
+- Enhanced sync logic to detect and handle document relocations (e.g., to archived folder)
+- Improved error handling for archive operations in all interfaces
+
 ## [0.2.1] - 2025-07-15
 
 ### Added
