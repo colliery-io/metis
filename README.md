@@ -26,8 +26,8 @@ sudo cargo install metis-docs-mcp --root /usr/local
 metis tui
 
 # Command Line Interface (for scripting and automation)
-metis init my-project
-metis create vision "My Vision"
+metis init --name "My Vision"
+metis create strategy "Core Strategy" --vision "my-vision"
 
 # MCP Server (for AI assistant integration)
 metis mcp
@@ -102,8 +102,8 @@ Metis provides 11 MCP tools for complete project management:
 | `update_exit_criterion` | Update specific exit criteria checkboxes |
 | `update_blocked_by` | Manage document dependencies and blockers |
 | `transition_phase` | Move documents through workflow phases |
-| `check_phase_transition` | Validate if a document can transition to a new phase |
 | `validate_exit_criteria` | Check completion status of exit criteria |
+| `archive_document` | Archive a document and all its children |
 | `list_documents` | Find all documents in a project |
 | `search_documents` | Full-text search across all documents |
 
@@ -128,6 +128,11 @@ Metis provides 11 MCP tools for complete project management:
 3. `transition_phase` - Move to next workflow stage
 4. `search_documents` - Find related work or blockers
 
+### Archiving Completed Work
+1. `archive_document` - Archive completed documents and their children
+2. Auto-sync updates the database after archiving
+3. `list_documents` - Verify archived documents no longer appear in active lists
+
 ## Directory Structure
 
 After running `initialize_project`, your project will have this structure:
@@ -149,19 +154,22 @@ Metis provides a comprehensive CLI for direct project management:
 
 ```bash
 # Initialize a new project
-metis init my-project
+metis init --name "Project Vision"
 
 # Create documents
-metis create vision "Project Vision"
-metis create strategy "Core Strategy" --parent "Project Vision"
-metis create initiative "Implementation" --parent "Core Strategy"
-metis create task "Build Feature" --parent "Implementation"
+metis create strategy "Core Strategy" --vision "project-vision"
+metis create initiative "Implementation" --strategy "core-strategy"
+metis create task "Build Feature" --initiative "implementation"
 metis create adr "Database Choice"
 
 # Manage document lifecycle
 metis transition "Project Vision" --phase review
 metis validate "Project Vision"
 metis status  # Show project overview
+
+# Archive and sync operations
+metis archive "document-id"  # Archive completed documents
+metis sync  # Synchronize workspace with file system
 
 # Search and list documents
 metis list --type strategy
@@ -187,9 +195,12 @@ metis tui
 - **Quick Actions**: 
   - `n` - Create new document
   - `Ctrl+n` - Create child document
+  - `Ctrl+A` - Create ADR document
   - `Enter` - View/edit document
   - `t` - Transition phase
   - `d` - Delete document
+  - `r` - Archive selected document
+  - `y` - Sync database and reload
   - `v` - View vision document
   - `1-4` - Jump to specific boards
 
