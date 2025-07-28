@@ -239,7 +239,10 @@ impl Document for Vision {
     fn can_transition_to(&self, phase: Phase) -> bool {
         if let Ok(current_phase) = self.phase() {
             use Phase::*;
-            matches!((current_phase, phase), (Draft, Review) | (Review, Published))
+            matches!(
+                (current_phase, phase),
+                (Draft, Review) | (Review, Published)
+            )
         } else {
             false // Can't transition if we can't determine current phase
         }

@@ -6,8 +6,8 @@ use crate::models::*;
 use crate::services::*;
 use anyhow::Result;
 use metis_core::{
-    application::services::workspace::ArchiveService,
-    domain::documents::types::DocumentType, Adr, Document, Initiative, Strategy, Task,
+    application::services::workspace::ArchiveService, domain::documents::types::DocumentType, Adr,
+    Document, Initiative, Strategy, Task,
 };
 
 /// Extract numerical part from ADR ID (e.g., "001-some-title" -> 1)
@@ -570,7 +570,7 @@ impl App {
             // Sort documents by type first, then by appropriate criteria
             documents.sort_by(|a, b| {
                 use std::cmp::Ordering;
-                
+
                 // Helper function to get document type order
                 let type_order = |doc_type: &DocumentType| -> u8 {
                     match doc_type {
@@ -581,11 +581,11 @@ impl App {
                         DocumentType::Adr => 4,
                     }
                 };
-                
+
                 // First compare by document type
                 let a_type_order = type_order(&a.document_type);
                 let b_type_order = type_order(&b.document_type);
-                
+
                 match a_type_order.cmp(&b_type_order) {
                     Ordering::Equal => {
                         // Same document type, use type-specific sorting
@@ -855,10 +855,10 @@ impl App {
         if let Some(sync_service) = &self.sync_service {
             sync_service.sync_database().await?;
         }
-        
+
         // Reload documents into boards
         self.load_documents().await?;
-        
+
         Ok(())
     }
 }

@@ -112,7 +112,7 @@ impl<'a> SyncService<'a> {
         use gray_matter::{engine::YAML, Matter};
         let matter = Matter::<YAML>::new();
         let result = matter.parse(&raw_content);
-        
+
         // Extract ID from frontmatter
         if let Some(frontmatter) = result.data {
             let fm_map = match frontmatter {
@@ -123,12 +123,12 @@ impl<'a> SyncService<'a> {
                     });
                 }
             };
-            
+
             if let Some(gray_matter::Pod::String(id_str)) = fm_map.get("id") {
                 return Ok(id_str.clone());
             }
         }
-        
+
         Err(MetisError::ValidationFailed {
             message: "Document missing ID in frontmatter".to_string(),
         })
@@ -142,10 +142,10 @@ impl<'a> SyncService<'a> {
     ) -> Result<()> {
         // Delete the old database entry first (to handle foreign key constraints)
         self.db_service.delete_document(&existing_doc.filepath)?;
-        
+
         // Import the document at the new path
         self.import_from_file(&new_file_path).await?;
-        
+
         Ok(())
     }
 
@@ -164,15 +164,16 @@ impl<'a> SyncService<'a> {
             (true, None) => {
                 // Extract the document ID without creating full document object
                 let document_id = Self::extract_document_id(&file_path)?;
-                
+
                 // Check if a document with this ID exists at a different path
                 if let Some(existing_doc) = self.db_service.find_by_id(&document_id)? {
                     // Document moved - update the existing record
                     let old_path = existing_doc.filepath.clone();
-                    self.update_moved_document(&existing_doc, &file_path).await?;
-                    Ok(SyncResult::Moved { 
-                        from: old_path, 
-                        to: path_str 
+                    self.update_moved_document(&existing_doc, &file_path)
+                        .await?;
+                    Ok(SyncResult::Moved {
+                        from: old_path,
+                        to: path_str,
                     })
                 } else {
                     // Truly new document - import it
@@ -310,7 +311,10 @@ impl SyncResult {
     pub fn is_change(&self) -> bool {
         matches!(
             self,
-            SyncResult::Imported { .. } | SyncResult::Updated { .. } | SyncResult::Deleted { .. } | SyncResult::Moved { .. }
+            SyncResult::Imported { .. }
+                | SyncResult::Updated { .. }
+                | SyncResult::Deleted { .. }
+                | SyncResult::Moved { .. }
         )
     }
 

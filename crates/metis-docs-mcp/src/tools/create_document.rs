@@ -69,9 +69,10 @@ impl CreateDocumentTool {
         let config = DocumentCreationConfig {
             title: self.title.clone(),
             description: None,
-            parent_id: self.parent_id.as_ref().map(|id| {
-                metis_core::domain::documents::types::DocumentId::from(id.clone())
-            }),
+            parent_id: self
+                .parent_id
+                .as_ref()
+                .map(|id| metis_core::domain::documents::types::DocumentId::from(id.clone())),
             tags: vec![],
             phase: None, // Will use defaults
         };
@@ -90,12 +91,10 @@ impl CreateDocumentTool {
                     .await
                     .map_err(|e| CallToolError::new(e))?
             }
-            DocumentType::Strategy => {
-                creation_service
-                    .create_strategy(config)
-                    .await
-                    .map_err(|e| CallToolError::new(e))?
-            }
+            DocumentType::Strategy => creation_service
+                .create_strategy(config)
+                .await
+                .map_err(|e| CallToolError::new(e))?,
             DocumentType::Initiative => {
                 let parent_id = self.parent_id.as_ref().ok_or_else(|| {
                     CallToolError::new(std::io::Error::new(

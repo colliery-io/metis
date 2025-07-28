@@ -1,7 +1,4 @@
-use metis_core::{
-    application::services::workspace::ArchiveService,
-    Application, Database,
-};
+use metis_core::{application::services::workspace::ArchiveService, Application, Database};
 use rust_mcp_sdk::{
     macros::{mcp_tool, JsonSchema},
     schema::{schema_utils::CallToolError, CallToolResult, TextContent},
@@ -44,7 +41,10 @@ impl ArchiveDocumentTool {
         let archive_service = ArchiveService::new(metis_dir);
 
         // Check if document is already archived
-        match archive_service.is_document_archived(&self.document_id).await {
+        match archive_service
+            .is_document_archived(&self.document_id)
+            .await
+        {
             Ok(true) => {
                 return Err(CallToolError::new(std::io::Error::new(
                     std::io::ErrorKind::AlreadyExists,

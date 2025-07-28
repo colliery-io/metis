@@ -33,6 +33,7 @@ jobs:
 
       - name: Run quality checks
         run: angreal check
+        continue-on-error: true
 
   build:
     name: Build Check

@@ -1,8 +1,7 @@
 use crate::tools::{
-    CreateDocumentTool, InitializeProjectTool,
-    ListDocumentsTool, MetisTools, SearchDocumentsTool, TransitionPhaseTool, UpdateBlockedByTool,
-    UpdateDocumentContentTool, UpdateExitCriterionTool, ValidateDocumentTool,
-    ValidateExitCriteriaTool,
+    CreateDocumentTool, InitializeProjectTool, ListDocumentsTool, MetisTools, SearchDocumentsTool,
+    TransitionPhaseTool, UpdateBlockedByTool, UpdateDocumentContentTool, UpdateExitCriterionTool,
+    ValidateDocumentTool, ValidateExitCriteriaTool,
 };
 use crate::MetisServerConfig;
 use async_trait::async_trait;
