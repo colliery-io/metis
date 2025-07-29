@@ -109,7 +109,12 @@ fn draw_loading(f: &mut Frame, app: &App, area: Rect) {
         ]));
     }
 
-    if app.core_state.sync_complete {
+    if app.core_state.sync_in_progress {
+        status_lines.push(Line::from(vec![
+            Span::styled("⟳ ", Style::default().fg(Color::Cyan)),
+            Span::raw("Syncing database..."),
+        ]));
+    } else if app.core_state.sync_complete {
         status_lines.push(Line::from(vec![
             Span::styled("✓ ", Style::default().fg(Color::Green)),
             Span::raw("Database synchronized"),
@@ -143,7 +148,7 @@ fn draw_footer(f: &mut Frame, app: &App, area: Rect) {
         },
         _ => {
             if app.is_ready() {
-                "↑↓←→: Navigate | 1-4: Jump to board | v: Vision | Tab: Switch | Enter: Edit | n: New | Ctrl+n: Child | Ctrl+a: ADR | d: Del | r: Archive | t: Trans | q: Quit"
+                "↑↓←→: Navigate | 1-4: Jump to board | v: Vision | Tab: Switch | Enter: Edit | n: New | Ctrl+n: Child | Ctrl+a: ADR | d: Del | r: Archive | t: Trans | y: Sync | q: Quit"
             } else {
                 "q: Quit"
             }

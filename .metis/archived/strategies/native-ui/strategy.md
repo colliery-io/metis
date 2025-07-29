@@ -1,22 +1,21 @@
 ---
-id: strategy-native-ui
-title: Native UI Strategy
+id: native-ui-strategy
 level: strategy
-status: shaping
-created_at: 2025-07-05T13:43:20Z
-updated_at: 2025-07-05T13:43:20Z
+title: "Native UI Strategy"
+created_at: 2025-07-05T13:43:20+00:00
+updated_at: 2025-07-05T13:43:20+00:00
 parent: metis-vision
-blocked_by: 
-archived: false
+blocked_by: []
+archived: true
+
 tags:
   - "#strategy"
   - "#phase/shaping"
+
+
 exit_criteria_met: false
-success_metrics: 
 risk_level: medium
-stakeholders:
-  - Product Team
-  - Engineering Team
+stakeholders: [Product Team, Engineering Team]
 ---
 
 # Native UI Strategy

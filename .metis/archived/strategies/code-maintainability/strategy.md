@@ -1,25 +1,19 @@
 ---
-id: code-maintainability
+id: code-maintainability-strategy
 level: strategy
 title: "Code Maintainability Strategy"
-status: shaping
-created_at: 2025-07-06T16:45:10Z
-updated_at: 2025-07-06T16:45:10Z
-archived: false
+created_at: 2025-07-06T16:45:10+00:00
+updated_at: 2025-07-06T16:45:10+00:00
 parent: metis-vision
-blocked_by: 
+blocked_by: []
+archived: true
 
-# Phase progression for strategies
 tags:
   - "#strategy"
   - "#phase/shaping"
-  # - "#phase/design"
-  # - "#phase/ready"
-  # - "#phase/active"
-  # - "#phase/completed"
+
 
 exit_criteria_met: false
-success_metrics: []
 risk_level: medium
 stakeholders: [Engineering Team, Technical Leadership]
 ---

@@ -1,28 +1,21 @@
 ---
-id: strategy-release-readiness
+id: release-readiness-strategy
 level: strategy
 title: "Release Readiness Strategy"
-status: active
-created_at: 2025-07-04T22:30:00Z
-updated_at: 2025-07-04T22:30:00Z
-archived: false
+created_at: 2025-07-04T22:30:00+00:00
+updated_at: 2025-07-04T22:30:00+00:00
 parent: metis-vision
-blocked_by: 
+blocked_by: []
+archived: true
+
 tags:
   - "#strategy"
   - "#phase/active"
-  # - "#phase/design"
-  # - "#phase/ready"
-  # - "#phase/active"
-  # - "#phase/completed"
+
+
 exit_criteria_met: true
-success_metrics: []
 risk_level: low
-stakeholders: 
-  - "Engineering"
-  - "Documentation"
-  - "DevOps"
-review_date: 2025-12-31
+stakeholders: [Engineering, Documentation, DevOps]
 ---
 
 # Release Readiness Strategy

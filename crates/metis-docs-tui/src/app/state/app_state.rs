@@ -6,6 +6,7 @@ pub struct CoreAppState {
     pub workspace_dir: Option<PathBuf>,
     pub workspace_valid: bool,
     pub sync_complete: bool,
+    pub sync_in_progress: bool,
 }
 
 impl CoreAppState {
@@ -14,6 +15,7 @@ impl CoreAppState {
             workspace_dir: None,
             workspace_valid: false,
             sync_complete: false,
+            sync_in_progress: false,
         }
     }
 
@@ -28,6 +30,12 @@ impl CoreAppState {
 
     pub fn set_sync_complete(&mut self) {
         self.sync_complete = true;
+        self.sync_in_progress = false;
+    }
+
+    pub fn set_sync_in_progress(&mut self) {
+        self.sync_in_progress = true;
+        self.sync_complete = false;
     }
 }
 

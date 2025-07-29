@@ -226,6 +226,9 @@ impl ArchiveService {
             }
         };
 
+        // Mark as archived in frontmatter before moving
+        self.mark_document_as_archived(&main_file, doc_type).await?;
+
         let document_id = self.get_document_id(&main_file, doc_type).await?;
 
         // Move the entire directory

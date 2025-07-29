@@ -1,21 +1,20 @@
 ---
-id: initiative-core-document-management
+id: core-document-management-library
 level: initiative
-status: active
-created_at: 2025-07-02T18:05:00Z
-updated_at: 2025-07-03T12:15:00Z
-title: Core Document Management Library Initiative
-archived: false
+title: "Core Document Management Library Initiative"
+created_at: 2025-07-02T18:05:00+00:00
+updated_at: 2025-07-28T21:06:32.188749+00:00
 parent: strategy-initial-capabilities
-blocked_by: 
-phase: active
+blocked_by: []
+archived: false
+
 tags:
   - "#initiative"
-  - "#phase/active"
+  - "#phase/completed"
+
+
 exit_criteria_met: false
-technical_lead: 
-estimated_complexity: m
-related_adrs: 
+estimated_complexity: M
 ---
 
 # Core Document Management Library Initiative

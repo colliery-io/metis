@@ -851,6 +851,9 @@ impl App {
     }
 
     pub async fn sync_and_reload(&mut self) -> Result<()> {
+        // Set sync in progress to show immediate feedback
+        self.core_state.set_sync_in_progress();
+
         // Perform database synchronization
         if let Some(sync_service) = &self.sync_service {
             sync_service.sync_database().await?;
@@ -858,6 +861,9 @@ impl App {
 
         // Reload documents into boards
         self.load_documents().await?;
+
+        // Mark sync as complete
+        self.core_state.set_sync_complete();
 
         Ok(())
     }

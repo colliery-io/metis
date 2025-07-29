@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.3] - 2025-07-28
+
+### Added
+- Visual feedback for TUI sync operation: Shows "⟳ Syncing database..." when 'y' is pressed
+- TUI status bar now displays 'y: Sync' key binding for better discoverability
+
+### Fixed
+- Documentation inaccuracies: Corrected CLI command syntax, removed deleted tools, added missing features
+- TUI key bindings now properly documented in status bar
+
 ## [0.2.2] - 2025-07-28
 
 ### Added

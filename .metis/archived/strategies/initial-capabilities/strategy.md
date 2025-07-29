@@ -1,22 +1,21 @@
 ---
-id: strategy-initial-capabilities
-title: Initial Capabilities Strategy
+id: initial-capabilities-strategy
 level: strategy
-status: active
-created_at: 2025-07-02T16:30:00Z
-updated_at: 2025-07-02T18:35:00Z
+title: "Initial Capabilities Strategy"
+created_at: 2025-07-02T16:30:00+00:00
+updated_at: 2025-07-02T18:35:00+00:00
 parent: metis-vision
-blocked_by: 
-phase: active
-archived: false
+blocked_by: []
+archived: true
+
 tags:
   - "#strategy"
   - "#phase/active"
+
+
 exit_criteria_met: true
-success_metrics: []
 risk_level: medium
 stakeholders: []
-review_date: 2025-12-31
 ---
 
 # Initial Capabilities Strategy
