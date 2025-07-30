@@ -109,8 +109,45 @@ impl DocumentService {
             .collect())
     }
 
-    pub async fn save_document_content(&self, file_path: &str, content: &str) -> Result<()> {
-        tokio::fs::write(file_path, content).await?;
+    pub async fn save_document_content(&self, file_path: &str, new_content: &str) -> Result<()> {
+        use metis_core::{Strategy, Initiative, Task, Adr, Document};
+        
+        // Load the document from file, update its content, then save it back
+        let path = std::path::Path::new(file_path);
+        
+        // Try to determine document type from file path or load and inspect
+        if file_path.contains("/strategies/") {
+            let mut strategy = Strategy::from_file(path).await
+                .map_err(|e| anyhow::anyhow!("Failed to load strategy: {}", e))?;
+            strategy.update_content_body(new_content.to_string())
+                .map_err(|e| anyhow::anyhow!("Failed to update strategy content: {}", e))?;
+            strategy.to_file(path).await
+                .map_err(|e| anyhow::anyhow!("Failed to save strategy: {}", e))?;
+        } else if file_path.contains("/initiatives/") {
+            let mut initiative = Initiative::from_file(path).await
+                .map_err(|e| anyhow::anyhow!("Failed to load initiative: {}", e))?;
+            initiative.update_content_body(new_content.to_string())
+                .map_err(|e| anyhow::anyhow!("Failed to update initiative content: {}", e))?;
+            initiative.to_file(path).await
+                .map_err(|e| anyhow::anyhow!("Failed to save initiative: {}", e))?;
+        } else if file_path.contains("/tasks/") {
+            let mut task = Task::from_file(path).await
+                .map_err(|e| anyhow::anyhow!("Failed to load task: {}", e))?;
+            task.update_content_body(new_content.to_string())
+                .map_err(|e| anyhow::anyhow!("Failed to update task content: {}", e))?;
+            task.to_file(path).await
+                .map_err(|e| anyhow::anyhow!("Failed to save task: {}", e))?;
+        } else if file_path.contains("/adrs/") {
+            let mut adr = Adr::from_file(path).await
+                .map_err(|e| anyhow::anyhow!("Failed to load adr: {}", e))?;
+            adr.update_content_body(new_content.to_string())
+                .map_err(|e| anyhow::anyhow!("Failed to update adr content: {}", e))?;
+            adr.to_file(path).await
+                .map_err(|e| anyhow::anyhow!("Failed to save adr: {}", e))?;
+        } else {
+            return Err(anyhow::anyhow!("Unable to determine document type from path: {}", file_path));
+        }
+        
         Ok(())
     }
 

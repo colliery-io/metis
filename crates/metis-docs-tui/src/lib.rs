@@ -7,10 +7,10 @@ use crossterm::{
 use ratatui::{backend::CrosstermBackend, Terminal};
 use std::io;
 
-mod app;
-mod error;
-mod models;
-mod services;
+pub mod app;
+pub mod error;
+pub mod models;
+pub mod services;
 mod ui;
 
 use app::state::ConfirmationType;

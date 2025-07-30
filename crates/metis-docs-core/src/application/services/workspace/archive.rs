@@ -231,6 +231,9 @@ impl ArchiveService {
 
         let document_id = self.get_document_id(&main_file, doc_type).await?;
 
+        // Remove empty subdirectories before attempting to move the parent directory
+        self.remove_empty_directories(dir_path)?;
+
         // Move the entire directory
         fs::rename(dir_path, &archived_path).map_err(|e| MetisError::FileSystem(e.to_string()))?;
 
@@ -240,6 +243,46 @@ impl ArchiveService {
             original_path: dir_path.to_path_buf(),
             archived_path,
         })
+    }
+
+    /// Remove empty directories recursively
+    fn remove_empty_directories(&self, dir_path: &Path) -> Result<()> {
+        if !dir_path.is_dir() {
+            return Ok(());
+        }
+
+        // Read all entries in the directory
+        let read_dir = fs::read_dir(dir_path)
+            .map_err(|e| MetisError::FileSystem(e.to_string()))?;
+        
+        let mut entries = Vec::new();
+        for entry in read_dir {
+            let entry = entry.map_err(|e| MetisError::FileSystem(e.to_string()))?;
+            entries.push(entry);
+        }
+
+        // Recursively process subdirectories first
+        for entry in &entries {
+            let path = entry.path();
+            if path.is_dir() {
+                // Recursively remove empty directories within this directory
+                self.remove_empty_directories(&path)?;
+                
+                // After processing subdirectories, try to remove this directory if it's empty
+                if self.is_directory_empty(&path)? {
+                    fs::remove_dir(&path).map_err(|e| MetisError::FileSystem(e.to_string()))?;
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Check if a directory is empty (contains no files or directories)
+    fn is_directory_empty(&self, dir_path: &Path) -> Result<bool> {
+        let mut entries = fs::read_dir(dir_path)
+            .map_err(|e| MetisError::FileSystem(e.to_string()))?;
+        Ok(entries.next().is_none())
     }
 
     /// Mark a document as archived by updating its frontmatter

@@ -108,15 +108,19 @@ impl CreateDocumentTool {
                     .map_err(|e| CallToolError::new(e))?
             }
             DocumentType::Task => {
-                let parent_id = self.parent_id.as_ref().ok_or_else(|| {
+                let initiative_id = self.parent_id.as_ref().ok_or_else(|| {
                     CallToolError::new(std::io::Error::new(
                         std::io::ErrorKind::InvalidInput,
                         "Task requires a parent initiative ID",
                     ))
                 })?;
-                // For tasks, we need to resolve the strategy from the initiative
+                
+                // For tasks, we need to resolve the strategy ID from the initiative's location
+                // The initiative file is at strategies/{strategy_id}/initiatives/{initiative_id}/initiative.md
+                let strategy_id = self.find_strategy_id_for_initiative(metis_dir, initiative_id)?;
+                
                 creation_service
-                    .create_task(config, parent_id, parent_id)
+                    .create_task(config, &strategy_id, initiative_id)
                     .await
                     .map_err(|e| CallToolError::new(e))?
             }
@@ -142,6 +146,40 @@ impl CreateDocumentTool {
         Ok(CallToolResult::text_content(vec![TextContent::from(
             serde_json::to_string_pretty(&response).map_err(CallToolError::new)?,
         )]))
+    }
+
+    fn find_strategy_id_for_initiative(&self, metis_dir: &Path, initiative_id: &str) -> Result<String, CallToolError> {
+        let strategies_dir = metis_dir.join("strategies");
+        
+        if !strategies_dir.exists() {
+            return Err(CallToolError::new(std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                "No strategies directory found",
+            )));
+        }
+
+        // Search through all strategy directories to find the one containing this initiative
+        for entry in std::fs::read_dir(&strategies_dir).map_err(CallToolError::new)? {
+            let entry = entry.map_err(CallToolError::new)?;
+            let strategy_path = entry.path();
+            
+            if strategy_path.is_dir() {
+                let initiatives_dir = strategy_path.join("initiatives").join(initiative_id);
+                if initiatives_dir.exists() && initiatives_dir.is_dir() {
+                    // Found the strategy containing this initiative
+                    if let Some(strategy_name) = strategy_path.file_name() {
+                        if let Some(strategy_id) = strategy_name.to_str() {
+                            return Ok(strategy_id.to_string());
+                        }
+                    }
+                }
+            }
+        }
+
+        Err(CallToolError::new(std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            format!("Parent initiative '{}' not found", initiative_id),
+        )))
     }
 
     async fn sync_workspace(&self, metis_dir: &Path) -> Result<(), CallToolError> {

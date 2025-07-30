@@ -113,7 +113,7 @@ async fn test_phase_transition_workflow() {
     let project_name = temp_dir.path().file_name().unwrap().to_str().unwrap();
     // The document ID is derived from the title, which is the project name
     // Using the DocumentId::from_title conversion logic
-    let vision_id = project_name
+    let _vision_id = project_name
         .to_lowercase()
         .chars()
         .map(|c| if c.is_alphanumeric() { c } else { '-' })
