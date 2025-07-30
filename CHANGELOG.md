@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.5] - 2025-07-30
+
+### Added
+- Comprehensive regression tests for ID/path consistency bug
+- Archive cascade tests for both TUI and MCP interfaces
+- Directory merging capability for archive operations
+
+### Fixed
+- **CRITICAL**: TUI workspace discovery now recursively searches parent directories (like Git)
+- **CRITICAL**: "Directory not empty" error when archiving initiatives with tasks
+- Archive process now handles existing archive directories by merging contents
+- Archive cascading for strategies/initiatives preserves directory structure
+- All child documents are marked as archived before parent directory moves
+
+### Changed
+- TUI can now be started from any subdirectory within a Metis workspace
+- Archive operations are more robust with proper error handling
+
+## [0.2.4] - 2025-07-29
+
+### Added
+- Automated testing infrastructure for critical functionality
+- Comprehensive test coverage improvements
+
+### Fixed
+- Unicode character boundary issues in document ID generation
+- Complexity validation to accept all valid values (XS, S, M, L, XL)
+- ID/path mismatch between database records and filesystem structure
+
 ## [0.2.3] - 2025-07-28
 
 ### Added
