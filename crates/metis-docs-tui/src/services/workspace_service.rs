@@ -10,23 +10,31 @@ impl WorkspaceService {
     }
 
     pub async fn check_workspace(&self) -> Result<Option<PathBuf>> {
-        let current_dir = std::env::current_dir()?;
-        let metis_dir = current_dir.join(".metis");
+        let mut current_dir = std::env::current_dir()?;
 
-        if metis_dir.exists() && metis_dir.is_dir() {
-            let db_path = metis_dir.join("metis.db");
-            if db_path.exists() {
-                Ok(Some(metis_dir))
-            } else {
-                Err(anyhow::anyhow!(
-                    "Metis workspace found but database missing. Run 'metis sync'."
-                ))
+        loop {
+            let metis_dir = current_dir.join(".metis");
+
+            if metis_dir.exists() && metis_dir.is_dir() {
+                let db_path = metis_dir.join("metis.db");
+                if db_path.exists() {
+                    return Ok(Some(metis_dir));
+                } else {
+                    return Err(anyhow::anyhow!(
+                        "Metis workspace found but database missing. Run 'metis sync'."
+                    ));
+                }
             }
-        } else {
-            Err(anyhow::anyhow!(
-                "Not in a Metis workspace. Run 'metis init' to create one."
-            ))
+
+            // Try parent directory
+            match current_dir.parent() {
+                Some(parent) => current_dir = parent.to_path_buf(),
+                None => break, // Reached filesystem root
+            }
         }
+
+        // No workspace found after checking all parent directories
+        Ok(None)
     }
 }
 

@@ -122,6 +122,32 @@ async fn test_mcp_archive_cascading_behavior() -> Result<()> {
     // Step 3: Archive strategy (should cascade to all children) - This tests the bug fix!
     println!("\n=== Step 3: Archive Strategy (Cascade Test) ===");
     
+    // Add debugging - check directory structure before archive
+    let strategy_dir = format!("{}/strategies/digital-transformation-strategy", helper.metis_dir);
+    
+    println!("Before MCP archive - Strategy directory structure:");
+    if let Ok(entries) = std::fs::read_dir(&strategy_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            println!("  Strategy: {:?} (is_dir: {})", path, path.is_dir());
+            if path.is_dir() && path.file_name().unwrap() == "initiatives" {
+                if let Ok(sub_entries) = std::fs::read_dir(&path) {
+                    for sub_entry in sub_entries.flatten() {
+                        let sub_path = sub_entry.path();
+                        println!("    Initiative dir: {:?}", sub_path);
+                        if sub_path.is_dir() {
+                            if let Ok(task_entries) = std::fs::read_dir(&sub_path) {
+                                for task_entry in task_entries.flatten() {
+                                    println!("      Task file: {:?}", task_entry.path());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
     let archive_strategy = ArchiveDocumentTool {
         project_path: helper.metis_dir.clone(),
         document_id: "digital-transformation-strategy".to_string(),
@@ -153,6 +179,32 @@ async fn test_mcp_archive_cascading_behavior() -> Result<()> {
         // This shouldn't happen with the bug fix, but handle gracefully for debugging
         println!("⚠️  Strategy archive failed: {:?}", result);
         println!("    This suggests the archive bug fix may not be working in MCP context");
+        
+        // Debug: Check what's left in the directories after failed archive
+        println!("After failed MCP archive - Strategy directory structure:");
+        if let Ok(entries) = std::fs::read_dir(&strategy_dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                println!("  Strategy: {:?} (is_dir: {})", path, path.is_dir());
+                if path.is_dir() && path.file_name().unwrap() == "initiatives" {
+                    if let Ok(sub_entries) = std::fs::read_dir(&path) {
+                        for sub_entry in sub_entries.flatten() {
+                            let sub_path = sub_entry.path();
+                            println!("    Initiative dir: {:?}", sub_path);
+                            if sub_path.is_dir() {
+                                if let Ok(task_entries) = std::fs::read_dir(&sub_path) {
+                                    for task_entry in task_entries.flatten() {
+                                        println!("      Task file: {:?}", task_entry.path());
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            println!("  Strategy directory no longer exists");
+        }
         
         // Still verify the expected behavior without cascade
         let db_strategies_final = repo.find_by_type("strategy").map_err(|e| anyhow::anyhow!("Find error: {}", e))?;

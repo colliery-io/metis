@@ -75,11 +75,12 @@ impl ArchiveService {
             }
 
             DocumentType::Strategy => {
-                // Archive strategy and all its initiatives (which will archive their tasks)
+                // Archive strategy and all its initiatives by marking them as archived
+                // then moving the entire directory structure intact
                 let strategy_dir = file_path.parent().unwrap();
                 let initiatives_dir = strategy_dir.join("initiatives");
 
-                // First archive all initiatives (and their tasks)
+                // First mark all initiatives (and their tasks) as archived
                 if initiatives_dir.exists() {
                     for entry in fs::read_dir(&initiatives_dir)
                         .map_err(|e| MetisError::FileSystem(e.to_string()))?
@@ -93,53 +94,86 @@ impl ArchiveService {
                                 if let Ok(_initiative) =
                                     Initiative::from_file(&initiative_file).await
                                 {
-                                    let mut child_archived = Box::pin(self.archive_document_tree(
-                                        &initiative_file,
-                                        DocumentType::Initiative,
-                                    ))
-                                    .await?;
-                                    archived_documents.append(&mut child_archived);
+                                    // Mark initiative as archived
+                                    self.mark_document_as_archived(&initiative_file, DocumentType::Initiative).await?;
+                                    
+                                    // Mark all tasks in this initiative as archived
+                                    for task_entry in fs::read_dir(&initiative_dir)
+                                        .map_err(|e| MetisError::FileSystem(e.to_string()))?
+                                    {
+                                        let task_path = task_entry
+                                            .map_err(|e| MetisError::FileSystem(e.to_string()))?
+                                            .path();
+                                        
+                                        if task_path.is_file() && task_path.extension().is_some_and(|ext| ext == "md") {
+                                            // Skip initiative.md itself
+                                            if task_path.file_name().is_some_and(|name| name == "initiative.md") {
+                                                continue;
+                                            }
+                                            
+                                            if let Ok(_task) = Task::from_file(&task_path).await {
+                                                self.mark_document_as_archived(&task_path, DocumentType::Task).await?;
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
                 }
 
-                // Then archive the strategy by just marking the file as archived and moving it
-                let archived_doc = self.archive_single_file(file_path, doc_type).await?;
+                // Then archive the strategy directory (which will move everything intact)
+                let archived_doc = self.archive_directory(strategy_dir, doc_type).await?;
                 archived_documents.push(archived_doc);
             }
 
             DocumentType::Initiative => {
-                // Archive initiative and all its tasks
+                // Archive initiative and all its tasks by marking them as archived
+                // then moving the entire directory structure intact
                 let initiative_dir = file_path.parent().unwrap();
 
-                // First archive all tasks in this initiative
+                // First mark all tasks in this initiative as archived (frontmatter only)
                 for entry in fs::read_dir(initiative_dir)
                     .map_err(|e| MetisError::FileSystem(e.to_string()))?
                 {
-                    let task_path = entry
+                    let entry_path = entry
                         .map_err(|e| MetisError::FileSystem(e.to_string()))?
                         .path();
-                    if task_path.is_file() && task_path.extension().is_some_and(|ext| ext == "md") {
+                    
+                    if entry_path.is_file() && entry_path.extension().is_some_and(|ext| ext == "md") {
                         // Skip initiative.md itself
-                        if task_path
+                        if entry_path
                             .file_name()
                             .is_some_and(|name| name == "initiative.md")
                         {
                             continue;
                         }
 
-                        if let Ok(_task) = Task::from_file(&task_path).await {
-                            let archived_doc = self
-                                .archive_single_file(&task_path, DocumentType::Task)
-                                .await?;
-                            archived_documents.push(archived_doc);
+                        if let Ok(_task) = Task::from_file(&entry_path).await {
+                            // Just mark as archived, don't move the file yet
+                            self.mark_document_as_archived(&entry_path, DocumentType::Task).await?;
+                        }
+                    }
+                    // Also check subdirectories for task files
+                    else if entry_path.is_dir() {
+                        // Look for task files in subdirectories and mark them as archived
+                        if let Ok(subdir_entries) = fs::read_dir(&entry_path) {
+                            for subentry in subdir_entries.flatten() {
+                                let task_file_path = subentry.path();
+                                if task_file_path.is_file() 
+                                    && task_file_path.extension().is_some_and(|ext| ext == "md")
+                                {
+                                    if let Ok(_task) = Task::from_file(&task_file_path).await {
+                                        // Just mark as archived, don't move the file yet
+                                        self.mark_document_as_archived(&task_file_path, DocumentType::Task).await?;
+                                    }
+                                }
+                            }
                         }
                     }
                 }
 
-                // Then archive the initiative directory
+                // Then archive the initiative directory (which will move everything intact)
                 let archived_doc = self.archive_directory(initiative_dir, doc_type).await?;
                 archived_documents.push(archived_doc);
             }
@@ -231,11 +265,18 @@ impl ArchiveService {
 
         let document_id = self.get_document_id(&main_file, doc_type).await?;
 
-        // Remove empty subdirectories before attempting to move the parent directory
-        self.remove_empty_directories(dir_path)?;
-
-        // Move the entire directory
-        fs::rename(dir_path, &archived_path).map_err(|e| MetisError::FileSystem(e.to_string()))?;
+        // Move the entire directory (including the main document file)
+        // Children should already be archived and their frontmatter marked as archived
+        // Handle case where archived directory already exists by merging contents
+        if archived_path.exists() {
+            // Target exists, merge by moving individual files/subdirs
+            self.merge_directory_contents(dir_path, &archived_path).await?;
+            // Remove the now-empty source directory
+            fs::remove_dir_all(dir_path).map_err(|e| MetisError::FileSystem(e.to_string()))?;
+        } else {
+            // Target doesn't exist, can use simple rename
+            fs::rename(dir_path, &archived_path).map_err(|e| MetisError::FileSystem(e.to_string()))?;
+        }
 
         Ok(ArchivedDocument {
             document_id,
@@ -278,11 +319,69 @@ impl ArchiveService {
         Ok(())
     }
 
+    /// Merge directory contents by moving files/subdirs from source to target
+    /// Handles conflicts by overwriting (source takes precedence)
+    async fn merge_directory_contents(&self, source_dir: &Path, target_dir: &Path) -> Result<()> {
+        for entry in fs::read_dir(source_dir)
+            .map_err(|e| MetisError::FileSystem(e.to_string()))?
+        {
+            let entry = entry.map_err(|e| MetisError::FileSystem(e.to_string()))?;
+            let source_path = entry.path();
+            let file_name = source_path.file_name().unwrap();
+            let target_path = target_dir.join(file_name);
+
+            if source_path.is_dir() {
+                // Recursively merge subdirectories
+                if target_path.exists() {
+                    // Target subdir exists, merge recursively
+                    Box::pin(self.merge_directory_contents(&source_path, &target_path)).await?;
+                    // Remove now-empty source subdir
+                    if let Ok(entries) = fs::read_dir(&source_path) {
+                        if entries.count() == 0 {
+                            fs::remove_dir(&source_path)
+                                .map_err(|e| MetisError::FileSystem(e.to_string()))?;
+                        }
+                    }
+                } else {
+                    // Target subdir doesn't exist, can move entire directory
+                    fs::rename(&source_path, &target_path)
+                        .map_err(|e| MetisError::FileSystem(e.to_string()))?;
+                }
+            } else {
+                // Move file (overwrite if exists)
+                if target_path.exists() {
+                    fs::remove_file(&target_path)
+                        .map_err(|e| MetisError::FileSystem(e.to_string()))?;
+                }
+                fs::rename(&source_path, &target_path)
+                    .map_err(|e| MetisError::FileSystem(e.to_string()))?;
+            }
+        }
+        Ok(())
+    }
+
     /// Check if a directory is empty (contains no files or directories)
+    /// Ignores hidden files like .DS_Store that macOS creates
     fn is_directory_empty(&self, dir_path: &Path) -> Result<bool> {
-        let mut entries = fs::read_dir(dir_path)
+        let entries = fs::read_dir(dir_path)
             .map_err(|e| MetisError::FileSystem(e.to_string()))?;
-        Ok(entries.next().is_none())
+        
+        for entry in entries {
+            let entry = entry.map_err(|e| MetisError::FileSystem(e.to_string()))?;
+            let path = entry.path();
+            
+            // Skip hidden files like .DS_Store that macOS creates
+            if let Some(name) = path.file_name() {
+                if name.to_string_lossy().starts_with('.') {
+                    continue;
+                }
+            }
+            
+            // If we find any non-hidden file or directory, it's not empty
+            return Ok(false);
+        }
+        
+        Ok(true)
     }
 
     /// Mark a document as archived by updating its frontmatter
@@ -567,8 +666,8 @@ mod tests {
             .await
             .unwrap();
 
-        // Should have archived both the initiative and the strategy
-        assert_eq!(archive_result.total_archived, 2);
+        // Should have archived the strategy directory (which contains initiative and tasks)
+        assert_eq!(archive_result.total_archived, 1);
         assert!(!strategy_result.file_path.exists());
     }
 
