@@ -501,6 +501,8 @@ mod tests {
             parent_id: None,
             tags: vec![],
             phase: None,
+            complexity: None,
+            risk_level: None,
         };
         let creation_result = creation_service.create_vision(config).await.unwrap();
 
@@ -535,6 +537,8 @@ mod tests {
             parent_id: None,
             tags: vec![],
             phase: None,
+            complexity: None,
+            risk_level: None,
         };
         let strategy_result = creation_service
             .create_strategy(strategy_config)
@@ -548,6 +552,8 @@ mod tests {
             parent_id: Some(strategy_result.document_id.clone()),
             tags: vec![],
             phase: None,
+            complexity: None,
+            risk_level: None,
         };
         let _initiative_result = creation_service
             .create_initiative(initiative_config, &strategy_result.document_id.to_string())
@@ -582,6 +588,8 @@ mod tests {
             parent_id: None,
             tags: vec![],
             phase: None,
+            complexity: None,
+            risk_level: None,
         };
         let creation_result = creation_service.create_vision(config).await.unwrap();
         archive_service
@@ -611,6 +619,8 @@ mod tests {
             parent_id: None,
             tags: vec![],
             phase: None,
+            complexity: None,
+            risk_level: None,
         };
         let creation_result = creation_service.create_vision(config).await.unwrap();
         let document_id = creation_result.document_id.to_string();

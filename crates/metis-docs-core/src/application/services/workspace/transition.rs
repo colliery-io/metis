@@ -414,6 +414,8 @@ mod tests {
             parent_id: None,
             tags: vec![],
             phase: None, // Should default to Draft
+            complexity: None,
+            risk_level: None,
         };
         let creation_result = creation_service.create_vision(config).await.unwrap();
 
@@ -443,6 +445,8 @@ mod tests {
             parent_id: None,
             tags: vec![],
             phase: None, // Should default to Shaping
+            complexity: None,
+            risk_level: None,
         };
         let creation_result = creation_service.create_strategy(config).await.unwrap();
 
@@ -493,6 +497,8 @@ mod tests {
             parent_id: None,
             tags: vec![],
             phase: None, // Should default to Draft
+            complexity: None,
+            risk_level: None,
         };
         let creation_result = creation_service.create_vision(config).await.unwrap();
 
@@ -521,6 +527,8 @@ mod tests {
             parent_id: None,
             tags: vec![],
             phase: None, // Should default to Draft
+            complexity: None,
+            risk_level: None,
         };
         let creation_result = creation_service.create_vision(config).await.unwrap();
 

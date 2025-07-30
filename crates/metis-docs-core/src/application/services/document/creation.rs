@@ -20,6 +20,8 @@ pub struct DocumentCreationConfig {
     pub parent_id: Option<DocumentId>,
     pub tags: Vec<Tag>,
     pub phase: Option<Phase>,
+    pub complexity: Option<Complexity>,
+    pub risk_level: Option<RiskLevel>,
 }
 
 /// Result of document creation
@@ -108,9 +110,9 @@ impl DocumentCreationService {
             config.parent_id,
             Vec::new(), // blocked_by
             tags,
-            false,             // not archived
-            RiskLevel::Medium, // default risk level
-            Vec::new(),        // stakeholders - empty by default
+            false,                                     // not archived
+            config.risk_level.unwrap_or(RiskLevel::Medium), // use config risk_level or default to Medium
+            Vec::new(),                                // stakeholders - empty by default
         )
         .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
 
@@ -180,8 +182,8 @@ impl DocumentCreationService {
                 .or_else(|| Some(DocumentId::from(strategy_id))),
             Vec::new(), // blocked_by
             tags,
-            false,         // not archived
-            Complexity::M, // default complexity
+            false,                                      // not archived
+            config.complexity.unwrap_or(Complexity::M), // use config complexity or default to M
         )
         .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
 
@@ -371,6 +373,8 @@ mod tests {
             parent_id: None,
             tags: vec![],
             phase: None,
+            complexity: None,
+            risk_level: None,
         };
 
         let result = service.create_vision(config).await.unwrap();
@@ -396,6 +400,8 @@ mod tests {
             parent_id: None,
             tags: vec![],
             phase: None,
+            complexity: None,
+            risk_level: None,
         };
 
         let result = service.create_strategy(config).await.unwrap();
@@ -423,6 +429,8 @@ mod tests {
             parent_id: None,
             tags: vec![],
             phase: None,
+            complexity: None,
+            risk_level: None,
         };
         let strategy_result = service.create_strategy(strategy_config).await.unwrap();
         let strategy_id = strategy_result.document_id.to_string();
@@ -434,6 +442,8 @@ mod tests {
             parent_id: Some(strategy_result.document_id),
             tags: vec![],
             phase: None,
+            complexity: None,
+            risk_level: None,
         };
 
         let result = service

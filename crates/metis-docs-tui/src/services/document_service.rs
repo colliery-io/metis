@@ -36,6 +36,8 @@ impl DocumentService {
                 .map(|id| metis_core::domain::documents::types::DocumentId::from(id.clone())),
             tags: vec![],
             phase: None,
+            complexity: None,
+            risk_level: None,
         };
 
         let result = match document_type {
@@ -167,6 +169,8 @@ impl DocumentService {
             )),
             tags: vec![],
             phase: None,
+            complexity: None,
+            risk_level: None,
         };
 
         let result = creation_service
@@ -184,6 +188,8 @@ impl DocumentService {
             parent_id: None, // ADRs are top-level documents
             tags: vec![],
             phase: None, // Will default to draft
+            complexity: None,
+            risk_level: None,
         };
 
         let result = creation_service.create_adr(config).await?;

@@ -11,6 +11,7 @@ use tera::{Context, Tera};
 /// Complexity level for initiatives
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Complexity {
+    XS, // Extra Small
     S,  // Small
     M,  // Medium
     L,  // Large
@@ -20,6 +21,7 @@ pub enum Complexity {
 impl std::fmt::Display for Complexity {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Complexity::XS => write!(f, "XS"),
             Complexity::S => write!(f, "S"),
             Complexity::M => write!(f, "M"),
             Complexity::L => write!(f, "L"),
@@ -33,6 +35,7 @@ impl std::str::FromStr for Complexity {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_uppercase().as_str() {
+            "XS" => Ok(Complexity::XS),
             "S" => Ok(Complexity::S),
             "M" => Ok(Complexity::M),
             "L" => Ok(Complexity::L),
@@ -507,10 +510,12 @@ We will implement this step by step.
 
     #[test]
     fn test_initiative_complexity_parsing() {
+        assert_eq!("XS".parse::<Complexity>().unwrap(), Complexity::XS);
         assert_eq!("S".parse::<Complexity>().unwrap(), Complexity::S);
         assert_eq!("M".parse::<Complexity>().unwrap(), Complexity::M);
         assert_eq!("L".parse::<Complexity>().unwrap(), Complexity::L);
         assert_eq!("XL".parse::<Complexity>().unwrap(), Complexity::XL);
+        assert_eq!("xs".parse::<Complexity>().unwrap(), Complexity::XS); // Case insensitive
         assert_eq!("s".parse::<Complexity>().unwrap(), Complexity::S); // Case insensitive
         assert!("invalid".parse::<Complexity>().is_err());
     }
@@ -623,6 +628,7 @@ exit_criteria_met: false
 
     #[test]
     fn test_complexity_display() {
+        assert_eq!(Complexity::XS.to_string(), "XS");
         assert_eq!(Complexity::S.to_string(), "S");
         assert_eq!(Complexity::M.to_string(), "M");
         assert_eq!(Complexity::L.to_string(), "L");

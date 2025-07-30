@@ -1,3 +1,7 @@
+use metis_core::{
+    application::Application,
+    dal::Database,
+};
 use rust_mcp_sdk::{
     macros::{mcp_tool, JsonSchema},
     schema::{schema_utils::CallToolError, CallToolResult, TextContent},
@@ -62,6 +66,9 @@ impl UpdateBlockedByTool {
             .await
             .map_err(|e| CallToolError::new(e))?;
 
+        // Auto-sync after update to update database
+        self.sync_workspace(metis_dir).await?;
+
         let response = serde_json::json!({
             "success": true,
             "document_path": self.document_path,
@@ -70,7 +77,8 @@ impl UpdateBlockedByTool {
                 "Successfully updated blocked_by relationships. Document is {} blocked by {} documents",
                 if self.blocked_by.is_empty() { "not" } else { "now" },
                 self.blocked_by.len()
-            )
+            ),
+            "auto_synced": true
         });
 
         Ok(CallToolResult::text_content(vec![TextContent::from(
@@ -138,5 +146,22 @@ impl UpdateBlockedByTool {
                 result_lines.push(format!("  - \"{}\"", blocked_document));
             }
         }
+    }
+
+    async fn sync_workspace(&self, metis_dir: &Path) -> Result<(), CallToolError> {
+        let db_path = metis_dir.join("metis.db");
+        let database = Database::new(db_path.to_str().unwrap()).map_err(|e| {
+            CallToolError::new(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!("Failed to open database for sync: {}", e),
+            ))
+        })?;
+        let app = Application::new(database);
+
+        app.sync_directory(metis_dir)
+            .await
+            .map_err(|e| CallToolError::new(e))?;
+
+        Ok(())
     }
 }

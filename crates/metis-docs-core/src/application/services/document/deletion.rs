@@ -169,6 +169,8 @@ mod tests {
             parent_id: None,
             tags: vec![],
             phase: None,
+            complexity: None,
+            risk_level: None,
         };
         creation_service.create_vision(vision_config).await.unwrap();
 
@@ -210,6 +212,8 @@ mod tests {
             parent_id: None,
             tags: vec![],
             phase: None,
+            complexity: None,
+            risk_level: None,
         };
         let strategy_result = creation_service
             .create_strategy(strategy_config)
@@ -223,6 +227,8 @@ mod tests {
             parent_id: Some(strategy_result.document_id.clone()),
             tags: vec![],
             phase: None,
+            complexity: None,
+            risk_level: None,
         };
         let initiative_result = creation_service
             .create_initiative(initiative_config, &strategy_result.document_id.to_string())
@@ -236,6 +242,8 @@ mod tests {
             parent_id: Some(initiative_result.document_id.clone()),
             tags: vec![],
             phase: None,
+            complexity: None,
+            risk_level: None,
         };
         let task_result = creation_service
             .create_task(
@@ -282,6 +290,8 @@ mod tests {
             parent_id: None,
             tags: vec![],
             phase: None,
+            complexity: None,
+            risk_level: None,
         };
         let strategy_result = creation_service
             .create_strategy(strategy_config)
@@ -295,6 +305,8 @@ mod tests {
             parent_id: Some(strategy_result.document_id.clone()),
             tags: vec![],
             phase: None,
+            complexity: None,
+            risk_level: None,
         };
         let initiative_result = creation_service
             .create_initiative(initiative_config, &strategy_result.document_id.to_string())
@@ -308,6 +320,8 @@ mod tests {
             parent_id: Some(initiative_result.document_id.clone()),
             tags: vec![],
             phase: None,
+            complexity: None,
+            risk_level: None,
         };
         let task1_result = creation_service
             .create_task(
@@ -324,6 +338,8 @@ mod tests {
             parent_id: Some(initiative_result.document_id.clone()),
             tags: vec![],
             phase: None,
+            complexity: None,
+            risk_level: None,
         };
         let task2_result = creation_service
             .create_task(
@@ -385,6 +401,8 @@ mod tests {
             parent_id: None,
             tags: vec![],
             phase: None,
+            complexity: None,
+            risk_level: None,
         };
         let strategy_result = creation_service
             .create_strategy(strategy_config)
@@ -397,6 +415,8 @@ mod tests {
             parent_id: Some(strategy_result.document_id.clone()),
             tags: vec![],
             phase: None,
+            complexity: None,
+            risk_level: None,
         };
         let initiative_result = creation_service
             .create_initiative(initiative_config, &strategy_result.document_id.to_string())
@@ -409,6 +429,8 @@ mod tests {
             parent_id: Some(initiative_result.document_id.clone()),
             tags: vec![],
             phase: None,
+            complexity: None,
+            risk_level: None,
         };
         let task_result = creation_service
             .create_task(

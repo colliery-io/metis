@@ -1,5 +1,8 @@
 use metis_core::{
-    application::services::workspace::PhaseTransitionService, domain::documents::types::Phase,
+    application::services::workspace::PhaseTransitionService, 
+    application::Application,
+    dal::Database,
+    domain::documents::types::Phase,
 };
 use rust_mcp_sdk::{
     macros::{mcp_tool, JsonSchema},
@@ -62,6 +65,9 @@ impl TransitionPhaseTool {
                 .map_err(|e| CallToolError::new(e))?
         };
 
+        // Auto-sync after transition to update database
+        self.sync_workspace(metis_dir).await?;
+
         let response = serde_json::json!({
             "success": true,
             "document_id": result.document_id,
@@ -69,7 +75,8 @@ impl TransitionPhaseTool {
             "from_phase": result.from_phase.to_string(),
             "to_phase": result.to_phase.to_string(),
             "file_path": result.file_path.to_string_lossy(),
-            "forced": self.force.unwrap_or(false)
+            "forced": self.force.unwrap_or(false),
+            "auto_synced": true
         });
 
         Ok(CallToolResult::text_content(vec![TextContent::from(
@@ -99,5 +106,22 @@ impl TransitionPhaseTool {
                 format!("Unknown phase: {}", phase_str),
             ))),
         }
+    }
+
+    async fn sync_workspace(&self, metis_dir: &Path) -> Result<(), CallToolError> {
+        let db_path = metis_dir.join("metis.db");
+        let database = Database::new(db_path.to_str().unwrap()).map_err(|e| {
+            CallToolError::new(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!("Failed to open database for sync: {}", e),
+            ))
+        })?;
+        let app = Application::new(database);
+
+        app.sync_directory(metis_dir)
+            .await
+            .map_err(|e| CallToolError::new(e))?;
+
+        Ok(())
     }
 }

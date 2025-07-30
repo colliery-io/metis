@@ -12,12 +12,13 @@ pub struct DocumentId(String);
 impl DocumentId {
     /// Create a new DocumentId from a raw string (used for ADRs with custom format)
     pub fn new(id: &str) -> Self {
-        let capped_id = if id.len() > MAX_ID_LENGTH {
-            &id[..MAX_ID_LENGTH]
+        let capped_id = if id.chars().count() > MAX_ID_LENGTH {
+            // Use char-aware truncation to avoid cutting UTF-8 characters
+            id.chars().take(MAX_ID_LENGTH).collect::<String>()
         } else {
-            id
+            id.to_string()
         };
-        Self(capped_id.to_string())
+        Self(capped_id)
     }
 
     /// Create a DocumentId from a title by converting to slug
@@ -39,8 +40,9 @@ impl DocumentId {
             .join("-");
 
         // Cap the length and ensure we don't cut off in the middle of a word
-        if slug.len() > MAX_ID_LENGTH {
-            let truncated = &slug[..MAX_ID_LENGTH];
+        if slug.chars().count() > MAX_ID_LENGTH {
+            // Use char-aware truncation to avoid cutting UTF-8 characters
+            let truncated: String = slug.chars().take(MAX_ID_LENGTH).collect();
             // Find the last dash to avoid cutting in the middle of a word
             if let Some(last_dash) = truncated.rfind('-') {
                 if last_dash > MAX_ID_LENGTH / 2 {
@@ -48,7 +50,7 @@ impl DocumentId {
                     return truncated[..last_dash].to_string();
                 }
             }
-            truncated.to_string()
+            truncated
         } else {
             slug
         }

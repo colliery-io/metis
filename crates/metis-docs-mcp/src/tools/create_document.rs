@@ -65,6 +65,24 @@ impl CreateDocumentTool {
         // Create the document creation service
         let creation_service = DocumentCreationService::new(metis_dir);
 
+        // Parse complexity if provided
+        let complexity = self.complexity.as_ref()
+            .map(|c| c.parse())
+            .transpose()
+            .map_err(|e| CallToolError::new(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                format!("Invalid complexity: {}", e),
+            )))?;
+
+        // Parse risk level if provided  
+        let risk_level = self.risk_level.as_ref()
+            .map(|r| r.parse())
+            .transpose()
+            .map_err(|e| CallToolError::new(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                format!("Invalid risk level: {}", e),
+            )))?;
+
         // Build configuration
         let config = DocumentCreationConfig {
             title: self.title.clone(),
@@ -75,6 +93,8 @@ impl CreateDocumentTool {
                 .map(|id| metis_core::domain::documents::types::DocumentId::from(id.clone())),
             tags: vec![],
             phase: None, // Will use defaults
+            complexity,
+            risk_level,
         };
 
         // Create the document based on type

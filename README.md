@@ -30,7 +30,7 @@ metis init --name "My Vision"
 metis create strategy "Core Strategy" --vision "my-vision"
 
 # MCP Server (for AI assistant integration)
-metis mcp
+metis-mcp
 ```
 
 ### 3. Configure Your AI Assistant
@@ -41,10 +41,15 @@ Add to your `claude_desktop_config.json`:
 {
   "mcpServers": {
     "metis": {
-      "command": "metis mcp"
+      "command": "metis-mcp"
     }
   }
 }
+```
+
+#### For Claude Code
+```bash
+claude mcp add --scope user --transport stdio metis -- metis-mcp
 ```
 
 #### For Cursor
@@ -52,7 +57,7 @@ Add to your Cursor MCP configuration:
 ```json
 {
   "metis": {
-    "command": "metis mcp"
+    "command": "metis-mcp"
   }
 }
 ```
@@ -177,7 +182,7 @@ metis search "database"
 
 # Launch interactive interfaces
 metis tui  # Terminal user interface
-metis mcp  # MCP server for AI assistants
+metis-mcp  # MCP server for AI assistants
 ```
 
 ## Terminal User Interface (TUI)

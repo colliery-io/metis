@@ -1,3 +1,7 @@
+use metis_core::{
+    application::Application,
+    dal::Database,
+};
 use rust_mcp_sdk::{
     macros::{mcp_tool, JsonSchema},
     schema::{schema_utils::CallToolError, CallToolResult, TextContent},
@@ -64,12 +68,16 @@ impl UpdateDocumentContentTool {
             .await
             .map_err(|e| CallToolError::new(e))?;
 
+        // Auto-sync after update to update database
+        self.sync_workspace(metis_dir).await?;
+
         let response = serde_json::json!({
             "success": true,
             "document_path": self.document_path,
             "section_heading": self.section_heading,
             "updated": true,
-            "message": format!("Successfully updated section '{}' in document", self.section_heading)
+            "message": format!("Successfully updated section '{}' in document", self.section_heading),
+            "auto_synced": true
         });
 
         Ok(CallToolResult::text_content(vec![TextContent::from(
@@ -125,5 +133,22 @@ impl UpdateDocumentContentTool {
         }
 
         Ok(result_lines.join("\n"))
+    }
+
+    async fn sync_workspace(&self, metis_dir: &Path) -> Result<(), CallToolError> {
+        let db_path = metis_dir.join("metis.db");
+        let database = Database::new(db_path.to_str().unwrap()).map_err(|e| {
+            CallToolError::new(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!("Failed to open database for sync: {}", e),
+            ))
+        })?;
+        let app = Application::new(database);
+
+        app.sync_directory(metis_dir)
+            .await
+            .map_err(|e| CallToolError::new(e))?;
+
+        Ok(())
     }
 }
