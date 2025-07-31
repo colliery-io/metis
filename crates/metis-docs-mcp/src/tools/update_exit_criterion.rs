@@ -1,7 +1,4 @@
-use metis_core::{
-    application::Application,
-    dal::Database,
-};
+use metis_core::{application::Application, dal::Database};
 use rust_mcp_sdk::{
     macros::{mcp_tool, JsonSchema},
     schema::{schema_utils::CallToolError, CallToolResult, TextContent},

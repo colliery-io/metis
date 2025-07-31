@@ -22,7 +22,7 @@ impl McpTestHelper {
         let temp_dir = create_temp_dir();
         let project_path = temp_dir.path().to_string_lossy().to_string();
         let metis_dir = format!("{}/.metis", project_path);
-        
+
         Ok(Self {
             temp_dir,
             project_path,
@@ -37,7 +37,10 @@ impl McpTestHelper {
 
         let result = init_tool.call_tool().await;
         if result.is_err() {
-            return Err(anyhow::anyhow!("Failed to initialize project: {:?}", result));
+            return Err(anyhow::anyhow!(
+                "Failed to initialize project: {:?}",
+                result
+            ));
         }
         Ok(())
     }
@@ -48,6 +51,12 @@ impl McpTestHelper {
     }
 
     pub fn get_project_name(&self) -> String {
-        self.temp_dir.path().file_name().unwrap().to_str().unwrap().to_string()
+        self.temp_dir
+            .path()
+            .file_name()
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .to_string()
     }
 }

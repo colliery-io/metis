@@ -20,7 +20,7 @@ impl McpServerProcess {
         let temp_dir = TempDir::new()?;
         let project_path = temp_dir.path().to_string_lossy().to_string();
         let metis_dir = format!("{}/.metis", project_path);
-        
+
         Ok(Self {
             temp_dir,
             project_path,
@@ -56,13 +56,10 @@ impl McpServerProcess {
     }
 
     /// Send an MCP request and get response
-    fn send_mcp_request(
-        child: &mut std::process::Child,
-        request: Value,
-    ) -> Result<Value> {
+    fn send_mcp_request(child: &mut std::process::Child, request: Value) -> Result<Value> {
         let stdin = child.stdin.as_mut().unwrap();
         let stdout = child.stdout.as_mut().unwrap();
-        
+
         // Send request
         let request_str = serde_json::to_string(&request)?;
         writeln!(stdin, "{}", request_str)?;
@@ -72,7 +69,7 @@ impl McpServerProcess {
         let mut reader = BufReader::new(stdout);
         let mut response_line = String::new();
         reader.read_line(&mut response_line)?;
-        
+
         let response: Value = serde_json::from_str(&response_line.trim())?;
         Ok(response)
     }
@@ -92,7 +89,7 @@ impl McpServerProcess {
         });
 
         let response = Self::send_mcp_request(child, request)?;
-        
+
         // Check if successful
         if response.get("error").is_some() {
             return Err(anyhow::anyhow!("Initialize failed: {:?}", response));
@@ -119,7 +116,7 @@ impl McpServerProcess {
         });
 
         let response = Self::send_mcp_request(child, request)?;
-        
+
         if let Some(error) = response.get("error") {
             return Err(anyhow::anyhow!("Create document failed: {:?}", error));
         }
@@ -143,11 +140,17 @@ impl McpServerProcess {
             }
         }
 
-        Err(anyhow::anyhow!("Could not extract document ID from response"))
+        Err(anyhow::anyhow!(
+            "Could not extract document ID from response"
+        ))
     }
 
     /// Test the archive_document functionality
-    async fn test_archive_document(&self, child: &mut std::process::Child, document_id: &str) -> Result<()> {
+    async fn test_archive_document(
+        &self,
+        child: &mut std::process::Child,
+        document_id: &str,
+    ) -> Result<()> {
         let request = json!({
             "jsonrpc": "2.0",
             "id": 3,
@@ -162,13 +165,13 @@ impl McpServerProcess {
         });
 
         let response = Self::send_mcp_request(child, request)?;
-        
+
         // This should NOT return "Unknown tool" error anymore
         if let Some(error) = response.get("error") {
             let error_message = error.get("message").unwrap().as_str().unwrap();
             if error_message.contains("Unknown tool") {
                 return Err(anyhow::anyhow!(
-                    "Archive document tool not found - the fix didn't work: {}", 
+                    "Archive document tool not found - the fix didn't work: {}",
                     error_message
                 ));
             }
@@ -185,34 +188,36 @@ impl McpServerProcess {
 #[tokio::test]
 async fn test_mcp_server_archive_document_integration() -> Result<()> {
     println!("=== Integration Test: MCP Server Archive Document ===");
-    
+
     // Step 1: Build the server
     println!("Building MCP server binary...");
     McpServerProcess::build_server()?;
-    
+
     // Step 2: Set up test environment
     let test_helper = McpServerProcess::new()?;
-    
+
     // Step 3: Spawn server process
     println!("Spawning MCP server process...");
     let mut child = test_helper.spawn_server()?;
-    
+
     // Step 4: Initialize project
     println!("Initializing project via MCP...");
     test_helper.initialize_project(&mut child).await?;
-    
+
     // Step 5: Create a test document
     println!("Creating test document to archive...");
     let document_id = test_helper.create_test_document(&mut child).await?;
     println!("Created document with ID: {}", document_id);
-    
+
     // Step 6: Test archive functionality (this should work now with our fix)
     println!("Testing archive_document tool...");
-    test_helper.test_archive_document(&mut child, &document_id).await?;
-    
+    test_helper
+        .test_archive_document(&mut child, &document_id)
+        .await?;
+
     // Step 7: Clean up
     child.kill()?;
-    
+
     println!("✅ Integration test passed - archive_document tool is working!");
     Ok(())
 }
@@ -220,21 +225,21 @@ async fn test_mcp_server_archive_document_integration() -> Result<()> {
 #[tokio::test]
 async fn test_mcp_server_list_tools() -> Result<()> {
     println!("=== Integration Test: MCP Server List Tools ===");
-    
+
     // Build and spawn server
     McpServerProcess::build_server()?;
     let test_helper = McpServerProcess::new()?;
     let mut child = test_helper.spawn_server()?;
-    
+
     // Send list_tools request
     let request = json!({
         "jsonrpc": "2.0",
         "id": 1,
         "method": "tools/list"
     });
-    
+
     let response = McpServerProcess::send_mcp_request(&mut child, request)?;
-    
+
     // Verify archive_document is in the tools list
     if let Some(result) = response.get("result") {
         if let Some(tools) = result.get("tools") {
@@ -242,16 +247,18 @@ async fn test_mcp_server_list_tools() -> Result<()> {
                 let has_archive_tool = tools_array.iter().any(|tool| {
                     tool.get("name").map(|n| n.as_str()) == Some(Some("archive_document"))
                 });
-                
+
                 if !has_archive_tool {
-                    return Err(anyhow::anyhow!("archive_document tool not found in tools list"));
+                    return Err(anyhow::anyhow!(
+                        "archive_document tool not found in tools list"
+                    ));
                 }
-                
+
                 println!("✅ archive_document tool found in tools list");
             }
         }
     }
-    
+
     child.kill()?;
     println!("✅ List tools test passed!");
     Ok(())

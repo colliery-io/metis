@@ -110,9 +110,9 @@ impl DocumentCreationService {
             config.parent_id,
             Vec::new(), // blocked_by
             tags,
-            false,                                     // not archived
+            false,                                          // not archived
             config.risk_level.unwrap_or(RiskLevel::Medium), // use config risk_level or default to Medium
-            Vec::new(),                                // stakeholders - empty by default
+            Vec::new(),                                     // stakeholders - empty by default
         )
         .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
 

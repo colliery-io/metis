@@ -1,8 +1,6 @@
 use metis_core::{
-    application::services::workspace::PhaseTransitionService, 
-    application::Application,
-    dal::Database,
-    domain::documents::types::Phase,
+    application::services::workspace::PhaseTransitionService, application::Application,
+    dal::Database, domain::documents::types::Phase,
 };
 use rust_mcp_sdk::{
     macros::{mcp_tool, JsonSchema},

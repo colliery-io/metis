@@ -66,22 +66,30 @@ impl CreateDocumentTool {
         let creation_service = DocumentCreationService::new(metis_dir);
 
         // Parse complexity if provided
-        let complexity = self.complexity.as_ref()
+        let complexity = self
+            .complexity
+            .as_ref()
             .map(|c| c.parse())
             .transpose()
-            .map_err(|e| CallToolError::new(std::io::Error::new(
-                std::io::ErrorKind::InvalidInput,
-                format!("Invalid complexity: {}", e),
-            )))?;
+            .map_err(|e| {
+                CallToolError::new(std::io::Error::new(
+                    std::io::ErrorKind::InvalidInput,
+                    format!("Invalid complexity: {}", e),
+                ))
+            })?;
 
-        // Parse risk level if provided  
-        let risk_level = self.risk_level.as_ref()
+        // Parse risk level if provided
+        let risk_level = self
+            .risk_level
+            .as_ref()
             .map(|r| r.parse())
             .transpose()
-            .map_err(|e| CallToolError::new(std::io::Error::new(
-                std::io::ErrorKind::InvalidInput,
-                format!("Invalid risk level: {}", e),
-            )))?;
+            .map_err(|e| {
+                CallToolError::new(std::io::Error::new(
+                    std::io::ErrorKind::InvalidInput,
+                    format!("Invalid risk level: {}", e),
+                ))
+            })?;
 
         // Build configuration
         let config = DocumentCreationConfig {
@@ -134,11 +142,11 @@ impl CreateDocumentTool {
                         "Task requires a parent initiative ID",
                     ))
                 })?;
-                
+
                 // For tasks, we need to resolve the strategy ID from the initiative's location
                 // The initiative file is at strategies/{strategy_id}/initiatives/{initiative_id}/initiative.md
                 let strategy_id = self.find_strategy_id_for_initiative(metis_dir, initiative_id)?;
-                
+
                 creation_service
                     .create_task(config, &strategy_id, initiative_id)
                     .await
@@ -168,9 +176,13 @@ impl CreateDocumentTool {
         )]))
     }
 
-    fn find_strategy_id_for_initiative(&self, metis_dir: &Path, initiative_id: &str) -> Result<String, CallToolError> {
+    fn find_strategy_id_for_initiative(
+        &self,
+        metis_dir: &Path,
+        initiative_id: &str,
+    ) -> Result<String, CallToolError> {
         let strategies_dir = metis_dir.join("strategies");
-        
+
         if !strategies_dir.exists() {
             return Err(CallToolError::new(std::io::Error::new(
                 std::io::ErrorKind::NotFound,
@@ -182,7 +194,7 @@ impl CreateDocumentTool {
         for entry in std::fs::read_dir(&strategies_dir).map_err(CallToolError::new)? {
             let entry = entry.map_err(CallToolError::new)?;
             let strategy_path = entry.path();
-            
+
             if strategy_path.is_dir() {
                 let initiatives_dir = strategy_path.join("initiatives").join(initiative_id);
                 if initiatives_dir.exists() && initiatives_dir.is_dir() {

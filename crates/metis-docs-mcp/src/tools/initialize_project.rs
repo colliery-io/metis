@@ -1,6 +1,6 @@
 use metis_core::{
-    application::services::workspace::initialization::WorkspaceInitializationService,
-    Application, Database,
+    application::services::workspace::initialization::WorkspaceInitializationService, Application,
+    Database,
 };
 use rust_mcp_sdk::{
     macros::{mcp_tool, JsonSchema},
