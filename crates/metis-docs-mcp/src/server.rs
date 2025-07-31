@@ -1,7 +1,7 @@
 use crate::tools::{
-    CreateDocumentTool, InitializeProjectTool, ListDocumentsTool, MetisTools, SearchDocumentsTool,
-    TransitionPhaseTool, UpdateBlockedByTool, UpdateDocumentContentTool, UpdateExitCriterionTool,
-    ValidateDocumentTool, ValidateExitCriteriaTool,
+    ArchiveDocumentTool, CreateDocumentTool, InitializeProjectTool, ListDocumentsTool, MetisTools,
+    SearchDocumentsTool, TransitionPhaseTool, UpdateBlockedByTool, UpdateDocumentContentTool,
+    UpdateExitCriterionTool, ValidateDocumentTool, ValidateExitCriteriaTool,
 };
 use crate::MetisServerConfig;
 use async_trait::async_trait;
@@ -96,6 +96,11 @@ impl ServerHandler for MetisServerHandler {
             }
             "update_blocked_by" => {
                 let tool: UpdateBlockedByTool = serde_json::from_value(args)
+                    .map_err(rust_mcp_sdk::schema::schema_utils::CallToolError::new)?;
+                tool.call_tool().await
+            }
+            "archive_document" => {
+                let tool: ArchiveDocumentTool = serde_json::from_value(args)
                     .map_err(rust_mcp_sdk::schema::schema_utils::CallToolError::new)?;
                 tool.call_tool().await
             }
