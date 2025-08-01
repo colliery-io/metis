@@ -13,9 +13,6 @@ impl ErrorHandler {
     }
 
     pub fn handle_error(&mut self, error: AppError) {
-        // Log the error (in a real implementation, you'd use a proper logger)
-        eprintln!("Application Error: {}", error);
-
         // Store the error for UI display
         self.current_error = Some(error);
     }

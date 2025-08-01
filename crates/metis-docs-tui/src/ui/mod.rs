@@ -1,6 +1,7 @@
 pub mod board;
 pub mod components;
 pub mod dialog;
+pub mod message;
 
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
@@ -17,12 +18,23 @@ pub use board::*;
 pub use dialog::*;
 
 pub fn draw(f: &mut Frame, app: &App) {
+    let has_messages = app.ui_state.message_state.has_messages();
+    let in_dialog = matches!(
+        app.app_state(),
+        AppState::CreatingDocument | AppState::CreatingChildDocument | 
+        AppState::CreatingAdr | AppState::Confirming
+    );
+    
+    // Only allocate space for messages when not in dialog and has messages
+    let message_height = if has_messages && !in_dialog { 3 } else { 0 };
+
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(3), // Header
-            Constraint::Min(0),    // Main content
-            Constraint::Length(3), // Footer
+            Constraint::Length(3),      // Header
+            Constraint::Min(0),         // Main content  
+            Constraint::Length(message_height), // Messages (fixed height)
+            Constraint::Length(3),      // Footer
         ])
         .split(f.area());
 
@@ -35,9 +47,8 @@ pub fn draw(f: &mut Frame, app: &App) {
             draw_content_edit_form(f, app, chunks[1]);
         }
         _ => {
-            if let Some(error) = app.error_message() {
-                draw_error(f, &error, chunks[1]);
-            } else if !app.is_ready() {
+            // Remove the old error handling since we'll use messages instead
+            if !app.is_ready() {
                 draw_loading(f, app, chunks[1]);
             } else {
                 draw_kanban_board(f, app, chunks[1]);
@@ -56,8 +67,18 @@ pub fn draw(f: &mut Frame, app: &App) {
         }
     }
 
-    // Footer
-    draw_footer(f, app, chunks[2]);
+    // Messages area (new) - only show when not in dialog states
+    let show_messages = has_messages && matches!(
+        app.app_state(),
+        AppState::Normal | AppState::EditingContent
+    );
+    
+    if show_messages {
+        message::draw_message_area(f, &app.ui_state.message_state, chunks[2]);
+    }
+
+    // Footer  
+    draw_footer(f, app, chunks[3]);
 }
 
 fn draw_header(f: &mut Frame, app: &App, area: Rect) {
@@ -84,14 +105,6 @@ fn draw_header(f: &mut Frame, app: &App, area: Rect) {
         .block(Block::default().borders(Borders::ALL))
         .alignment(Alignment::Center);
     f.render_widget(header, area);
-}
-
-fn draw_error(f: &mut Frame, error: &str, area: Rect) {
-    let error_widget = Paragraph::new(error)
-        .style(Style::default().fg(Color::Red))
-        .block(Block::default().title("Error").borders(Borders::ALL))
-        .wrap(Wrap { trim: true });
-    f.render_widget(error_widget, area);
 }
 
 fn draw_loading(f: &mut Frame, app: &App, area: Rect) {

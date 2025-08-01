@@ -1,6 +1,8 @@
 pub mod kanban;
+pub mod message;
 
 pub use kanban::*;
+pub use message::*;
 
 // Add database document structure
 #[derive(Debug, Clone)]

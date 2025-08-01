@@ -56,12 +56,16 @@ async fn run_app<B: ratatui::backend::Backend>(
     let mut initialization_done = false;
 
     loop {
+        // Clear expired messages on each loop iteration
+        app.clear_expired_messages();
+
         // Draw UI
         terminal.draw(|f| ui::draw(f, app))?;
 
         // Handle initialization
         if !initialization_done {
             if let Err(e) = app.initialize().await {
+                app.add_error_message("Failed to initialize application".to_string());
                 app.error_handler
                     .handle_with_context(AppError::from(e), "Initialization");
             }
@@ -73,6 +77,11 @@ async fn run_app<B: ratatui::backend::Backend>(
             if let Event::Key(key) = event::read()? {
                 match app.app_state() {
                     AppState::Normal => {
+                        // Clear message on any meaningful keystroke (except space which explicitly dismisses)
+                        if !matches!(key.code, KeyCode::Char(' ')) {
+                            app.clear_messages();
+                        }
+                        
                         match key.code {
                             KeyCode::Char('q') => return Ok(()),
                             KeyCode::Tab => {
@@ -157,6 +166,10 @@ async fn run_app<B: ratatui::backend::Backend>(
                                     app.view_vision_document();
                                 }
                             }
+                            KeyCode::Char(' ') => {
+                                // Space bar: dismiss current message
+                                app.ui_state.message_state.clear_message();
+                            }
                             KeyCode::Char('r') | KeyCode::Char('R') => {
                                 if app.is_ready() && app.get_selected_item().is_some() {
                                     if let Err(e) = app.archive_selected_document().await {
@@ -171,6 +184,7 @@ async fn run_app<B: ratatui::backend::Backend>(
                                 if app.is_ready() {
                                     // Y: Sync database and reload
                                     if let Err(e) = app.sync_and_reload().await {
+                                        app.add_error_message(format!("Sync failed: {}", e));
                                         app.error_handler.handle_with_context(
                                             AppError::from(e),
                                             "Sync operation",

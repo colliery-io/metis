@@ -1,4 +1,4 @@
-use crate::models::{AppState, BoardType, KanbanBoard};
+use crate::models::{AppState, BoardType, KanbanBoard, MessageState};
 use tui_input::Input;
 use tui_textarea::TextArea;
 
@@ -23,6 +23,7 @@ pub struct UiState {
     pub strategy_editor: Option<TextArea<'static>>,
     pub confirmation_type: Option<ConfirmationType>,
     pub editing_vision_path: Option<std::path::PathBuf>,
+    pub message_state: MessageState,
 }
 
 impl UiState {
@@ -40,6 +41,7 @@ impl UiState {
             strategy_editor: None,
             confirmation_type: None,
             editing_vision_path: None,
+            message_state: MessageState::new(),
         }
     }
 

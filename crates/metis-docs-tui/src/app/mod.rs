@@ -161,6 +161,31 @@ impl App {
         self.error_handler.get_user_friendly_message()
     }
 
+    // Message handling methods
+    pub fn add_success_message(&mut self, message: String) {
+        self.ui_state.message_state.add_success(message);
+    }
+
+    pub fn add_error_message(&mut self, message: String) {
+        self.ui_state.message_state.add_error(message);
+    }
+
+    pub fn add_warning_message(&mut self, message: String) {
+        self.ui_state.message_state.add_warning(message);
+    }
+
+    pub fn add_info_message(&mut self, message: String) {
+        self.ui_state.message_state.add_info(message);
+    }
+
+    pub fn clear_messages(&mut self) {
+        self.ui_state.message_state.clear_message();
+    }
+
+    pub fn clear_expired_messages(&mut self) {
+        self.ui_state.message_state.clear_expired_messages();
+    }
+
     // Navigation methods
     pub fn next_board(&mut self) {
         self.ui_state.next_board();
@@ -358,9 +383,9 @@ impl App {
     pub async fn create_new_document(&mut self) -> Result<()> {
         let title = self.ui_state.input_title.value().to_string();
         if title.trim().is_empty() {
-            self.error_handler.handle_error(AppError::UserInputError(
-                "Title cannot be empty".to_string(),
-            ));
+            self.add_error_message("Title cannot be empty".to_string());
+            self.ui_state.set_app_state(AppState::Normal);
+            self.ui_state.reset_input();
             return Ok(());
         }
 
@@ -380,6 +405,7 @@ impl App {
                 .await
             {
                 Ok(_) => {
+                    self.add_success_message(format!("{} created successfully", doc_type));
                     self.ui_state.set_app_state(AppState::Normal);
                     self.ui_state.reset_input();
                     // Sync database and reload documents
@@ -389,7 +415,9 @@ impl App {
                     self.load_documents().await?;
                 }
                 Err(e) => {
-                    self.error_handler.handle_error(AppError::from(e));
+                    self.add_error_message(format!("Failed to create {}: {}", doc_type, e));
+                    self.ui_state.set_app_state(AppState::Normal);
+                    self.ui_state.reset_input();
                 }
             }
         }
@@ -400,9 +428,9 @@ impl App {
     pub async fn create_child_document(&mut self) -> Result<()> {
         let title = self.ui_state.input_title.value().to_string();
         if title.trim().is_empty() {
-            self.error_handler.handle_error(AppError::UserInputError(
-                "Title cannot be empty".to_string(),
-            ));
+            self.add_error_message("Title cannot be empty".to_string());
+            self.ui_state.set_app_state(AppState::Normal);
+            self.ui_state.reset_input();
             return Ok(());
         }
 
@@ -413,9 +441,9 @@ impl App {
                     DocumentType::Strategy => DocumentType::Initiative,
                     DocumentType::Initiative => DocumentType::Task,
                     _ => {
-                        self.error_handler.handle_error(AppError::ValidationError(
-                            "Cannot create child for this document type".to_string(),
-                        ));
+                        self.add_error_message("Cannot create child for this document type".to_string());
+                        self.ui_state.set_app_state(AppState::Normal);
+                        self.ui_state.reset_input();
                         return Ok(());
                     }
                 };
@@ -447,18 +475,20 @@ impl App {
                                         self.load_documents().await?;
                                     }
                                     Err(e) => {
-                                        self.error_handler.handle_error(AppError::from(e));
+                                        self.add_error_message(format!("Failed to create task: {}", e));
+                                        self.ui_state.set_app_state(AppState::Normal);
+                                        self.ui_state.reset_input();
                                     }
                                 }
                             } else {
-                                self.error_handler.handle_error(AppError::ValidationError(
-                                    "Initiative has no parent strategy".to_string(),
-                                ));
+                                self.add_error_message("Initiative has no parent strategy".to_string());
+                                self.ui_state.set_app_state(AppState::Normal);
+                                self.ui_state.reset_input();
                             }
                         } else {
-                            self.error_handler.handle_error(AppError::ValidationError(
-                                "Selected item is not an initiative".to_string(),
-                            ));
+                            self.add_error_message("Selected item is not an initiative".to_string());
+                            self.ui_state.set_app_state(AppState::Normal);
+                            self.ui_state.reset_input();
                         }
                     }
                     _ => {
@@ -473,6 +503,7 @@ impl App {
                             .await
                         {
                             Ok(_) => {
+                                self.add_success_message(format!("{} created successfully", child_doc_type));
                                 self.ui_state.set_app_state(AppState::Normal);
                                 self.ui_state.reset_input();
                                 // Sync database and reload documents
@@ -482,7 +513,9 @@ impl App {
                                 self.load_documents().await?;
                             }
                             Err(e) => {
-                                self.error_handler.handle_error(AppError::from(e));
+                                self.add_error_message(format!("Failed to create {}: {}", child_doc_type, e));
+                                self.ui_state.set_app_state(AppState::Normal);
+                                self.ui_state.reset_input();
                             }
                         }
                     }
@@ -523,6 +556,7 @@ impl App {
                 let archive_service = ArchiveService::new(workspace_dir);
                 match archive_service.archive_document(&selected_item.id()).await {
                     Ok(_archive_result) => {
+                        self.add_success_message(format!("Document '{}' archived successfully", selected_item.title()));
                         // Sync database and reload documents
                         if let Some(sync_service) = &self.sync_service {
                             let _ = sync_service.sync_database().await;
@@ -530,7 +564,7 @@ impl App {
                         self.load_documents().await?;
                     }
                     Err(e) => {
-                        self.error_handler.handle_error(AppError::from(e));
+                        self.add_error_message(format!("Failed to archive document: {}", e));
                     }
                 }
             }
@@ -565,6 +599,26 @@ impl App {
 
     pub async fn load_documents(&mut self) -> Result<()> {
         if let Some(document_service) = &self.document_service {
+            // Clear all boards before loading new documents
+            for column in &mut self.ui_state.strategy_board.columns {
+                column.items.clear();
+            }
+            for column in &mut self.ui_state.initiative_board.columns {
+                column.items.clear();
+            }
+            for column in &mut self.ui_state.task_board.columns {
+                column.items.clear();
+            }
+            for column in &mut self.ui_state.adr_board.columns {
+                column.items.clear();
+            }
+            
+            // Reset selection state to avoid referencing non-existent items
+            self.selection_state.strategy_selection = (0, 0);
+            self.selection_state.initiative_selection = (0, 0);
+            self.selection_state.task_selection = (0, 0);
+            self.selection_state.adr_selection = (0, 0);
+            
             let mut documents = document_service.load_documents_from_database().await?;
 
             // Sort documents by type first, then by appropriate criteria
@@ -790,9 +844,9 @@ impl App {
         // Get the title from user input
         let title = self.ui_state.input_title.value().to_string();
         if title.trim().is_empty() {
-            self.error_handler.handle_error(AppError::UserInputError(
-                "ADR title cannot be empty".to_string(),
-            ));
+            self.add_error_message("ADR title cannot be empty".to_string());
+            self.ui_state.set_app_state(AppState::Normal);
+            self.ui_state.reset_input();
             return Ok(());
         }
 
@@ -833,6 +887,7 @@ impl App {
         if let Some(document_service) = &self.document_service {
             match document_service.create_adr(title, context).await {
                 Ok(_file_path) => {
+                    self.add_success_message("ADR created successfully".to_string());
                     self.ui_state.set_app_state(AppState::Normal);
                     self.ui_state.reset_input();
                     // Sync database and reload documents
@@ -842,7 +897,9 @@ impl App {
                     self.load_documents().await?;
                 }
                 Err(e) => {
-                    self.error_handler.handle_error(AppError::from(e));
+                    self.add_error_message(format!("Failed to create ADR: {}", e));
+                    self.ui_state.set_app_state(AppState::Normal);
+                    self.ui_state.reset_input();
                 }
             }
         }
@@ -864,6 +921,9 @@ impl App {
 
         // Mark sync as complete
         self.core_state.set_sync_complete();
+        
+        // Show success message
+        self.add_success_message("Synchronization completed".to_string());
 
         Ok(())
     }
