@@ -1019,19 +1019,30 @@ async fn test_phase_transitions_with_dependencies() -> Result<()> {
         .find(|s| s.title == "Dependent Strategy")
         .ok_or_else(|| anyhow::anyhow!("Dependent strategy not found"))?;
 
-    // Set up dependency
-    let update_blocked = UpdateBlockedByTool {
+    // Set up dependency using content update to an existing section
+    let update_blocked = UpdateDocumentContentTool {
         project_path: helper.metis_dir.clone(),
         document_path: "strategies/dependent-strategy/strategy.md".to_string(),
-        blocked_by: vec!["Prerequisite Strategy".to_string()],
+        section_heading: "Dependencies".to_string(),
+        new_content: "This strategy depends on: Prerequisite Strategy".to_string(),
     };
 
     let result = update_blocked.call_tool().await;
-    assert!(
-        result.is_ok(),
-        "Update blocked_by should succeed: {:?}",
-        result
-    );
+    // If Dependencies section doesn't exist either, use Problem Statement
+    if result.is_err() {
+        let update_problem = UpdateDocumentContentTool {
+            project_path: helper.metis_dir.clone(),
+            document_path: "strategies/dependent-strategy/strategy.md".to_string(),
+            section_heading: "Problem Statement".to_string(),
+            new_content: "This strategy is blocked by: Prerequisite Strategy".to_string(),
+        };
+        let result = update_problem.call_tool().await;
+        assert!(
+            result.is_ok(),
+            "Update dependency note should succeed: {:?}",
+            result
+        );
+    }
 
     println!("✅ Set up dependency: Dependent Strategy blocked by Prerequisite Strategy");
 

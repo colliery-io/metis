@@ -73,16 +73,7 @@ async fn test_full_document_lifecycle() {
     let result = list_tool.call_tool().await;
     assert!(result.is_ok(), "List documents should succeed");
 
-    // 4. Validate the vision document
-    let validate_tool = ValidateDocumentTool {
-        project_path: metis_path.clone(),
-        document_path: "vision.md".to_string(),
-    };
-
-    let result = validate_tool.call_tool().await;
-    assert!(result.is_ok(), "Validate document should succeed");
-
-    // 5. Search for documents
+    // 4. Search for documents
     let search_tool = SearchDocumentsTool {
         project_path: metis_path.clone(),
         query: "Test".to_string(),
@@ -121,16 +112,30 @@ async fn test_phase_transition_workflow() {
         .trim_matches('-')
         .to_string();
 
-    // Check phase transition removed - use transition_phase tool instead
-
-    // Validate exit criteria for the vision
-    let validate_exit = ValidateExitCriteriaTool {
+    // Test transition phase tool
+    // The vision document ID should be the project name (which is the temp dir name)
+    let vision_id = project_name
+        .to_lowercase()
+        .chars()
+        .map(|c| if c.is_alphanumeric() { c } else { '-' })
+        .collect::<String>()
+        .split('-')
+        .filter(|s| !s.is_empty())
+        .collect::<Vec<_>>()
+        .join("-");
+    
+    let transition_tool = TransitionPhaseTool {
         project_path: metis_path.clone(),
-        document_path: "vision.md".to_string(),
+        document_id: vision_id,
+        phase: Some("review".to_string()),
+        force: None,
     };
 
-    let result = validate_exit.call_tool().await;
-    assert!(result.is_ok(), "Validate exit criteria should succeed");
+    let result = transition_tool.call_tool().await;
+    if let Err(e) = &result {
+        println!("Phase transition error: {:?}", e);
+    }
+    assert!(result.is_ok(), "Phase transition should succeed: {:?}", result);
 }
 
 #[tokio::test]
@@ -158,13 +163,17 @@ async fn test_document_updates() {
     let result = update_content.call_tool().await;
     assert!(result.is_ok(), "Update document content should succeed");
 
-    // Update blocked_by relationship
-    let update_blocked = UpdateBlockedByTool {
+    // Test updating an existing section (Purpose should exist in vision template)
+    let update_purpose = UpdateDocumentContentTool {
         project_path: metis_path.clone(),
         document_path: "vision.md".to_string(),
-        blocked_by: vec!["external_approval".to_string()],
+        section_heading: "Purpose".to_string(),
+        new_content: "Updated purpose: To create an amazing system for work management.".to_string(),
     };
 
-    let result = update_blocked.call_tool().await;
-    assert!(result.is_ok(), "Update blocked_by should succeed");
+    let result = update_purpose.call_tool().await;
+    if let Err(e) = &result {
+        println!("Update purpose error: {:?}", e);
+    }
+    assert!(result.is_ok(), "Update purpose content should succeed: {:?}", result);
 }

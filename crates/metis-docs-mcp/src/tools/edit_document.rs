@@ -8,26 +8,28 @@ use std::path::Path;
 use tokio::fs;
 
 #[mcp_tool(
-    name = "update_document_content",
-    description = "Update content of a specific H2 section in a document",
+    name = "edit_document",
+    description = "Edit document content using search-and-replace. Always read documents before editing them.",
     idempotent_hint = false,
     destructive_hint = false,
     open_world_hint = false,
     read_only_hint = false
 )]
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct UpdateDocumentContentTool {
+pub struct EditDocumentTool {
     /// Path to the .metis folder containing the document
     pub project_path: String,
     /// Path to the document file (relative to project root)
     pub document_path: String,
-    /// Section heading to update - must be an H2 level heading (e.g., "Problem Statement" targets "## Problem Statement")
-    pub section_heading: String,
-    /// New content for the section
-    pub new_content: String,
+    /// Text to search for (will be replaced)
+    pub search: String,
+    /// Text to replace the search text with
+    pub replace: String,
+    /// Whether to replace all occurrences (default: false, only first match)
+    pub replace_all: Option<bool>,
 }
 
-impl UpdateDocumentContentTool {
+impl EditDocumentTool {
     pub async fn call_tool(&self) -> std::result::Result<CallToolResult, CallToolError> {
         let metis_dir = Path::new(&self.project_path);
 
@@ -57,11 +59,21 @@ impl UpdateDocumentContentTool {
             .await
             .map_err(|e| CallToolError::new(e))?;
 
-        // Update the section content
-        let updated_content = self.update_section_content(&content)?;
+        // Perform the edit operation
+        let (updated_content, replacements_made) = self.perform_edit(&content)?;
+
+        if replacements_made == 0 {
+            return Err(CallToolError::new(std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                format!(
+                    "Search text '{}' not found in document. Use read_document to see the current content.",
+                    self.search
+                ),
+            )));
+        }
 
         // Write the updated content back to the file
-        fs::write(&full_document_path, updated_content)
+        fs::write(&full_document_path, &updated_content)
             .await
             .map_err(|e| CallToolError::new(e))?;
 
@@ -71,9 +83,14 @@ impl UpdateDocumentContentTool {
         let response = serde_json::json!({
             "success": true,
             "document_path": self.document_path,
-            "section_heading": self.section_heading,
-            "updated": true,
-            "message": format!("Successfully updated section '{}' in document", self.section_heading),
+            "replacements_made": replacements_made,
+            "search_text": self.search,
+            "replace_text": self.replace,
+            "replace_all": self.replace_all.unwrap_or(false),
+            "message": format!(
+                "Successfully made {} replacement(s) in {}",
+                replacements_made, self.document_path
+            ),
             "auto_synced": true
         });
 
@@ -82,54 +99,26 @@ impl UpdateDocumentContentTool {
         )]))
     }
 
-    fn update_section_content(&self, content: &str) -> Result<String, CallToolError> {
-        let lines: Vec<&str> = content.lines().collect();
-        let mut result_lines = Vec::new();
-        let mut in_target_section = false;
-        let mut found_section = false;
-
-        let target_heading = format!("## {}", self.section_heading);
-
-        for line in lines {
-            if line.trim() == target_heading.trim() {
-                // Found the target section
-                found_section = true;
-                in_target_section = true;
-                result_lines.push(line);
-
-                // Add the new content after the heading
-                result_lines.push("");
-                result_lines.push(&self.new_content);
-                result_lines.push("");
-                continue;
-            }
-
-            if in_target_section {
-                // Check if we've reached the next section (another ## heading)
-                if line.trim().starts_with("## ") {
-                    in_target_section = false;
-                    result_lines.push(line);
-                } else {
-                    // Skip lines in the target section (they're being replaced)
-                    continue;
-                }
+    fn perform_edit(&self, content: &str) -> Result<(String, usize), CallToolError> {
+        let replace_all = self.replace_all.unwrap_or(false);
+        
+        if replace_all {
+            // Replace all occurrences
+            let replacements = content.matches(&self.search).count();
+            let updated_content = content.replace(&self.search, &self.replace);
+            Ok((updated_content, replacements))
+        } else {
+            // Replace only the first occurrence
+            if let Some(pos) = content.find(&self.search) {
+                let mut updated_content = String::new();
+                updated_content.push_str(&content[..pos]);
+                updated_content.push_str(&self.replace);
+                updated_content.push_str(&content[pos + self.search.len()..]);
+                Ok((updated_content, 1))
             } else {
-                // Not in target section, keep the line
-                result_lines.push(line);
+                Ok((content.to_string(), 0))
             }
         }
-
-        if !found_section {
-            return Err(CallToolError::new(std::io::Error::new(
-                std::io::ErrorKind::NotFound,
-                format!(
-                    "Section heading '{}' not found in document",
-                    self.section_heading
-                ),
-            )));
-        }
-
-        Ok(result_lines.join("\n"))
     }
 
     async fn sync_workspace(&self, metis_dir: &Path) -> Result<(), CallToolError> {

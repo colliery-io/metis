@@ -1,7 +1,6 @@
 use crate::tools::{
-    ArchiveDocumentTool, CreateDocumentTool, InitializeProjectTool, ListDocumentsTool, MetisTools,
-    SearchDocumentsTool, TransitionPhaseTool, UpdateBlockedByTool, UpdateDocumentContentTool,
-    UpdateExitCriterionTool, ValidateDocumentTool, ValidateExitCriteriaTool,
+    ArchiveDocumentTool, CreateDocumentTool, EditDocumentTool, InitializeProjectTool,
+    ListDocumentsTool, MetisTools, ReadDocumentTool, SearchDocumentsTool, TransitionPhaseTool,
 };
 use crate::MetisServerConfig;
 use async_trait::async_trait;
@@ -64,13 +63,13 @@ impl ServerHandler for MetisServerHandler {
                     .map_err(rust_mcp_sdk::schema::schema_utils::CallToolError::new)?;
                 tool.call_tool().await
             }
-            "create_document" => {
-                let tool: CreateDocumentTool = serde_json::from_value(args)
+            "read_document" => {
+                let tool: ReadDocumentTool = serde_json::from_value(args)
                     .map_err(rust_mcp_sdk::schema::schema_utils::CallToolError::new)?;
                 tool.call_tool().await
             }
-            "validate_document" => {
-                let tool: ValidateDocumentTool = serde_json::from_value(args)
+            "create_document" => {
+                let tool: CreateDocumentTool = serde_json::from_value(args)
                     .map_err(rust_mcp_sdk::schema::schema_utils::CallToolError::new)?;
                 tool.call_tool().await
             }
@@ -79,23 +78,8 @@ impl ServerHandler for MetisServerHandler {
                     .map_err(rust_mcp_sdk::schema::schema_utils::CallToolError::new)?;
                 tool.call_tool().await
             }
-            "validate_exit_criteria" => {
-                let tool: ValidateExitCriteriaTool = serde_json::from_value(args)
-                    .map_err(rust_mcp_sdk::schema::schema_utils::CallToolError::new)?;
-                tool.call_tool().await
-            }
-            "update_document_content" => {
-                let tool: UpdateDocumentContentTool = serde_json::from_value(args)
-                    .map_err(rust_mcp_sdk::schema::schema_utils::CallToolError::new)?;
-                tool.call_tool().await
-            }
-            "update_exit_criterion" => {
-                let tool: UpdateExitCriterionTool = serde_json::from_value(args)
-                    .map_err(rust_mcp_sdk::schema::schema_utils::CallToolError::new)?;
-                tool.call_tool().await
-            }
-            "update_blocked_by" => {
-                let tool: UpdateBlockedByTool = serde_json::from_value(args)
+            "edit_document" => {
+                let tool: EditDocumentTool = serde_json::from_value(args)
                     .map_err(rust_mcp_sdk::schema::schema_utils::CallToolError::new)?;
                 tool.call_tool().await
             }

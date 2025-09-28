@@ -1,10 +1,8 @@
 use super::{
     archive_document::ArchiveDocumentTool, create_document::CreateDocumentTool,
-    initialize_project::InitializeProjectTool, list_documents::ListDocumentsTool,
+    edit_document::EditDocumentTool, initialize_project::InitializeProjectTool,
+    list_documents::ListDocumentsTool, read_document::ReadDocumentTool,
     search_documents::SearchDocumentsTool, transition_phase::TransitionPhaseTool,
-    update_blocked_by::UpdateBlockedByTool, update_document_content::UpdateDocumentContentTool,
-    update_exit_criterion::UpdateExitCriterionTool, validate_document::ValidateDocumentTool,
-    validate_exit_criteria::ValidateExitCriteriaTool,
 };
 use rust_mcp_sdk::tool_box;
 
@@ -15,13 +13,10 @@ tool_box!(
         InitializeProjectTool,
         ListDocumentsTool,
         SearchDocumentsTool,
+        ReadDocumentTool,
         CreateDocumentTool,
-        ValidateDocumentTool,
+        EditDocumentTool,
         TransitionPhaseTool,
-        ValidateExitCriteriaTool,
-        UpdateDocumentContentTool,
-        UpdateExitCriterionTool,
-        UpdateBlockedByTool,
         ArchiveDocumentTool
     ]
 );

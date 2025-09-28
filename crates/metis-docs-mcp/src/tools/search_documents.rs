@@ -27,6 +27,20 @@ pub struct SearchDocumentsTool {
 }
 
 impl SearchDocumentsTool {
+    /// Sanitize search query to prevent FTS syntax errors
+    fn sanitize_search_query(&self, query: &str) -> String {
+        // If query is very short or contains problematic FTS characters, quote it
+        let problematic_chars = ['#', '*', ':', '(', ')', '[', ']', '{', '}', '^', '~', '?'];
+        
+        if query.len() <= 2 || query.chars().any(|c| problematic_chars.contains(&c)) {
+            // Wrap in double quotes and escape any internal quotes
+            format!("\"{}\"", query.replace('"', "\"\""))
+        } else {
+            // For longer, safe queries, use as-is
+            query.to_string()
+        }
+    }
+
     pub async fn call_tool(&self) -> std::result::Result<CallToolResult, CallToolError> {
         let metis_dir = Path::new(&self.project_path);
 
@@ -58,13 +72,16 @@ impl SearchDocumentsTool {
         })?;
         let mut app = Application::new(database);
 
+        // Sanitize query for FTS search - escape special characters and handle edge cases
+        let sanitized_query = self.sanitize_search_query(&self.query);
+
         // Perform full-text search
         let results = app
-            .with_database(|db_service| db_service.search_documents(&self.query))
+            .with_database(|db_service| db_service.search_documents(&sanitized_query))
             .map_err(|e| {
                 CallToolError::new(std::io::Error::new(
                     std::io::ErrorKind::Other,
-                    format!("Search failed: {}", e),
+                    format!("Search failed: {}. Try using simpler search terms without special characters.", e),
                 ))
             })?;
 
