@@ -737,6 +737,9 @@ async fn test_invalid_phase_transitions() -> Result<()> {
     app.load_documents().await?;
     app.move_selection_right();
 
+    // Clear any existing messages to ensure we get the right error
+    app.clear_messages();
+
     // Attempt invalid transition from decided
     let result = app.transition_selected_document().await;
 

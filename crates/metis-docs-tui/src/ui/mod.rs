@@ -1,7 +1,6 @@
-pub mod board;
 pub mod components;
-pub mod dialog;
-pub mod message;
+pub mod dialogs;
+pub mod rendering;
 
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
@@ -14,8 +13,8 @@ use ratatui::{
 use crate::app::App;
 use crate::models::*;
 
-pub use board::*;
-pub use dialog::*;
+pub use dialogs::*;
+pub use rendering::*;
 
 pub fn draw(f: &mut Frame, app: &App) {
     let has_messages = app.ui_state.message_state.has_messages();
@@ -76,7 +75,7 @@ pub fn draw(f: &mut Frame, app: &App) {
     );
     
     if show_messages {
-        message::draw_message_area(f, &app.ui_state.message_state, chunks[2]);
+        draw_message_area(f, &app.ui_state.message_state, chunks[2]);
     }
 
     // Footer  

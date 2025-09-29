@@ -307,37 +307,6 @@ impl ArchiveService {
         })
     }
 
-    /// Remove empty directories recursively
-    fn remove_empty_directories(&self, dir_path: &Path) -> Result<()> {
-        if !dir_path.is_dir() {
-            return Ok(());
-        }
-
-        // Read all entries in the directory
-        let read_dir = fs::read_dir(dir_path).map_err(|e| MetisError::FileSystem(e.to_string()))?;
-
-        let mut entries = Vec::new();
-        for entry in read_dir {
-            let entry = entry.map_err(|e| MetisError::FileSystem(e.to_string()))?;
-            entries.push(entry);
-        }
-
-        // Recursively process subdirectories first
-        for entry in &entries {
-            let path = entry.path();
-            if path.is_dir() {
-                // Recursively remove empty directories within this directory
-                self.remove_empty_directories(&path)?;
-
-                // After processing subdirectories, try to remove this directory if it's empty
-                if self.is_directory_empty(&path)? {
-                    fs::remove_dir(&path).map_err(|e| MetisError::FileSystem(e.to_string()))?;
-                }
-            }
-        }
-
-        Ok(())
-    }
 
     /// Merge directory contents by moving files/subdirs from source to target
     /// Handles conflicts by overwriting (source takes precedence)
@@ -378,28 +347,6 @@ impl ArchiveService {
         Ok(())
     }
 
-    /// Check if a directory is empty (contains no files or directories)
-    /// Ignores hidden files like .DS_Store that macOS creates
-    fn is_directory_empty(&self, dir_path: &Path) -> Result<bool> {
-        let entries = fs::read_dir(dir_path).map_err(|e| MetisError::FileSystem(e.to_string()))?;
-
-        for entry in entries {
-            let entry = entry.map_err(|e| MetisError::FileSystem(e.to_string()))?;
-            let path = entry.path();
-
-            // Skip hidden files like .DS_Store that macOS creates
-            if let Some(name) = path.file_name() {
-                if name.to_string_lossy().starts_with('.') {
-                    continue;
-                }
-            }
-
-            // If we find any non-hidden file or directory, it's not empty
-            return Ok(false);
-        }
-
-        Ok(true)
-    }
 
     /// Mark a document as archived by updating its frontmatter
     async fn mark_document_as_archived(
