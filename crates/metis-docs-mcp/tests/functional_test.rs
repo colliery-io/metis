@@ -153,22 +153,24 @@ async fn test_document_updates() {
 
     // Update document content
     let metis_path = format!("{}/.metis", project_path);
-    let update_content = UpdateDocumentContentTool {
+    let update_content = EditDocumentTool {
         project_path: metis_path.clone(),
         document_path: "vision.md".to_string(),
-        section_heading: "Purpose".to_string(),
-        new_content: "This is an updated purpose statement.".to_string(),
+        search: "{Why this vision exists and what it aims to achieve}".to_string(),
+        replace: "This is an updated purpose statement.".to_string(),
+        replace_all: None,
     };
 
     let result = update_content.call_tool().await;
     assert!(result.is_ok(), "Update document content should succeed");
 
-    // Test updating an existing section (Purpose should exist in vision template)
-    let update_purpose = UpdateDocumentContentTool {
+    // Test updating another section
+    let update_purpose = EditDocumentTool {
         project_path: metis_path.clone(),
         document_path: "vision.md".to_string(),
-        section_heading: "Purpose".to_string(),
-        new_content: "Updated purpose: To create an amazing system for work management.".to_string(),
+        search: "This is an updated purpose statement.".to_string(),
+        replace: "Updated purpose: To create an amazing system for work management.".to_string(),
+        replace_all: None,
     };
 
     let result = update_purpose.call_tool().await;

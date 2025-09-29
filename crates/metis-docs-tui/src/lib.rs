@@ -115,20 +115,9 @@ async fn run_app<B: ratatui::backend::Backend>(
                                 }
                             }
                             KeyCode::Char('n') => {
-                                if app.is_ready() {
-                                    if key.modifiers.contains(KeyModifiers::CONTROL) {
-                                        // Ctrl+N: Create child document for selected item
-                                        app.start_child_document_creation();
-                                    } else {
-                                        // N: Create new document
-                                        app.start_document_creation();
-                                    }
-                                }
-                            }
-                            KeyCode::Char('a') => {
                                 if app.is_ready() && key.modifiers.contains(KeyModifiers::CONTROL) {
-                                    // Ctrl+A: Start ADR creation dialog
-                                    app.start_adr_creation();
+                                    // Ctrl+N: Smart document creation based on current board
+                                    app.start_smart_document_creation();
                                 }
                             }
                             KeyCode::Char('d') | KeyCode::Char('D') => {
@@ -159,6 +148,11 @@ async fn run_app<B: ratatui::backend::Backend>(
                             KeyCode::Char('4') => {
                                 if app.is_ready() {
                                     app.jump_to_adr_board();
+                                }
+                            }
+                            KeyCode::Char('5') => {
+                                if app.is_ready() {
+                                    app.jump_to_backlog_board();
                                 }
                             }
                             KeyCode::Char('v') | KeyCode::Char('V') => {
@@ -282,6 +276,23 @@ async fn run_app<B: ratatui::backend::Backend>(
                             app.cancel_confirmation();
                         }
                         _ => {}
+                    },
+                    AppState::SelectingBacklogCategory => {
+                        match key.code {
+                            KeyCode::Esc => {
+                                app.cancel_document_creation();
+                            }
+                            KeyCode::Up => {
+                                app.move_category_selection_up();
+                            }
+                            KeyCode::Down => {
+                                app.move_category_selection_down();
+                            }
+                            KeyCode::Enter => {
+                                app.confirm_category_selection();
+                            }
+                            _ => {}
+                        }
                     },
                     AppState::EditingContent => {
                         match key.code {

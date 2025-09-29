@@ -76,6 +76,27 @@ fn get_adr_column_index(adr: &Adr) -> usize {
     }
 }
 
+/// Get column index for backlog board based on task type
+/// Columns: backlog(0), bugs(1), features(2), tech-debt(3)
+fn get_backlog_column_index(task: &Task) -> usize {
+    use metis_core::{Document, domain::documents::types::Tag};
+    
+    // Check task tags to determine type
+    for tag in &task.core().tags {
+        if let Tag::Label(label) = tag {
+            match label.as_str() {
+                "bug" => return 1, // bugs column
+                "feature" => return 2, // features column
+                "tech-debt" => return 3, // tech-debt column
+                _ => {}
+            }
+        }
+    }
+    
+    // Default to backlog column (general items)
+    0
+}
+
 pub struct App {
     // Core application state
     pub core_state: state::CoreAppState,
@@ -158,7 +179,7 @@ impl App {
     }
 
     pub fn error_message(&self) -> Option<String> {
-        self.error_handler.get_user_friendly_message()
+        self.ui_state.message_state.get_current_message().map(|msg| msg.content.clone())
     }
 
     // Message handling methods
@@ -209,6 +230,10 @@ impl App {
 
     pub fn jump_to_adr_board(&mut self) {
         self.ui_state.current_board = BoardType::Adr;
+    }
+
+    pub fn jump_to_backlog_board(&mut self) {
+        self.ui_state.current_board = BoardType::Backlog;
     }
 
     pub fn view_vision_document(&mut self) {
@@ -303,6 +328,37 @@ impl App {
         self.ui_state.reset_input();
     }
 
+    pub fn start_smart_document_creation(&mut self) {
+        use crate::models::BoardType;
+        
+        match self.ui_state.current_board {
+            // Strategy board: Create initiative under selected strategy
+            BoardType::Strategy => {
+                self.ui_state.set_app_state(AppState::CreatingChildDocument);
+                self.ui_state.reset_input();
+            }
+            // Initiative board: Create task under selected initiative
+            BoardType::Initiative => {
+                self.ui_state.set_app_state(AppState::CreatingChildDocument);
+                self.ui_state.reset_input();
+            }
+            // Task board: No creation allowed - tasks created from Initiative or Backlog boards
+            BoardType::Task => {
+                self.add_error_message("Tasks are created from the Initiative board (with parent) or Backlog board (standalone)".to_string());
+            }
+            // ADR board: Create new ADR (standalone)
+            BoardType::Adr => {
+                self.ui_state.set_app_state(AppState::CreatingAdr);
+                self.ui_state.reset_input();
+            }
+            // Backlog board: Create backlog item (standalone)
+            BoardType::Backlog => {
+                self.ui_state.set_app_state(AppState::SelectingBacklogCategory);
+                self.ui_state.reset_input();
+            }
+        }
+    }
+
     pub fn start_child_document_creation(&mut self) {
         self.ui_state.set_app_state(AppState::CreatingChildDocument);
         self.ui_state.reset_input();
@@ -360,6 +416,7 @@ impl App {
                 BoardType::Initiative => &self.ui_state.initiative_board,
                 BoardType::Task => &self.ui_state.task_board,
                 BoardType::Adr => &self.ui_state.adr_board,
+                BoardType::Backlog => &self.ui_state.backlog_board,
             };
 
             if col_idx < board.columns.len() && item_idx < board.columns[col_idx].items.len() {
@@ -395,16 +452,118 @@ impl App {
                 BoardType::Initiative => DocumentType::Initiative,
                 BoardType::Task => DocumentType::Task,
                 BoardType::Adr => DocumentType::Adr,
+                BoardType::Backlog => DocumentType::Task, // Backlog items are tasks
             };
 
-            match document_service
-                .create_document(
-                    doc_type, title, None, // description
-                    None, // parent_id
-                )
-                .await
+            // For initiatives and tasks, we need to find an available parent
+            let parent_id = match doc_type {
+                DocumentType::Initiative => {
+                    // Find the first available strategy to use as parent
+                    let strategy_items: Vec<_> = self.ui_state.strategy_board.columns
+                        .iter()
+                        .flat_map(|col| &col.items)
+                        .collect();
+                    
+                    if let Some(strategy) = strategy_items.first() {
+                        Some(strategy.id())
+                    } else {
+                        self.add_error_message("Cannot create initiative: No strategy available as parent".to_string());
+                        self.ui_state.set_app_state(AppState::Normal);
+                        self.ui_state.reset_input();
+                        return Ok(());
+                    }
+                }
+                DocumentType::Task => {
+                    // For tasks on task board, find the first available initiative as parent
+                    if self.ui_state.current_board == BoardType::Task {
+                        let initiative_items: Vec<_> = self.ui_state.initiative_board.columns
+                            .iter()
+                            .flat_map(|col| &col.items)
+                            .collect();
+                        
+                        if let Some(initiative) = initiative_items.first() {
+                            Some(initiative.id())
+                        } else {
+                            self.add_error_message("Cannot create task: No initiative available as parent".to_string());
+                            self.ui_state.set_app_state(AppState::Normal);
+                            self.ui_state.reset_input();
+                            return Ok(());
+                        }
+                    } else {
+                        // For backlog tasks, no parent needed
+                        None
+                    }
+                }
+                _ => None
+            };
+
+            // For tasks with parent initiative, use create_child_task
+            let result = if doc_type == DocumentType::Task && parent_id.is_some() && self.ui_state.current_board == BoardType::Task {
+                // Find the strategy that owns this initiative
+                let initiative_items: Vec<_> = self.ui_state.initiative_board.columns
+                    .iter()
+                    .flat_map(|col| &col.items)
+                    .collect();
+                
+                if let Some(initiative) = initiative_items.first() {
+                    // Get the strategy ID from the initiative's parent
+                    use metis_core::Document;
+                    use crate::models::kanban::DocumentObject;
+                    
+                    let strategy_id = match &initiative.document {
+                        DocumentObject::Initiative(init) => init.parent_id(),
+                        _ => None,
+                    };
+                    
+                    if let Some(strategy_id) = strategy_id {
+                        match document_service
+                            .create_child_task(
+                                title,
+                                strategy_id.to_string(),
+                                initiative.id(),
+                            )
+                            .await
+                        {
+                            Ok(task_id) => Ok(task_id),
+                            Err(e) => Err(e)
+                        }
+                    } else {
+                        Err(anyhow::anyhow!("Initiative has no parent strategy"))
+                    }
+                } else {
+                    Err(anyhow::anyhow!("No initiative found for task creation"))
+                }
+            } else {
+                match document_service
+                    .create_document(
+                        doc_type, title, None, // description
+                        parent_id,
+                    )
+                    .await
+                {
+                    Ok(doc_id) => Ok(doc_id),
+                    Err(e) => Err(e)
+                }
+            };
+
+            match result
             {
-                Ok(_) => {
+                Ok(doc_id) => {
+                    // For backlog items, add the selected category tag
+                    if self.ui_state.current_board == BoardType::Backlog {
+                        if let Some(tag) = self.ui_state.selected_backlog_category.as_tag() {
+                            // Force a sync first to ensure the document is in the database
+                            if let Some(sync_service) = &self.sync_service {
+                                let _ = sync_service.sync_database().await;
+                            }
+                            
+                            // Add the tag to the document
+                            if let Err(_e) = self.add_tag_to_document(&doc_id, tag).await {
+                                // Silently handle tag addition errors
+                            }
+                        }
+                    }
+
                     self.add_success_message(format!("{} created successfully", doc_type));
                     self.ui_state.set_app_state(AppState::Normal);
                     self.ui_state.reset_input();
@@ -434,6 +593,7 @@ impl App {
             return Ok(());
         }
 
+        // Check if a parent item is selected
         if let Some(parent_item) = self.get_selected_item() {
             if let Some(document_service) = &self.document_service {
                 // Determine child document type based on parent
@@ -521,6 +681,17 @@ impl App {
                     }
                 }
             }
+        } else {
+            // No parent selected - show appropriate error message based on board
+            use crate::models::BoardType;
+            let error_msg = match self.ui_state.current_board {
+                BoardType::Strategy => "Please select a strategy first to create an initiative under it",
+                BoardType::Initiative => "Please select an initiative first to create a task under it",
+                _ => "Please select a parent document first",
+            };
+            self.add_error_message(error_msg.to_string());
+            self.ui_state.set_app_state(AppState::Normal);
+            self.ui_state.reset_input();
         }
 
         Ok(())
@@ -612,12 +783,16 @@ impl App {
             for column in &mut self.ui_state.adr_board.columns {
                 column.items.clear();
             }
+            for column in &mut self.ui_state.backlog_board.columns {
+                column.items.clear();
+            }
             
             // Reset selection state to avoid referencing non-existent items
             self.selection_state.strategy_selection = (0, 0);
             self.selection_state.initiative_selection = (0, 0);
             self.selection_state.task_selection = (0, 0);
             self.selection_state.adr_selection = (0, 0);
+            self.selection_state.backlog_selection = (0, 0);
             
             let mut documents = document_service.load_documents_from_database().await?;
 
@@ -662,6 +837,7 @@ impl App {
             self.ui_state.initiative_board = KanbanBoard::create_initiative_board();
             self.ui_state.task_board = KanbanBoard::create_task_board();
             self.ui_state.adr_board = KanbanBoard::create_adr_board();
+            self.ui_state.backlog_board = KanbanBoard::create_backlog_board();
 
             // Load documents into appropriate boards
             for doc in documents {
@@ -705,17 +881,39 @@ impl App {
                     DocumentType::Task => {
                         if let Ok(task) = Task::from_file(std::path::Path::new(&doc.filepath)).await
                         {
-                            let column_index = get_task_column_index(&task);
-                            let item = KanbanItem {
-                                document: DocumentObject::Task(task),
-                                prelude: doc.title.clone(),
-                                risk_complexity: None,
-                                file_path: doc.filepath,
-                            };
-                            if column_index < self.ui_state.task_board.columns.len() {
-                                self.ui_state.task_board.columns[column_index]
-                                    .items
-                                    .push(item);
+                            use metis_core::{domain::documents::types::Phase, Document};
+                            
+                            // Check if this is a backlog item (Phase::Backlog or no parent)
+                            let is_backlog = task.phase() == Ok(Phase::Backlog) || task.parent_id().is_none();
+                            
+                            if is_backlog {
+                                // Place in backlog board
+                                let column_index = get_backlog_column_index(&task);
+                                let item = KanbanItem {
+                                    document: DocumentObject::Task(task),
+                                    prelude: doc.title.clone(),
+                                    risk_complexity: None,
+                                    file_path: doc.filepath,
+                                };
+                                if column_index < self.ui_state.backlog_board.columns.len() {
+                                    self.ui_state.backlog_board.columns[column_index]
+                                        .items
+                                        .push(item);
+                                }
+                            } else {
+                                // Place in regular task board
+                                let column_index = get_task_column_index(&task);
+                                let item = KanbanItem {
+                                    document: DocumentObject::Task(task),
+                                    prelude: doc.title.clone(),
+                                    risk_complexity: None,
+                                    file_path: doc.filepath,
+                                };
+                                if column_index < self.ui_state.task_board.columns.len() {
+                                    self.ui_state.task_board.columns[column_index]
+                                        .items
+                                        .push(item);
+                                }
                             }
                         }
                     }
@@ -925,6 +1123,92 @@ impl App {
         // Show success message
         self.add_success_message("Synchronization completed".to_string());
 
+        Ok(())
+    }
+
+    // Backlog category selection methods
+    pub fn move_category_selection_up(&mut self) {
+        if self.ui_state.backlog_category_selection > 0 {
+            self.ui_state.backlog_category_selection -= 1;
+            self.update_selected_category();
+        }
+    }
+
+    pub fn move_category_selection_down(&mut self) {
+        if self.ui_state.backlog_category_selection < 3 { // 4 categories (0-3)
+            self.ui_state.backlog_category_selection += 1;
+            self.update_selected_category();
+        }
+    }
+
+    pub fn confirm_category_selection(&mut self) {
+        // Move to document creation with the selected category
+        self.ui_state.set_app_state(AppState::CreatingDocument);
+    }
+
+    fn update_selected_category(&mut self) {
+        use crate::app::state::BacklogCategory;
+        self.ui_state.selected_backlog_category = match self.ui_state.backlog_category_selection {
+            0 => BacklogCategory::General,
+            1 => BacklogCategory::Bug,
+            2 => BacklogCategory::Feature,
+            3 => BacklogCategory::TechDebt,
+            _ => BacklogCategory::General,
+        };
+    }
+
+    async fn add_tag_to_document(&self, doc_id: &str, tag: &str) -> Result<()> {
+        if let Some(document_service) = &self.document_service {
+            // Get document from database to find file path
+            let docs = document_service.load_documents_from_database().await?;
+            
+            if let Some(doc) = docs.iter().find(|d| d.id == doc_id) {
+                // Read the file content
+                let content = std::fs::read_to_string(&doc.filepath)?;
+                
+                // Add the tag to the frontmatter - look for the actual format used
+                let updated_content = if content.contains("tags:") {
+                    // Look for the pattern: find the last tag line and insert after it
+                    let lines: Vec<&str> = content.lines().collect();
+                    let mut new_lines = Vec::new();
+                    let mut in_tags_section = false;
+                    let mut tags_section_ended = false;
+                    let tag_line = format!("  - \"{}\"", tag);
+                    
+                    for line in lines {
+                        if line.trim() == "tags:" {
+                            in_tags_section = true;
+                            new_lines.push(line.to_string());
+                        } else if in_tags_section && !tags_section_ended {
+                            if line.trim().starts_with("- \"#") {
+                                // This is a tag line, keep it
+                                new_lines.push(line.to_string());
+                            } else if line.trim().is_empty() {
+                                // Found empty line after tags, insert our tag before it
+                                new_lines.push(tag_line.clone());
+                                new_lines.push(line.to_string());
+                                tags_section_ended = true;
+                            } else {
+                                // Non-tag line found, insert our tag before it
+                                new_lines.push(tag_line.clone());
+                                new_lines.push(line.to_string());
+                                tags_section_ended = true;
+                            }
+                        } else {
+                            new_lines.push(line.to_string());
+                        }
+                    }
+                    
+                    new_lines.join("\n")
+                } else {
+                    // This shouldn't happen for properly created documents, but handle it
+                    content
+                };
+                
+                // Write the updated content back
+                std::fs::write(&doc.filepath, updated_content)?;
+            }
+        }
         Ok(())
     }
 }

@@ -2,13 +2,47 @@
 
 *This template includes sections for various types of tasks. Delete sections that don't apply to your specific use case.*
 
-## Parent Initiative **[REQUIRED]**
+## Parent Initiative **[CONDITIONAL: Assigned Task]**
 
-[[{{ parent_title }}]]
+{% if parent_title %}[[{{ parent_title }}]]{% else %}{This task is in the backlog and not yet assigned to an initiative. Delete this section for backlog items.}{% endif %}
 
 ## Objective **[REQUIRED]**
 
 {Clear statement of what this task accomplishes}
+
+## Backlog Item Details **[CONDITIONAL: Backlog Item]**
+
+{Delete this section when task is assigned to an initiative}
+
+### Type
+- [ ] Bug - Production issue that needs fixing
+- [ ] Feature - New functionality or enhancement  
+- [ ] Tech Debt - Code improvement or refactoring
+- [ ] Chore - Maintenance or setup work
+
+### Priority
+- [ ] P0 - Critical (blocks users/revenue)
+- [ ] P1 - High (important for user experience)
+- [ ] P2 - Medium (nice to have)
+- [ ] P3 - Low (when time permits)
+
+### Impact Assessment **[CONDITIONAL: Bug]**
+- **Affected Users**: {Number/percentage of users affected}
+- **Reproduction Steps**: 
+  1. {Step 1}
+  2. {Step 2}
+  3. {Step 3}
+- **Expected vs Actual**: {What should happen vs what happens}
+
+### Business Justification **[CONDITIONAL: Feature]**
+- **User Value**: {Why users need this}
+- **Business Value**: {Impact on metrics/revenue}
+- **Effort Estimate**: {Rough size - S/M/L/XL}
+
+### Technical Debt Impact **[CONDITIONAL: Tech Debt]**
+- **Current Problems**: {What's difficult/slow/buggy now}
+- **Benefits of Fixing**: {What improves after refactoring}
+- **Risk Assessment**: {Risks of not addressing this}
 
 ## Acceptance Criteria **[REQUIRED]**
 

@@ -159,6 +159,7 @@ impl Task {
     fn next_phase_in_sequence(current: Phase) -> Option<Phase> {
         use Phase::*;
         match current {
+            Backlog => None,   // Backlog doesn't auto-transition - must be explicitly assigned
             Todo => Some(Active),
             Active => Some(Completed),
             Completed => None, // Final phase
@@ -273,6 +274,7 @@ impl Document for Task {
         if let Ok(current_phase) = self.phase() {
             use Phase::*;
             match (current_phase, phase) {
+                (Backlog, Todo) => true, // Move from backlog to todo when assigned to initiative
                 (Todo, Active) => true,
                 (Active, Completed) => true,
                 (Active, Blocked) => true,
@@ -302,11 +304,20 @@ impl Document for Task {
             ));
         }
 
-        // Tasks should typically have a parent (Initiative)
+        // Tasks should have a parent (Initiative) unless they are in Backlog phase
         if self.parent_id().is_none() {
-            return Err(DocumentValidationError::MissingRequiredField(
-                "Tasks should have a parent Initiative".to_string(),
-            ));
+            // Allow no parent only if task is in Backlog phase
+            if let Ok(phase) = self.phase() {
+                if phase != Phase::Backlog {
+                    return Err(DocumentValidationError::MissingRequiredField(
+                        "Tasks should have a parent Initiative unless in Backlog phase".to_string(),
+                    ));
+                }
+            } else {
+                return Err(DocumentValidationError::MissingRequiredField(
+                    "Tasks should have a parent Initiative".to_string(),
+                ));
+            }
         }
 
         // If blocked, must have blocking documents listed

@@ -136,21 +136,23 @@ impl CreateDocumentTool {
                     .map_err(|e| CallToolError::new(e))?
             }
             DocumentType::Task => {
-                let initiative_id = self.parent_id.as_ref().ok_or_else(|| {
-                    CallToolError::new(std::io::Error::new(
-                        std::io::ErrorKind::InvalidInput,
-                        "Task requires a parent initiative ID",
-                    ))
-                })?;
+                if let Some(initiative_id) = self.parent_id.as_ref() {
+                    // Regular task with parent initiative
+                    // For tasks, we need to resolve the strategy ID from the initiative's location
+                    // The initiative file is at strategies/{strategy_id}/initiatives/{initiative_id}/initiative.md
+                    let strategy_id = self.find_strategy_id_for_initiative(metis_dir, initiative_id)?;
 
-                // For tasks, we need to resolve the strategy ID from the initiative's location
-                // The initiative file is at strategies/{strategy_id}/initiatives/{initiative_id}/initiative.md
-                let strategy_id = self.find_strategy_id_for_initiative(metis_dir, initiative_id)?;
-
-                creation_service
-                    .create_task(config, &strategy_id, initiative_id)
-                    .await
-                    .map_err(|e| CallToolError::new(e))?
+                    creation_service
+                        .create_task(config, &strategy_id, initiative_id)
+                        .await
+                        .map_err(|e| CallToolError::new(e))?
+                } else {
+                    // Backlog item without parent
+                    creation_service
+                        .create_backlog_item(config)
+                        .await
+                        .map_err(|e| CallToolError::new(e))?
+                }
             }
             DocumentType::Adr => creation_service
                 .create_adr(config)

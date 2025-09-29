@@ -273,6 +273,77 @@ impl DocumentCreationService {
         })
     }
 
+    /// Create a new backlog item (task without parent)
+    pub async fn create_backlog_item(&self, config: DocumentCreationConfig) -> Result<CreationResult> {
+        // Generate task ID from title
+        let task_id = self.generate_id_from_title(&config.title);
+        
+        // Create backlog directory structure based on tags
+        let backlog_dir = self.determine_backlog_directory(&config.tags);
+        let file_path = backlog_dir.join(format!("{}.md", task_id));
+
+        // Check if backlog item already exists
+        if file_path.exists() {
+            return Err(MetisError::ValidationFailed {
+                message: format!("Backlog item with ID '{}' already exists", task_id),
+            });
+        }
+
+        // Create backlog item with defaults - no parent, Backlog phase
+        let mut tags = vec![
+            Tag::Label("task".to_string()),
+            Tag::Phase(config.phase.unwrap_or(Phase::Backlog)),
+        ];
+        tags.extend(config.tags);
+
+        let task = Task::new(
+            config.title.clone(),
+            None,                            // No parent for backlog items
+            None,                            // No parent title for template
+            Vec::new(),                      // blocked_by
+            tags,
+            false, // not archived
+        )
+        .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
+
+        // Create parent directory if needed
+        if !backlog_dir.exists() {
+            fs::create_dir_all(&backlog_dir)
+                .map_err(|e| MetisError::FileSystem(e.to_string()))?;
+        }
+
+        // Write to file
+        task.to_file(&file_path)
+            .await
+            .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
+
+        Ok(CreationResult {
+            document_id: task.id(),
+            document_type: DocumentType::Task,
+            file_path,
+        })
+    }
+
+    /// Determine the backlog directory based on tags
+    fn determine_backlog_directory(&self, tags: &[Tag]) -> PathBuf {
+        let base_backlog_dir = self.workspace_dir.join("backlog");
+        
+        // Check for type tags to determine subdirectory
+        for tag in tags {
+            if let Tag::Label(label) = tag {
+                match label.as_str() {
+                    "bug" => return base_backlog_dir.join("bugs"),
+                    "feature" => return base_backlog_dir.join("features"),
+                    "tech-debt" => return base_backlog_dir.join("tech-debt"),
+                    _ => {}
+                }
+            }
+        }
+        
+        // Default to general backlog if no specific type found
+        base_backlog_dir
+    }
+
     /// Create a new ADR document
     pub async fn create_adr(&self, config: DocumentCreationConfig) -> Result<CreationResult> {
         // Find the next ADR number

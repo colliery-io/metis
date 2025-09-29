@@ -6,6 +6,7 @@ use ratatui::{
 };
 
 use crate::app::App;
+use crate::app::state::BacklogCategory;
 use metis_core::domain::documents::types::DocumentType;
 
 fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
@@ -63,8 +64,16 @@ pub fn draw_creation_dialog(f: &mut Frame, app: &App, area: Rect) {
         .margin(2)
         .split(dialog_area);
 
-    // Dialog title
-    let title = Paragraph::new("Create New Strategy").style(
+    // Dialog title - dynamic based on current board
+    let doc_type_name = match app.ui_state.current_board {
+        crate::models::BoardType::Strategy => "Strategy",
+        crate::models::BoardType::Initiative => "Initiative", 
+        crate::models::BoardType::Task => "Task",
+        crate::models::BoardType::Adr => "ADR",
+        crate::models::BoardType::Backlog => "Backlog Item",
+    };
+    
+    let title = Paragraph::new(format!("Create New {}", doc_type_name)).style(
         Style::default()
             .fg(Color::Cyan)
             .add_modifier(Modifier::BOLD),
@@ -90,14 +99,14 @@ pub fn draw_creation_dialog(f: &mut Frame, app: &App, area: Rect) {
         .block(
             Block::default()
                 .borders(Borders::ALL)
-                .title(format!("Strategy Title ({}/30)", input_value.len()))
+                .title(format!("{} Title ({}/30)", doc_type_name, input_value.len()))
                 .style(Style::default().fg(Color::Cyan)),
         );
     f.render_widget(input_widget, dialog_chunks[2]);
 
     // Instructions
     let instructions = Paragraph::new(
-        "Enter a title for your new strategy.\nPress Enter to create or Escape to cancel.",
+        format!("Enter a title for your new {}.\nPress Enter to create or Escape to cancel.", doc_type_name.to_lowercase()),
     )
     .style(Style::default().fg(Color::Gray))
     .wrap(Wrap { trim: true });
@@ -366,4 +375,114 @@ pub fn draw_adr_creation_dialog(f: &mut Frame, app: &App, area: Rect) {
         .borders(Borders::ALL)
         .border_style(Style::default().fg(Color::Cyan));
     f.render_widget(border, popup_area);
+}
+
+pub fn draw_backlog_category_selection_dialog(f: &mut Frame, app: &App, area: Rect) {
+    // Create a centered dialog
+    let dialog_width = 50;
+    let dialog_height = 14;
+    let x = (area.width.saturating_sub(dialog_width)) / 2;
+    let y = (area.height.saturating_sub(dialog_height)) / 2;
+
+    let dialog_area = Rect {
+        x,
+        y,
+        width: dialog_width,
+        height: dialog_height,
+    };
+
+    // Clear the dialog area
+    f.render_widget(
+        Block::default()
+            .style(Style::default().bg(Color::Black))
+            .borders(Borders::ALL),
+        dialog_area,
+    );
+
+    // Create layout for the dialog content
+    let dialog_chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(1), // Title
+            Constraint::Length(1), // Spacer
+            Constraint::Length(8), // Category options
+            Constraint::Length(1), // Spacer
+            Constraint::Min(1),    // Instructions
+        ])
+        .margin(2)
+        .split(dialog_area);
+
+    // Dialog title
+    let title = Paragraph::new("Select Backlog Category").style(
+        Style::default()
+            .fg(Color::Cyan)
+            .add_modifier(Modifier::BOLD),
+    );
+    f.render_widget(title, dialog_chunks[0]);
+
+    // Category options
+    let categories = [
+        BacklogCategory::General,
+        BacklogCategory::Bug,
+        BacklogCategory::Feature,
+        BacklogCategory::TechDebt,
+    ];
+
+    let descriptions = [
+        "General items that don't fit other categories",
+        "Production issues that need fixing",
+        "New functionality or enhancements",
+        "Code improvements or refactoring",
+    ];
+
+    for (i, (category, description)) in categories.iter().zip(descriptions.iter()).enumerate() {
+        let is_selected = i == app.ui_state.backlog_category_selection;
+        
+        let (name_style, desc_style) = if is_selected {
+            (
+                Style::default().fg(Color::Black).bg(Color::Cyan).add_modifier(Modifier::BOLD),
+                Style::default().fg(Color::Black).bg(Color::Cyan),
+            )
+        } else {
+            (
+                Style::default().fg(Color::White),
+                Style::default().fg(Color::Gray),
+            )
+        };
+
+        let option_area = Rect {
+            x: dialog_chunks[2].x,
+            y: dialog_chunks[2].y + i as u16 * 2,
+            width: dialog_chunks[2].width,
+            height: 2,
+        };
+
+        // Category name
+        let name_paragraph = Paragraph::new(format!("  {}", category.display_name()))
+            .style(name_style);
+        f.render_widget(name_paragraph, Rect {
+            x: option_area.x,
+            y: option_area.y,
+            width: option_area.width,
+            height: 1,
+        });
+
+        // Category description
+        let desc_paragraph = Paragraph::new(format!("    {}", description))
+            .style(desc_style);
+        f.render_widget(desc_paragraph, Rect {
+            x: option_area.x,
+            y: option_area.y + 1,
+            width: option_area.width,
+            height: 1,
+        });
+    }
+
+    // Instructions
+    let instructions = Paragraph::new(
+        "↑↓: Navigate categories | Enter: Select | Esc: Cancel",
+    )
+    .style(Style::default().fg(Color::Gray))
+    .wrap(Wrap { trim: true });
+    f.render_widget(instructions, dialog_chunks[4]);
 }

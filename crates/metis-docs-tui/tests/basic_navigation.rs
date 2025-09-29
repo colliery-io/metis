@@ -43,9 +43,15 @@ async fn test_basic_board_navigation() -> Result<()> {
     assert_eq!(app.ui_state.current_board, BoardType::Adr);
 
     app.next_board();
+    assert_eq!(app.ui_state.current_board, BoardType::Backlog);
+
+    app.next_board();
     assert_eq!(app.ui_state.current_board, BoardType::Strategy);
 
     // Test board navigation with shift-tab
+    app.previous_board();
+    assert_eq!(app.ui_state.current_board, BoardType::Backlog);
+
     app.previous_board();
     assert_eq!(app.ui_state.current_board, BoardType::Adr);
 
@@ -64,6 +70,9 @@ async fn test_basic_board_navigation() -> Result<()> {
 
     app.jump_to_adr_board();
     assert_eq!(app.ui_state.current_board, BoardType::Adr);
+
+    app.jump_to_backlog_board();
+    assert_eq!(app.ui_state.current_board, BoardType::Backlog);
 
     Ok(())
 }

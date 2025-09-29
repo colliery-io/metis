@@ -383,18 +383,20 @@ async fn test_concurrent_modifications() -> Result<()> {
     let strategy_path = "strategies/concurrent-test-strategy/strategy.md";
 
     // Simulate concurrent updates to different sections
-    let update1 = UpdateDocumentContentTool {
+    let update1 = EditDocumentTool {
         project_path: helper.metis_dir.clone(),
         document_path: strategy_path.to_string(),
-        section_heading: "Problem Statement".to_string(),
-        new_content: "First concurrent update to problem statement.".to_string(),
+        search: "{What problem does this strategy solve}".to_string(),
+        replace: "First concurrent update to problem statement.".to_string(),
+        replace_all: None,
     };
 
-    let update2 = UpdateDocumentContentTool {
+    let update2 = EditDocumentTool {
         project_path: helper.metis_dir.clone(),
         document_path: strategy_path.to_string(),
-        section_heading: "Target Outcomes".to_string(),
-        new_content: "Second concurrent update to target outcomes.".to_string(),
+        search: "{What success looks like}".to_string(),
+        replace: "Second concurrent update to target outcomes.".to_string(),
+        replace_all: None,
     };
 
     // Execute updates concurrently
@@ -487,11 +489,12 @@ async fn test_invalid_document_ids_and_paths() -> Result<()> {
     }
 
     // Try to update content with invalid path
-    let update = UpdateDocumentContentTool {
+    let update = EditDocumentTool {
         project_path: helper.metis_dir.clone(),
         document_path: "invalid/path/to/document.md".to_string(),
-        section_heading: "Some Section".to_string(),
-        new_content: "New content".to_string(),
+        search: "Some content".to_string(),
+        replace: "New content".to_string(),
+        replace_all: None,
     };
 
     let result = update.call_tool().await;
@@ -502,11 +505,12 @@ async fn test_invalid_document_ids_and_paths() -> Result<()> {
     }
 
     // Try path traversal attack
-    let malicious_update = UpdateDocumentContentTool {
+    let malicious_update = EditDocumentTool {
         project_path: helper.metis_dir.clone(),
         document_path: "../../../etc/passwd".to_string(),
-        section_heading: "root".to_string(),
-        new_content: "malicious content".to_string(),
+        search: "root".to_string(),
+        replace: "malicious content".to_string(),
+        replace_all: None,
     };
 
     let result = malicious_update.call_tool().await;

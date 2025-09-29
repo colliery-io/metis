@@ -456,11 +456,12 @@ async fn test_mcp_document_content_editing() -> Result<()> {
     println!("=== Test Document Content Editing ===");
 
     // Update vision document content
-    let update_content = UpdateDocumentContentTool {
+    let update_content = EditDocumentTool {
         project_path: helper.metis_dir.clone(),
         document_path: "vision.md".to_string(),
-        section_heading: "Purpose".to_string(),
-        new_content: "To create an exceptional user experience that drives customer satisfaction and business growth.".to_string(),
+        search: "{Why this vision exists and what it aims to achieve}".to_string(),
+        replace: "To create an exceptional user experience that drives customer satisfaction and business growth.".to_string(),
+        replace_all: None,
     };
 
     let result = update_content.call_tool().await;

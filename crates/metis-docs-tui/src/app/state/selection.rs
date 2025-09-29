@@ -7,6 +7,7 @@ pub struct SelectionState {
     pub initiative_selection: (usize, usize),
     pub task_selection: (usize, usize),
     pub adr_selection: (usize, usize),
+    pub backlog_selection: (usize, usize),
 }
 
 impl SelectionState {
@@ -16,6 +17,7 @@ impl SelectionState {
             initiative_selection: (0, 0),
             task_selection: (0, 0),
             adr_selection: (0, 0),
+            backlog_selection: (0, 0),
         }
     }
 
@@ -25,6 +27,7 @@ impl SelectionState {
             BoardType::Initiative => self.initiative_selection,
             BoardType::Task => self.task_selection,
             BoardType::Adr => self.adr_selection,
+            BoardType::Backlog => self.backlog_selection,
         }
     }
 
@@ -34,6 +37,7 @@ impl SelectionState {
             BoardType::Initiative => &mut self.initiative_selection,
             BoardType::Task => &mut self.task_selection,
             BoardType::Adr => &mut self.adr_selection,
+            BoardType::Backlog => &mut self.backlog_selection,
         }
     }
 

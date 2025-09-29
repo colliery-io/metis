@@ -54,7 +54,7 @@ impl DocumentService {
             }
             DocumentType::Task => {
                 if let Some(initiative_id) = &parent_id {
-                    // For tasks, we need both strategy and initiative IDs
+                    // For tasks with parent, we need both strategy and initiative IDs
                     // Try to create the task and let the creation service handle validation
                     match creation_service
                         .create_task(config, initiative_id, initiative_id)
@@ -64,7 +64,8 @@ impl DocumentService {
                         Err(e) => return Err(anyhow::anyhow!("Failed to create task: {}", e)),
                     }
                 } else {
-                    return Err(anyhow::anyhow!("Task requires a parent initiative"));
+                    // For tasks without parent, create as backlog item
+                    creation_service.create_backlog_item(config).await?
                 }
             }
             DocumentType::Adr => creation_service.create_adr(config).await?,

@@ -90,6 +90,7 @@ impl TransitionPhaseTool {
             "discussion" => Ok(Phase::Discussion),
             "decided" => Ok(Phase::Decided),
             "superseded" => Ok(Phase::Superseded),
+            "backlog" => Ok(Phase::Backlog),
             "todo" => Ok(Phase::Todo),
             "active" => Ok(Phase::Active),
             "blocked" => Ok(Phase::Blocked),

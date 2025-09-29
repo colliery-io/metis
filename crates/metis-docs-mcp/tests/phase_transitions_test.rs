@@ -102,12 +102,13 @@ async fn test_vision_phase_transitions() -> Result<()> {
     validate_phase_transition(&helper, "vision.md", "draft", "vision", &vision_id).await?;
 
     // Update some content to meet exit criteria
-    let update_content = UpdateDocumentContentTool {
+    let update_content = EditDocumentTool {
         project_path: helper.metis_dir.clone(),
         document_path: "vision.md".to_string(),
-        section_heading: "Purpose".to_string(),
-        new_content: "To create an exceptional platform that transforms how teams collaborate."
+        search: "{Why this vision exists and what it aims to achieve}".to_string(),
+        replace: "To create an exceptional platform that transforms how teams collaborate."
             .to_string(),
+        replace_all: None,
     };
     let result = update_content.call_tool().await;
     assert!(
@@ -1020,21 +1021,23 @@ async fn test_phase_transitions_with_dependencies() -> Result<()> {
         .ok_or_else(|| anyhow::anyhow!("Dependent strategy not found"))?;
 
     // Set up dependency using content update to an existing section
-    let update_blocked = UpdateDocumentContentTool {
+    let update_blocked = EditDocumentTool {
         project_path: helper.metis_dir.clone(),
         document_path: "strategies/dependent-strategy/strategy.md".to_string(),
-        section_heading: "Dependencies".to_string(),
-        new_content: "This strategy depends on: Prerequisite Strategy".to_string(),
+        search: "{Dependencies or external factors}".to_string(),
+        replace: "This strategy depends on: Prerequisite Strategy".to_string(),
+        replace_all: None,
     };
 
     let result = update_blocked.call_tool().await;
     // If Dependencies section doesn't exist either, use Problem Statement
     if result.is_err() {
-        let update_problem = UpdateDocumentContentTool {
+        let update_problem = EditDocumentTool {
             project_path: helper.metis_dir.clone(),
             document_path: "strategies/dependent-strategy/strategy.md".to_string(),
-            section_heading: "Problem Statement".to_string(),
-            new_content: "This strategy is blocked by: Prerequisite Strategy".to_string(),
+            search: "{What problem does this strategy solve}".to_string(),
+            replace: "This strategy is blocked by: Prerequisite Strategy".to_string(),
+            replace_all: None,
         };
         let result = update_problem.call_tool().await;
         assert!(

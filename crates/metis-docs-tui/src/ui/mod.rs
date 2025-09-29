@@ -22,7 +22,7 @@ pub fn draw(f: &mut Frame, app: &App) {
     let in_dialog = matches!(
         app.app_state(),
         AppState::CreatingDocument | AppState::CreatingChildDocument | 
-        AppState::CreatingAdr | AppState::Confirming
+        AppState::CreatingAdr | AppState::Confirming | AppState::SelectingBacklogCategory
     );
     
     // Only allocate space for messages when not in dialog and has messages
@@ -61,6 +61,8 @@ pub fn draw(f: &mut Frame, app: &App) {
                 draw_child_creation_dialog(f, app, f.area());
             } else if app.app_state() == &AppState::CreatingAdr {
                 draw_adr_creation_dialog(f, app, f.area());
+            } else if app.app_state() == &AppState::SelectingBacklogCategory {
+                draw_backlog_category_selection_dialog(f, app, f.area());
             } else if app.app_state() == &AppState::Confirming {
                 draw_confirmation_dialog(f, app, f.area());
             }
@@ -90,6 +92,7 @@ fn draw_header(f: &mut Frame, app: &App, area: Rect) {
                 BoardType::Initiative => "Initiative",
                 BoardType::Task => "Task",
                 BoardType::Adr => "ADR",
+                BoardType::Backlog => "Backlog",
             }
         )
     } else {
@@ -151,6 +154,7 @@ fn draw_footer(f: &mut Frame, app: &App, area: Rect) {
         AppState::CreatingDocument => "Enter: Create | Escape: Cancel | Type to enter title",
         AppState::CreatingChildDocument => "Enter: Create | Escape: Cancel | Type to enter title",
         AppState::CreatingAdr => "Enter: Create ADR | Escape: Cancel | Type to enter title",
+        AppState::SelectingBacklogCategory => "↑↓: Navigate | Enter: Select | Escape: Cancel",
         AppState::EditingContent => "Ctrl+S: Save | Esc: Cancel | Type to edit document content",
         AppState::Confirming => match app.ui_state.confirmation_type {
             Some(crate::app::state::ConfirmationType::Delete) => "Y: Yes, delete | N: Cancel",
@@ -161,7 +165,20 @@ fn draw_footer(f: &mut Frame, app: &App, area: Rect) {
         },
         _ => {
             if app.is_ready() {
-                "↑↓←→: Navigate | 1-4: Jump to board | v: Vision | Tab: Switch | Enter: Edit | n: New | Ctrl+n: Child | Ctrl+a: ADR | d: Del | r: Archive | t: Trans | y: Sync | q: Quit"
+                use crate::models::BoardType;
+                let create_text = match app.ui_state.current_board {
+                    BoardType::Strategy => "Ctrl+n: Create Initiative",
+                    BoardType::Initiative => "Ctrl+n: Create Task", 
+                    BoardType::Task => "", // No creation on task board
+                    BoardType::Adr => "Ctrl+n: Create ADR",
+                    BoardType::Backlog => "Ctrl+n: Create Backlog Item",
+                };
+                
+                if create_text.is_empty() {
+                    "↑↓←→: Navigate | 1-5: Jump to board | v: Vision | Tab: Switch | Enter: Edit | d: Del | r: Archive | t: Trans | y: Sync | q: Quit"
+                } else {
+                    &format!("↑↓←→: Navigate | 1-5: Jump to board | v: Vision | Tab: Switch | Enter: Edit | {} | d: Del | r: Archive | t: Trans | y: Sync | q: Quit", create_text)
+                }
             } else {
                 "q: Quit"
             }

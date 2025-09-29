@@ -131,6 +131,7 @@ pub enum Phase {
     Superseded,
 
     // General phases
+    Backlog,
     Todo,
     Active,
     Blocked,
@@ -153,6 +154,7 @@ impl fmt::Display for Phase {
             Phase::Discussion => write!(f, "discussion"),
             Phase::Decided => write!(f, "decided"),
             Phase::Superseded => write!(f, "superseded"),
+            Phase::Backlog => write!(f, "backlog"),
             Phase::Todo => write!(f, "todo"),
             Phase::Active => write!(f, "active"),
             Phase::Blocked => write!(f, "blocked"),
@@ -228,6 +230,7 @@ impl std::str::FromStr for Tag {
                 "ready" => Ok(Tag::Phase(Phase::Ready)),
                 "decompose" => Ok(Tag::Phase(Phase::Decompose)),
                 "discovery" => Ok(Tag::Phase(Phase::Discovery)),
+                "backlog" => Ok(Tag::Phase(Phase::Backlog)),
                 _ => Err(()), // Unknown phase
             }
         } else if let Some(stripped) = s.strip_prefix("#") {

@@ -76,6 +76,7 @@ pub enum BoardType {
     Initiative,
     Task,
     Adr,
+    Backlog,
 }
 
 #[derive(Debug, PartialEq)]
@@ -86,6 +87,7 @@ pub enum AppState {
     CreatingAdr,
     EditingContent,
     Confirming,
+    SelectingBacklogCategory,
 }
 
 impl KanbanBoard {
@@ -187,6 +189,29 @@ impl KanbanBoard {
                 },
                 KanbanColumn {
                     title: "superseded".to_string(),
+                    items: vec![],
+                },
+            ],
+        }
+    }
+
+    pub fn create_backlog_board() -> Self {
+        Self {
+            columns: vec![
+                KanbanColumn {
+                    title: "backlog".to_string(),
+                    items: vec![],
+                },
+                KanbanColumn {
+                    title: "bugs".to_string(),
+                    items: vec![],
+                },
+                KanbanColumn {
+                    title: "features".to_string(),
+                    items: vec![],
+                },
+                KanbanColumn {
+                    title: "tech-debt".to_string(),
                     items: vec![],
                 },
             ],
