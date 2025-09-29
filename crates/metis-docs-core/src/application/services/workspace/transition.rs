@@ -272,6 +272,7 @@ impl PhaseTransitionService {
                 _ => vec![],
             },
             DocumentType::Task => match from_phase {
+                Phase::Backlog => vec![Phase::Todo],
                 Phase::Todo => vec![Phase::Active, Phase::Blocked],
                 Phase::Active => vec![Phase::Todo, Phase::Completed, Phase::Blocked],
                 Phase::Blocked => vec![Phase::Todo, Phase::Active],
@@ -339,6 +340,7 @@ impl PhaseTransitionService {
             },
             DocumentType::Task => {
                 match current_phase {
+                    Phase::Backlog => Ok(Phase::Todo), // Transition from backlog to todo
                     Phase::Todo => Ok(Phase::Active),
                     Phase::Active => Ok(Phase::Completed),
                     Phase::Blocked => Ok(Phase::Active), // Unblock by default
@@ -568,6 +570,11 @@ mod tests {
         let strategy_shaping_transitions =
             transition_service.get_valid_transitions_for(DocumentType::Strategy, Phase::Shaping);
         assert_eq!(strategy_shaping_transitions, vec![Phase::Design]);
+
+        // Test task transitions - specifically backlog to todo
+        let task_backlog_transitions =
+            transition_service.get_valid_transitions_for(DocumentType::Task, Phase::Backlog);
+        assert_eq!(task_backlog_transitions, vec![Phase::Todo]);
     }
 
     #[tokio::test]

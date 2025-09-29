@@ -154,65 +154,84 @@ impl DocumentDiscoveryService {
             }
 
             DocumentType::Task => {
-                let strategies_dir = self.workspace_dir.join("strategies");
-                if !strategies_dir.exists() {
-                    return Err(MetisError::NotFound(
-                        "No strategies directory found".to_string(),
-                    ));
-                }
-
-                for strategy_entry in fs::read_dir(&strategies_dir)
-                    .map_err(|e| MetisError::FileSystem(e.to_string()))?
-                {
-                    let strategy_dir = strategy_entry
-                        .map_err(|e| MetisError::FileSystem(e.to_string()))?
-                        .path();
-                    if !strategy_dir.is_dir() {
-                        continue;
-                    }
-
-                    let initiatives_dir = strategy_dir.join("initiatives");
-                    if !initiatives_dir.exists() {
-                        continue;
-                    }
-
-                    for initiative_entry in fs::read_dir(&initiatives_dir)
+                // First check backlog directory for backlog tasks
+                let backlog_dir = self.workspace_dir.join("backlog");
+                if backlog_dir.exists() {
+                    for entry in fs::read_dir(&backlog_dir)
                         .map_err(|e| MetisError::FileSystem(e.to_string()))?
                     {
-                        let initiative_dir = initiative_entry
+                        let task_path = entry
                             .map_err(|e| MetisError::FileSystem(e.to_string()))?
                             .path();
-                        if !initiative_dir.is_dir() {
+                        if task_path.is_file()
+                            && task_path.extension().is_some_and(|ext| ext == "md")
+                        {
+                            if let Ok(task) = Task::from_file(&task_path).await {
+                                if task.id().to_string() == document_id {
+                                    return Ok(task_path);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Then check strategies directory for assigned tasks
+                let strategies_dir = self.workspace_dir.join("strategies");
+                if strategies_dir.exists() {
+                    for strategy_entry in fs::read_dir(&strategies_dir)
+                        .map_err(|e| MetisError::FileSystem(e.to_string()))?
+                    {
+                        let strategy_dir = strategy_entry
+                            .map_err(|e| MetisError::FileSystem(e.to_string()))?
+                            .path();
+                        if !strategy_dir.is_dir() {
                             continue;
                         }
 
-                        // Look for task files in the initiative directory
-                        for task_entry in fs::read_dir(&initiative_dir)
+                        let initiatives_dir = strategy_dir.join("initiatives");
+                        if !initiatives_dir.exists() {
+                            continue;
+                        }
+
+                        for initiative_entry in fs::read_dir(&initiatives_dir)
                             .map_err(|e| MetisError::FileSystem(e.to_string()))?
                         {
-                            let task_path = task_entry
+                            let initiative_dir = initiative_entry
                                 .map_err(|e| MetisError::FileSystem(e.to_string()))?
                                 .path();
-                            if task_path.is_file()
-                                && task_path.extension().is_some_and(|ext| ext == "md")
-                            {
-                                // Skip initiative.md
-                                if task_path
-                                    .file_name()
-                                    .is_some_and(|name| name == "initiative.md")
-                                {
-                                    continue;
-                                }
+                            if !initiative_dir.is_dir() {
+                                continue;
+                            }
 
-                                if let Ok(task) = Task::from_file(&task_path).await {
-                                    if task.id().to_string() == document_id {
-                                        return Ok(task_path);
+                            // Look for task files in the initiative directory
+                            for task_entry in fs::read_dir(&initiative_dir)
+                                .map_err(|e| MetisError::FileSystem(e.to_string()))?
+                            {
+                                let task_path = task_entry
+                                    .map_err(|e| MetisError::FileSystem(e.to_string()))?
+                                    .path();
+                                if task_path.is_file()
+                                    && task_path.extension().is_some_and(|ext| ext == "md")
+                                {
+                                    // Skip initiative.md
+                                    if task_path
+                                        .file_name()
+                                        .is_some_and(|name| name == "initiative.md")
+                                    {
+                                        continue;
+                                    }
+
+                                    if let Ok(task) = Task::from_file(&task_path).await {
+                                        if task.id().to_string() == document_id {
+                                            return Ok(task_path);
+                                        }
                                     }
                                 }
                             }
                         }
                     }
                 }
+                
                 Err(MetisError::NotFound("Task document not found".to_string()))
             }
 

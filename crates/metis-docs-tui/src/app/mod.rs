@@ -266,8 +266,8 @@ impl App {
                         {
                             use metis_core::{domain::documents::types::Phase, Document};
                             
-                            // Check if this is a backlog item (Phase::Backlog or no parent)
-                            let is_backlog = task.phase() == Ok(Phase::Backlog) || task.parent_id().is_none();
+                            // Check if this is a backlog item (only Phase::Backlog)
+                            let is_backlog = task.phase() == Ok(Phase::Backlog);
                             
                             if is_backlog {
                                 // Place in backlog board
