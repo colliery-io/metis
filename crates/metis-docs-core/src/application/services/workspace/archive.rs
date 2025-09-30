@@ -29,6 +29,133 @@ pub struct ArchivedDocument {
 }
 
 impl ArchiveService {
+    // Helper methods to reduce duplication
+
+    /// Common helper for loading and marking a document as archived
+    async fn mark_as_archived_helper(&self, file_path: &Path, doc_type: DocumentType) -> Result<()> {
+        match doc_type {
+            DocumentType::Vision => {
+                let mut vision = Vision::from_file(file_path)
+                    .await
+                    .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
+                vision.core_mut().archived = true;
+                vision.to_file(file_path).await
+                    .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
+            }
+            DocumentType::Strategy => {
+                let mut strategy = Strategy::from_file(file_path)
+                    .await
+                    .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
+                strategy.core_mut().archived = true;
+                strategy.to_file(file_path).await
+                    .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
+            }
+            DocumentType::Initiative => {
+                let mut initiative = Initiative::from_file(file_path)
+                    .await
+                    .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
+                initiative.core_mut().archived = true;
+                initiative.to_file(file_path).await
+                    .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
+            }
+            DocumentType::Task => {
+                let mut task = Task::from_file(file_path)
+                    .await
+                    .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
+                task.core_mut().archived = true;
+                task.to_file(file_path).await
+                    .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
+            }
+            DocumentType::Adr => {
+                let mut adr = Adr::from_file(file_path)
+                    .await
+                    .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
+                adr.core_mut().archived = true;
+                adr.to_file(file_path).await
+                    .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
+            }
+        }
+        Ok(())
+    }
+
+    /// Helper to safely read directory contents
+    fn read_dir_safe(&self, path: &Path) -> Result<fs::ReadDir> {
+        fs::read_dir(path).map_err(|e| MetisError::FileSystem(e.to_string()))
+    }
+
+    /// Helper to check if a path is a markdown file
+    fn is_markdown_file(&self, path: &Path) -> bool {
+        path.is_file() && path.extension().is_some_and(|ext| ext == "md")
+    }
+
+    /// Helper to mark tasks in a directory as archived
+    async fn mark_tasks_in_directory_as_archived(&self, dir_path: &Path) -> Result<()> {
+        for entry in self.read_dir_safe(dir_path)? {
+            let entry_path = entry
+                .map_err(|e| MetisError::FileSystem(e.to_string()))?
+                .path();
+
+            if self.is_markdown_file(&entry_path) {
+                // Skip initiative.md itself
+                if entry_path
+                    .file_name()
+                    .is_some_and(|name| name == "initiative.md")
+                {
+                    continue;
+                }
+
+                if Task::from_file(&entry_path).await.is_ok() {
+                    self.mark_as_archived_helper(&entry_path, DocumentType::Task)
+                        .await?;
+                }
+            }
+            // Also check subdirectories for task files
+            else if entry_path.is_dir() {
+                if let Ok(subdir_entries) = fs::read_dir(&entry_path) {
+                    for subentry in subdir_entries.flatten() {
+                        let task_file_path = subentry.path();
+                        if self.is_markdown_file(&task_file_path) {
+                            if Task::from_file(&task_file_path).await.is_ok() {
+                                self.mark_as_archived_helper(
+                                    &task_file_path,
+                                    DocumentType::Task,
+                                )
+                                .await?;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Helper to archive initiatives and their tasks within a strategy
+    async fn archive_strategy_initiatives(&self, initiatives_dir: &Path) -> Result<()> {
+        if !initiatives_dir.exists() {
+            return Ok(());
+        }
+
+        for entry in self.read_dir_safe(initiatives_dir)? {
+            let initiative_dir = entry
+                .map_err(|e| MetisError::FileSystem(e.to_string()))?
+                .path();
+            
+            if initiative_dir.is_dir() {
+                let initiative_file = initiative_dir.join("initiative.md");
+                if initiative_file.exists() && Initiative::from_file(&initiative_file).await.is_ok() {
+                    // Mark initiative as archived
+                    self.mark_as_archived_helper(&initiative_file, DocumentType::Initiative)
+                        .await?;
+                    
+                    // Mark all tasks in this initiative as archived
+                    self.mark_tasks_in_directory_as_archived(&initiative_dir).await?;
+                }
+            }
+        }
+        Ok(())
+    }
+
     /// Create a new archive service for a workspace
     pub fn new<P: AsRef<Path>>(workspace_dir: P) -> Self {
         let workspace_dir = workspace_dir.as_ref().to_path_buf();
@@ -68,144 +195,34 @@ impl ArchiveService {
         let mut archived_documents = Vec::new();
 
         match doc_type {
-            DocumentType::Vision => {
-                // Archive the vision document
+            DocumentType::Vision | DocumentType::Task | DocumentType::Adr => {
+                // These document types don't have children, just archive the file
                 let archived_doc = self.archive_single_file(file_path, doc_type).await?;
                 archived_documents.push(archived_doc);
             }
 
             DocumentType::Strategy => {
-                // Archive strategy and all its initiatives by marking them as archived
-                // then moving the entire directory structure intact
+                // Archive strategy and all its initiatives/tasks
                 let strategy_dir = file_path.parent().unwrap();
                 let initiatives_dir = strategy_dir.join("initiatives");
 
-                // First mark all initiatives (and their tasks) as archived
-                if initiatives_dir.exists() {
-                    for entry in fs::read_dir(&initiatives_dir)
-                        .map_err(|e| MetisError::FileSystem(e.to_string()))?
-                    {
-                        let initiative_dir = entry
-                            .map_err(|e| MetisError::FileSystem(e.to_string()))?
-                            .path();
-                        if initiative_dir.is_dir() {
-                            let initiative_file = initiative_dir.join("initiative.md");
-                            if initiative_file.exists() {
-                                if let Ok(_initiative) =
-                                    Initiative::from_file(&initiative_file).await
-                                {
-                                    // Mark initiative as archived
-                                    self.mark_document_as_archived(
-                                        &initiative_file,
-                                        DocumentType::Initiative,
-                                    )
-                                    .await?;
+                // Mark all initiatives and their tasks as archived
+                self.archive_strategy_initiatives(&initiatives_dir).await?;
 
-                                    // Mark all tasks in this initiative as archived
-                                    for task_entry in fs::read_dir(&initiative_dir)
-                                        .map_err(|e| MetisError::FileSystem(e.to_string()))?
-                                    {
-                                        let task_path = task_entry
-                                            .map_err(|e| MetisError::FileSystem(e.to_string()))?
-                                            .path();
-
-                                        if task_path.is_file()
-                                            && task_path.extension().is_some_and(|ext| ext == "md")
-                                        {
-                                            // Skip initiative.md itself
-                                            if task_path
-                                                .file_name()
-                                                .is_some_and(|name| name == "initiative.md")
-                                            {
-                                                continue;
-                                            }
-
-                                            if let Ok(_task) = Task::from_file(&task_path).await {
-                                                self.mark_document_as_archived(
-                                                    &task_path,
-                                                    DocumentType::Task,
-                                                )
-                                                .await?;
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Then archive the strategy directory (which will move everything intact)
+                // Then archive the strategy directory (which moves everything intact)
                 let archived_doc = self.archive_directory(strategy_dir, doc_type).await?;
                 archived_documents.push(archived_doc);
             }
 
             DocumentType::Initiative => {
-                // Archive initiative and all its tasks by marking them as archived
-                // then moving the entire directory structure intact
+                // Archive initiative and all its tasks
                 let initiative_dir = file_path.parent().unwrap();
 
-                // First mark all tasks in this initiative as archived (frontmatter only)
-                for entry in fs::read_dir(initiative_dir)
-                    .map_err(|e| MetisError::FileSystem(e.to_string()))?
-                {
-                    let entry_path = entry
-                        .map_err(|e| MetisError::FileSystem(e.to_string()))?
-                        .path();
+                // Mark all tasks in this initiative as archived
+                self.mark_tasks_in_directory_as_archived(initiative_dir).await?;
 
-                    if entry_path.is_file() && entry_path.extension().is_some_and(|ext| ext == "md")
-                    {
-                        // Skip initiative.md itself
-                        if entry_path
-                            .file_name()
-                            .is_some_and(|name| name == "initiative.md")
-                        {
-                            continue;
-                        }
-
-                        if let Ok(_task) = Task::from_file(&entry_path).await {
-                            // Just mark as archived, don't move the file yet
-                            self.mark_document_as_archived(&entry_path, DocumentType::Task)
-                                .await?;
-                        }
-                    }
-                    // Also check subdirectories for task files
-                    else if entry_path.is_dir() {
-                        // Look for task files in subdirectories and mark them as archived
-                        if let Ok(subdir_entries) = fs::read_dir(&entry_path) {
-                            for subentry in subdir_entries.flatten() {
-                                let task_file_path = subentry.path();
-                                if task_file_path.is_file()
-                                    && task_file_path.extension().is_some_and(|ext| ext == "md")
-                                {
-                                    if let Ok(_task) = Task::from_file(&task_file_path).await {
-                                        // Just mark as archived, don't move the file yet
-                                        self.mark_document_as_archived(
-                                            &task_file_path,
-                                            DocumentType::Task,
-                                        )
-                                        .await?;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Then archive the initiative directory (which will move everything intact)
+                // Then archive the initiative directory (which moves everything intact)
                 let archived_doc = self.archive_directory(initiative_dir, doc_type).await?;
-                archived_documents.push(archived_doc);
-            }
-
-            DocumentType::Task => {
-                // Tasks don't have children, just archive the file
-                let archived_doc = self.archive_single_file(file_path, doc_type).await?;
-                archived_documents.push(archived_doc);
-            }
-
-            DocumentType::Adr => {
-                // ADRs don't have children, just archive the file
-                let archived_doc = self.archive_single_file(file_path, doc_type).await?;
                 archived_documents.push(archived_doc);
             }
         }
@@ -233,7 +250,7 @@ impl ArchiveService {
         }
 
         // Mark as archived in frontmatter before moving
-        self.mark_document_as_archived(file_path, doc_type).await?;
+        self.mark_as_archived_helper(file_path, doc_type).await?;
 
         // Get document ID before moving
         let document_id = self.get_document_id(file_path, doc_type).await?;
@@ -280,7 +297,7 @@ impl ArchiveService {
         };
 
         // Mark as archived in frontmatter before moving
-        self.mark_document_as_archived(&main_file, doc_type).await?;
+        self.mark_as_archived_helper(&main_file, doc_type).await?;
 
         let document_id = self.get_document_id(&main_file, doc_type).await?;
 
@@ -354,57 +371,7 @@ impl ArchiveService {
         file_path: &Path,
         doc_type: DocumentType,
     ) -> Result<()> {
-        match doc_type {
-            DocumentType::Vision => {
-                let mut vision = Vision::from_file(file_path)
-                    .await
-                    .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
-                vision.core_mut().archived = true;
-                vision
-                    .to_file(file_path)
-                    .await
-                    .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
-            }
-            DocumentType::Strategy => {
-                let mut strategy = Strategy::from_file(file_path)
-                    .await
-                    .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
-                strategy.core_mut().archived = true;
-                strategy
-                    .to_file(file_path)
-                    .await
-                    .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
-            }
-            DocumentType::Initiative => {
-                let mut initiative = Initiative::from_file(file_path)
-                    .await
-                    .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
-                initiative.core_mut().archived = true;
-                initiative
-                    .to_file(file_path)
-                    .await
-                    .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
-            }
-            DocumentType::Task => {
-                let mut task = Task::from_file(file_path)
-                    .await
-                    .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
-                task.core_mut().archived = true;
-                task.to_file(file_path)
-                    .await
-                    .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
-            }
-            DocumentType::Adr => {
-                let mut adr = Adr::from_file(file_path)
-                    .await
-                    .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
-                adr.core_mut().archived = true;
-                adr.to_file(file_path)
-                    .await
-                    .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
-            }
-        }
-        Ok(())
+        self.mark_as_archived_helper(file_path, doc_type).await
     }
 
     /// Get document ID from a file

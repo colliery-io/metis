@@ -5,143 +5,155 @@ use anyhow::Result;
 use metis_core::{domain::documents::types::DocumentType, Document};
 
 impl App {
-    pub async fn create_new_document(&mut self) -> Result<()> {
-        let title = self.ui_state.input_title.value().to_string();
-        if title.trim().is_empty() {
-            self.add_error_message("Title cannot be empty".to_string());
-            self.ui_state.set_app_state(AppState::Normal);
-            self.ui_state.reset_input();
-            return Ok(());
+    // Helper methods for document operations
+    
+    /// Common error handling and state reset
+    fn handle_creation_error(&mut self, message: String) {
+        self.add_error_message(message);
+        self.ui_state.set_app_state(AppState::Normal);
+        self.ui_state.reset_input();
+    }
+    
+    /// Common success handling with sync and reload
+    async fn handle_creation_success(&mut self, doc_type: DocumentType, doc_id: Option<String>) -> Result<()> {
+        // Handle backlog category tagging if needed
+        if let Some(id) = doc_id {
+            if self.ui_state.current_board == BoardType::Backlog {
+                if let Some(tag) = self.ui_state.selected_backlog_category.as_tag() {
+                    if let Some(sync_service) = &self.sync_service {
+                        let _ = sync_service.sync_database().await;
+                    }
+                    let _ = self.add_tag_to_document(&id, tag).await;
+                }
+            }
         }
-
-        if let Some(document_service) = &self.document_service {
-            let doc_type = match self.ui_state.current_board {
-                BoardType::Strategy => DocumentType::Strategy,
-                BoardType::Initiative => DocumentType::Initiative,
-                BoardType::Task => DocumentType::Task,
-                BoardType::Adr => DocumentType::Adr,
-                BoardType::Backlog => DocumentType::Task, // Backlog items are tasks
-            };
-
-            // For initiatives and tasks, we need to find an available parent
-            let parent_id = match doc_type {
-                DocumentType::Initiative => {
-                    // Find the first available strategy to use as parent
-                    let strategy_items: Vec<_> = self.ui_state.strategy_board.columns
-                        .iter()
-                        .flat_map(|col| &col.items)
-                        .collect();
-                    
-                    if let Some(strategy) = strategy_items.first() {
-                        Some(strategy.id())
-                    } else {
-                        self.add_error_message("Cannot create initiative: No strategy available as parent".to_string());
-                        self.ui_state.set_app_state(AppState::Normal);
-                        self.ui_state.reset_input();
-                        return Ok(());
-                    }
-                }
-                DocumentType::Task => {
-                    // For tasks on task board, find the first available initiative as parent
-                    if self.ui_state.current_board == BoardType::Task {
-                        let initiative_items: Vec<_> = self.ui_state.initiative_board.columns
-                            .iter()
-                            .flat_map(|col| &col.items)
-                            .collect();
-                        
-                        if let Some(initiative) = initiative_items.first() {
-                            Some(initiative.id())
-                        } else {
-                            self.add_error_message("Cannot create task: No initiative available as parent".to_string());
-                            self.ui_state.set_app_state(AppState::Normal);
-                            self.ui_state.reset_input();
-                            return Ok(());
-                        }
-                    } else {
-                        // For backlog tasks, no parent needed
-                        None
-                    }
-                }
-                _ => None
-            };
-
-            // For tasks with parent initiative, use create_child_task
-            let result = if doc_type == DocumentType::Task && parent_id.is_some() && self.ui_state.current_board == BoardType::Task {
-                // Find the strategy that owns this initiative
-                let initiative_items: Vec<_> = self.ui_state.initiative_board.columns
+        
+        self.add_success_message(format!("{} created successfully", doc_type));
+        self.ui_state.set_app_state(AppState::Normal);
+        self.ui_state.reset_input();
+        
+        // Sync database and reload documents
+        if let Some(sync_service) = &self.sync_service {
+            let _ = sync_service.sync_database().await;
+        }
+        self.load_documents().await?;
+        Ok(())
+    }
+    
+    /// Get document type for current board
+    fn get_document_type_for_board(&self) -> DocumentType {
+        match self.ui_state.current_board {
+            BoardType::Strategy => DocumentType::Strategy,
+            BoardType::Initiative => DocumentType::Initiative,
+            BoardType::Task => DocumentType::Task,
+            BoardType::Adr => DocumentType::Adr,
+            BoardType::Backlog => DocumentType::Task,
+        }
+    }
+    
+    /// Find parent ID for document creation
+    fn find_parent_id(&mut self, doc_type: DocumentType) -> Option<String> {
+        match doc_type {
+            DocumentType::Initiative => {
+                let strategy_items: Vec<_> = self.ui_state.strategy_board.columns
                     .iter()
                     .flat_map(|col| &col.items)
                     .collect();
                 
-                if let Some(initiative) = initiative_items.first() {
-                    // Get the strategy ID from the initiative's parent
-                    let strategy_id = match &initiative.document {
-                        DocumentObject::Initiative(init) => init.parent_id(),
-                        _ => None,
-                    };
+                if let Some(strategy) = strategy_items.first() {
+                    Some(strategy.id())
+                } else {
+                    self.handle_creation_error("Cannot create initiative: No strategy available as parent".to_string());
+                    None
+                }
+            }
+            DocumentType::Task => {
+                if self.ui_state.current_board == BoardType::Task {
+                    let initiative_items: Vec<_> = self.ui_state.initiative_board.columns
+                        .iter()
+                        .flat_map(|col| &col.items)
+                        .collect();
                     
-                    if let Some(strategy_id) = strategy_id {
-                        match document_service
-                            .create_child_task(
-                                title,
-                                strategy_id.to_string(),
-                                initiative.id(),
-                            )
-                            .await
-                        {
-                            Ok(task_id) => Ok(task_id),
-                            Err(e) => Err(e)
-                        }
+                    if let Some(initiative) = initiative_items.first() {
+                        Some(initiative.id())
                     } else {
-                        Err(anyhow::anyhow!("Initiative has no parent strategy"))
+                        self.handle_creation_error("Cannot create task: No initiative available as parent".to_string());
+                        None
                     }
                 } else {
-                    Err(anyhow::anyhow!("No initiative found for task creation"))
+                    None // Backlog tasks have no parent
+                }
+            }
+            _ => None
+        }
+    }
+    
+    /// Create a child task with proper strategy/initiative relationship
+    async fn create_child_task_from_initiative(&self, title: String) -> Result<String> {
+        if let Some(document_service) = &self.document_service {
+            let initiative_items: Vec<_> = self.ui_state.initiative_board.columns
+                .iter()
+                .flat_map(|col| &col.items)
+                .collect();
+            
+            if let Some(initiative) = initiative_items.first() {
+                let strategy_id = match &initiative.document {
+                    DocumentObject::Initiative(init) => init.parent_id(),
+                    _ => None,
+                };
+                
+                if let Some(strategy_id) = strategy_id {
+                    document_service
+                        .create_child_task(
+                            title,
+                            strategy_id.to_string(),
+                            initiative.id(),
+                        )
+                        .await
+                } else {
+                    Err(anyhow::anyhow!("Initiative has no parent strategy"))
                 }
             } else {
-                match document_service
-                    .create_document(
-                        doc_type, title, None, // description
-                        parent_id,
-                    )
-                    .await
-                {
-                    Ok(doc_id) => Ok(doc_id),
-                    Err(e) => Err(e)
-                }
-            };
+                Err(anyhow::anyhow!("No initiative found for task creation"))
+            }
+        } else {
+            Err(anyhow::anyhow!("Document service not available"))
+        }
+    }
 
-            match result {
-                Ok(doc_id) => {
-                    // For backlog items, add the selected category tag
-                    if self.ui_state.current_board == BoardType::Backlog {
-                        if let Some(tag) = self.ui_state.selected_backlog_category.as_tag() {
-                            // Force a sync first to ensure the document is in the database
-                            if let Some(sync_service) = &self.sync_service {
-                                let _ = sync_service.sync_database().await;
-                            }
-                            
-                            // Add the tag to the document
-                            if let Err(_e) = self.add_tag_to_document(&doc_id, tag).await {
-                                // Silently handle tag addition errors
-                            }
-                        }
-                    }
+    pub async fn create_new_document(&mut self) -> Result<()> {
+        let title = self.ui_state.input_title.value().to_string();
+        if title.trim().is_empty() {
+            self.handle_creation_error("Title cannot be empty".to_string());
+            return Ok(());
+        }
 
-                    self.add_success_message(format!("{} created successfully", doc_type));
-                    self.ui_state.set_app_state(AppState::Normal);
-                    self.ui_state.reset_input();
-                    // Sync database and reload documents
-                    if let Some(sync_service) = &self.sync_service {
-                        let _ = sync_service.sync_database().await;
-                    }
-                    self.load_documents().await?;
-                }
-                Err(e) => {
-                    self.add_error_message(format!("Failed to create {}: {}", doc_type, e));
-                    self.ui_state.set_app_state(AppState::Normal);
-                    self.ui_state.reset_input();
-                }
+        let doc_type = self.get_document_type_for_board();
+        
+        // For initiatives and tasks, find parent if needed
+        let parent_id = self.find_parent_id(doc_type);
+        if doc_type != DocumentType::Strategy && doc_type != DocumentType::Adr && 
+           doc_type != DocumentType::Task && parent_id.is_none() {
+            return Ok(()); // Error already handled in find_parent_id
+        }
+
+        // Create the document using appropriate method
+        let result = if doc_type == DocumentType::Task && parent_id.is_some() && self.ui_state.current_board == BoardType::Task {
+            self.create_child_task_from_initiative(title).await
+        } else if let Some(document_service) = &self.document_service {
+            document_service
+                .create_document(doc_type, title, None, parent_id)
+                .await
+        } else {
+            Err(anyhow::anyhow!("Document service not available"))
+        };
+
+        match result {
+            Ok(doc_id) => {
+                self.handle_creation_success(doc_type, Some(doc_id)).await?;
+            }
+            Err(e) => {
+                self.handle_creation_error(format!("Failed to create {}: {}", doc_type, e));
             }
         }
 
