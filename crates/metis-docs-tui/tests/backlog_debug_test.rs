@@ -1,5 +1,4 @@
 use anyhow::Result;
-use metis_docs_tui::models::BoardType;
 
 mod common;
 use common::TestHelper;

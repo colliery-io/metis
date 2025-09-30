@@ -161,7 +161,7 @@ impl MessageState {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::thread::sleep;
+    
 
     #[test]
     fn test_message_creation() {

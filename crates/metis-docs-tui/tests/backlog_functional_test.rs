@@ -7,7 +7,7 @@ use common::TestHelper;
 
 #[tokio::test]
 async fn test_backlog_board_navigation() -> Result<()> {
-    let mut helper = TestHelper::new().await?;
+    let helper = TestHelper::new().await?;
     let mut app = helper.create_app();
 
     // Verify initial state is Strategy board
@@ -48,7 +48,7 @@ async fn test_backlog_board_navigation() -> Result<()> {
 
 #[tokio::test]
 async fn test_backlog_board_structure() -> Result<()> {
-    let mut helper = TestHelper::new().await?;
+    let helper = TestHelper::new().await?;
     let mut app = helper.create_app();
 
     // Jump to backlog board
@@ -72,7 +72,7 @@ async fn test_backlog_board_structure() -> Result<()> {
 
 #[tokio::test]
 async fn test_backlog_item_detection_and_placement() -> Result<()> {
-    let mut helper = TestHelper::new().await?;
+    let helper = TestHelper::new().await?;
     // Project is already initialized by TestHelper::new()
 
     // Create a backlog task with bug tag using the document service
@@ -130,7 +130,7 @@ async fn test_backlog_item_detection_and_placement() -> Result<()> {
 
 #[tokio::test]
 async fn test_backlog_item_feature_categorization() -> Result<()> {
-    let mut helper = TestHelper::new().await?;
+    let helper = TestHelper::new().await?;
     // Project is already initialized by TestHelper::new()
 
     // Create app and create backlog task using TUI, then add feature tag
@@ -186,7 +186,7 @@ async fn test_backlog_item_feature_categorization() -> Result<()> {
 
 #[tokio::test]
 async fn test_backlog_item_tech_debt_categorization() -> Result<()> {
-    let mut helper = TestHelper::new().await?;
+    let helper = TestHelper::new().await?;
     // Project is already initialized by TestHelper::new()
 
     // Create app and create backlog task using TUI, then add tech-debt tag
@@ -242,7 +242,7 @@ async fn test_backlog_item_tech_debt_categorization() -> Result<()> {
 
 #[tokio::test]
 async fn test_backlog_item_default_categorization() -> Result<()> {
-    let mut helper = TestHelper::new().await?;
+    let helper = TestHelper::new().await?;
     // Project is already initialized by TestHelper::new()
 
     // Create app and create backlog task using TUI (no additional tags)
@@ -284,7 +284,7 @@ async fn test_backlog_item_default_categorization() -> Result<()> {
 
 #[tokio::test]
 async fn test_backlog_selection_state() -> Result<()> {
-    let mut helper = TestHelper::new().await?;
+    let helper = TestHelper::new().await?;
     let mut app = helper.create_app();
 
     // Jump to backlog board
@@ -312,7 +312,7 @@ async fn test_backlog_selection_state() -> Result<()> {
 
 #[tokio::test]
 async fn test_keyboard_shortcut_five_for_backlog() -> Result<()> {
-    let mut helper = TestHelper::new().await?;
+    let helper = TestHelper::new().await?;
     let mut app = helper.create_app();
 
     // Start at strategy board

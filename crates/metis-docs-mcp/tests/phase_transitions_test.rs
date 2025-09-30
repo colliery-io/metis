@@ -1035,7 +1035,7 @@ async fn test_phase_transitions_with_dependencies() -> Result<()> {
         let update_problem = EditDocumentTool {
             project_path: helper.metis_dir.clone(),
             document_path: "strategies/dependent-strategy/strategy.md".to_string(),
-            search: "{What problem does this strategy solve}".to_string(),
+            search: "{Describe the problem and why it matters - 1-2 paragraphs}".to_string(),
             replace: "This strategy is blocked by: Prerequisite Strategy".to_string(),
             replace_all: None,
         };

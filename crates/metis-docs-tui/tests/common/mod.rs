@@ -5,8 +5,8 @@ use tempfile::TempDir;
 
 /// Simple test helper for TUI tests
 pub struct TestHelper {
-    pub temp_dir: TempDir,
-    pub project_path: PathBuf,
+    pub _temp_dir: TempDir,
+    pub _project_path: PathBuf,
     pub metis_dir: PathBuf,
 }
 
@@ -24,8 +24,8 @@ impl TestHelper {
         let metis_dir = project_path.join(".metis");
 
         Ok(Self {
-            temp_dir,
-            project_path,
+            _temp_dir: temp_dir,
+            _project_path: project_path,
             metis_dir,
         })
     }

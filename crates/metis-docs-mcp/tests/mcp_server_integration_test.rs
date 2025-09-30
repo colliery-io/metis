@@ -6,7 +6,6 @@ use serde_json::{json, Value};
 use std::io::{BufRead, BufReader, Write};
 use std::process::{Command, Stdio};
 use tempfile::TempDir;
-use tokio::time::{timeout, Duration};
 
 /// Helper to build and spawn the MCP server binary
 struct McpServerProcess {
@@ -46,7 +45,7 @@ impl McpServerProcess {
 
     /// Spawn the MCP server process and return handles for communication
     fn spawn_server(&self) -> Result<std::process::Child> {
-        let mut child = Command::new("../../target/release/metis-mcp")
+        let child = Command::new("../../target/release/metis-mcp")
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())

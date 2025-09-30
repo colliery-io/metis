@@ -203,7 +203,7 @@ async fn test_strategy_phase_transitions() -> Result<()> {
     let phases = ["design", "ready", "active", "completed"];
     let expected_columns = [1, 2, 3, 4]; // Column indices for each phase
 
-    for (i, (phase, expected_col)) in phases.iter().zip(expected_columns.iter()).enumerate() {
+    for (i, (phase, _expected_col)) in phases.iter().zip(expected_columns.iter()).enumerate() {
         // Load documents to refresh board
         app.load_documents().await?;
 
@@ -385,7 +385,7 @@ async fn test_initiative_phase_transitions() -> Result<()> {
     let phases = ["design", "ready", "decompose", "active", "completed"];
     let expected_columns = [1, 2, 3, 4, 5]; // Column indices for each phase
 
-    for (i, (phase, expected_col)) in phases.iter().zip(expected_columns.iter()).enumerate() {
+    for (i, (phase, _expected_col)) in phases.iter().zip(expected_columns.iter()).enumerate() {
         // Load documents to refresh board
         app.load_documents().await?;
 
