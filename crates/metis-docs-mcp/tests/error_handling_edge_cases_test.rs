@@ -10,14 +10,14 @@ use metis_mcp_server::tools::*;
 /// Test invalid parent relationships
 #[tokio::test]
 async fn test_invalid_parent_relationships() -> Result<()> {
-    let helper = McpTestHelper::new()?;
+    let helper = McpTestHelper::new().await?;
     helper.initialize_project().await?;
 
     println!("=== Test Invalid Parent Relationships ===");
 
     // Try to create an initiative without a valid strategy parent
     let create_initiative = CreateDocumentTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_type: "initiative".to_string(),
         title: "Orphan Initiative".to_string(),
         parent_id: Some("non-existent-strategy".to_string()),
@@ -36,7 +36,7 @@ async fn test_invalid_parent_relationships() -> Result<()> {
 
     // Try to create a task without a valid initiative parent
     let create_task = CreateDocumentTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_type: "task".to_string(),
         title: "Orphan Task".to_string(),
         parent_id: Some("non-existent-initiative".to_string()),
@@ -55,7 +55,7 @@ async fn test_invalid_parent_relationships() -> Result<()> {
 
     // Try to create a strategy with wrong parent type (should be vision/project)
     let create_strategy = CreateDocumentTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_type: "strategy".to_string(),
         title: "Misplaced Strategy".to_string(),
         parent_id: Some("some-random-id".to_string()),
@@ -79,7 +79,7 @@ async fn test_invalid_parent_relationships() -> Result<()> {
 /// Test edge cases with extremely large titles
 #[tokio::test]
 async fn test_large_title_edge_cases() -> Result<()> {
-    let helper = McpTestHelper::new()?;
+    let helper = McpTestHelper::new().await?;
     helper.initialize_project().await?;
 
     println!("=== Test Large Title Edge Cases ===");
@@ -88,7 +88,7 @@ async fn test_large_title_edge_cases() -> Result<()> {
     let long_title = "This is an extremely long title that goes on and on and on to test how the system handles very lengthy document titles that might cause issues with file system paths or database fields or UI rendering or any other component that needs to display or store this information properly without truncation".to_string();
 
     let create_strategy = CreateDocumentTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_type: "strategy".to_string(),
         title: long_title.clone(),
         parent_id: Some(helper.get_project_name()),
@@ -132,7 +132,7 @@ async fn test_large_title_edge_cases() -> Result<()> {
     // Test with title containing only spaces
     let space_title = "     ".to_string();
     let create_spaces = CreateDocumentTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_type: "initiative".to_string(),
         title: space_title,
         parent_id: Some(helper.get_project_name()),
@@ -151,7 +151,7 @@ async fn test_large_title_edge_cases() -> Result<()> {
 
     // Test with empty title
     let create_empty = CreateDocumentTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_type: "task".to_string(),
         title: "".to_string(),
         parent_id: Some(helper.get_project_name()),
@@ -174,7 +174,7 @@ async fn test_large_title_edge_cases() -> Result<()> {
 /// Test special characters in titles and content
 #[tokio::test]
 async fn test_special_characters_edge_cases() -> Result<()> {
-    let helper = McpTestHelper::new()?;
+    let helper = McpTestHelper::new().await?;
     helper.initialize_project().await?;
 
     println!("=== Test Special Characters Edge Cases ===");
@@ -210,7 +210,7 @@ async fn test_special_characters_edge_cases() -> Result<()> {
         println!("\n--- Testing: {} ---", description);
 
         let create_doc = CreateDocumentTool {
-            project_path: helper.metis_dir.clone(),
+            project_path: helper.metis_dir().clone(),
             document_type: "adr".to_string(),
             title: title.to_string(),
             parent_id: None,
@@ -248,14 +248,14 @@ async fn test_special_characters_edge_cases() -> Result<()> {
 /// Test boundary values for numeric fields
 #[tokio::test]
 async fn test_numeric_boundary_values() -> Result<()> {
-    let helper = McpTestHelper::new()?;
+    let helper = McpTestHelper::new().await?;
     helper.initialize_project().await?;
 
     println!("=== Test Numeric Boundary Values ===");
 
     // Create parent strategy first
     let create_strategy = CreateDocumentTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_type: "strategy".to_string(),
         title: "Parent Strategy for Complexity Test".to_string(),
         parent_id: Some(helper.get_project_name()),
@@ -286,7 +286,7 @@ async fn test_numeric_boundary_values() -> Result<()> {
         println!("\n--- Testing: {} ---", description);
 
         let create_initiative = CreateDocumentTool {
-            project_path: helper.metis_dir.clone(),
+            project_path: helper.metis_dir().clone(),
             document_type: "initiative".to_string(),
             title: format!("Test Initiative {}", complexity),
             parent_id: Some(strategy_id.to_string()),
@@ -331,7 +331,7 @@ async fn test_numeric_boundary_values() -> Result<()> {
         println!("\n--- Testing: {} ---", description);
 
         let create_strategy = CreateDocumentTool {
-            project_path: helper.metis_dir.clone(),
+            project_path: helper.metis_dir().clone(),
             document_type: "strategy".to_string(),
             title: format!("Test Strategy {}", risk),
             parent_id: Some(helper.get_project_name()),
@@ -360,14 +360,14 @@ async fn test_numeric_boundary_values() -> Result<()> {
 /// Test concurrent modifications
 #[tokio::test]
 async fn test_concurrent_modifications() -> Result<()> {
-    let helper = McpTestHelper::new()?;
+    let helper = McpTestHelper::new().await?;
     helper.initialize_project().await?;
 
     println!("=== Test Concurrent Modifications ===");
 
     // Create a strategy to modify
     let create_strategy = CreateDocumentTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_type: "strategy".to_string(),
         title: "Concurrent Test Strategy".to_string(),
         parent_id: Some(helper.get_project_name()),
@@ -384,7 +384,7 @@ async fn test_concurrent_modifications() -> Result<()> {
 
     // Simulate concurrent updates to different sections
     let update1 = EditDocumentTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_path: strategy_path.to_string(),
         search: "{What problem does this strategy solve}".to_string(),
         replace: "First concurrent update to problem statement.".to_string(),
@@ -392,7 +392,7 @@ async fn test_concurrent_modifications() -> Result<()> {
     };
 
     let update2 = EditDocumentTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_path: strategy_path.to_string(),
         search: "{What success looks like}".to_string(),
         replace: "Second concurrent update to target outcomes.".to_string(),
@@ -417,14 +417,14 @@ async fn test_concurrent_modifications() -> Result<()> {
 
     // Try concurrent phase transitions (should handle gracefully)
     let transition1 = TransitionPhaseTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_id: "concurrent-test-strategy".to_string(),
         phase: Some("design".to_string()),
         force: Some(true),
     };
 
     let transition2 = TransitionPhaseTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_id: "concurrent-test-strategy".to_string(),
         phase: Some("ready".to_string()),
         force: Some(true),
@@ -468,14 +468,14 @@ async fn test_concurrent_modifications() -> Result<()> {
 /// Test invalid document IDs and paths
 #[tokio::test]
 async fn test_invalid_document_ids_and_paths() -> Result<()> {
-    let helper = McpTestHelper::new()?;
+    let helper = McpTestHelper::new().await?;
     helper.initialize_project().await?;
 
     println!("=== Test Invalid Document IDs and Paths ===");
 
     // Try to transition with non-existent document ID
     let transition = TransitionPhaseTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_id: "non-existent-document-id".to_string(),
         phase: Some("design".to_string()),
         force: None,
@@ -490,7 +490,7 @@ async fn test_invalid_document_ids_and_paths() -> Result<()> {
 
     // Try to update content with invalid path
     let update = EditDocumentTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_path: "invalid/path/to/document.md".to_string(),
         search: "Some content".to_string(),
         replace: "New content".to_string(),
@@ -506,7 +506,7 @@ async fn test_invalid_document_ids_and_paths() -> Result<()> {
 
     // Try path traversal attack
     let malicious_update = EditDocumentTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_path: "../../../etc/passwd".to_string(),
         search: "root".to_string(),
         replace: "malicious content".to_string(),
@@ -522,7 +522,7 @@ async fn test_invalid_document_ids_and_paths() -> Result<()> {
 
     // Try to archive non-existent document
     let archive = ArchiveDocumentTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_id: "ghost-document".to_string(),
     };
 

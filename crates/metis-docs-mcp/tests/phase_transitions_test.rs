@@ -18,7 +18,7 @@ async fn validate_phase_transition(
     document_id: &str,
 ) -> Result<()> {
     // Validate file exists and contains expected phase tag
-    let full_path = format!("{}/{}", helper.metis_dir, file_path);
+    let full_path = format!("{}/{}", helper.metis_dir(), file_path);
     assert!(
         Path::new(&full_path).exists(),
         "Document file should exist at: {}",
@@ -81,7 +81,7 @@ async fn validate_phase_transition(
 /// Test Vision document phase transitions: draft → review → published
 #[tokio::test]
 async fn test_vision_phase_transitions() -> Result<()> {
-    let helper = McpTestHelper::new()?;
+    let helper = McpTestHelper::new().await?;
 
     println!("=== Test Vision Phase Transitions ===");
 
@@ -103,7 +103,7 @@ async fn test_vision_phase_transitions() -> Result<()> {
 
     // Update some content to meet exit criteria
     let update_content = EditDocumentTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_path: "vision.md".to_string(),
         search: "{Why this vision exists and what it aims to achieve}".to_string(),
         replace: "To create an exceptional platform that transforms how teams collaborate."
@@ -119,7 +119,7 @@ async fn test_vision_phase_transitions() -> Result<()> {
 
     // Transition to review phase (force it for testing)
     let transition = TransitionPhaseTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_id: vision_id.clone(),
         phase: Some("review".to_string()),
         force: Some(true), // Force transition for testing
@@ -137,7 +137,7 @@ async fn test_vision_phase_transitions() -> Result<()> {
 
     // Transition to published phase
     let transition = TransitionPhaseTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_id: vision_id.clone(),
         phase: Some("published".to_string()),
         force: None,
@@ -160,14 +160,14 @@ async fn test_vision_phase_transitions() -> Result<()> {
 /// Test Strategy document phase transitions: shaping → design → ready → active → completed
 #[tokio::test]
 async fn test_strategy_phase_transitions() -> Result<()> {
-    let helper = McpTestHelper::new()?;
+    let helper = McpTestHelper::new().await?;
     helper.initialize_project().await?;
 
     println!("=== Test Strategy Phase Transitions ===");
 
     // Create a strategy
     let create_strategy = CreateDocumentTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_type: "strategy".to_string(),
         title: "Digital Transformation Strategy".to_string(),
         parent_id: Some(helper.get_project_name()),
@@ -185,7 +185,7 @@ async fn test_strategy_phase_transitions() -> Result<()> {
     );
 
     // Verify file was created in correct location
-    let strategy_dir = Path::new(&helper.metis_dir)
+    let strategy_dir = Path::new(&helper.metis_dir())
         .join("strategies")
         .join("digital-transformation-strategy");
     assert!(
@@ -293,7 +293,7 @@ async fn test_strategy_phase_transitions() -> Result<()> {
 
     for (phase, file_path) in phases.iter() {
         let transition = TransitionPhaseTool {
-            project_path: helper.metis_dir.clone(),
+            project_path: helper.metis_dir().clone(),
             document_id: strategy_id.clone(),
             phase: Some(phase.to_string()),
             force: Some(true), // Force transition for testing
@@ -319,14 +319,14 @@ async fn test_strategy_phase_transitions() -> Result<()> {
 /// Test Initiative document phase transitions: discovery → design → ready → decompose → active → completed
 #[tokio::test]
 async fn test_initiative_phase_transitions() -> Result<()> {
-    let helper = McpTestHelper::new()?;
+    let helper = McpTestHelper::new().await?;
     helper.initialize_project().await?;
 
     println!("=== Test Initiative Phase Transitions ===");
 
     // Create a strategy first
     let create_strategy = CreateDocumentTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_type: "strategy".to_string(),
         title: "Growth Strategy".to_string(),
         parent_id: Some(helper.get_project_name()),
@@ -345,7 +345,7 @@ async fn test_initiative_phase_transitions() -> Result<()> {
 
     // Create an initiative
     let create_initiative = CreateDocumentTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_type: "initiative".to_string(),
         title: "Launch New Product Line".to_string(),
         parent_id: Some("growth-strategy".to_string()),
@@ -363,7 +363,7 @@ async fn test_initiative_phase_transitions() -> Result<()> {
     );
 
     // Verify initiative was created in correct hierarchical location
-    let initiative_dir = Path::new(&helper.metis_dir)
+    let initiative_dir = Path::new(&helper.metis_dir())
         .join("strategies")
         .join("growth-strategy")
         .join("initiatives")
@@ -484,7 +484,7 @@ async fn test_initiative_phase_transitions() -> Result<()> {
 
     for (phase, file_path) in phases.iter() {
         let transition = TransitionPhaseTool {
-            project_path: helper.metis_dir.clone(),
+            project_path: helper.metis_dir().clone(),
             document_id: initiative_id.clone(),
             phase: Some(phase.to_string()),
             force: Some(true), // Force transition for testing
@@ -512,14 +512,14 @@ async fn test_initiative_phase_transitions() -> Result<()> {
 /// Test Task document phase transitions: todo → doing → completed
 #[tokio::test]
 async fn test_task_phase_transitions() -> Result<()> {
-    let helper = McpTestHelper::new()?;
+    let helper = McpTestHelper::new().await?;
     helper.initialize_project().await?;
 
     println!("=== Test Task Phase Transitions ===");
 
     // Create hierarchy: Strategy -> Initiative -> Task
     let create_strategy = CreateDocumentTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_type: "strategy".to_string(),
         title: "Technical Excellence".to_string(),
         parent_id: Some(helper.get_project_name()),
@@ -537,7 +537,7 @@ async fn test_task_phase_transitions() -> Result<()> {
     );
 
     let create_initiative = CreateDocumentTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_type: "initiative".to_string(),
         title: "Upgrade Infrastructure".to_string(),
         parent_id: Some("technical-excellence".to_string()),
@@ -556,7 +556,7 @@ async fn test_task_phase_transitions() -> Result<()> {
 
     // Create a task
     let create_task = CreateDocumentTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_type: "task".to_string(),
         title: "Setup CI/CD Pipeline".to_string(),
         parent_id: Some("upgrade-infrastructure".to_string()),
@@ -570,7 +570,7 @@ async fn test_task_phase_transitions() -> Result<()> {
     assert!(result.is_ok(), "Create task should succeed: {:?}", result);
 
     // Verify task was created in correct hierarchical location
-    let task_dir = Path::new(&helper.metis_dir)
+    let task_dir = Path::new(&helper.metis_dir())
         .join("strategies")
         .join("technical-excellence")
         .join("initiatives")
@@ -643,7 +643,7 @@ async fn test_task_phase_transitions() -> Result<()> {
 
     // Transition to active
     let transition = TransitionPhaseTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_id: task_id.clone(),
         phase: Some("active".to_string()),
         force: None,
@@ -661,7 +661,7 @@ async fn test_task_phase_transitions() -> Result<()> {
 
     // Transition to completed
     let transition = TransitionPhaseTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_id: task_id.clone(),
         phase: Some("completed".to_string()),
         force: None,
@@ -684,14 +684,14 @@ async fn test_task_phase_transitions() -> Result<()> {
 /// Test ADR document phase transitions: draft → discussion → decided → superseded
 #[tokio::test]
 async fn test_adr_phase_transitions() -> Result<()> {
-    let helper = McpTestHelper::new()?;
+    let helper = McpTestHelper::new().await?;
     helper.initialize_project().await?;
 
     println!("=== Test ADR Phase Transitions ===");
 
     // Create an ADR
     let create_adr = CreateDocumentTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_type: "adr".to_string(),
         title: "Use Rust for Backend Services".to_string(),
         parent_id: None, // ADRs don't require a parent
@@ -705,7 +705,7 @@ async fn test_adr_phase_transitions() -> Result<()> {
     assert!(result.is_ok(), "Create ADR should succeed: {:?}", result);
 
     // Verify ADR was created in correct location
-    let adrs_dir = Path::new(&helper.metis_dir).join("adrs");
+    let adrs_dir = Path::new(&helper.metis_dir()).join("adrs");
     assert!(
         adrs_dir.exists(),
         "ADRs directory should exist at: {:?}",
@@ -776,7 +776,7 @@ async fn test_adr_phase_transitions() -> Result<()> {
 
     // Transition to discussion
     let transition = TransitionPhaseTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_id: adr_id.clone(),
         phase: Some("discussion".to_string()),
         force: None,
@@ -794,7 +794,7 @@ async fn test_adr_phase_transitions() -> Result<()> {
 
     // Transition to decided
     let transition = TransitionPhaseTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_id: adr_id.clone(),
         phase: Some("decided".to_string()),
         force: Some(true), // Force transition for testing
@@ -821,14 +821,14 @@ async fn test_adr_phase_transitions() -> Result<()> {
 /// Test automatic phase transitions (transition to next valid phase)
 #[tokio::test]
 async fn test_automatic_phase_transitions() -> Result<()> {
-    let helper = McpTestHelper::new()?;
+    let helper = McpTestHelper::new().await?;
     helper.initialize_project().await?;
 
     println!("=== Test Automatic Phase Transitions ===");
 
     // Create a strategy
     let create_strategy = CreateDocumentTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_type: "strategy".to_string(),
         title: "Auto Transition Test".to_string(),
         parent_id: Some(helper.get_project_name()),
@@ -847,7 +847,7 @@ async fn test_automatic_phase_transitions() -> Result<()> {
 
     // Transition without specifying phase (should go to next valid phase)
     let transition = TransitionPhaseTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_id: "auto-transition-test".to_string(),
         phase: None,       // Let it auto-select next phase
         force: Some(true), // Force transition for testing
@@ -874,7 +874,7 @@ async fn test_automatic_phase_transitions() -> Result<()> {
 
     // Try another automatic transition
     let transition = TransitionPhaseTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_id: "auto-transition-test".to_string(),
         phase: None,
         force: Some(true),
@@ -900,14 +900,14 @@ async fn test_automatic_phase_transitions() -> Result<()> {
 /// Test invalid phase transitions
 #[tokio::test]
 async fn test_invalid_phase_transitions() -> Result<()> {
-    let helper = McpTestHelper::new()?;
+    let helper = McpTestHelper::new().await?;
     helper.initialize_project().await?;
 
     println!("=== Test Invalid Phase Transitions ===");
 
     // Try to transition vision to an invalid phase
     let transition = TransitionPhaseTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_id: helper.get_project_name(),
         phase: Some("invalid_phase".to_string()),
         force: None,
@@ -920,7 +920,7 @@ async fn test_invalid_phase_transitions() -> Result<()> {
 
     // Try to transition to a non-adjacent phase without force
     let create_strategy = CreateDocumentTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_type: "strategy".to_string(),
         title: "Skip Phase Test".to_string(),
         parent_id: Some(helper.get_project_name()),
@@ -939,7 +939,7 @@ async fn test_invalid_phase_transitions() -> Result<()> {
 
     // Try to skip from shaping directly to active (should fail without force)
     let transition = TransitionPhaseTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_id: "skip-phase-test".to_string(),
         phase: Some("active".to_string()),
         force: None,
@@ -959,14 +959,14 @@ async fn test_invalid_phase_transitions() -> Result<()> {
 /// Integration test: Test phase transitions with blocked_by relationships
 #[tokio::test]
 async fn test_phase_transitions_with_dependencies() -> Result<()> {
-    let helper = McpTestHelper::new()?;
+    let helper = McpTestHelper::new().await?;
     helper.initialize_project().await?;
 
     println!("=== Test Phase Transitions with Dependencies ===");
 
     // Create two strategies
     let create_strategy1 = CreateDocumentTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_type: "strategy".to_string(),
         title: "Prerequisite Strategy".to_string(),
         parent_id: Some(helper.get_project_name()),
@@ -984,7 +984,7 @@ async fn test_phase_transitions_with_dependencies() -> Result<()> {
     );
 
     let create_strategy2 = CreateDocumentTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_type: "strategy".to_string(),
         title: "Dependent Strategy".to_string(),
         parent_id: Some(helper.get_project_name()),
@@ -1022,7 +1022,7 @@ async fn test_phase_transitions_with_dependencies() -> Result<()> {
 
     // Set up dependency using content update to an existing section
     let update_blocked = EditDocumentTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_path: "strategies/dependent-strategy/strategy.md".to_string(),
         search: "{Dependencies or external factors}".to_string(),
         replace: "This strategy depends on: Prerequisite Strategy".to_string(),
@@ -1033,7 +1033,7 @@ async fn test_phase_transitions_with_dependencies() -> Result<()> {
     // If Dependencies section doesn't exist either, use Problem Statement
     if result.is_err() {
         let update_problem = EditDocumentTool {
-            project_path: helper.metis_dir.clone(),
+            project_path: helper.metis_dir().clone(),
             document_path: "strategies/dependent-strategy/strategy.md".to_string(),
             search: "{Describe the problem and why it matters - 1-2 paragraphs}".to_string(),
             replace: "This strategy is blocked by: Prerequisite Strategy".to_string(),
@@ -1051,7 +1051,7 @@ async fn test_phase_transitions_with_dependencies() -> Result<()> {
 
     // Move prerequisite strategy through phases: shaping → design → ready → active
     let transition = TransitionPhaseTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_id: prerequisite_strategy.id.clone(),
         phase: Some("design".to_string()),
         force: None,
@@ -1065,7 +1065,7 @@ async fn test_phase_transitions_with_dependencies() -> Result<()> {
     );
 
     let transition = TransitionPhaseTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_id: prerequisite_strategy.id.clone(),
         phase: Some("ready".to_string()),
         force: None,
@@ -1079,7 +1079,7 @@ async fn test_phase_transitions_with_dependencies() -> Result<()> {
     );
 
     let transition = TransitionPhaseTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_id: prerequisite_strategy.id.clone(),
         phase: Some("active".to_string()),
         force: None,
@@ -1090,7 +1090,7 @@ async fn test_phase_transitions_with_dependencies() -> Result<()> {
 
     // Now dependent strategy should be able to progress
     let transition = TransitionPhaseTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_id: dependent_strategy.id.clone(),
         phase: Some("design".to_string()),
         force: None,

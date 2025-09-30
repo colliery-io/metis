@@ -101,7 +101,7 @@ async fn test_tui_archive_initiative_cascade() -> Result<()> {
     // Step 2: Verify initial state in database
     println!("\n=== Step 2: Verify Initial Database State ===");
 
-    let db_path = helper.metis_dir.join("metis.db");
+    let db_path = helper.metis_dir().join("metis.db");
     let db = metis_core::dal::Database::new(&db_path.to_string_lossy())
         .map_err(|e| anyhow::anyhow!("Database error: {}", e))?;
     let mut repo = db.into_repository();
@@ -138,7 +138,7 @@ async fn test_tui_archive_initiative_cascade() -> Result<()> {
 
     // Before archiving, let's see what's in the initiative directory
     let strategy_dir = helper
-        .metis_dir
+        .metis_dir()
         .join("strategies")
         .join("test-strategy-for-archive");
     let initiative_dir = strategy_dir
@@ -206,8 +206,8 @@ async fn test_tui_archive_initiative_cascade() -> Result<()> {
         // Step 4: Verify file system state
         println!("\n=== Step 4: Verify File System State ===");
 
-        let strategies_dir = helper.metis_dir.join("strategies");
-        let archived_dir = helper.metis_dir.join("archived");
+        let strategies_dir = helper.metis_dir().join("strategies");
+        let archived_dir = helper.metis_dir().join("archived");
 
         // Strategy directory should still exist (strategy not archived)
         assert!(
@@ -249,7 +249,7 @@ async fn test_tui_archive_initiative_cascade() -> Result<()> {
 
             // Let's examine what's actually in the initiative directory
             let strategy_dir = helper
-                .metis_dir
+                .metis_dir()
                 .join("strategies")
                 .join("test-strategy-for-archive");
             let initiative_dir = strategy_dir
@@ -401,7 +401,7 @@ async fn test_tui_archive_strategy_with_partial_archive() -> Result<()> {
     // Step 2: Verify initial state
     println!("\n=== Step 2: Verify Initial Database State ===");
 
-    let db_path = helper.metis_dir.join("metis.db");
+    let db_path = helper.metis_dir().join("metis.db");
     let db = metis_core::dal::Database::new(&db_path.to_string_lossy())
         .map_err(|e| anyhow::anyhow!("Database error: {}", e))?;
     let mut repo = db.into_repository();

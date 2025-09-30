@@ -13,14 +13,14 @@ use std::fs;
 /// Testing file locations and database state between each action
 #[tokio::test]
 async fn test_mcp_complete_flight_levels_workflow() -> Result<()> {
-    let helper = McpTestHelper::new()?;
+    let helper = McpTestHelper::new().await?;
 
     // Step 1: Initialize project (creates Vision document)
     println!("=== Step 1: Initialize Project with Vision Document ===");
     helper.initialize_project().await?;
 
     // Verify vision document exists
-    let vision_path = format!("{}/vision.md", helper.metis_dir);
+    let vision_path = format!("{}/vision.md", helper.metis_dir());
     assert!(
         std::path::Path::new(&vision_path).exists(),
         "Vision document should exist after initialization"
@@ -57,7 +57,7 @@ async fn test_mcp_complete_flight_levels_workflow() -> Result<()> {
     println!("\n=== Step 2: Create Strategy Document ===");
 
     let create_strategy = CreateDocumentTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_type: "strategy".to_string(),
         title: "Improve Customer Experience".to_string(),
         parent_id: Some(helper.get_project_name()),
@@ -75,7 +75,7 @@ async fn test_mcp_complete_flight_levels_workflow() -> Result<()> {
     );
 
     // Verify strategy was created in file system
-    let strategies_dir = format!("{}/strategies", helper.metis_dir);
+    let strategies_dir = format!("{}/strategies", helper.metis_dir());
     assert!(
         std::path::Path::new(&strategies_dir).exists(),
         "Strategies directory should exist"
@@ -125,7 +125,7 @@ async fn test_mcp_complete_flight_levels_workflow() -> Result<()> {
     println!("\n=== Step 3: Create Initiative from Strategy ===");
 
     let create_initiative = CreateDocumentTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_type: "initiative".to_string(),
         title: "Redesign User Onboarding".to_string(),
         parent_id: Some("improve-customer-experience".to_string()),
@@ -145,7 +145,7 @@ async fn test_mcp_complete_flight_levels_workflow() -> Result<()> {
     // Verify initiative was created in the correct location
     let strategy_initiative_dir = format!(
         "{}/strategies/improve-customer-experience/initiatives",
-        helper.metis_dir
+        helper.metis_dir()
     );
     assert!(
         std::path::Path::new(&strategy_initiative_dir).exists(),
@@ -205,7 +205,7 @@ async fn test_mcp_complete_flight_levels_workflow() -> Result<()> {
     println!("\n=== Step 4: Create Task from Initiative ===");
 
     let create_task = CreateDocumentTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_type: "task".to_string(),
         title: "Create wireframes for onboarding flow".to_string(),
         parent_id: Some("redesign-user-onboarding".to_string()),
@@ -221,7 +221,7 @@ async fn test_mcp_complete_flight_levels_workflow() -> Result<()> {
     // Verify task was created in the correct location
     let initiative_dir = format!(
         "{}/strategies/improve-customer-experience/initiatives/redesign-user-onboarding",
-        helper.metis_dir
+        helper.metis_dir()
     );
     let task_file = format!("{}/create-wireframes-for-onboarding.md", initiative_dir);
     assert!(
@@ -269,7 +269,7 @@ async fn test_mcp_complete_flight_levels_workflow() -> Result<()> {
     println!("\n=== Step 5: Create Second Task ===");
 
     let create_task_2 = CreateDocumentTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_type: "task".to_string(),
         title: "Write user research plan".to_string(),
         parent_id: Some("redesign-user-onboarding".to_string()),
@@ -305,7 +305,7 @@ async fn test_mcp_complete_flight_levels_workflow() -> Result<()> {
     println!("\n=== Step 6: Archive Single Task ===");
 
     let archive_task = ArchiveDocumentTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_id: "create-wireframes-for-onboarding".to_string(),
     };
 
@@ -369,7 +369,7 @@ async fn test_mcp_complete_flight_levels_workflow() -> Result<()> {
     println!("\n=== Step 7: Archive Strategy (Cascade Test) ===");
 
     let archive_strategy = ArchiveDocumentTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_id: "improve-customer-experience".to_string(),
     };
 
@@ -450,14 +450,14 @@ async fn test_mcp_complete_flight_levels_workflow() -> Result<()> {
 /// Test MCP server document content editing workflow
 #[tokio::test]
 async fn test_mcp_document_content_editing() -> Result<()> {
-    let helper = McpTestHelper::new()?;
+    let helper = McpTestHelper::new().await?;
     helper.initialize_project().await?;
 
     println!("=== Test Document Content Editing ===");
 
     // Update vision document content
     let update_content = EditDocumentTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_path: "vision.md".to_string(),
         search: "{Why this vision exists and what it aims to achieve}".to_string(),
         replace: "To create an exceptional user experience that drives customer satisfaction and business growth.".to_string(),
@@ -472,7 +472,7 @@ async fn test_mcp_document_content_editing() -> Result<()> {
     );
 
     // Verify content was updated
-    let vision_path = format!("{}/vision.md", helper.metis_dir);
+    let vision_path = format!("{}/vision.md", helper.metis_dir());
     let vision_content = fs::read_to_string(&vision_path)?;
     assert!(
         vision_content.contains("To create an exceptional user experience"),
@@ -482,7 +482,7 @@ async fn test_mcp_document_content_editing() -> Result<()> {
     println!("✅ Document content updated successfully");
 
     // Instead of validation tool, verify document content exists and is readable
-    let vision_path = std::path::Path::new(&helper.metis_dir).join("vision.md");
+    let vision_path = std::path::Path::new(&helper.metis_dir()).join("vision.md");
     let result = tokio::fs::read_to_string(&vision_path).await;
     assert!(
         result.is_ok(),
@@ -498,12 +498,12 @@ async fn test_mcp_document_content_editing() -> Result<()> {
 /// Test MCP server document search and listing functionality
 #[tokio::test]
 async fn test_mcp_document_search_and_listing() -> Result<()> {
-    let helper = McpTestHelper::new()?;
+    let helper = McpTestHelper::new().await?;
     helper.initialize_project().await?;
 
     // Create some documents to search
     let create_strategy = CreateDocumentTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_type: "strategy".to_string(),
         title: "Data Analytics Strategy".to_string(),
         parent_id: Some(helper.get_project_name()),
@@ -520,7 +520,7 @@ async fn test_mcp_document_search_and_listing() -> Result<()> {
 
     // Test listing all documents
     let list_tool = ListDocumentsTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
     };
 
     let result = list_tool.call_tool().await;
@@ -534,7 +534,7 @@ async fn test_mcp_document_search_and_listing() -> Result<()> {
 
     // Test searching for documents
     let search_tool = SearchDocumentsTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         query: "Analytics".to_string(),
         document_type: Some("strategy".to_string()),
         limit: None,

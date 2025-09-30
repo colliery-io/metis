@@ -60,7 +60,7 @@ async fn test_debug_backlog_creation() -> Result<()> {
 
     // Check what files were created
     println!("=== File System Check ===");
-    let metis_dir = &helper.metis_dir;
+    let metis_dir = &helper.metis_dir();
     if let Ok(entries) = std::fs::read_dir(metis_dir) {
         for entry in entries.flatten() {
             if entry.path().is_file() && entry.path().extension().map_or(false, |ext| ext == "md") {
@@ -88,7 +88,7 @@ async fn test_debug_backlog_creation() -> Result<()> {
 
     // Debug filesystem scanning
     println!("=== Filesystem Scanning Debug ===");
-    match metis_core::application::services::FilesystemService::find_markdown_files(&helper.metis_dir) {
+    match metis_core::application::services::FilesystemService::find_markdown_files(&helper.metis_dir()) {
         Ok(files) => {
             println!("FilesystemService found {} files:", files.len());
             for file in &files {
@@ -102,11 +102,11 @@ async fn test_debug_backlog_creation() -> Result<()> {
 
     // Force sync and debug with detailed results
     println!("=== Explicit Sync Check ===");
-    let db_path = helper.metis_dir.join("metis.db");
+    let db_path = helper.metis_dir().join("metis.db");
     let db = metis_core::dal::Database::new(&db_path.to_string_lossy()).unwrap();
     let app_core = metis_core::application::Application::new(db);
     
-    match app_core.sync_directory(&helper.metis_dir).await {
+    match app_core.sync_directory(&helper.metis_dir()).await {
         Ok(results) => {
             println!("Sync completed with {} results:", results.len());
             for result in &results {

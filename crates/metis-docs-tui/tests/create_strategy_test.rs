@@ -61,7 +61,7 @@ async fn test_create_strategy() -> Result<()> {
     assert_eq!(board.columns[0].items[0].prelude, "Test Strategy");
 
     // Verify the file exists on disk
-    let strategies_dir = helper.metis_dir.join("strategies");
+    let strategies_dir = helper.metis_dir().join("strategies");
     assert!(strategies_dir.exists(), "Strategies directory should exist");
 
     // Find the strategy directory (it will have a generated ID)
@@ -96,7 +96,7 @@ async fn test_create_strategy() -> Result<()> {
     );
 
     // Verify database entry
-    let db = metis_core::dal::Database::new(helper.metis_dir.join("metis.db").to_str().unwrap())
+    let db = metis_core::dal::Database::new(helper.metis_dir().join("metis.db").to_str().unwrap())
         .map_err(|e| anyhow::anyhow!("Database error: {}", e))?;
 
     let mut repo = db

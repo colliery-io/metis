@@ -18,7 +18,7 @@ async fn validate_phase_transition(
     document_id: &str,
 ) -> Result<()> {
     // Validate file exists and contains expected phase tag
-    let full_path = helper.metis_dir.join(file_path);
+    let full_path = helper.metis_dir().join(file_path);
     assert!(
         full_path.exists(),
         "Document file should exist at: {}",
@@ -35,7 +35,7 @@ async fn validate_phase_transition(
     );
 
     // Validate database state
-    let db = metis_core::dal::Database::new(helper.metis_dir.join("metis.db").to_str().unwrap())
+    let db = metis_core::dal::Database::new(helper.metis_dir().join("metis.db").to_str().unwrap())
         .map_err(|e| anyhow::anyhow!("Database error: {}", e))?;
 
     let mut repo = db
@@ -113,7 +113,7 @@ async fn test_strategy_phase_transitions() -> Result<()> {
 
     // Verify file was created in correct location
     let strategy_dir = helper
-        .metis_dir
+        .metis_dir()
         .join("strategies")
         .join("digital-transformation-strategy");
     assert!(
@@ -154,7 +154,7 @@ async fn test_strategy_phase_transitions() -> Result<()> {
     println!("✅ Strategy file created at correct location with proper content");
 
     // Get strategy ID and validate initial phase
-    let db = metis_core::dal::Database::new(helper.metis_dir.join("metis.db").to_str().unwrap())
+    let db = metis_core::dal::Database::new(helper.metis_dir().join("metis.db").to_str().unwrap())
         .map_err(|e| anyhow::anyhow!("Database error: {}", e))?;
 
     let mut repo = db
@@ -284,7 +284,7 @@ async fn test_initiative_phase_transitions() -> Result<()> {
 
     // Verify initiative was created in correct hierarchical location
     let initiative_dir = helper
-        .metis_dir
+        .metis_dir()
         .join("strategies")
         .join("growth-strategy")
         .join("initiatives")
@@ -332,7 +332,7 @@ async fn test_initiative_phase_transitions() -> Result<()> {
     println!("✅ Initiative file created at correct hierarchical location with proper content");
 
     // Get initiative ID and validate initial phase
-    let db = metis_core::dal::Database::new(helper.metis_dir.join("metis.db").to_str().unwrap())
+    let db = metis_core::dal::Database::new(helper.metis_dir().join("metis.db").to_str().unwrap())
         .map_err(|e| anyhow::anyhow!("Database error: {}", e))?;
 
     let mut repo = db
@@ -484,7 +484,7 @@ async fn test_task_phase_transitions() -> Result<()> {
 
     // Verify task was created in correct hierarchical location
     let task_dir = helper
-        .metis_dir
+        .metis_dir()
         .join("strategies")
         .join("technical-excellence")
         .join("initiatives")
@@ -526,7 +526,7 @@ async fn test_task_phase_transitions() -> Result<()> {
     println!("✅ Task file created at correct hierarchical location with proper content");
 
     // Get task ID and validate initial phase
-    let db = metis_core::dal::Database::new(helper.metis_dir.join("metis.db").to_str().unwrap())
+    let db = metis_core::dal::Database::new(helper.metis_dir().join("metis.db").to_str().unwrap())
         .map_err(|e| anyhow::anyhow!("Database error: {}", e))?;
 
     let mut repo = db
@@ -611,7 +611,7 @@ async fn test_adr_phase_transitions() -> Result<()> {
     assert_eq!(*app.app_state(), AppState::Normal);
 
     // Verify ADR was created in correct location
-    let adrs_dir = helper.metis_dir.join("adrs");
+    let adrs_dir = helper.metis_dir().join("adrs");
     assert!(
         adrs_dir.exists(),
         "ADRs directory should exist at: {:?}",
@@ -646,7 +646,7 @@ async fn test_adr_phase_transitions() -> Result<()> {
     println!("✅ ADR file created at correct location with proper content");
 
     // Get ADR ID and validate initial phase
-    let db = metis_core::dal::Database::new(helper.metis_dir.join("metis.db").to_str().unwrap())
+    let db = metis_core::dal::Database::new(helper.metis_dir().join("metis.db").to_str().unwrap())
         .map_err(|e| anyhow::anyhow!("Database error: {}", e))?;
 
     let mut repo = db
@@ -755,7 +755,7 @@ async fn test_invalid_phase_transitions() -> Result<()> {
     } else {
         // The transition might have silently failed, check that phase hasn't changed
         let db =
-            metis_core::dal::Database::new(helper.metis_dir.join("metis.db").to_str().unwrap())
+            metis_core::dal::Database::new(helper.metis_dir().join("metis.db").to_str().unwrap())
                 .map_err(|e| anyhow::anyhow!("Database error: {}", e))?;
 
         let mut repo = db

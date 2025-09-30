@@ -53,7 +53,7 @@ async fn test_edit_and_save_strategy() -> Result<()> {
     assert_eq!(*app.app_state(), AppState::Normal);
 
     // Verify the strategy was updated correctly by reloading it
-    let strategy_dirs: Vec<_> = std::fs::read_dir(helper.metis_dir.join("strategies"))?
+    let strategy_dirs: Vec<_> = std::fs::read_dir(helper.metis_dir().join("strategies"))?
         .filter_map(|entry| entry.ok())
         .filter(|entry| entry.path().is_dir())
         .collect();

@@ -42,7 +42,7 @@ Test backlog item detection
 ";
 
     // Write the task file to root metis directory first to test recognition
-    let task_path = helper.metis_dir.join("debug-task.md");
+    let task_path = helper.metis_dir().join("debug-task.md");
     tokio::fs::write(&task_path, task_content).await?;
     
     println!("Created task file at: {:?}", task_path);

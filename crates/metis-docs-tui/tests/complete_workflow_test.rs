@@ -15,7 +15,7 @@ async fn test_complete_flight_levels_workflow() -> Result<()> {
 
     // Step 1: Verify we start with a Vision document
     println!("=== Step 1: Verify Vision Document ===");
-    let vision_path = helper.metis_dir.join("vision.md");
+    let vision_path = helper.metis_dir().join("vision.md");
     assert!(
         vision_path.exists(),
         "Vision document should exist after project initialization"
@@ -55,7 +55,7 @@ async fn test_complete_flight_levels_workflow() -> Result<()> {
     assert_eq!(*app.app_state(), AppState::Normal);
 
     // Verify strategy was created in file system
-    let strategies_dir = helper.metis_dir.join("strategies");
+    let strategies_dir = helper.metis_dir().join("strategies");
     assert!(strategies_dir.exists(), "Strategies directory should exist");
 
     let strategy_dirs: Vec<_> = std::fs::read_dir(&strategies_dir)?
@@ -86,7 +86,7 @@ async fn test_complete_flight_levels_workflow() -> Result<()> {
     );
 
     // Verify in database
-    let db = metis_core::dal::Database::new(helper.metis_dir.join("metis.db").to_str().unwrap())
+    let db = metis_core::dal::Database::new(helper.metis_dir().join("metis.db").to_str().unwrap())
         .map_err(|e| anyhow::anyhow!("Database error: {}", e))?;
 
     let mut repo = db
@@ -151,7 +151,7 @@ async fn test_complete_flight_levels_workflow() -> Result<()> {
 
     // Verify initiative was created in the correct location
     let strategy_initiative_dir = helper
-        .metis_dir
+        .metis_dir()
         .join("strategies")
         .join("improve-customer-experience")
         .join("initiatives");

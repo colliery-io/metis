@@ -10,14 +10,14 @@ use metis_mcp_server::tools::*;
 /// This specifically tests the bug fix for archiving strategies with nested directories
 #[tokio::test]
 async fn test_mcp_archive_cascading_behavior() -> Result<()> {
-    let helper = McpTestHelper::new()?;
+    let helper = McpTestHelper::new().await?;
     helper.initialize_project().await?;
 
     println!("=== MCP Archive Cascading Test ===");
 
     // Step 1: Create full hierarchy - Strategy -> Initiative -> 2 Tasks
     let create_strategy = CreateDocumentTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_type: "strategy".to_string(),
         title: "Digital Transformation Strategy".to_string(),
         parent_id: Some(helper.get_project_name()),
@@ -31,7 +31,7 @@ async fn test_mcp_archive_cascading_behavior() -> Result<()> {
     assert!(result.is_ok(), "Create strategy should succeed");
 
     let create_initiative = CreateDocumentTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_type: "initiative".to_string(),
         title: "Modernize Legacy Systems".to_string(),
         parent_id: Some("digital-transformation-strategy".to_string()),
@@ -45,7 +45,7 @@ async fn test_mcp_archive_cascading_behavior() -> Result<()> {
     assert!(result.is_ok(), "Create initiative should succeed");
 
     let create_task_1 = CreateDocumentTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_type: "task".to_string(),
         title: "Audit current database schema".to_string(),
         parent_id: Some("modernize-legacy-systems".to_string()),
@@ -59,7 +59,7 @@ async fn test_mcp_archive_cascading_behavior() -> Result<()> {
     assert!(result.is_ok(), "Create first task should succeed");
 
     let create_task_2 = CreateDocumentTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_type: "task".to_string(),
         title: "Plan migration roadmap".to_string(),
         parent_id: Some("modernize-legacy-systems".to_string()),
@@ -117,7 +117,7 @@ async fn test_mcp_archive_cascading_behavior() -> Result<()> {
     println!("\n=== Step 2: Archive Individual Task ===");
 
     let archive_task = ArchiveDocumentTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_id: "audit-current-database-schema".to_string(),
     };
 
@@ -161,7 +161,7 @@ async fn test_mcp_archive_cascading_behavior() -> Result<()> {
     // Add debugging - check directory structure before archive
     let strategy_dir = format!(
         "{}/strategies/digital-transformation-strategy",
-        helper.metis_dir
+        helper.metis_dir()
     );
 
     println!("Before MCP archive - Strategy directory structure:");
@@ -188,7 +188,7 @@ async fn test_mcp_archive_cascading_behavior() -> Result<()> {
     }
 
     let archive_strategy = ArchiveDocumentTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_id: "digital-transformation-strategy".to_string(),
     };
 
@@ -296,8 +296,8 @@ async fn test_mcp_archive_cascading_behavior() -> Result<()> {
     // Step 4: Verify file system state
     println!("\n=== Step 4: Verify File System State ===");
 
-    let strategies_dir = format!("{}/strategies", helper.metis_dir);
-    let archived_dir = format!("{}/archived", helper.metis_dir);
+    let strategies_dir = format!("{}/strategies", helper.metis_dir());
+    let archived_dir = format!("{}/archived", helper.metis_dir());
 
     // Original strategies directory should be empty or non-existent after archive
     if let Ok(entries) = std::fs::read_dir(&strategies_dir) {
@@ -318,7 +318,7 @@ async fn test_mcp_archive_cascading_behavior() -> Result<()> {
 
     let archived_strategy_dir = format!(
         "{}/archived/strategies/digital-transformation-strategy",
-        helper.metis_dir
+        helper.metis_dir()
     );
     assert!(
         std::path::Path::new(&archived_strategy_dir).exists(),
@@ -341,14 +341,14 @@ async fn test_mcp_archive_cascading_behavior() -> Result<()> {
 /// Test MCP server archive error handling
 #[tokio::test]
 async fn test_mcp_archive_error_handling() -> Result<()> {
-    let helper = McpTestHelper::new()?;
+    let helper = McpTestHelper::new().await?;
     helper.initialize_project().await?;
 
     println!("=== MCP Archive Error Handling Test ===");
 
     // Try to archive non-existent document
     let archive_nonexistent = ArchiveDocumentTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_id: "non-existent-document".to_string(),
     };
 
@@ -359,7 +359,7 @@ async fn test_mcp_archive_error_handling() -> Result<()> {
 
     // Try to archive same document twice
     let create_strategy = CreateDocumentTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_type: "strategy".to_string(),
         title: "Test Strategy for Archive".to_string(),
         parent_id: Some(helper.get_project_name()),
@@ -373,7 +373,7 @@ async fn test_mcp_archive_error_handling() -> Result<()> {
     assert!(result.is_ok(), "Create strategy should succeed");
 
     let archive_strategy = ArchiveDocumentTool {
-        project_path: helper.metis_dir.clone(),
+        project_path: helper.metis_dir().clone(),
         document_id: "test-strategy-for-archive".to_string(),
     };
 
