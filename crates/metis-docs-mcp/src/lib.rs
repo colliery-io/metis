@@ -12,6 +12,7 @@ pub use error::{McpServerError, Result};
 pub use server::MetisServerHandler;
 
 use anyhow::Result as AnyhowResult;
+use metis_core::application::services::workspace::WorkspaceDetectionService;
 use rust_mcp_sdk::{
     mcp_server::server_runtime,
     schema::{
@@ -23,31 +24,16 @@ use rust_mcp_sdk::{
 use tracing::info;
 
 fn find_metis_log_path() -> Option<String> {
-    let current_dir = std::env::current_dir().ok()?;
-    let mut current = current_dir;
-
-    // Traverse upward looking for initialized metis project
-    loop {
-        let metis_dir = current.join("metis");
-        let metis_db = metis_dir.join(".metis.db");
-
-        // Only create logs if there's an initialized metis project
-        if metis_dir.is_dir() && metis_db.exists() {
-            return Some(
-                metis_dir
-                    .join("metis-mcp-server.log")
-                    .to_string_lossy()
-                    .to_string(),
-            );
-        }
-
-        // Move to parent directory
-        if let Some(parent) = current.parent() {
-            current = parent.to_path_buf();
-        } else {
-            // Reached filesystem root
-            break;
-        }
+    let detection_service = WorkspaceDetectionService::new();
+    
+    // Use core service to find workspace
+    if let Ok(Some(metis_dir)) = detection_service.find_workspace() {
+        return Some(
+            metis_dir
+                .join("metis-mcp-server.log")
+                .to_string_lossy()
+                .to_string(),
+        );
     }
 
     None

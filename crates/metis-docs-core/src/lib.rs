@@ -5,6 +5,7 @@
 //! documents through their defined phases.
 
 pub mod application;
+pub mod constants;
 pub mod dal;
 pub mod domain;
 pub mod error;
@@ -22,3 +23,9 @@ pub use domain::documents::{
     vision::Vision,
 };
 pub use error::{MetisError, Result};
+
+// Test utilities for other crates
+#[cfg(feature = "test-utils")]
+pub mod tests {
+    pub mod common;
+}

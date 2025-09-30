@@ -1,5 +1,8 @@
 //! Error types for Metis operations
 
+pub mod conversions;
+
+pub use conversions::{ErrorCategory, ErrorContext, UserFriendlyError};
 use thiserror::Error;
 
 pub type Result<T> = std::result::Result<T, MetisError>;

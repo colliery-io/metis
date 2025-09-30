@@ -41,4 +41,5 @@ tui-input = "0.10"
 tui-textarea = "0.6"
 
 [dev-dependencies]
+metis-docs-core = { path = "../metis-docs-core", version = "0.2.6", features = ["test-utils"] }
 tempfile = "3.0"

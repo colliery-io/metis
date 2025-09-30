@@ -10,6 +10,10 @@ homepage.workspace = true
 keywords.workspace = true
 categories.workspace = true
 
+[features]
+default = []
+test-utils = ["tempfile"]
+
 [dependencies]
 # Shared dependencies
 tokio = { workspace = true }
@@ -33,6 +37,9 @@ gray_matter = "0.2"
 tera = "1.19"
 include_dir = "0.7"
 walkdir = "2.0"
+
+# Optional test utilities
+tempfile = { workspace = true, optional = true }
 
 [dev-dependencies]
 tokio-test = { workspace = true }
