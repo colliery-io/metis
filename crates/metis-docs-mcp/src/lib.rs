@@ -72,7 +72,7 @@ pub async fn run() -> AnyhowResult<()> {
     let server_details = InitializeResult {
         server_info: Implementation {
             name: "Metis Documentation Management System".to_string(),
-            version: "0.2.7".to_string(),
+            version: "0.3.0".to_string(),
             title: Some("Metis MCP Server".to_string()),
         },
         capabilities: ServerCapabilities {

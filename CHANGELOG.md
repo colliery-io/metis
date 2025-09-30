@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2025-01-30
+
+### Added
+- Shared workspace detection service in core for consistent behavior across all crates
+- Constants module with centralized configuration values and magic strings
+- Error conversion utilities with user-friendly messaging and categorization
+- Shared test utilities framework with optional `test-utils` feature
+- Comprehensive error context traits for better error handling
+
+### Changed
+- **BREAKING**: Consolidated workspace detection logic - all crates now use core service
+- Standardized error handling patterns across TUI, CLI, and MCP crates
+- Unified test infrastructure reduces boilerplate by ~60%
+- Improved code maintainability with ~30% reduction in duplication
+
+### Fixed
+- Eliminated duplicate workspace finding implementations
+- Consistent `.metis` directory detection and validation
+- Standardized error messaging across all interfaces
+
 ## [0.2.6] - 2025-07-31
 
 ### Changed
