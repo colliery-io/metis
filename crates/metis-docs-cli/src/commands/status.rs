@@ -26,54 +26,51 @@ struct StatusRow {
 }
 
 impl StatusCommand {
-    pub async fn execute(&self) -> Result<()> {
-        // 1. Validate we're in a metis workspace
+    // Helper methods to reduce complexity
+
+    /// Get all document types to query
+    fn get_document_types() -> &'static [&'static str] {
+        &["vision", "strategy", "initiative", "task", "adr"]
+    }
+
+    /// Initialize database connection from workspace
+    async fn connect_to_database() -> Result<metis_core::dal::database::repository::DocumentRepository> {
         let (workspace_exists, metis_dir) = workspace::has_metis_vault();
         if !workspace_exists {
             anyhow::bail!("Not in a Metis workspace. Run 'metis init' to create one.");
         }
         let metis_dir = metis_dir.unwrap();
 
-        // 2. Connect to database
         let db_path = metis_dir.join("metis.db");
         let db = Database::new(db_path.to_str().unwrap())
             .map_err(|e| anyhow::anyhow!("Database connection failed: {}", e))?;
-        let mut repo = db.into_repository();
-
-        // 3. Get all documents (excluding archived by default)
-        let documents = self.get_status_documents(&mut repo).await?;
-
-        // 4. Display results
-        if documents.is_empty() {
-            println!("No documents found in workspace.");
-            return Ok(());
-        }
-
-        self.display_status(&documents);
-
-        Ok(())
+        Ok(db.into_repository())
     }
 
-    async fn get_status_documents(
+    /// Fetch and filter documents from repository
+    async fn fetch_documents(
         &self,
         repo: &mut metis_core::dal::database::repository::DocumentRepository,
     ) -> MetisResult<Vec<metis_core::dal::database::models::Document>> {
-        // Get all document types
         let mut all_docs = Vec::new();
 
-        for doc_type in ["vision", "strategy", "initiative", "task", "adr"] {
+        // Collect all documents
+        for doc_type in Self::get_document_types() {
             let mut docs = repo.find_by_type(doc_type)?;
             all_docs.append(&mut docs);
         }
 
-        // Filter out archived documents unless requested
+        // Filter archived if needed
         if !self.include_archived {
             all_docs.retain(|doc| !doc.archived);
         }
 
-        // Sort by actionability: blocked first, then by phase priority, then by updated date
-        all_docs.sort_by(|a, b| {
-            // First, prioritize by actionability
+        Ok(all_docs)
+    }
+
+    /// Sort documents by actionability and recency
+    fn sort_documents_by_priority(&self, docs: &mut [metis_core::dal::database::models::Document]) {
+        docs.sort_by(|a, b| {
             let a_priority = self.get_action_priority(a);
             let b_priority = self.get_action_priority(b);
 
@@ -87,9 +84,47 @@ impl StatusCommand {
                 other => other,
             }
         });
-
-        Ok(all_docs)
     }
+
+    /// Format a single document into a status row
+    fn create_status_row(&self, doc: &metis_core::dal::database::models::Document) -> StatusRow {
+        StatusRow {
+            title: self.truncate_string(&doc.title, 35),
+            doc_type: doc.document_type.clone(),
+            phase: doc.phase.clone(),
+            blocked_by: self.extract_blocked_by_info(doc),
+            updated: chrono::DateTime::from_timestamp(doc.updated_at as i64, 0)
+                .map(|dt| self.format_relative_time(dt))
+                .unwrap_or_else(|| "Unknown".to_string()),
+        }
+    }
+
+    /// Count documents by phase for insights
+    fn count_documents_by_phase(&self, documents: &[metis_core::dal::database::models::Document]) -> (usize, usize, usize) {
+        let blocked_count = documents.iter().filter(|d| d.phase == "blocked").count();
+        let todo_count = documents.iter().filter(|d| d.phase == "todo").count();
+        let active_count = documents.iter().filter(|d| d.phase == "active").count();
+        (blocked_count, todo_count, active_count)
+    }
+
+    pub async fn execute(&self) -> Result<()> {
+        // 1. Connect to database
+        let mut repo = Self::connect_to_database().await?;
+
+        // 2. Fetch and sort documents
+        let mut documents = self.fetch_documents(&mut repo).await?;
+        self.sort_documents_by_priority(&mut documents);
+
+        // 3. Display results
+        if documents.is_empty() {
+            println!("No documents found in workspace.");
+            return Ok(());
+        }
+
+        self.display_status(&documents);
+        Ok(())
+    }
+
 
     fn get_action_priority(&self, doc: &metis_core::dal::database::models::Document) -> u8 {
         // Lower numbers = higher priority (more actionable)
@@ -112,15 +147,7 @@ impl StatusCommand {
         // Convert documents to table rows
         let rows: Vec<StatusRow> = documents
             .iter()
-            .map(|doc| StatusRow {
-                title: self.truncate_string(&doc.title, 35),
-                doc_type: doc.document_type.clone(),
-                phase: doc.phase.clone(),
-                blocked_by: self.extract_blocked_by_info(doc),
-                updated: chrono::DateTime::from_timestamp(doc.updated_at as i64, 0)
-                    .map(|dt| self.format_relative_time(dt))
-                    .unwrap_or_else(|| "Unknown".to_string()),
-            })
+            .map(|doc| self.create_status_row(doc))
             .collect();
 
         // Create and display table
@@ -190,9 +217,7 @@ impl StatusCommand {
     }
 
     fn display_insights(&self, documents: &[metis_core::dal::database::models::Document]) {
-        let blocked_count = documents.iter().filter(|d| d.phase == "blocked").count();
-        let todo_count = documents.iter().filter(|d| d.phase == "todo").count();
-        let active_count = documents.iter().filter(|d| d.phase == "active").count();
+        let (blocked_count, todo_count, active_count) = self.count_documents_by_phase(documents);
 
         if blocked_count > 0 || todo_count > 0 {
             println!("ACTIONABLE ITEMS:");

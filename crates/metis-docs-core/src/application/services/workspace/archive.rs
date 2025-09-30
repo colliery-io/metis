@@ -365,14 +365,6 @@ impl ArchiveService {
     }
 
 
-    /// Mark a document as archived by updating its frontmatter
-    async fn mark_document_as_archived(
-        &self,
-        file_path: &Path,
-        doc_type: DocumentType,
-    ) -> Result<()> {
-        self.mark_as_archived_helper(file_path, doc_type).await
-    }
 
     /// Get document ID from a file
     async fn get_document_id(&self, file_path: &Path, doc_type: DocumentType) -> Result<String> {

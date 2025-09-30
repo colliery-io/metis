@@ -408,65 +408,6 @@ impl DocumentDiscoveryService {
         Ok(documents)
     }
 
-    // Helper methods to reduce code duplication
-
-    /// Helper to traverse strategy directories and apply a function to each
-    fn traverse_strategy_directories<F>(&self, mut handler: F) -> Result<()>
-    where
-        F: FnMut(&Path) -> Result<()>,
-    {
-        let strategies_dir = self.workspace_dir.join("strategies");
-        if !strategies_dir.exists() {
-            return Ok(());
-        }
-
-        for entry in fs::read_dir(&strategies_dir)
-            .map_err(|e| MetisError::FileSystem(e.to_string()))?
-        {
-            let strategy_dir = entry
-                .map_err(|e| MetisError::FileSystem(e.to_string()))?
-                .path();
-            if strategy_dir.is_dir() {
-                handler(&strategy_dir)?;
-            }
-        }
-        Ok(())
-    }
-
-    /// Helper to traverse initiative directories within strategies
-    fn traverse_initiative_directories<F>(&self, mut handler: F) -> Result<()>
-    where
-        F: FnMut(&Path) -> Result<()>,
-    {
-        self.traverse_strategy_directories(|strategy_dir| {
-            let initiatives_dir = strategy_dir.join("initiatives");
-            if !initiatives_dir.exists() {
-                return Ok(());
-            }
-
-            for initiative_entry in fs::read_dir(&initiatives_dir)
-                .map_err(|e| MetisError::FileSystem(e.to_string()))?
-            {
-                let initiative_dir = initiative_entry
-                    .map_err(|e| MetisError::FileSystem(e.to_string()))?
-                    .path();
-                if initiative_dir.is_dir() {
-                    handler(&initiative_dir)?;
-                }
-            }
-            Ok(())
-        })
-    }
-
-    /// Helper to check if a file is a markdown file
-    fn is_markdown_file(&self, path: &Path) -> bool {
-        path.is_file() && path.extension().is_some_and(|ext| ext == "md")
-    }
-
-    /// Helper to read a directory safely
-    fn read_dir_safely(&self, path: &Path) -> Result<fs::ReadDir> {
-        fs::read_dir(path).map_err(|e| MetisError::FileSystem(e.to_string()))
-    }
 }
 
 #[cfg(test)]
