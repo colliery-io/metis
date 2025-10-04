@@ -13,3 +13,5 @@ tags:
 
 exit_criteria_met: {{ exit_criteria_met }}
 estimated_complexity: {{ estimated_complexity }}
+strategy_id: {{ strategy_id }}
+initiative_id: {{ initiative_id }}

@@ -1,10 +1,12 @@
 use crate::application::services::document::DocumentDiscoveryService;
+use crate::application::services::DatabaseService;
 use crate::domain::documents::traits::Document;
 use crate::domain::documents::types::DocumentType;
 use crate::Result;
 use crate::{Adr, Initiative, MetisError, Strategy, Task, Vision};
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::str::FromStr;
 
 /// Service for archiving documents and managing the archived folder structure
 pub struct ArchiveService {
@@ -179,6 +181,76 @@ impl ArchiveService {
         let archived_documents = self
             .archive_document_tree(&discovery_result.file_path, discovery_result.document_type)
             .await?;
+
+        Ok(ArchiveResult {
+            total_archived: archived_documents.len(),
+            archived_documents,
+        })
+    }
+
+    /// Archive a document using database lineage queries for efficient hierarchy discovery
+    /// This method can be used when a database service is available for optimization
+    pub async fn archive_document_with_database(
+        &self, 
+        document_id: &str, 
+        db_service: &mut DatabaseService
+    ) -> Result<ArchiveResult> {
+        // Find the document in the database
+        let doc = db_service.find_by_id(document_id)?.ok_or_else(|| {
+            MetisError::DocumentNotFound {
+                id: document_id.to_string(),
+            }
+        })?;
+
+        let doc_type = DocumentType::from_str(&doc.document_type)
+            .map_err(|e| MetisError::ValidationFailed { message: format!("Invalid document type: {}", e) })?;
+        let mut archived_documents = Vec::new();
+
+        match doc_type {
+            DocumentType::Vision | DocumentType::Task | DocumentType::Adr => {
+                // These document types don't have children, just archive the file
+                let archived_doc = self.archive_single_file(&PathBuf::from(&doc.filepath), doc_type).await?;
+                archived_documents.push(archived_doc);
+            }
+
+            DocumentType::Strategy => {
+                // Use database query to find all documents in strategy hierarchy
+                let hierarchy_docs = db_service.find_strategy_hierarchy(document_id)?;
+                
+                // Mark all documents as archived first
+                for db_doc in &hierarchy_docs {
+                    let path = PathBuf::from(&db_doc.filepath);
+                    let dt = DocumentType::from_str(&db_doc.document_type)
+                        .map_err(|e| MetisError::ValidationFailed { message: format!("Invalid document type: {}", e) })?;
+                    self.mark_as_archived_helper(&path, dt).await?;
+                }
+
+                // Archive the strategy directory (which moves everything intact)
+                let strategy_path = PathBuf::from(&doc.filepath);
+                let strategy_dir = strategy_path.parent().unwrap();
+                let archived_doc = self.archive_directory(strategy_dir, doc_type).await?;
+                archived_documents.push(archived_doc);
+            }
+
+            DocumentType::Initiative => {
+                // Use database query to find all documents in initiative hierarchy
+                let hierarchy_docs = db_service.find_initiative_hierarchy(document_id)?;
+                
+                // Mark all documents as archived first
+                for db_doc in &hierarchy_docs {
+                    let path = PathBuf::from(&db_doc.filepath);
+                    let dt = DocumentType::from_str(&db_doc.document_type)
+                        .map_err(|e| MetisError::ValidationFailed { message: format!("Invalid document type: {}", e) })?;
+                    self.mark_as_archived_helper(&path, dt).await?;
+                }
+
+                // Archive the initiative directory (which moves everything intact)
+                let initiative_path = PathBuf::from(&doc.filepath);
+                let initiative_dir = initiative_path.parent().unwrap();
+                let archived_doc = self.archive_directory(initiative_dir, doc_type).await?;
+                archived_documents.push(archived_doc);
+            }
+        }
 
         Ok(ArchiveResult {
             total_archived: archived_documents.len(),

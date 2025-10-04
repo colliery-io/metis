@@ -1,9 +1,11 @@
+use crate::application::services::DatabaseService;
 use crate::domain::documents::traits::Document;
 use crate::domain::documents::types::DocumentType;
 use crate::Result;
 use crate::{Adr, Initiative, MetisError, Strategy, Task, Vision};
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::str::FromStr;
 
 /// Service for discovering documents by ID across all document types
 pub struct DocumentDiscoveryService {
@@ -431,6 +433,112 @@ impl DocumentDiscoveryService {
         }
 
         Ok(documents)
+    }
+
+    /// Find all documents in a strategy hierarchy using database lineage queries
+    /// This is more efficient than filesystem-based discovery for large hierarchies
+    pub async fn find_strategy_hierarchy_with_database(
+        &self,
+        strategy_id: &str,
+        db_service: &mut DatabaseService,
+    ) -> Result<Vec<DocumentDiscoveryResult>> {
+        let hierarchy_docs = db_service.find_strategy_hierarchy(strategy_id)?;
+        let mut results = Vec::new();
+        
+        for doc in hierarchy_docs {
+            if let Ok(doc_type) = DocumentType::from_str(&doc.document_type) {
+                results.push(DocumentDiscoveryResult {
+                    document_type: doc_type,
+                    file_path: PathBuf::from(doc.filepath),
+                });
+            }
+        }
+        
+        Ok(results)
+    }
+
+    /// Find all documents in an initiative hierarchy using database lineage queries
+    /// This is more efficient than filesystem-based discovery for large hierarchies
+    pub async fn find_initiative_hierarchy_with_database(
+        &self,
+        initiative_id: &str,
+        db_service: &mut DatabaseService,
+    ) -> Result<Vec<DocumentDiscoveryResult>> {
+        let hierarchy_docs = db_service.find_initiative_hierarchy(initiative_id)?;
+        let mut results = Vec::new();
+        
+        for doc in hierarchy_docs {
+            if let Ok(doc_type) = DocumentType::from_str(&doc.document_type) {
+                results.push(DocumentDiscoveryResult {
+                    document_type: doc_type,
+                    file_path: PathBuf::from(doc.filepath),
+                });
+            }
+        }
+        
+        Ok(results)
+    }
+
+    /// Find all documents belonging to a strategy using database lineage queries
+    pub async fn find_documents_by_strategy_with_database(
+        &self,
+        strategy_id: &str,
+        db_service: &mut DatabaseService,
+    ) -> Result<Vec<DocumentDiscoveryResult>> {
+        let docs = db_service.find_by_strategy_id(strategy_id)?;
+        let mut results = Vec::new();
+        
+        for doc in docs {
+            if let Ok(doc_type) = DocumentType::from_str(&doc.document_type) {
+                results.push(DocumentDiscoveryResult {
+                    document_type: doc_type,
+                    file_path: PathBuf::from(doc.filepath),
+                });
+            }
+        }
+        
+        Ok(results)
+    }
+
+    /// Find all documents belonging to an initiative using database lineage queries
+    pub async fn find_documents_by_initiative_with_database(
+        &self,
+        initiative_id: &str,
+        db_service: &mut DatabaseService,
+    ) -> Result<Vec<DocumentDiscoveryResult>> {
+        let docs = db_service.find_by_initiative_id(initiative_id)?;
+        let mut results = Vec::new();
+        
+        for doc in docs {
+            if let Ok(doc_type) = DocumentType::from_str(&doc.document_type) {
+                results.push(DocumentDiscoveryResult {
+                    document_type: doc_type,
+                    file_path: PathBuf::from(doc.filepath),
+                });
+            }
+        }
+        
+        Ok(results)
+    }
+
+    /// Fast document lookup using database instead of filesystem scanning
+    /// This is more efficient when the database is synchronized
+    pub async fn find_document_by_id_with_database(
+        &self,
+        document_id: &str,
+        db_service: &mut DatabaseService,
+    ) -> Result<DocumentDiscoveryResult> {
+        let doc = db_service.find_by_id(document_id)?.ok_or_else(|| {
+            MetisError::NotFound(format!("Document '{}' not found", document_id))
+        })?;
+        
+        let doc_type = DocumentType::from_str(&doc.document_type)
+            .map_err(|e| MetisError::ValidationFailed { message: format!("Invalid document type: {}", e) })?;
+        
+        Ok(DocumentDiscoveryResult {
+            document_type: doc_type,
+            file_path: PathBuf::from(doc.filepath),
+        })
     }
 
 }

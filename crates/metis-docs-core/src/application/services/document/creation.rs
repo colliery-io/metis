@@ -218,6 +218,7 @@ impl DocumentCreationService {
         let initiative = Initiative::new(
             config.title.clone(),
             parent_id.parent_id().cloned(), // Extract actual parent ID for document creation
+            Some(DocumentId::from(effective_strategy_id)), // strategy_id from configuration
             Vec::new(), // blocked_by
             tags,
             false,                                      // not archived
@@ -339,6 +340,8 @@ impl DocumentCreationService {
             config.title.clone(),
             parent_id.parent_id().cloned(), // Extract actual parent ID for document creation
             parent_title,                   // parent title for template
+            if effective_strategy_id == "NULL" { None } else { Some(DocumentId::from(effective_strategy_id)) },
+            if effective_initiative_id == "NULL" { None } else { Some(DocumentId::from(effective_initiative_id)) },
             Vec::new(),                     // blocked_by
             tags,
             false, // not archived
@@ -390,6 +393,8 @@ impl DocumentCreationService {
             config.title.clone(),
             None,                            // No parent for backlog items
             None,                            // No parent title for template
+            None,                            // No strategy for backlog items
+            None,                            // No initiative for backlog items
             Vec::new(),                      // blocked_by
             tags,
             false, // not archived

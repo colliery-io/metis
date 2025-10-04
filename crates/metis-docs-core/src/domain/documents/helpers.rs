@@ -117,6 +117,17 @@ impl FrontmatterParser {
             )),
         }
     }
+    
+    /// Extract an optional string field from frontmatter
+    pub fn extract_optional_string(
+        map: &std::collections::HashMap<String, gray_matter::Pod>,
+        key: &str,
+    ) -> Option<String> {
+        match map.get(key) {
+            Some(gray_matter::Pod::String(s)) => Some(s.clone()),
+            _ => None,
+        }
+    }
 }
 
 #[cfg(test)]

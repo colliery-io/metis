@@ -84,6 +84,9 @@ impl Strategy {
 
         let content = DocumentContent::new(&rendered_content);
 
+        // For strategies, the strategy_id is self and initiative_id is None
+        let strategy_id = Some(DocumentId::from_title(&title));
+        
         Ok(Self {
             core: super::traits::DocumentCore {
                 title,
@@ -93,6 +96,8 @@ impl Strategy {
                 blocked_by,
                 tags,
                 archived,
+                strategy_id,
+                initiative_id: None,
             },
             risk_level,
             stakeholders,
@@ -112,6 +117,9 @@ impl Strategy {
         risk_level: RiskLevel,
         stakeholders: Vec<String>,
     ) -> Self {
+        // For strategies, the strategy_id is self and initiative_id is None
+        let strategy_id = Some(DocumentId::from_title(&title));
+        
         Self {
             core: super::traits::DocumentCore {
                 title,
@@ -121,6 +129,8 @@ impl Strategy {
                 blocked_by,
                 tags,
                 archived,
+                strategy_id,
+                initiative_id: None,
             },
             risk_level,
             stakeholders,
@@ -289,6 +299,22 @@ impl Strategy {
         // Convert tags to strings
         let tag_strings: Vec<String> = self.tags().iter().map(|tag| tag.to_str()).collect();
         context.insert("tags", &tag_strings);
+        
+        // Add lineage fields
+        context.insert(
+            "strategy_id",
+            &self.core.strategy_id
+                .as_ref()
+                .map(|id| id.to_string())
+                .unwrap_or_default(),
+        );
+        context.insert(
+            "initiative_id",
+            &self.core.initiative_id
+                .as_ref()
+                .map(|id| id.to_string())
+                .unwrap_or_default(),
+        );
 
         // Render frontmatter
         let frontmatter = tera.render("frontmatter", &context).map_err(|e| {

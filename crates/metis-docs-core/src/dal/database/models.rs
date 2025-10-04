@@ -27,6 +27,8 @@ pub struct Document {
     pub frontmatter_json: String,
     pub content: Option<String>,
     pub phase: String,
+    pub strategy_id: Option<String>,
+    pub initiative_id: Option<String>,
 }
 
 #[derive(Queryable, Selectable, Insertable, Debug, Clone, Serialize, Deserialize)]
@@ -63,6 +65,8 @@ pub struct NewDocument {
     pub frontmatter_json: String,
     pub content: Option<String>,
     pub phase: String,
+    pub strategy_id: Option<String>,
+    pub initiative_id: Option<String>,
 }
 
 // Document search needs separate structs because rowid is auto-generated

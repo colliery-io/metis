@@ -12,3 +12,5 @@ tags:
 {% endfor %}
 
 exit_criteria_met: {{ exit_criteria_met }}
+strategy_id: {{ strategy_id }}
+initiative_id: {{ initiative_id }}

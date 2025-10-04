@@ -112,6 +112,26 @@ impl DatabaseService {
 
         Ok(pairs)
     }
+
+    /// Get all documents belonging to a strategy
+    pub fn find_by_strategy_id(&mut self, strategy_id: &str) -> Result<Vec<Document>> {
+        self.repository.find_by_strategy_id(strategy_id)
+    }
+
+    /// Get all documents belonging to an initiative
+    pub fn find_by_initiative_id(&mut self, initiative_id: &str) -> Result<Vec<Document>> {
+        self.repository.find_by_initiative_id(initiative_id)
+    }
+
+    /// Get all documents in a strategy hierarchy (strategy + its initiatives + their tasks)
+    pub fn find_strategy_hierarchy(&mut self, strategy_id: &str) -> Result<Vec<Document>> {
+        self.repository.find_strategy_hierarchy(strategy_id)
+    }
+
+    /// Get all documents in an initiative hierarchy (initiative + its tasks)
+    pub fn find_initiative_hierarchy(&mut self, initiative_id: &str) -> Result<Vec<Document>> {
+        self.repository.find_initiative_hierarchy(initiative_id)
+    }
 }
 
 #[cfg(test)]
@@ -138,6 +158,33 @@ mod tests {
             frontmatter_json: "{}".to_string(),
             content: Some("Test content".to_string()),
             phase: "draft".to_string(),
+            strategy_id: None,
+            initiative_id: None,
+        }
+    }
+
+    fn create_test_document_with_lineage(
+        id: &str, 
+        doc_type: &str, 
+        filepath: &str,
+        strategy_id: Option<String>,
+        initiative_id: Option<String>
+    ) -> NewDocument {
+        NewDocument {
+            filepath: filepath.to_string(),
+            id: id.to_string(),
+            title: format!("Test {}", doc_type),
+            document_type: doc_type.to_string(),
+            created_at: 1609459200.0,
+            updated_at: 1609459200.0,
+            archived: false,
+            exit_criteria_met: false,
+            file_hash: "abc123".to_string(),
+            frontmatter_json: "{}".to_string(),
+            content: Some("Test content".to_string()),
+            phase: "draft".to_string(),
+            strategy_id,
+            initiative_id,
         }
     }
 
@@ -221,5 +268,70 @@ mod tests {
             .expect("Failed to find parent")
             .expect("Parent not found");
         assert_eq!(parent.id, "parent-1");
+    }
+
+    #[test]
+    fn test_lineage_queries() {
+        let mut service = setup_service();
+
+        // Create strategy
+        let strategy = create_test_document_with_lineage(
+            "strategy-1", 
+            "strategy", 
+            "/strategies/strategy-1/strategy.md",
+            None, 
+            None
+        );
+        service.create_document(strategy).expect("Failed to create strategy");
+
+        // Create initiative under strategy
+        let initiative = create_test_document_with_lineage(
+            "initiative-1", 
+            "initiative", 
+            "/strategies/strategy-1/initiatives/initiative-1/initiative.md",
+            Some("strategy-1".to_string()), 
+            None
+        );
+        service.create_document(initiative).expect("Failed to create initiative");
+
+        // Create tasks under initiative
+        let task1 = create_test_document_with_lineage(
+            "task-1", 
+            "task", 
+            "/strategies/strategy-1/initiatives/initiative-1/tasks/task-1.md",
+            Some("strategy-1".to_string()), 
+            Some("initiative-1".to_string())
+        );
+        let task2 = create_test_document_with_lineage(
+            "task-2", 
+            "task", 
+            "/strategies/strategy-1/initiatives/initiative-1/tasks/task-2.md",
+            Some("strategy-1".to_string()), 
+            Some("initiative-1".to_string())
+        );
+        service.create_document(task1).expect("Failed to create task1");
+        service.create_document(task2).expect("Failed to create task2");
+
+        // Test find by strategy ID
+        let strategy_docs = service.find_by_strategy_id("strategy-1").expect("Failed to find by strategy");
+        assert_eq!(strategy_docs.len(), 3); // initiative + 2 tasks
+
+        // Test find by initiative ID
+        let initiative_docs = service.find_by_initiative_id("initiative-1").expect("Failed to find by initiative");
+        assert_eq!(initiative_docs.len(), 2); // 2 tasks
+
+        // Test strategy hierarchy (should include strategy itself + its children)
+        let strategy_hierarchy = service.find_strategy_hierarchy("strategy-1").expect("Failed to find strategy hierarchy");
+        assert_eq!(strategy_hierarchy.len(), 4); // strategy + initiative + 2 tasks
+
+        // Test initiative hierarchy (should include initiative itself + its tasks)
+        let initiative_hierarchy = service.find_initiative_hierarchy("initiative-1").expect("Failed to find initiative hierarchy");
+        assert_eq!(initiative_hierarchy.len(), 3); // initiative + 2 tasks
+
+        // Verify document types in strategy hierarchy
+        let doc_types: Vec<&str> = strategy_hierarchy.iter().map(|d| d.document_type.as_str()).collect();
+        assert!(doc_types.contains(&"strategy"));
+        assert!(doc_types.contains(&"initiative"));
+        assert!(doc_types.iter().filter(|&&t| t == "task").count() == 2);
     }
 }

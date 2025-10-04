@@ -31,6 +31,7 @@ pub async fn create_new_initiative(title: &str, strategy_id: &str) -> Result<()>
     let initiative = Initiative::new(
         title.to_string(),
         Some(strategy_doc_id.clone()),
+        Some(strategy_doc_id.clone()), // strategy_id (same as parent for initiatives)
         Vec::new(), // blocked_by
         tags,
         false, // not archived

@@ -1,6 +1,6 @@
 use crate::application::services::{DatabaseService, FilesystemService};
 use crate::dal::database::models::{Document, NewDocument};
-use crate::domain::documents::{factory::DocumentFactory, traits::Document as DocumentTrait};
+use crate::domain::documents::{factory::DocumentFactory, traits::Document as DocumentTrait, types::DocumentId};
 use crate::{MetisError, Result};
 use serde_json;
 use std::path::Path;
@@ -8,11 +8,21 @@ use std::path::Path;
 /// Synchronization service - bridges filesystem and database
 pub struct SyncService<'a> {
     db_service: &'a mut DatabaseService,
+    workspace_dir: Option<&'a Path>,
 }
 
 impl<'a> SyncService<'a> {
     pub fn new(db_service: &'a mut DatabaseService) -> Self {
-        Self { db_service }
+        Self { 
+            db_service,
+            workspace_dir: None,
+        }
+    }
+    
+    /// Set the workspace directory for lineage extraction
+    pub fn with_workspace_dir(mut self, workspace_dir: &'a Path) -> Self {
+        self.workspace_dir = Some(workspace_dir);
+        self
     }
 
     /// Direction 1: File → DocumentObject → Database
@@ -83,6 +93,21 @@ impl<'a> SyncService<'a> {
             })?
             .to_string();
 
+        // Extract lineage from filesystem path if workspace directory is available
+        let (fs_strategy_id, fs_initiative_id) = if let Some(workspace_dir) = self.workspace_dir {
+            Self::extract_lineage_from_path(filepath, workspace_dir)
+        } else {
+            (None, None)
+        };
+        
+        // Use filesystem lineage if available, otherwise use document lineage
+        let final_strategy_id = fs_strategy_id
+            .or_else(|| core.strategy_id.clone())
+            .map(|id| id.to_string());
+        let final_initiative_id = fs_initiative_id
+            .or_else(|| core.initiative_id.clone())
+            .map(|id| id.to_string());
+
         Ok(NewDocument {
             filepath: filepath.to_string(),
             id: document_obj.id().to_string(),
@@ -96,7 +121,77 @@ impl<'a> SyncService<'a> {
             frontmatter_json: serde_json::to_string(&core.metadata).map_err(MetisError::Json)?,
             content: Some(content),
             phase,
+            strategy_id: final_strategy_id,
+            initiative_id: final_initiative_id,
         })
+    }
+
+    /// Extract lineage information from file path
+    /// Returns (strategy_id, initiative_id) based on filesystem structure
+    fn extract_lineage_from_path<P: AsRef<Path>>(
+        file_path: P,
+        workspace_dir: &Path,
+    ) -> (Option<DocumentId>, Option<DocumentId>) {
+        let path = file_path.as_ref();
+        
+        // Get relative path from workspace
+        let relative_path = match path.strip_prefix(workspace_dir) {
+            Ok(rel) => rel,
+            Err(_) => return (None, None),
+        };
+        
+        let path_parts: Vec<&str> = relative_path
+            .components()
+            .filter_map(|c| c.as_os_str().to_str())
+            .collect();
+            
+        // Match the path structure
+        match path_parts.as_slice() {
+            // strategies/{strategy-id}/strategy.md
+            ["strategies", strategy_id, "strategy.md"] => {
+                if strategy_id == &"NULL" {
+                    (None, None)
+                } else {
+                    (Some(DocumentId::from(*strategy_id)), None)
+                }
+            }
+            // strategies/{strategy-id}/initiatives/{initiative-id}/initiative.md
+            ["strategies", strategy_id, "initiatives", initiative_id, "initiative.md"] => {
+                let strat_id = if strategy_id == &"NULL" { 
+                    None 
+                } else { 
+                    Some(DocumentId::from(*strategy_id)) 
+                };
+                let init_id = if initiative_id == &"NULL" { 
+                    None 
+                } else { 
+                    Some(DocumentId::from(*initiative_id)) 
+                };
+                (strat_id, init_id)
+            }
+            // strategies/{strategy-id}/initiatives/{initiative-id}/tasks/{task-id}.md
+            ["strategies", strategy_id, "initiatives", initiative_id, "tasks", _] => {
+                let strat_id = if strategy_id == &"NULL" { 
+                    None 
+                } else { 
+                    Some(DocumentId::from(*strategy_id)) 
+                };
+                let init_id = if initiative_id == &"NULL" { 
+                    None 
+                } else { 
+                    Some(DocumentId::from(*initiative_id)) 
+                };
+                (strat_id, init_id)
+            }
+            // backlog/{task-id}.md (no lineage)
+            ["backlog", _] => (None, None),
+            // adrs/{adr-id}.md (no lineage)
+            ["adrs", _] => (None, None),
+            // vision.md (no lineage)
+            ["vision.md"] => (None, None),
+            // Default: no lineage
+            _ => (None, None),
+        }
     }
 
     /// Extract document ID from file without keeping the document object around
