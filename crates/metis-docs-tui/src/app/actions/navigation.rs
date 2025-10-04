@@ -5,30 +5,39 @@ use crate::models::AppState;
 impl App {
     // Board navigation methods
     pub fn next_board(&mut self) {
-        self.ui_state.next_board();
+        self.ui_state.next_board_with_config(&self.core_state.flight_config);
     }
 
     pub fn previous_board(&mut self) {
-        self.ui_state.previous_board();
+        self.ui_state.previous_board_with_config(&self.core_state.flight_config);
     }
 
     pub fn jump_to_strategy_board(&mut self) {
-        self.ui_state.current_board = crate::models::BoardType::Strategy;
+        use crate::app::state::UiState;
+        if UiState::is_board_enabled(crate::models::BoardType::Strategy, &self.core_state.flight_config) {
+            self.ui_state.current_board = crate::models::BoardType::Strategy;
+        }
     }
 
     pub fn jump_to_initiative_board(&mut self) {
-        self.ui_state.current_board = crate::models::BoardType::Initiative;
+        use crate::app::state::UiState;
+        if UiState::is_board_enabled(crate::models::BoardType::Initiative, &self.core_state.flight_config) {
+            self.ui_state.current_board = crate::models::BoardType::Initiative;
+        }
     }
 
     pub fn jump_to_task_board(&mut self) {
+        // Task board is always enabled
         self.ui_state.current_board = crate::models::BoardType::Task;
     }
 
     pub fn jump_to_adr_board(&mut self) {
+        // ADR board is always enabled
         self.ui_state.current_board = crate::models::BoardType::Adr;
     }
 
     pub fn jump_to_backlog_board(&mut self) {
+        // Backlog board is always enabled
         self.ui_state.current_board = crate::models::BoardType::Backlog;
     }
 

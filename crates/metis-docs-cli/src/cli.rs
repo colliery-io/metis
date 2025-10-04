@@ -3,7 +3,7 @@ use clap::{Parser, Subcommand};
 use tracing_subscriber::filter::LevelFilter;
 
 use crate::commands::{
-    ArchiveCommand, CreateCommand, InitCommand, ListCommand, McpCommand, SearchCommand,
+    ArchiveCommand, ConfigCommand, CreateCommand, InitCommand, ListCommand, McpCommand, SearchCommand,
     StatusCommand, SyncCommand, TransitionCommand, TuiCommand, ValidateCommand,
 };
 
@@ -44,6 +44,8 @@ pub enum Commands {
     Tui(TuiCommand),
     /// Launch the MCP server for external integrations
     Mcp(McpCommand),
+    /// Manage flight level configuration
+    Config(ConfigCommand),
 }
 
 impl Cli {
@@ -74,6 +76,7 @@ impl Cli {
             Commands::Validate(cmd) => cmd.execute().await,
             Commands::Tui(cmd) => cmd.execute().await,
             Commands::Mcp(cmd) => cmd.execute().await,
+            Commands::Config(cmd) => cmd.execute().await,
         }
     }
 }

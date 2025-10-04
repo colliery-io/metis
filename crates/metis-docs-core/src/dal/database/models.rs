@@ -85,3 +85,14 @@ pub struct NewDocumentSearch {
     pub title: Option<String>,
     pub document_type: Option<String>,
 }
+
+#[derive(
+    Queryable, Selectable, Insertable, AsChangeset, Debug, Clone, Serialize, Deserialize,
+)]
+#[diesel(table_name = crate::dal::database::schema::configuration)]
+#[diesel(check_for_backend(diesel::sqlite::Sqlite))]
+pub struct Configuration {
+    pub key: String,
+    pub value: String,
+    pub updated_at: f64,
+}

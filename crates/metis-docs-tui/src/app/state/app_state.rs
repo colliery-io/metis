@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use metis_core::domain::configuration::FlightLevelConfig;
 
 /// Core application state that persists across the application lifecycle
 #[derive(Debug, Clone)]
@@ -7,6 +8,7 @@ pub struct CoreAppState {
     pub workspace_valid: bool,
     pub sync_complete: bool,
     pub sync_in_progress: bool,
+    pub flight_config: FlightLevelConfig,
 }
 
 impl CoreAppState {
@@ -16,6 +18,7 @@ impl CoreAppState {
             workspace_valid: false,
             sync_complete: false,
             sync_in_progress: false,
+            flight_config: FlightLevelConfig::default(), // Start with default (full) configuration
         }
     }
 
@@ -36,6 +39,10 @@ impl CoreAppState {
     pub fn set_sync_in_progress(&mut self) {
         self.sync_in_progress = true;
         self.sync_complete = false;
+    }
+
+    pub fn set_flight_config(&mut self, config: FlightLevelConfig) {
+        self.flight_config = config;
     }
 }
 

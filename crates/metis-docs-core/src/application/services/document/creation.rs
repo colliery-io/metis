@@ -1,7 +1,8 @@
 use crate::domain::documents::initiative::Complexity;
 use crate::domain::documents::strategy::RiskLevel;
 use crate::domain::documents::traits::Document;
-use crate::domain::documents::types::{DocumentId, DocumentType, Phase, Tag};
+use crate::domain::documents::types::{DocumentId, DocumentType, Phase, Tag, ParentReference};
+use crate::domain::configuration::FlightLevelConfig;
 use crate::Result;
 use crate::{Adr, Initiative, MetisError, Strategy, Task, Vision};
 use std::fs;
@@ -132,20 +133,71 @@ impl DocumentCreationService {
         })
     }
 
-    /// Create a new initiative document
+    /// Create a new initiative document (legacy method)
     pub async fn create_initiative(
         &self,
         config: DocumentCreationConfig,
         strategy_id: &str,
     ) -> Result<CreationResult> {
+        // Use full configuration for backward compatibility
+        self.create_initiative_with_config(config, strategy_id, &FlightLevelConfig::full()).await
+    }
+
+    /// Create a new initiative document with flight level configuration
+    pub async fn create_initiative_with_config(
+        &self,
+        config: DocumentCreationConfig,
+        strategy_id: &str,
+        flight_config: &FlightLevelConfig,
+    ) -> Result<CreationResult> {
+        // Validate that initiatives are enabled in this configuration
+        if !flight_config.initiatives_enabled {
+            return Err(MetisError::ValidationFailed {
+                message: "Initiative creation is disabled in current flight level configuration".to_string(),
+            });
+        }
+
         // Generate initiative ID from title
         let initiative_id = self.generate_id_from_title(&config.title);
-        let initiative_dir = self
-            .workspace_dir
-            .join("strategies")
-            .join(strategy_id)
-            .join("initiatives")
-            .join(&initiative_id);
+        
+        // Determine directory structure based on configuration
+        let (initiative_dir, parent_ref) = if flight_config.strategies_enabled {
+            // Full configuration: initiatives go under strategies
+            if strategy_id == "NULL" {
+                return Err(MetisError::ValidationFailed {
+                    message: "Cannot create initiative with NULL strategy when strategies are enabled".to_string(),
+                });
+            }
+            
+            // Validate parent strategy exists
+            let strategy_file = self
+                .workspace_dir
+                .join("strategies")
+                .join(strategy_id)
+                .join("strategy.md");
+            if !strategy_file.exists() {
+                return Err(MetisError::NotFound(format!(
+                    "Parent strategy '{}' not found",
+                    strategy_id
+                )));
+            }
+            
+            let dir = self
+                .workspace_dir
+                .join("strategies")
+                .join(strategy_id)
+                .join("initiatives")
+                .join(&initiative_id);
+            (dir, ParentReference::Some(DocumentId::from(strategy_id)))
+        } else {
+            // Streamlined configuration: initiatives go directly under workspace
+            let dir = self
+                .workspace_dir
+                .join("initiatives")
+                .join(&initiative_id);
+            (dir, ParentReference::Null) // Use NULL parent for streamlined config
+        };
+
         let file_path = initiative_dir.join("initiative.md");
 
         // Check if initiative already exists
@@ -155,19 +207,6 @@ impl DocumentCreationService {
             });
         }
 
-        // Validate parent strategy exists
-        let strategy_file = self
-            .workspace_dir
-            .join("strategies")
-            .join(strategy_id)
-            .join("strategy.md");
-        if !strategy_file.exists() {
-            return Err(MetisError::NotFound(format!(
-                "Parent strategy '{}' not found",
-                strategy_id
-            )));
-        }
-
         // Create initiative with defaults
         let mut tags = vec![
             Tag::Label("initiative".to_string()),
@@ -175,11 +214,12 @@ impl DocumentCreationService {
         ];
         tags.extend(config.tags);
 
+        // Use the parent reference from configuration, or explicit parent_id from config
+        let parent_id = config.parent_id.map(ParentReference::Some).unwrap_or(parent_ref);
+
         let initiative = Initiative::new(
             config.title.clone(),
-            config
-                .parent_id
-                .or_else(|| Some(DocumentId::from(strategy_id))),
+            parent_id.parent_id().cloned(), // Extract actual parent ID for document creation
             Vec::new(), // blocked_by
             tags,
             false,                                      // not archived
@@ -203,37 +243,74 @@ impl DocumentCreationService {
         })
     }
 
-    /// Create a new task document
+    /// Create a new task document (legacy method)
     pub async fn create_task(
         &self,
         config: DocumentCreationConfig,
         strategy_id: &str,
         initiative_id: &str,
     ) -> Result<CreationResult> {
+        // Use full configuration for backward compatibility
+        self.create_task_with_config(config, strategy_id, initiative_id, &FlightLevelConfig::full()).await
+    }
+
+    /// Create a new task document with flight level configuration
+    pub async fn create_task_with_config(
+        &self,
+        config: DocumentCreationConfig,
+        strategy_id: &str,
+        initiative_id: &str,
+        flight_config: &FlightLevelConfig,
+    ) -> Result<CreationResult> {
         // Generate task ID from title
         let task_id = self.generate_id_from_title(&config.title);
-        let initiative_dir = self
-            .workspace_dir
-            .join("strategies")
-            .join(strategy_id)
-            .join("initiatives")
-            .join(initiative_id);
-        let file_path = initiative_dir.join(format!("{}.md", task_id));
+        
+        // Determine directory structure and parent based on configuration
+        let (task_dir, parent_ref, parent_title) = if flight_config.initiatives_enabled {
+            // Tasks go under initiatives
+            if initiative_id == "NULL" {
+                return Err(MetisError::ValidationFailed {
+                    message: "Cannot create task with NULL initiative when initiatives are enabled".to_string(),
+                });
+            }
+
+            let initiative_dir = if flight_config.strategies_enabled {
+                // Full configuration: tasks under strategies/strategy/initiatives/initiative
+                self.workspace_dir
+                    .join("strategies")
+                    .join(strategy_id)
+                    .join("initiatives")
+                    .join(initiative_id)
+            } else {
+                // Streamlined configuration: tasks under initiatives/initiative
+                self.workspace_dir
+                    .join("initiatives")
+                    .join(initiative_id)
+            };
+
+            // Validate parent initiative exists
+            let initiative_file = initiative_dir.join("initiative.md");
+            if !initiative_file.exists() {
+                return Err(MetisError::NotFound(format!(
+                    "Parent initiative '{}' not found",
+                    initiative_id
+                )));
+            }
+
+            (initiative_dir, ParentReference::Some(DocumentId::from(initiative_id)), Some(initiative_id.to_string()))
+        } else {
+            // Direct configuration: tasks go directly under workspace/tasks
+            let task_dir = self.workspace_dir.join("tasks");
+            (task_dir, ParentReference::Null, None) // Use NULL parent for direct config
+        };
+
+        let file_path = task_dir.join(format!("{}.md", task_id));
 
         // Check if task already exists
         if file_path.exists() {
             return Err(MetisError::ValidationFailed {
                 message: format!("Task with ID '{}' already exists", task_id),
             });
-        }
-
-        // Validate parent initiative exists
-        let initiative_file = initiative_dir.join("initiative.md");
-        if !initiative_file.exists() {
-            return Err(MetisError::NotFound(format!(
-                "Parent initiative '{}' not found",
-                initiative_id
-            )));
         }
 
         // Create task with defaults
@@ -243,21 +320,22 @@ impl DocumentCreationService {
         ];
         tags.extend(config.tags);
 
+        // Use the parent reference from configuration, or explicit parent_id from config
+        let parent_id = config.parent_id.map(ParentReference::Some).unwrap_or(parent_ref);
+
         let task = Task::new(
             config.title.clone(),
-            config
-                .parent_id
-                .or_else(|| Some(DocumentId::from(initiative_id))),
-            Some(initiative_id.to_string()), // parent title for template
-            Vec::new(),                      // blocked_by
+            parent_id.parent_id().cloned(), // Extract actual parent ID for document creation
+            parent_title,                   // parent title for template
+            Vec::new(),                     // blocked_by
             tags,
             false, // not archived
         )
         .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
 
         // Create parent directory if needed
-        if !initiative_dir.exists() {
-            fs::create_dir_all(&initiative_dir)
+        if !task_dir.exists() {
+            fs::create_dir_all(&task_dir)
                 .map_err(|e| MetisError::FileSystem(e.to_string()))?;
         }
 
@@ -569,5 +647,142 @@ mod tests {
 
         // Should return 3 as next number
         assert_eq!(service.get_next_adr_number().unwrap(), 3);
+    }
+
+    // Flexible flight levels tests
+
+    fn setup_test_service_temp() -> (DocumentCreationService, tempfile::TempDir) {
+        let temp_dir = tempfile::TempDir::new().expect("Failed to create temp directory");
+        let service = DocumentCreationService::new(temp_dir.path());
+        (service, temp_dir)
+    }
+
+    #[tokio::test]
+    async fn test_create_initiative_full_configuration() {
+        let (service, _temp) = setup_test_service_temp();
+        let flight_config = FlightLevelConfig::full();
+
+        // First create a strategy
+        let strategy_config = DocumentCreationConfig {
+            title: "Test Strategy".to_string(),
+            description: None,
+            parent_id: None,
+            tags: vec![],
+            phase: None,
+            complexity: None,
+            risk_level: None,
+        };
+
+        let strategy_result = service.create_strategy(strategy_config).await.unwrap();
+
+        // Now create an initiative under the strategy
+        let initiative_config = DocumentCreationConfig {
+            title: "Test Initiative".to_string(),
+            description: None,
+            parent_id: None,
+            tags: vec![],
+            phase: None,
+            complexity: None,
+            risk_level: None,
+        };
+
+        let result = service
+            .create_initiative_with_config(
+                initiative_config,
+                &strategy_result.document_id.to_string(),
+                &flight_config,
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(result.document_type, DocumentType::Initiative);
+        assert!(result.file_path.exists());
+        
+        // Verify the path structure for full configuration
+        assert!(result.file_path.to_string_lossy().contains("strategies"));
+        assert!(result.file_path.to_string_lossy().contains("initiatives"));
+    }
+
+    #[tokio::test]
+    async fn test_create_initiative_streamlined_configuration() {
+        let (service, _temp) = setup_test_service_temp();
+        let flight_config = FlightLevelConfig::streamlined();
+
+        let initiative_config = DocumentCreationConfig {
+            title: "Test Initiative".to_string(),
+            description: None,
+            parent_id: None,
+            tags: vec![],
+            phase: None,
+            complexity: None,
+            risk_level: None,
+        };
+
+        // In streamlined config, we pass "NULL" as strategy_id
+        let result = service
+            .create_initiative_with_config(initiative_config, "NULL", &flight_config)
+            .await
+            .unwrap();
+
+        assert_eq!(result.document_type, DocumentType::Initiative);
+        assert!(result.file_path.exists());
+        
+        // Verify the path structure for streamlined configuration
+        assert!(result.file_path.to_string_lossy().contains("initiatives"));
+        assert!(!result.file_path.to_string_lossy().contains("strategies"));
+    }
+
+    #[tokio::test]
+    async fn test_create_initiative_disabled_in_direct_configuration() {
+        let (service, _temp) = setup_test_service_temp();
+        let flight_config = FlightLevelConfig::direct();
+
+        let initiative_config = DocumentCreationConfig {
+            title: "Test Initiative".to_string(),
+            description: None,
+            parent_id: None,
+            tags: vec![],
+            phase: None,
+            complexity: None,
+            risk_level: None,
+        };
+
+        // In direct config, initiatives are disabled
+        let result = service
+            .create_initiative_with_config(initiative_config, "NULL", &flight_config)
+            .await;
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Initiative creation is disabled"));
+    }
+
+    #[tokio::test]
+    async fn test_create_task_direct_configuration() {
+        let (service, _temp) = setup_test_service_temp();
+        let flight_config = FlightLevelConfig::direct();
+
+        let task_config = DocumentCreationConfig {
+            title: "Test Task".to_string(),
+            description: None,
+            parent_id: None,
+            tags: vec![],
+            phase: None,
+            complexity: None,
+            risk_level: None,
+        };
+
+        // In direct config, tasks go directly under workspace
+        let result = service
+            .create_task_with_config(task_config, "NULL", "NULL", &flight_config)
+            .await
+            .unwrap();
+
+        assert_eq!(result.document_type, DocumentType::Task);
+        assert!(result.file_path.exists());
+        
+        // Verify the path structure for direct configuration
+        assert!(result.file_path.to_string_lossy().contains("tasks"));
+        assert!(!result.file_path.to_string_lossy().contains("initiatives"));
+        assert!(!result.file_path.to_string_lossy().contains("strategies"));
     }
 }

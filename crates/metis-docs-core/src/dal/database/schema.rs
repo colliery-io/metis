@@ -43,6 +43,14 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    configuration (key) {
+        key -> Text,
+        value -> Text,
+        updated_at -> Double,
+    }
+}
+
 diesel::joinable!(document_tags -> documents (document_filepath));
 diesel::joinable!(document_search -> documents (document_filepath));
 
@@ -51,4 +59,5 @@ diesel::allow_tables_to_appear_in_same_query!(
     document_relationships,
     document_search,
     document_tags,
+    configuration,
 );

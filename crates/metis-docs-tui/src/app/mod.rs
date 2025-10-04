@@ -61,7 +61,10 @@ impl App {
                         Ok(_) => {
                             self.core_state.set_sync_complete();
 
-                            // 3. Load documents into boards
+                            // 3. Load flight level configuration
+                            self.load_flight_config().await?;
+
+                            // 4. Load documents into boards
                             self.load_documents().await?;
                         }
                         Err(e) => {
@@ -150,6 +153,34 @@ impl App {
 
 
 
+
+    pub async fn load_flight_config(&mut self) -> Result<()> {
+        if let Some(workspace_dir) = &self.core_state.workspace_dir {
+            // Create database connection and load configuration
+            let db_path = workspace_dir.join(".metis/metis.db");
+            if let Ok(db) = metis_core::Database::new(db_path.to_str().unwrap()) {
+                if let Ok(mut config_repo) = db.configuration_repository() {
+                    match config_repo.get_flight_level_config() {
+                        Ok(config) => {
+                            self.core_state.set_flight_config(config);
+                            // Ensure the current board is valid for the new configuration
+                            self.ui_state.ensure_valid_board(&self.core_state.flight_config);
+                        }
+                        Err(e) => {
+                            // Log error but continue with default configuration
+                            eprintln!("Warning: Failed to load flight level configuration: {}", e);
+                            eprintln!("Using default (full) configuration");
+                        }
+                    }
+                } else {
+                    eprintln!("Warning: Failed to create configuration repository, using default configuration");
+                }
+            } else {
+                eprintln!("Warning: Failed to connect to database, using default configuration");
+            }
+        }
+        Ok(())
+    }
 
     pub async fn load_documents(&mut self) -> Result<()> {
         if let Some(document_service) = &self.document_service {

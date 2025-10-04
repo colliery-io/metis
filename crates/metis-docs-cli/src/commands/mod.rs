@@ -1,4 +1,5 @@
 pub mod archive;
+pub mod config;
 pub mod create;
 pub mod init;
 pub mod list;
@@ -11,6 +12,7 @@ pub mod tui;
 pub mod validate;
 
 pub use archive::ArchiveCommand;
+pub use config::ConfigCommand;
 pub use create::CreateCommand;
 pub use init::InitCommand;
 pub use list::ListCommand;

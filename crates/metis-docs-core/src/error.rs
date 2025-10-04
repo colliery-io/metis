@@ -63,4 +63,7 @@ pub enum MetisError {
 
     #[error("Document validation error: {0}")]
     DocumentValidation(#[from] crate::domain::documents::traits::DocumentValidationError),
+
+    #[error("Configuration error: {0}")]
+    ConfigurationError(#[from] crate::domain::configuration::ConfigurationError),
 }

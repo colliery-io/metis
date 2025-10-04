@@ -80,6 +80,74 @@ impl From<&str> for DocumentId {
     }
 }
 
+/// Parent reference for documents in flexible flight levels
+/// Handles the case where intermediate levels may be optional
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum ParentReference {
+    /// Document has a specific parent
+    Some(DocumentId),
+    /// Document has no parent (top-level like Vision or ADR)
+    None,
+    /// Document would have a parent but that level is disabled in configuration
+    /// Used for path construction with "NULL" string
+    Null,
+}
+
+impl ParentReference {
+    /// Convert to string for path construction
+    pub fn to_path_string(&self) -> String {
+        match self {
+            ParentReference::Some(id) => id.as_str().to_string(),
+            ParentReference::None => "vision".to_string(), // Default to vision for top-level
+            ParentReference::Null => "NULL".to_string(),
+        }
+    }
+
+    /// Check if this reference points to an actual parent
+    pub fn has_parent(&self) -> bool {
+        matches!(self, ParentReference::Some(_))
+    }
+
+    /// Get the parent ID if it exists
+    pub fn parent_id(&self) -> Option<&DocumentId> {
+        match self {
+            ParentReference::Some(id) => Some(id),
+            _ => None,
+        }
+    }
+
+    /// Create from optional document ID
+    pub fn from_option(id: Option<DocumentId>) -> Self {
+        match id {
+            Some(id) => ParentReference::Some(id),
+            None => ParentReference::None,
+        }
+    }
+
+    /// Create a null reference for disabled levels
+    pub fn null() -> Self {
+        ParentReference::Null
+    }
+}
+
+impl From<DocumentId> for ParentReference {
+    fn from(id: DocumentId) -> Self {
+        ParentReference::Some(id)
+    }
+}
+
+impl From<Option<DocumentId>> for ParentReference {
+    fn from(opt: Option<DocumentId>) -> Self {
+        ParentReference::from_option(opt)
+    }
+}
+
+impl fmt::Display for ParentReference {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.to_path_string())
+    }
+}
+
 /// Document type enumeration
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum DocumentType {
