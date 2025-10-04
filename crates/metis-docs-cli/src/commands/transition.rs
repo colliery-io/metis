@@ -138,6 +138,9 @@ mod tests {
         // Create workspace
         let init_cmd = InitCommand {
             name: Some("Test Project".to_string()),
+            preset: None,
+            strategies: None,
+            initiatives: None,
         };
         init_cmd.execute().await.unwrap();
 
@@ -169,6 +172,9 @@ mod tests {
         // Create workspace
         let init_cmd = InitCommand {
             name: Some("Test Project".to_string()),
+            preset: None,
+            strategies: None,
+            initiatives: None,
         };
         init_cmd.execute().await.unwrap();
 
@@ -227,6 +233,9 @@ mod tests {
         // Create workspace
         let init_cmd = InitCommand {
             name: Some("Test Project".to_string()),
+            preset: None,
+            strategies: None,
+            initiatives: None,
         };
         init_cmd.execute().await.unwrap();
 
@@ -316,6 +325,9 @@ mod tests {
         // Create workspace
         let init_cmd = InitCommand {
             name: Some("Test Project".to_string()),
+            preset: None,
+            strategies: None,
+            initiatives: None,
         };
         init_cmd.execute().await.unwrap();
 
@@ -395,6 +407,9 @@ mod tests {
         // Create workspace
         let init_cmd = InitCommand {
             name: Some("Test Project".to_string()),
+            preset: None,
+            strategies: None,
+            initiatives: None,
         };
         init_cmd.execute().await.unwrap();
 
@@ -488,6 +503,9 @@ mod tests {
         // Create workspace
         let init_cmd = InitCommand {
             name: Some("Test Project".to_string()),
+            preset: None,
+            strategies: None,
+            initiatives: None,
         };
         init_cmd.execute().await.unwrap();
 
@@ -543,6 +561,9 @@ mod tests {
         // Create workspace
         let init_cmd = InitCommand {
             name: Some("Test Project".to_string()),
+            preset: None,
+            strategies: None,
+            initiatives: None,
         };
         init_cmd.execute().await.unwrap();
 
@@ -588,6 +609,9 @@ mod tests {
         // Create workspace
         let init_cmd = InitCommand {
             name: Some("Test Project".to_string()),
+            preset: None,
+            strategies: None,
+            initiatives: None,
         };
         init_cmd.execute().await.unwrap();
 

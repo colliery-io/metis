@@ -26,8 +26,8 @@ sudo cargo install metis-docs-mcp --root /usr/local
 metis tui
 
 # Command Line Interface (for scripting and automation)
-metis init --name "My Vision"
-metis create strategy "Core Strategy" --vision "my-vision"
+metis init --name "My Vision"                           # Creates streamlined config
+metis create initiative "Core Initiative" --vision "my-vision"  # No strategies in default
 
 # MCP Server (for AI assistant integration)
 metis-mcp
@@ -64,8 +64,11 @@ Add to your Cursor MCP configuration:
 
 ## What is Flight Levels?
 
-Flight Levels is a methodology for organizing work across four levels:
+Flight Levels is a methodology for organizing work across different levels of abstraction. Metis supports flexible configurations to match your project's complexity:
 
+### Flight Level Configurations
+
+**Full** - Complete hierarchy for complex projects:
 ```
 Vision                      - Overall purpose and direction  
 └── Strategy                - How to achieve the vision
@@ -73,13 +76,53 @@ Vision                      - Overall purpose and direction
         └── Task            - Individual work items
 ```
 
-Each level has defined workflows:
+**Streamlined** (Default) - Balanced approach for most projects:
+```
+Vision                      - Overall purpose and direction  
+└── Initiative              - Concrete projects implementing the vision
+    └── Task                - Individual work items
+```
+
+**Direct** - Minimal hierarchy for simple projects:
+```
+Vision                      - Overall purpose and direction  
+└── Task                    - Individual work items
+```
+
+### Configuration Management
+
+You can set your project's configuration during initialization:
+
+```bash
+# Use default streamlined configuration
+metis init --name "My Project"
+
+# Use full flight levels for complex projects  
+metis init --name "My Project" --preset full
+
+# Use direct approach for simple projects
+metis init --name "My Project" --preset direct
+
+# Custom configuration
+metis init --name "My Project" --strategies false --initiatives true
+```
+
+Or change it later:
+
+```bash
+metis config set --preset streamlined
+metis config show  # View current configuration
+```
+
+### Workflow Phases
+
+Each document type has defined workflows:
 - **Vision**: draft → review → published
 - **Strategy**: shaping → design → ready → active → completed
 - **Initiative**: discovery → design → ready → decompose → active → completed  
 - **Task**: todo → doing → completed
 
-> Something to keep in mind, this methodology is best with large complex things - especially when working within smaller projects and teams you may find yourself working largely within Initiatives and Tasks with a few long lived "Strategy" documents. That's fine as your complexity increases you can adapt your personal usage.  
+> **Pro Tip**: Start with the streamlined configuration (default). You can always upgrade to full flight levels as your project complexity grows, or simplify to direct for straightforward work.  
 
 ## The Metis Process: Vision to Execution
 
@@ -96,7 +139,7 @@ This creates a clear line of sight from high-level vision down to day-to-day wor
 
 ## MCP Tools Reference
 
-Metis provides 11 MCP tools for complete project management:
+Metis provides 11 MCP tools for complete project management. Available document types depend on your project's flight level configuration:
 
 | Tool | Purpose |
 |------|---------|
@@ -158,26 +201,34 @@ The `initialize_project` tool creates a clean `.metis/` subdirectory to keep all
 Metis provides a comprehensive CLI for direct project management:
 
 ```bash
-# Initialize a new project
-metis init --name "Project Vision"
+# Initialize a new project with configuration
+metis init --name "Project Vision"                    # Default streamlined config
+metis init --name "Project Vision" --preset full      # Full flight levels
+metis init --name "Project Vision" --preset direct    # Minimal hierarchy  
+metis init --name "Project Vision" --strategies false --initiatives true  # Custom
 
-# Create documents
-metis create strategy "Core Strategy" --vision "project-vision"
-metis create initiative "Implementation" --strategy "core-strategy"
-metis create task "Build Feature" --initiative "implementation"
-metis create adr "Database Choice"
+# Configuration management
+metis config show                    # View current configuration
+metis config set --preset full      # Change to full flight levels
+metis config set --strategies true --initiatives false  # Custom settings
+
+# Create documents (available types depend on your configuration)
+metis create strategy "Core Strategy" --vision "project-vision"    # Only in full config
+metis create initiative "Implementation" --strategy "core-strategy" # Full/streamlined
+metis create task "Build Feature" --initiative "implementation"    # All configs
+metis create adr "Database Choice"                                  # All configs
 
 # Manage document lifecycle
 metis transition "Project Vision" --phase review
 metis validate "Project Vision"
-metis status  # Show project overview
+metis status  # Show project overview with current configuration
 
 # Archive and sync operations
 metis archive "document-id"  # Archive completed documents
 metis sync  # Synchronize workspace with file system
 
 # Search and list documents
-metis list --type strategy
+metis list --type initiative
 metis search "database"
 
 # Launch interactive interfaces

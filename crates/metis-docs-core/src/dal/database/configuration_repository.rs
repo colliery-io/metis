@@ -75,7 +75,7 @@ impl ConfigurationRepository {
     /// Get flight level configuration
     pub fn get_flight_level_config(&mut self) -> Result<FlightLevelConfig> {
         let json = self.get("flight_levels")?
-            .unwrap_or_else(|| r#"{"strategies_enabled":true,"initiatives_enabled":true}"#.to_string());
+            .unwrap_or_else(|| r#"{"strategies_enabled":false,"initiatives_enabled":true}"#.to_string());
 
         serde_json::from_str(&json)
             .map_err(|e| crate::MetisError::ConfigurationError(
@@ -167,9 +167,9 @@ mod tests {
     fn test_flight_level_config() {
         let mut repo = setup_test_repo();
 
-        // Should have default configuration
+        // Should have default configuration (streamlined)
         let config = repo.get_flight_level_config().unwrap();
-        assert_eq!(config, FlightLevelConfig::full());
+        assert_eq!(config, FlightLevelConfig::streamlined());
 
         // Set streamlined configuration
         let streamlined = FlightLevelConfig::streamlined();

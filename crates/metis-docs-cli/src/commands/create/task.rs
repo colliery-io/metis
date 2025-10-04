@@ -215,6 +215,9 @@ mod tests {
         // Create workspace
         let init_cmd = InitCommand {
             name: Some("Test Project".to_string()),
+            preset: None,
+            strategies: None,
+            initiatives: None,
         };
         if init_cmd.execute().await.is_err() {
             std::env::set_current_dir(original_dir).unwrap();

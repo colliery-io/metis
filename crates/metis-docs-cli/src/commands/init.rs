@@ -1,7 +1,7 @@
 use crate::workspace;
 use anyhow::Result;
 use clap::Args;
-use metis_core::{Database, Phase, Tag, Vision};
+use metis_core::{Database, Phase, Tag, Vision, domain::configuration::FlightLevelConfig};
 use std::path::Path;
 
 #[derive(Args)]
@@ -9,6 +9,15 @@ pub struct InitCommand {
     /// Project name for the vision document
     #[arg(short, long)]
     pub name: Option<String>,
+    /// Configuration preset (full, streamlined, direct). Default: streamlined
+    #[arg(short, long)]
+    pub preset: Option<String>,
+    /// Enable/disable strategies (true/false)
+    #[arg(long)]
+    pub strategies: Option<bool>,
+    /// Enable/disable initiatives (true/false)
+    #[arg(long)]
+    pub initiatives: Option<bool>,
 }
 
 impl InitCommand {
@@ -29,8 +38,15 @@ impl InitCommand {
 
         // Initialize database
         let db_path = metis_dir.join("metis.db");
-        let _db = Database::new(db_path.to_str().unwrap())
+        let db = Database::new(db_path.to_str().unwrap())
             .map_err(|e| anyhow::anyhow!("Database initialization failed: {}", e))?;
+
+        // Set up flight level configuration
+        let flight_config = self.determine_flight_config()?;
+        let mut config_repo = db.configuration_repository()
+            .map_err(|e| anyhow::anyhow!("Failed to create configuration repository: {}", e))?;
+        config_repo.set_flight_level_config(&flight_config)
+            .map_err(|e| anyhow::anyhow!("Failed to set flight level configuration: {}", e))?;
 
         // Create strategies directory
         let strategies_dir = metis_dir.join("strategies");
@@ -42,8 +58,38 @@ impl InitCommand {
 
         println!("✓ Initialized Metis workspace in {}", current_dir.display());
         println!("✓ Created vision.md with project template");
+        println!("✓ Set flight level configuration: {}", flight_config.preset_name());
 
         Ok(())
+    }
+
+    /// Determine the flight level configuration based on command arguments
+    fn determine_flight_config(&self) -> Result<FlightLevelConfig> {
+        if let Some(preset_name) = &self.preset {
+            // Use specified preset
+            match preset_name.as_str() {
+                "full" => Ok(FlightLevelConfig::full()),
+                "streamlined" => Ok(FlightLevelConfig::streamlined()),
+                "direct" => Ok(FlightLevelConfig::direct()),
+                _ => {
+                    anyhow::bail!(
+                        "Invalid preset '{}'. Valid presets are: full, streamlined, direct",
+                        preset_name
+                    );
+                }
+            }
+        } else if self.strategies.is_some() || self.initiatives.is_some() {
+            // Use custom configuration, with streamlined as default base
+            let default_config = FlightLevelConfig::streamlined();
+            let strategies_enabled = self.strategies.unwrap_or(default_config.strategies_enabled);
+            let initiatives_enabled = self.initiatives.unwrap_or(default_config.initiatives_enabled);
+
+            FlightLevelConfig::new(strategies_enabled, initiatives_enabled)
+                .map_err(|e| anyhow::anyhow!("Invalid configuration: {}", e))
+        } else {
+            // Default to streamlined preset
+            Ok(FlightLevelConfig::streamlined())
+        }
     }
 }
 
@@ -83,6 +129,9 @@ mod tests {
         // Run init command
         let cmd = InitCommand {
             name: Some("Test Project".to_string()),
+            preset: None,
+            strategies: None,
+            initiatives: None,
         };
 
         let result = cmd.execute().await;
@@ -145,6 +194,9 @@ mod tests {
         // Run init command
         let cmd = InitCommand {
             name: Some("Test Project".to_string()),
+            preset: None,
+            strategies: None,
+            initiatives: None,
         };
 
         let result = cmd.execute().await;
@@ -167,7 +219,12 @@ mod tests {
         std::env::set_current_dir(temp_dir.path()).unwrap();
 
         // Run init command without name
-        let cmd = InitCommand { name: None };
+        let cmd = InitCommand {
+            name: None,
+            preset: None,
+            strategies: None,
+            initiatives: None,
+        };
 
         let result = cmd.execute().await;
         assert!(result.is_ok());
@@ -176,6 +233,133 @@ mod tests {
         let vision_path = temp_dir.path().join(".metis").join("vision.md");
         let vision_content = fs::read_to_string(&vision_path).unwrap();
         assert!(vision_content.contains("Project Vision"));
+
+        // Restore original directory
+        std::env::set_current_dir(original_dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_init_command_with_preset() {
+        let temp_dir = tempdir().unwrap();
+        let original_dir = std::env::current_dir().unwrap();
+
+        // Change to temp directory
+        std::env::set_current_dir(temp_dir.path()).unwrap();
+
+        // Run init command with full preset
+        let cmd = InitCommand {
+            name: Some("Test Project".to_string()),
+            preset: Some("full".to_string()),
+            strategies: None,
+            initiatives: None,
+        };
+
+        let result = cmd.execute().await;
+        assert!(result.is_ok());
+
+        // Verify workspace was created
+        let metis_dir = temp_dir.path().join(".metis");
+        assert!(metis_dir.exists());
+
+        // Verify configuration was set
+        use metis_core::Database;
+        let db_path = metis_dir.join("metis.db");
+        let db = Database::new(db_path.to_str().unwrap()).unwrap();
+        let mut config_repo = db.configuration_repository().unwrap();
+        let config = config_repo.get_flight_level_config().unwrap();
+        
+        assert_eq!(config, metis_core::domain::configuration::FlightLevelConfig::full());
+
+        // Restore original directory
+        std::env::set_current_dir(original_dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_init_command_with_custom_flags() {
+        let temp_dir = tempdir().unwrap();
+        let original_dir = std::env::current_dir().unwrap();
+
+        // Change to temp directory
+        std::env::set_current_dir(temp_dir.path()).unwrap();
+
+        // Run init command with custom flags (strategies disabled, initiatives enabled)
+        let cmd = InitCommand {
+            name: Some("Test Project".to_string()),
+            preset: None,
+            strategies: Some(false),
+            initiatives: Some(true),
+        };
+
+        let result = cmd.execute().await;
+        assert!(result.is_ok());
+
+        // Verify configuration was set
+        use metis_core::Database;
+        let metis_dir = temp_dir.path().join(".metis");
+        let db_path = metis_dir.join("metis.db");
+        let db = Database::new(db_path.to_str().unwrap()).unwrap();
+        let mut config_repo = db.configuration_repository().unwrap();
+        let config = config_repo.get_flight_level_config().unwrap();
+        
+        assert!(!config.strategies_enabled);
+        assert!(config.initiatives_enabled);
+
+        // Restore original directory
+        std::env::set_current_dir(original_dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_init_command_default_streamlined() {
+        let temp_dir = tempdir().unwrap();
+        let original_dir = std::env::current_dir().unwrap();
+
+        // Change to temp directory
+        std::env::set_current_dir(temp_dir.path()).unwrap();
+
+        // Run init command with no preset specified (should default to streamlined)
+        let cmd = InitCommand {
+            name: Some("Test Project".to_string()),
+            preset: None,
+            strategies: None,
+            initiatives: None,
+        };
+
+        let result = cmd.execute().await;
+        assert!(result.is_ok());
+
+        // Verify configuration defaults to streamlined
+        use metis_core::Database;
+        let metis_dir = temp_dir.path().join(".metis");
+        let db_path = metis_dir.join("metis.db");
+        let db = Database::new(db_path.to_str().unwrap()).unwrap();
+        let mut config_repo = db.configuration_repository().unwrap();
+        let config = config_repo.get_flight_level_config().unwrap();
+        
+        assert_eq!(config, metis_core::domain::configuration::FlightLevelConfig::streamlined());
+
+        // Restore original directory
+        std::env::set_current_dir(original_dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_init_command_invalid_preset() {
+        let temp_dir = tempdir().unwrap();
+        let original_dir = std::env::current_dir().unwrap();
+
+        // Change to temp directory
+        std::env::set_current_dir(temp_dir.path()).unwrap();
+
+        // Run init command with invalid preset
+        let cmd = InitCommand {
+            name: Some("Test Project".to_string()),
+            preset: Some("invalid".to_string()),
+            strategies: None,
+            initiatives: None,
+        };
+
+        let result = cmd.execute().await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Invalid preset"));
 
         // Restore original directory
         std::env::set_current_dir(original_dir).unwrap();
