@@ -37,7 +37,13 @@ impl ArchiveDocumentTool {
             )));
         }
 
-        // Create the archive service
+        // Create the archive service with database optimization
+        let db = metis_core::dal::Database::new(&metis_dir.join("metis.db").to_string_lossy())
+            .map_err(|e| CallToolError::new(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!("Database initialization failed: {}", e),
+            )))?;
+        let mut db_service = metis_core::application::services::DatabaseService::new(db.into_repository());
         let archive_service = ArchiveService::new(metis_dir);
 
         // Check if document is already archived
@@ -62,9 +68,9 @@ impl ArchiveDocumentTool {
             }
         }
 
-        // Archive the document
+        // Archive the document using database optimization
         let archive_result = archive_service
-            .archive_document(&self.document_id)
+            .archive_document(&self.document_id, &mut db_service)
             .await
             .map_err(|e| {
                 CallToolError::new(std::io::Error::new(

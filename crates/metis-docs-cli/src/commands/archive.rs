@@ -22,11 +22,20 @@ impl ArchiveCommand {
         }
         let metis_dir = metis_dir.unwrap();
 
-        // 2. Create the archive service
+        // 2. Create the archive service with database optimization
+        let db = metis_core::dal::Database::new(&metis_dir.join("metis.db").to_string_lossy())
+            .map_err(|e| anyhow::anyhow!("Database initialization failed: {}", e))?;
+        let mut db_service = metis_core::application::services::DatabaseService::new(db.into_repository());
         let archive_service = ArchiveService::new(&metis_dir);
 
-        // 3. Archive the document and its children
-        let archive_result = archive_service.archive_document(&self.document_id).await?;
+        // 2.5. Sync workspace to ensure documents are in database
+        let mut sync_service = metis_core::application::services::SyncService::new(&mut db_service)
+            .with_workspace_dir(&metis_dir);
+        sync_service.sync_directory(&metis_dir).await
+            .map_err(|e| anyhow::anyhow!("Failed to sync workspace: {}", e))?;
+
+        // 3. Archive the document and its children using database-optimized method
+        let archive_result = archive_service.archive_document(&self.document_id, &mut db_service).await?;
 
         // 4. Report results
         println!("✓ Archived {} documents:", archive_result.total_archived);
@@ -34,8 +43,8 @@ impl ArchiveCommand {
             println!("  - {} ({})", doc.document_id, doc.document_type);
         }
 
-        // 5. Auto-sync to update database
-        println!("Archive completed. Run 'metis sync' to update the database.");
+        // 5. Archive completed
+        println!("Archive completed.");
 
         Ok(())
     }

@@ -80,83 +80,6 @@ impl ArchiveService {
         Ok(())
     }
 
-    /// Helper to safely read directory contents
-    fn read_dir_safe(&self, path: &Path) -> Result<fs::ReadDir> {
-        fs::read_dir(path).map_err(|e| MetisError::FileSystem(e.to_string()))
-    }
-
-    /// Helper to check if a path is a markdown file
-    fn is_markdown_file(&self, path: &Path) -> bool {
-        path.is_file() && path.extension().is_some_and(|ext| ext == "md")
-    }
-
-    /// Helper to mark tasks in a directory as archived
-    async fn mark_tasks_in_directory_as_archived(&self, dir_path: &Path) -> Result<()> {
-        for entry in self.read_dir_safe(dir_path)? {
-            let entry_path = entry
-                .map_err(|e| MetisError::FileSystem(e.to_string()))?
-                .path();
-
-            if self.is_markdown_file(&entry_path) {
-                // Skip initiative.md itself
-                if entry_path
-                    .file_name()
-                    .is_some_and(|name| name == "initiative.md")
-                {
-                    continue;
-                }
-
-                if Task::from_file(&entry_path).await.is_ok() {
-                    self.mark_as_archived_helper(&entry_path, DocumentType::Task)
-                        .await?;
-                }
-            }
-            // Also check subdirectories for task files
-            else if entry_path.is_dir() {
-                if let Ok(subdir_entries) = fs::read_dir(&entry_path) {
-                    for subentry in subdir_entries.flatten() {
-                        let task_file_path = subentry.path();
-                        if self.is_markdown_file(&task_file_path) {
-                            if Task::from_file(&task_file_path).await.is_ok() {
-                                self.mark_as_archived_helper(
-                                    &task_file_path,
-                                    DocumentType::Task,
-                                )
-                                .await?;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        Ok(())
-    }
-
-    /// Helper to archive initiatives and their tasks within a strategy
-    async fn archive_strategy_initiatives(&self, initiatives_dir: &Path) -> Result<()> {
-        if !initiatives_dir.exists() {
-            return Ok(());
-        }
-
-        for entry in self.read_dir_safe(initiatives_dir)? {
-            let initiative_dir = entry
-                .map_err(|e| MetisError::FileSystem(e.to_string()))?
-                .path();
-            
-            if initiative_dir.is_dir() {
-                let initiative_file = initiative_dir.join("initiative.md");
-                if initiative_file.exists() && Initiative::from_file(&initiative_file).await.is_ok() {
-                    // Mark initiative as archived
-                    self.mark_as_archived_helper(&initiative_file, DocumentType::Initiative)
-                        .await?;
-                    
-                    // Mark all tasks in this initiative as archived
-                    self.mark_tasks_in_directory_as_archived(&initiative_dir).await?;
-                }
-            }
-        }
-        Ok(())
-    }
 
     /// Create a new archive service for a workspace
     pub fn new<P: AsRef<Path>>(workspace_dir: P) -> Self {
@@ -169,28 +92,8 @@ impl ArchiveService {
         }
     }
 
-    /// Archive a document and all its children
-    pub async fn archive_document(&self, document_id: &str) -> Result<ArchiveResult> {
-        // Find the document
-        let discovery_result = self
-            .discovery_service
-            .find_document_by_id(document_id)
-            .await?;
-
-        // Archive the document tree
-        let archived_documents = self
-            .archive_document_tree(&discovery_result.file_path, discovery_result.document_type)
-            .await?;
-
-        Ok(ArchiveResult {
-            total_archived: archived_documents.len(),
-            archived_documents,
-        })
-    }
-
-    /// Archive a document using database lineage queries for efficient hierarchy discovery
-    /// This method can be used when a database service is available for optimization
-    pub async fn archive_document_with_database(
+    /// Archive a document and all its children using database lineage queries
+    pub async fn archive_document(
         &self, 
         document_id: &str, 
         db_service: &mut DatabaseService
@@ -258,49 +161,7 @@ impl ArchiveService {
         })
     }
 
-    /// Archive a document tree starting from a specific file
-    async fn archive_document_tree(
-        &self,
-        file_path: &Path,
-        doc_type: DocumentType,
-    ) -> Result<Vec<ArchivedDocument>> {
-        let mut archived_documents = Vec::new();
 
-        match doc_type {
-            DocumentType::Vision | DocumentType::Task | DocumentType::Adr => {
-                // These document types don't have children, just archive the file
-                let archived_doc = self.archive_single_file(file_path, doc_type).await?;
-                archived_documents.push(archived_doc);
-            }
-
-            DocumentType::Strategy => {
-                // Archive strategy and all its initiatives/tasks
-                let strategy_dir = file_path.parent().unwrap();
-                let initiatives_dir = strategy_dir.join("initiatives");
-
-                // Mark all initiatives and their tasks as archived
-                self.archive_strategy_initiatives(&initiatives_dir).await?;
-
-                // Then archive the strategy directory (which moves everything intact)
-                let archived_doc = self.archive_directory(strategy_dir, doc_type).await?;
-                archived_documents.push(archived_doc);
-            }
-
-            DocumentType::Initiative => {
-                // Archive initiative and all its tasks
-                let initiative_dir = file_path.parent().unwrap();
-
-                // Mark all tasks in this initiative as archived
-                self.mark_tasks_in_directory_as_archived(initiative_dir).await?;
-
-                // Then archive the initiative directory (which moves everything intact)
-                let archived_doc = self.archive_directory(initiative_dir, doc_type).await?;
-                archived_documents.push(archived_doc);
-            }
-        }
-
-        Ok(archived_documents)
-    }
 
     /// Archive a single file
     async fn archive_single_file(
@@ -579,6 +440,7 @@ mod tests {
     use super::*;
     use crate::application::services::document::creation::DocumentCreationConfig;
     use crate::application::services::document::DocumentCreationService;
+    use crate::Database;
     use tempfile::tempdir;
 
     #[tokio::test]
@@ -602,8 +464,16 @@ mod tests {
 
         // Archive the vision
         let archive_service = ArchiveService::new(&workspace_dir);
+        let db = Database::new(":memory:").unwrap();
+        let mut db_service = crate::application::services::DatabaseService::new(db.into_repository());
+        
+        // Sync the document to the database first
+        let mut sync_service = crate::application::services::SyncService::new(&mut db_service)
+            .with_workspace_dir(&workspace_dir);
+        sync_service.sync_directory(&workspace_dir).await.unwrap();
+        
         let archive_result = archive_service
-            .archive_document(&creation_result.document_id.to_string())
+            .archive_document(&creation_result.document_id.to_string(), &mut db_service)
             .await
             .unwrap();
 
@@ -656,8 +526,16 @@ mod tests {
 
         // Archive the strategy (should archive the initiative too)
         let archive_service = ArchiveService::new(&workspace_dir);
+        let db = Database::new(":memory:").unwrap();
+        let mut db_service = crate::application::services::DatabaseService::new(db.into_repository());
+        
+        // Sync documents to the database first
+        let mut sync_service = crate::application::services::SyncService::new(&mut db_service)
+            .with_workspace_dir(&workspace_dir);
+        sync_service.sync_directory(&workspace_dir).await.unwrap();
+        
         let archive_result = archive_service
-            .archive_document(&strategy_result.document_id.to_string())
+            .archive_document(&strategy_result.document_id.to_string(), &mut db_service)
             .await
             .unwrap();
 
@@ -686,8 +564,16 @@ mod tests {
             risk_level: None,
         };
         let creation_result = creation_service.create_vision(config).await.unwrap();
+        let db = Database::new(":memory:").unwrap();
+        let mut db_service = crate::application::services::DatabaseService::new(db.into_repository());
+        
+        // Sync the document to the database first
+        let mut sync_service = crate::application::services::SyncService::new(&mut db_service)
+            .with_workspace_dir(&workspace_dir);
+        sync_service.sync_directory(&workspace_dir).await.unwrap();
+        
         archive_service
-            .archive_document(&creation_result.document_id.to_string())
+            .archive_document(&creation_result.document_id.to_string(), &mut db_service)
             .await
             .unwrap();
 
@@ -726,8 +612,16 @@ mod tests {
             .unwrap());
 
         // Archive the document
+        let db = Database::new(":memory:").unwrap();
+        let mut db_service = crate::application::services::DatabaseService::new(db.into_repository());
+        
+        // Sync the document to the database first
+        let mut sync_service = crate::application::services::SyncService::new(&mut db_service)
+            .with_workspace_dir(&workspace_dir);
+        sync_service.sync_directory(&workspace_dir).await.unwrap();
+        
         archive_service
-            .archive_document(&document_id)
+            .archive_document(&document_id, &mut db_service)
             .await
             .unwrap();
 

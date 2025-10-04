@@ -31,8 +31,17 @@ impl App {
     pub async fn archive_selected_document(&mut self) -> Result<()> {
         if let Some(selected_item) = self.get_selected_item() {
             if let Some(workspace_dir) = &self.core_state.workspace_dir {
+                // Create archive service with database optimization
+                let db = match metis_core::dal::Database::new(&workspace_dir.join("metis.db").to_string_lossy()) {
+                    Ok(db) => db,
+                    Err(e) => {
+                        self.add_error_message(format!("Database error: {}", e));
+                        return Ok(());
+                    }
+                };
+                let mut db_service = metis_core::application::services::DatabaseService::new(db.into_repository());
                 let archive_service = ArchiveService::new(workspace_dir);
-                match archive_service.archive_document(&selected_item.id()).await {
+                match archive_service.archive_document(&selected_item.id(), &mut db_service).await {
                     Ok(_archive_result) => {
                         self.add_success_message(format!("Document '{}' archived successfully", selected_item.title()));
                         // Sync database and reload documents
