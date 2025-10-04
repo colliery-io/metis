@@ -218,12 +218,12 @@ async fn test_mcp_complete_flight_levels_workflow() -> Result<()> {
     let result = create_task.call_tool().await;
     assert!(result.is_ok(), "Create task should succeed: {:?}", result);
 
-    // Verify task was created in the correct location
+    // Verify task was created in the correct location (NULL-based structure)
     let initiative_dir = format!(
         "{}/strategies/improve-customer-experience/initiatives/redesign-user-onboarding",
         helper.metis_dir()
     );
-    let task_file = format!("{}/create-wireframes-for-onboarding.md", initiative_dir);
+    let task_file = format!("{}/tasks/create-wireframes-for-onboarding.md", initiative_dir);
     assert!(
         std::path::Path::new(&task_file).exists(),
         "Task file should exist"
@@ -292,7 +292,7 @@ async fn test_mcp_complete_flight_levels_workflow() -> Result<()> {
         .map_err(|e| anyhow::anyhow!("Find error: {}", e))?;
     assert_eq!(db_tasks.len(), 2, "Should have 2 tasks in database");
 
-    let second_task_file = format!("{}/write-user-research-plan.md", initiative_dir);
+    let second_task_file = format!("{}/tasks/write-user-research-plan.md", initiative_dir);
     assert!(
         std::path::Path::new(&second_task_file).exists(),
         "Second task file should exist"

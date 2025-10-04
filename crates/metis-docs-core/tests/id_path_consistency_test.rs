@@ -183,12 +183,13 @@ async fn test_task_id_path_consistency() {
         "setup-ci-cd-pipeline-testing"
     );
 
-    // Verify file path
+    // Verify file path with NULL-based directory structure
     let expected_file = workspace_dir
         .join("strategies")
         .join("strategy-one")
         .join("initiatives")
         .join("initiative-one")
+        .join("tasks")
         .join("setup-ci-cd-pipeline-testing.md");
 
     assert!(expected_file.exists());

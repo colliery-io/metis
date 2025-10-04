@@ -1,6 +1,10 @@
 use crate::workspace;
 use anyhow::Result;
-use metis_core::{domain::documents::types::DocumentId, Document, Initiative, Phase, Tag, Task};
+use metis_core::{
+    application::services::document::creation::{DocumentCreationConfig, DocumentCreationService},
+    domain::documents::types::DocumentId,
+    Document, Initiative, Phase, Tag,
+};
 use std::path::Path;
 
 /// Create a new Task document with defaults and write to file
@@ -13,36 +17,32 @@ pub async fn create_new_task(title: &str, initiative_id: &str) -> Result<()> {
     let metis_dir = metis_dir.unwrap();
 
     // 2. Verify the initiative exists and get its document ID and file path
-    let (initiative_doc_id, initiative_path) = find_initiative(&metis_dir, initiative_id).await?;
+    let (initiative_doc_id, _initiative_path) = find_initiative(&metis_dir, initiative_id).await?;
 
-    // 3. Create Task with defaults
-    let tags = vec![Tag::Label("task".to_string()), Tag::Phase(Phase::Todo)];
+    // 3. Use DocumentCreationService to create the task
+    let creation_service = DocumentCreationService::new(&metis_dir);
+    
+    let config = DocumentCreationConfig {
+        title: title.to_string(),
+        description: None,
+        parent_id: Some(initiative_doc_id.clone()),
+        tags: vec![Tag::Label("task".to_string()), Tag::Phase(Phase::Todo)],
+        phase: Some(Phase::Todo),
+        complexity: None,
+        risk_level: None,
+    };
 
-    let task = Task::new(
-        title.to_string(),
-        Some(initiative_doc_id.clone()),
-        Some(initiative_id.to_string()), // parent title for template
-        Vec::new(),                      // blocked_by
-        tags,
-        false, // not archived
-    )
-    .map_err(|e| anyhow::anyhow!("Failed to create task: {}", e))?;
+    // 4. Find the strategy ID for the initiative
+    let strategy_id = find_strategy_for_initiative(&metis_dir, initiative_id).await?;
+    
+    // 5. Create the task using the DocumentCreationService
+    let result = creation_service
+        .create_task(config, &strategy_id, initiative_id)
+        .await
+        .map_err(|e| anyhow::anyhow!("Failed to create task: {}", e))?;
 
-    // 4. Determine file path: /strategies/{strategy-id}/initiatives/{initiative-id}/{task-id}.md
-    let doc_id = task.id();
-    let initiative_dir = initiative_path.parent().unwrap();
-    let file_path = initiative_dir.join(format!("{}.md", doc_id));
-
-    // Check if file already exists
-    if file_path.exists() {
-        anyhow::bail!("Task document already exists: {}", file_path.display());
-    }
-
-    // 5. Write to file
-    task.to_file(&file_path).await?;
-
-    println!("✓ Created task: {}", file_path.display());
-    println!("  ID: {}", doc_id);
+    println!("✓ Created task: {}", result.file_path.display());
+    println!("  ID: {}", result.document_id);
     println!("  Title: {}", title);
     println!("  Parent Initiative: {}", initiative_doc_id);
 
@@ -141,6 +141,38 @@ fn list_available_initiatives(workspace_dir: &Path) -> Result<Vec<String>> {
 
     initiatives.sort();
     Ok(initiatives)
+}
+
+/// Find the strategy ID that contains the given initiative
+async fn find_strategy_for_initiative(workspace_dir: &Path, initiative_id: &str) -> Result<String> {
+    let strategies_dir = workspace_dir.join("strategies");
+
+    if !strategies_dir.exists() {
+        anyhow::bail!("No strategies directory found");
+    }
+
+    for strategy_entry in std::fs::read_dir(&strategies_dir)? {
+        let strategy_dir = strategy_entry?.path();
+        if !strategy_dir.is_dir() {
+            continue;
+        }
+
+        let initiatives_dir = strategy_dir.join("initiatives");
+        if !initiatives_dir.exists() {
+            continue;
+        }
+
+        // Check if this strategy contains the initiative
+        let initiative_dir = initiatives_dir.join(initiative_id);
+        if initiative_dir.exists() && initiative_dir.is_dir() {
+            // Return the strategy directory name as the strategy ID
+            if let Some(strategy_name) = strategy_dir.file_name().and_then(|n| n.to_str()) {
+                return Ok(strategy_name.to_string());
+            }
+        }
+    }
+
+    anyhow::bail!("Could not find strategy for initiative '{}'", initiative_id);
 }
 
 #[cfg(test)]

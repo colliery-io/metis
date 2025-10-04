@@ -160,9 +160,9 @@ impl DocumentCreationService {
         // Generate initiative ID from title
         let initiative_id = self.generate_id_from_title(&config.title);
         
-        // Determine directory structure based on configuration
-        let (initiative_dir, parent_ref) = if flight_config.strategies_enabled {
-            // Full configuration: initiatives go under strategies
+        // Determine directory structure using consistent NULL-based paths
+        let (parent_ref, effective_strategy_id) = if flight_config.strategies_enabled {
+            // Full configuration: use actual strategy_id
             if strategy_id == "NULL" {
                 return Err(MetisError::ValidationFailed {
                     message: "Cannot create initiative with NULL strategy when strategies are enabled".to_string(),
@@ -182,21 +182,19 @@ impl DocumentCreationService {
                 )));
             }
             
-            let dir = self
-                .workspace_dir
-                .join("strategies")
-                .join(strategy_id)
-                .join("initiatives")
-                .join(&initiative_id);
-            (dir, ParentReference::Some(DocumentId::from(strategy_id)))
+            (ParentReference::Some(DocumentId::from(strategy_id)), strategy_id)
         } else {
-            // Streamlined configuration: initiatives go directly under workspace
-            let dir = self
-                .workspace_dir
-                .join("initiatives")
-                .join(&initiative_id);
-            (dir, ParentReference::Null) // Use NULL parent for streamlined config
+            // Streamlined configuration: use NULL as strategy placeholder
+            (ParentReference::Null, "NULL")
         };
+        
+        // Consistent directory structure: strategies/{strategy_id}/initiatives/{initiative_id}
+        let initiative_dir = self
+            .workspace_dir
+            .join("strategies")
+            .join(effective_strategy_id)
+            .join("initiatives")
+            .join(&initiative_id);
 
         let file_path = initiative_dir.join("initiative.md");
 
@@ -265,31 +263,37 @@ impl DocumentCreationService {
         // Generate task ID from title
         let task_id = self.generate_id_from_title(&config.title);
         
-        // Determine directory structure and parent based on configuration
-        let (task_dir, parent_ref, parent_title) = if flight_config.initiatives_enabled {
-            // Tasks go under initiatives
+        // Determine directory structure using consistent NULL-based paths
+        let (parent_ref, parent_title, effective_strategy_id, effective_initiative_id) = if flight_config.initiatives_enabled {
+            // Initiatives are enabled, tasks go under initiatives
             if initiative_id == "NULL" {
                 return Err(MetisError::ValidationFailed {
                     message: "Cannot create task with NULL initiative when initiatives are enabled".to_string(),
                 });
             }
 
-            let initiative_dir = if flight_config.strategies_enabled {
-                // Full configuration: tasks under strategies/strategy/initiatives/initiative
-                self.workspace_dir
-                    .join("strategies")
-                    .join(strategy_id)
-                    .join("initiatives")
-                    .join(initiative_id)
+            let eff_strategy_id = if flight_config.strategies_enabled {
+                // Full configuration: use actual strategy_id
+                if strategy_id == "NULL" {
+                    return Err(MetisError::ValidationFailed {
+                        message: "Cannot create task with NULL strategy when strategies are enabled".to_string(),
+                    });
+                }
+                strategy_id
             } else {
-                // Streamlined configuration: tasks under initiatives/initiative
-                self.workspace_dir
-                    .join("initiatives")
-                    .join(initiative_id)
+                // Streamlined configuration: use NULL as strategy placeholder
+                "NULL"
             };
 
-            // Validate parent initiative exists
-            let initiative_file = initiative_dir.join("initiative.md");
+            // Validate parent initiative exists using the consistent path structure
+            let initiative_file = self
+                .workspace_dir
+                .join("strategies")
+                .join(eff_strategy_id)
+                .join("initiatives")
+                .join(initiative_id)
+                .join("initiative.md");
+            
             if !initiative_file.exists() {
                 return Err(MetisError::NotFound(format!(
                     "Parent initiative '{}' not found",
@@ -297,12 +301,20 @@ impl DocumentCreationService {
                 )));
             }
 
-            (initiative_dir, ParentReference::Some(DocumentId::from(initiative_id)), Some(initiative_id.to_string()))
+            (ParentReference::Some(DocumentId::from(initiative_id)), Some(initiative_id.to_string()), eff_strategy_id, initiative_id)
         } else {
-            // Direct configuration: tasks go directly under workspace/tasks
-            let task_dir = self.workspace_dir.join("tasks");
-            (task_dir, ParentReference::Null, None) // Use NULL parent for direct config
+            // Direct configuration: use NULL placeholders for both strategy and initiative
+            (ParentReference::Null, None, "NULL", "NULL")
         };
+
+        // Consistent directory structure: strategies/{strategy_id}/initiatives/{initiative_id}/tasks/{task_id}
+        let task_dir = self
+            .workspace_dir
+            .join("strategies")
+            .join(effective_strategy_id)
+            .join("initiatives")
+            .join(effective_initiative_id)
+            .join("tasks");
 
         let file_path = task_dir.join(format!("{}.md", task_id));
 
@@ -727,9 +739,9 @@ mod tests {
         assert_eq!(result.document_type, DocumentType::Initiative);
         assert!(result.file_path.exists());
         
-        // Verify the path structure for streamlined configuration
+        // Verify the NULL-based path structure for streamlined configuration
         assert!(result.file_path.to_string_lossy().contains("initiatives"));
-        assert!(!result.file_path.to_string_lossy().contains("strategies"));
+        assert!(result.file_path.to_string_lossy().contains("strategies/NULL"));
     }
 
     #[tokio::test]
@@ -780,9 +792,8 @@ mod tests {
         assert_eq!(result.document_type, DocumentType::Task);
         assert!(result.file_path.exists());
         
-        // Verify the path structure for direct configuration
+        // Verify the NULL-based path structure for direct configuration
         assert!(result.file_path.to_string_lossy().contains("tasks"));
-        assert!(!result.file_path.to_string_lossy().contains("initiatives"));
-        assert!(!result.file_path.to_string_lossy().contains("strategies"));
+        assert!(result.file_path.to_string_lossy().contains("strategies/NULL/initiatives/NULL"));
     }
 }

@@ -582,7 +582,7 @@ async fn test_task_phase_transitions() -> Result<()> {
     );
     assert!(task_dir.is_dir(), "Task parent path should be a directory");
 
-    let task_file = task_dir.join("setup-ci-cd-pipeline.md");
+    let task_file = task_dir.join("tasks").join("setup-ci-cd-pipeline.md");
     assert!(
         task_file.exists(),
         "Task file should exist at: {:?}",
@@ -638,7 +638,7 @@ async fn test_task_phase_transitions() -> Result<()> {
     assert_eq!(db_tasks[0].archived, false, "Task should not be archived");
 
     // Validate complete state including file hash
-    let task_path = "strategies/technical-excellence/initiatives/upgrade-infrastructure/setup-ci-cd-pipeline.md";
+    let task_path = "strategies/technical-excellence/initiatives/upgrade-infrastructure/tasks/setup-ci-cd-pipeline.md";
     validate_phase_transition(&helper, task_path, "todo", "task", &task_id).await?;
 
     // Transition to active

@@ -148,6 +148,7 @@ impl DocumentDiscoveryService {
                         }
                     }
                 }
+                
                 Err(MetisError::NotFound(
                     "Initiative document not found".to_string(),
                 ))
@@ -203,8 +204,13 @@ impl DocumentDiscoveryService {
                                 continue;
                             }
 
-                            // Look for task files in the initiative directory
-                            for task_entry in fs::read_dir(&initiative_dir)
+                            // Look for task files in the tasks subdirectory (NULL-based structure)
+                            let tasks_dir = initiative_dir.join("tasks");
+                            if !tasks_dir.exists() {
+                                continue;
+                            }
+
+                            for task_entry in fs::read_dir(&tasks_dir)
                                 .map_err(|e| MetisError::FileSystem(e.to_string()))?
                             {
                                 let task_path = task_entry
@@ -213,19 +219,38 @@ impl DocumentDiscoveryService {
                                 if task_path.is_file()
                                     && task_path.extension().is_some_and(|ext| ext == "md")
                                 {
-                                    // Skip initiative.md
-                                    if task_path
-                                        .file_name()
-                                        .is_some_and(|name| name == "initiative.md")
-                                    {
-                                        continue;
-                                    }
-
                                     if let Ok(task) = Task::from_file(&task_path).await {
                                         if task.id().to_string() == document_id {
                                             return Ok(task_path);
                                         }
                                     }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Also check for direct configuration tasks (strategies/NULL/initiatives/NULL/tasks/)
+                let direct_tasks_dir = self.workspace_dir
+                    .join("strategies")
+                    .join("NULL")
+                    .join("initiatives")
+                    .join("NULL")
+                    .join("tasks");
+                
+                if direct_tasks_dir.exists() {
+                    for task_entry in fs::read_dir(&direct_tasks_dir)
+                        .map_err(|e| MetisError::FileSystem(e.to_string()))?
+                    {
+                        let task_path = task_entry
+                            .map_err(|e| MetisError::FileSystem(e.to_string()))?
+                            .path();
+                        if task_path.is_file()
+                            && task_path.extension().is_some_and(|ext| ext == "md")
+                        {
+                            if let Ok(task) = Task::from_file(&task_path).await {
+                                if task.id().to_string() == document_id {
+                                    return Ok(task_path);
                                 }
                             }
                         }

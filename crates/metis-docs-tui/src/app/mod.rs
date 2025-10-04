@@ -157,7 +157,8 @@ impl App {
     pub async fn load_flight_config(&mut self) -> Result<()> {
         if let Some(workspace_dir) = &self.core_state.workspace_dir {
             // Create database connection and load configuration
-            let db_path = workspace_dir.join(".metis/metis.db");
+            // workspace_dir is the .metis directory, so we need metis.db directly
+            let db_path = workspace_dir.join("metis.db");
             if let Ok(db) = metis_core::Database::new(db_path.to_str().unwrap()) {
                 if let Ok(mut config_repo) = db.configuration_repository() {
                     match config_repo.get_flight_level_config() {
@@ -170,13 +171,19 @@ impl App {
                             // Log error but continue with default configuration
                             eprintln!("Warning: Failed to load flight level configuration: {}", e);
                             eprintln!("Using default (full) configuration");
+                            // Ensure the current board is valid for the default configuration
+                            self.ui_state.ensure_valid_board(&self.core_state.flight_config);
                         }
                     }
                 } else {
                     eprintln!("Warning: Failed to create configuration repository, using default configuration");
+                    // Ensure the current board is valid for the default configuration
+                    self.ui_state.ensure_valid_board(&self.core_state.flight_config);
                 }
             } else {
                 eprintln!("Warning: Failed to connect to database, using default configuration");
+                // Ensure the current board is valid for the default configuration
+                self.ui_state.ensure_valid_board(&self.core_state.flight_config);
             }
         }
         Ok(())

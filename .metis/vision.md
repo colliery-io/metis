@@ -1,9 +1,9 @@
 ---
-id: metis
+id: project-vision
 level: vision
-title: "metis"
-created_at: 2025-09-28T20:52:56.590837+00:00
-updated_at: 2025-09-28T20:52:56.590837+00:00
+title: "Project Vision"
+created_at: 2025-10-04T09:40:42.360031+00:00
+updated_at: 2025-10-04T09:40:42.360031+00:00
 archived: false
 
 tags:
@@ -14,28 +14,50 @@ tags:
 exit_criteria_met: false
 ---
 
-# metis Vision
+# Project Vision Vision
 
-## Purpose
+*This template includes sections for various types of vision documents. Delete sections that don't apply to your specific use case.*
 
-This vision document serves as a test for the TUI backlog integration functionality.
+## Purpose **[REQUIRED]**
 
-## Current State
+{Why this vision exists and what it aims to achieve}
 
-Currently testing the backlog management system implementation.
+## Product/Solution Overview **[CONDITIONAL: Product/Solution Vision]**
 
-## Future State
+{Describe the product or solution, target audience, key benefits, and expected improvements. Delete if this is an organizational or process vision.}
 
-A fully functional backlog management system integrated with the TUI.
+## Current State **[REQUIRED]**
 
-## Success Criteria
+{Where we are today - the baseline}
 
-Backlog items display correctly in the TUI and can be managed effectively.
+## Future State **[REQUIRED]**
 
-## Principles
+{Where we want to be - the target vision}
+
+## Major Features **[CONDITIONAL: Product Vision]**
+
+{List and describe the major features and their functionality. Delete if not a product vision.}
+
+- {Feature 1: Description and value}
+- {Feature 2: Description and value}
+- {Feature 3: Description and value}
+
+## Business Requirements Overview **[CONDITIONAL: Business Vision]**
+
+{Brief overview of key business requirements this vision addresses. Delete if this is a technical or product-only vision.}
+
+- {Business requirement 1}
+- {Business requirement 2}
+- {Business requirement 3}
+
+## Success Criteria **[REQUIRED]**
+
+{How we'll know when the vision is achieved}
+
+## Principles **[REQUIRED]**
 
 {Core principles that guide decision-making}
 
-## Constraints
+## Constraints **[REQUIRED]**
 
 {Known limitations or boundaries}

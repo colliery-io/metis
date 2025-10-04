@@ -49,7 +49,11 @@ impl DocumentService {
                         .create_initiative(config, parent_id)
                         .await?
                 } else {
-                    return Err(anyhow::anyhow!("Initiative requires a parent strategy"));
+                    // Create initiative without parent (streamlined configuration)
+                    // Use "NULL" as strategy_id which the core service handles correctly
+                    creation_service
+                        .create_initiative_with_config(config, "NULL", &metis_core::domain::configuration::FlightLevelConfig::streamlined())
+                        .await?
                 }
             }
             DocumentType::Task => {
@@ -64,8 +68,12 @@ impl DocumentService {
                         Err(e) => return Err(anyhow::anyhow!("Failed to create task: {}", e)),
                     }
                 } else {
-                    // For tasks without parent, create as backlog item
-                    creation_service.create_backlog_item(config).await?
+                    // For tasks without parent, check if it's a backlog or direct config task
+                    // For now, we'll handle the direct configuration case by using the task creation service
+                    // Use "NULL" for strategy_id and initiative_id which the core service handles
+                    creation_service
+                        .create_task_with_config(config, "NULL", "NULL", &metis_core::domain::configuration::FlightLevelConfig::direct())
+                        .await?
                 }
             }
             DocumentType::Adr => creation_service.create_adr(config).await?,
@@ -189,8 +197,15 @@ impl DocumentService {
             risk_level: None,
         };
 
+        // Determine flight configuration based on strategy_id
+        let flight_config = if strategy_id == "NULL" {
+            metis_core::domain::configuration::FlightLevelConfig::streamlined()
+        } else {
+            metis_core::domain::configuration::FlightLevelConfig::full()
+        };
+
         let result = creation_service
-            .create_task(config, &strategy_id, &initiative_id)
+            .create_task_with_config(config, &strategy_id, &initiative_id, &flight_config)
             .await?;
         Ok(result.document_id.to_string())
     }

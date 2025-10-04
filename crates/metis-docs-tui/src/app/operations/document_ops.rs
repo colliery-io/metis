@@ -55,29 +55,41 @@ impl App {
     fn find_parent_id(&mut self, doc_type: DocumentType) -> Option<String> {
         match doc_type {
             DocumentType::Initiative => {
-                let strategy_items: Vec<_> = self.ui_state.strategy_board.columns
-                    .iter()
-                    .flat_map(|col| &col.items)
-                    .collect();
-                
-                if let Some(strategy) = strategy_items.first() {
-                    Some(strategy.id())
+                // Only look for parent strategies if strategies are enabled
+                if self.core_state.flight_config.strategies_enabled {
+                    let strategy_items: Vec<_> = self.ui_state.strategy_board.columns
+                        .iter()
+                        .flat_map(|col| &col.items)
+                        .collect();
+                    
+                    if let Some(strategy) = strategy_items.first() {
+                        Some(strategy.id())
+                    } else {
+                        self.handle_creation_error("Cannot create initiative: No strategy available as parent".to_string());
+                        None
+                    }
                 } else {
-                    self.handle_creation_error("Cannot create initiative: No strategy available as parent".to_string());
+                    // Streamlined config: initiatives have no parent
                     None
                 }
             }
             DocumentType::Task => {
                 if self.ui_state.current_board == BoardType::Task {
-                    let initiative_items: Vec<_> = self.ui_state.initiative_board.columns
-                        .iter()
-                        .flat_map(|col| &col.items)
-                        .collect();
-                    
-                    if let Some(initiative) = initiative_items.first() {
-                        Some(initiative.id())
+                    // Only look for parent initiatives if initiatives are enabled
+                    if self.core_state.flight_config.initiatives_enabled {
+                        let initiative_items: Vec<_> = self.ui_state.initiative_board.columns
+                            .iter()
+                            .flat_map(|col| &col.items)
+                            .collect();
+                        
+                        if let Some(initiative) = initiative_items.first() {
+                            Some(initiative.id())
+                        } else {
+                            self.handle_creation_error("Cannot create task: No initiative available as parent".to_string());
+                            None
+                        }
                     } else {
-                        self.handle_creation_error("Cannot create task: No initiative available as parent".to_string());
+                        // Direct config: tasks have no parent
                         None
                     }
                 } else {
@@ -102,17 +114,20 @@ impl App {
                     _ => None,
                 };
                 
-                if let Some(strategy_id) = strategy_id {
-                    document_service
-                        .create_child_task(
-                            title,
-                            strategy_id.to_string(),
-                            initiative.id(),
-                        )
-                        .await
+                let effective_strategy_id = if let Some(strategy_id) = strategy_id {
+                    strategy_id.to_string()
                 } else {
-                    Err(anyhow::anyhow!("Initiative has no parent strategy"))
-                }
+                    // Streamlined config: use NULL as strategy placeholder
+                    "NULL".to_string()
+                };
+                
+                document_service
+                    .create_child_task(
+                        title,
+                        effective_strategy_id,
+                        initiative.id(),
+                    )
+                    .await
             } else {
                 Err(anyhow::anyhow!("No initiative found for task creation"))
             }
@@ -132,8 +147,16 @@ impl App {
         
         // For initiatives and tasks, find parent if needed
         let parent_id = self.find_parent_id(doc_type);
-        if doc_type != DocumentType::Strategy && doc_type != DocumentType::Adr && 
-           doc_type != DocumentType::Task && parent_id.is_none() {
+        
+        // Check if we need a parent for this document type in current configuration
+        let needs_parent = match doc_type {
+            DocumentType::Strategy | DocumentType::Adr => false, // Never need parents
+            DocumentType::Initiative => self.core_state.flight_config.strategies_enabled, // Need parent only if strategies enabled
+            DocumentType::Task => self.core_state.flight_config.initiatives_enabled, // Need parent only if initiatives enabled  
+            _ => false,
+        };
+        
+        if needs_parent && parent_id.is_none() {
             return Ok(()); // Error already handled in find_parent_id
         }
 
@@ -192,34 +215,35 @@ impl App {
                         // For tasks, we need both strategy_id and initiative_id
                         // Get strategy_id from the initiative's parent
                         if let DocumentObject::Initiative(ref initiative) = &parent_item.document {
-                            if let Some(strategy_id) = initiative.parent_id() {
-                                match document_service
-                                    .create_child_task(
-                                        title,
-                                        strategy_id.to_string(),
-                                        parent_id.to_string(),
-                                    )
-                                    .await
-                                {
-                                    Ok(_) => {
-                                        self.ui_state.set_app_state(AppState::Normal);
-                                        self.ui_state.reset_input();
-                                        // Sync database and reload documents
-                                        if let Some(sync_service) = &self.sync_service {
-                                            let _ = sync_service.sync_database().await;
-                                        }
-                                        self.load_documents().await?;
-                                    }
-                                    Err(e) => {
-                                        self.add_error_message(format!("Failed to create task: {}", e));
-                                        self.ui_state.set_app_state(AppState::Normal);
-                                        self.ui_state.reset_input();
-                                    }
-                                }
+                            let effective_strategy_id = if let Some(strategy_id) = initiative.parent_id() {
+                                strategy_id.to_string()
                             } else {
-                                self.add_error_message("Initiative has no parent strategy".to_string());
-                                self.ui_state.set_app_state(AppState::Normal);
-                                self.ui_state.reset_input();
+                                // Streamlined config: use NULL as strategy placeholder
+                                "NULL".to_string()
+                            };
+                            
+                            match document_service
+                                .create_child_task(
+                                    title,
+                                    effective_strategy_id,
+                                    parent_id.to_string(),
+                                )
+                                .await
+                            {
+                                Ok(_) => {
+                                    self.ui_state.set_app_state(AppState::Normal);
+                                    self.ui_state.reset_input();
+                                    // Sync database and reload documents
+                                    if let Some(sync_service) = &self.sync_service {
+                                        let _ = sync_service.sync_database().await;
+                                    }
+                                    self.load_documents().await?;
+                                }
+                                Err(e) => {
+                                    self.add_error_message(format!("Failed to create task: {}", e));
+                                    self.ui_state.set_app_state(AppState::Normal);
+                                    self.ui_state.reset_input();
+                                }
                             }
                         } else {
                             self.add_error_message("Selected item is not an initiative".to_string());

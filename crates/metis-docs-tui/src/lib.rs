@@ -279,7 +279,12 @@ async fn run_app<B: ratatui::backend::Backend>(
     terminal: &mut Terminal<B>,
     app: &mut App,
 ) -> Result<()> {
-    let mut initialization_done = false;
+    // Initialize app before starting the main loop
+    if let Err(e) = app.initialize().await {
+        app.add_error_message("Failed to initialize application".to_string());
+        app.error_handler
+            .handle_with_context(AppError::from(e), "Initialization");
+    }
 
     loop {
         // Clear expired messages on each loop iteration
@@ -287,16 +292,6 @@ async fn run_app<B: ratatui::backend::Backend>(
 
         // Draw UI
         terminal.draw(|f| ui::draw(f, app))?;
-
-        // Handle initialization
-        if !initialization_done {
-            if let Err(e) = app.initialize().await {
-                app.add_error_message("Failed to initialize application".to_string());
-                app.error_handler
-                    .handle_with_context(AppError::from(e), "Initialization");
-            }
-            initialization_done = true;
-        }
 
         // Handle input events with timeout
         if crossterm::event::poll(std::time::Duration::from_millis(50))? {

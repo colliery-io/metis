@@ -36,19 +36,38 @@ impl App {
 
     pub fn start_smart_document_creation(&mut self) {
         match self.ui_state.current_board {
-            // Strategy board: Create initiative under selected strategy
+            // Strategy board: Create strategies (full config) or initiatives (other configs)
             BoardType::Strategy => {
-                self.ui_state.set_app_state(AppState::CreatingChildDocument);
+                if self.core_state.flight_config.strategies_enabled {
+                    // Full config: Create root strategy
+                    self.ui_state.set_app_state(AppState::CreatingDocument);
+                } else {
+                    // Streamlined/Direct config: Create initiative under selected strategy (if any exist)
+                    self.ui_state.set_app_state(AppState::CreatingChildDocument);
+                }
                 self.ui_state.reset_input();
             }
-            // Initiative board: Create task under selected initiative
+            // Initiative board: Create initiatives (streamlined config) or tasks (other configs)
             BoardType::Initiative => {
-                self.ui_state.set_app_state(AppState::CreatingChildDocument);
+                if !self.core_state.flight_config.strategies_enabled && self.core_state.flight_config.initiatives_enabled {
+                    // Streamlined config: Create root initiative (no parent strategies)
+                    self.ui_state.set_app_state(AppState::CreatingDocument);
+                } else {
+                    // Full config: Create task under selected initiative
+                    self.ui_state.set_app_state(AppState::CreatingChildDocument);
+                }
                 self.ui_state.reset_input();
             }
-            // Task board: No creation allowed - tasks created from Initiative or Backlog boards
+            // Task board: Create tasks (direct config) or show error (other configs)
             BoardType::Task => {
-                self.add_error_message("Tasks are created from the Initiative board (with parent) or Backlog board (standalone)".to_string());
+                if !self.core_state.flight_config.strategies_enabled && !self.core_state.flight_config.initiatives_enabled {
+                    // Direct config: Create root task (no parent strategies/initiatives)
+                    self.ui_state.set_app_state(AppState::CreatingDocument);
+                    self.ui_state.reset_input();
+                } else {
+                    // Full/Streamlined config: Tasks must have parents
+                    self.add_error_message("Tasks are created from the Initiative board (with parent) or Backlog board (standalone)".to_string());
+                }
             }
             // ADR board: Create new ADR (standalone)
             BoardType::Adr => {
