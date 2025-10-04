@@ -7,4 +7,4 @@ CREATE TABLE configuration (
 
 -- Insert default flight level configuration
 INSERT INTO configuration (key, value, updated_at) VALUES 
-    ('flight_levels', '{"strategies_enabled":true,"initiatives_enabled":true}', strftime('%s', 'now'));
+    ('flight_levels', '{"strategies_enabled":false,"initiatives_enabled":true}', strftime('%s', 'now'));
