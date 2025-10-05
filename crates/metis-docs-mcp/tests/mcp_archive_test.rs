@@ -12,6 +12,11 @@ use metis_mcp_server::tools::*;
 async fn test_mcp_archive_cascading_behavior() -> Result<()> {
     let helper = McpTestHelper::new().await?;
     helper.initialize_project().await?;
+    
+    // Set full configuration to enable all document types for testing
+    let db = helper.get_database()?;
+    let mut config_repo = db.configuration_repository().map_err(|e| anyhow::anyhow!("Failed to get config repo: {}", e))?;
+    config_repo.set("flight_levels", r#"{"strategies_enabled":true,"initiatives_enabled":true}"#).map_err(|e| anyhow::anyhow!("Failed to set config: {}", e))?;
 
     println!("=== MCP Archive Cascading Test ===");
 
@@ -343,6 +348,11 @@ async fn test_mcp_archive_cascading_behavior() -> Result<()> {
 async fn test_mcp_archive_error_handling() -> Result<()> {
     let helper = McpTestHelper::new().await?;
     helper.initialize_project().await?;
+    
+    // Set full configuration to enable all document types for testing
+    let db = helper.get_database()?;
+    let mut config_repo = db.configuration_repository().map_err(|e| anyhow::anyhow!("Failed to get config repo: {}", e))?;
+    config_repo.set("flight_levels", r#"{"strategies_enabled":true,"initiatives_enabled":true}"#).map_err(|e| anyhow::anyhow!("Failed to set config: {}", e))?;
 
     println!("=== MCP Archive Error Handling Test ===");
 

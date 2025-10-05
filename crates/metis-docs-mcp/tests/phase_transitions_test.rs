@@ -162,6 +162,11 @@ async fn test_vision_phase_transitions() -> Result<()> {
 async fn test_strategy_phase_transitions() -> Result<()> {
     let helper = McpTestHelper::new().await?;
     helper.initialize_project().await?;
+    
+    // Set full configuration to enable all document types for testing
+    let db = helper.get_database()?;
+    let mut config_repo = db.configuration_repository().map_err(|e| anyhow::anyhow!("Failed to get config repo: {}", e))?;
+    config_repo.set("flight_levels", r#"{"strategies_enabled":true,"initiatives_enabled":true}"#).map_err(|e| anyhow::anyhow!("Failed to set config: {}", e))?;
 
     println!("=== Test Strategy Phase Transitions ===");
 
@@ -321,6 +326,11 @@ async fn test_strategy_phase_transitions() -> Result<()> {
 async fn test_initiative_phase_transitions() -> Result<()> {
     let helper = McpTestHelper::new().await?;
     helper.initialize_project().await?;
+    
+    // Set full configuration to enable all document types for testing
+    let db = helper.get_database()?;
+    let mut config_repo = db.configuration_repository().map_err(|e| anyhow::anyhow!("Failed to get config repo: {}", e))?;
+    config_repo.set("flight_levels", r#"{"strategies_enabled":true,"initiatives_enabled":true}"#).map_err(|e| anyhow::anyhow!("Failed to set config: {}", e))?;
 
     println!("=== Test Initiative Phase Transitions ===");
 
@@ -514,6 +524,11 @@ async fn test_initiative_phase_transitions() -> Result<()> {
 async fn test_task_phase_transitions() -> Result<()> {
     let helper = McpTestHelper::new().await?;
     helper.initialize_project().await?;
+    
+    // Set full configuration to enable all document types for testing
+    let db = helper.get_database()?;
+    let mut config_repo = db.configuration_repository().map_err(|e| anyhow::anyhow!("Failed to get config repo: {}", e))?;
+    config_repo.set("flight_levels", r#"{"strategies_enabled":true,"initiatives_enabled":true}"#).map_err(|e| anyhow::anyhow!("Failed to set config: {}", e))?;
 
     println!("=== Test Task Phase Transitions ===");
 
@@ -823,6 +838,11 @@ async fn test_adr_phase_transitions() -> Result<()> {
 async fn test_automatic_phase_transitions() -> Result<()> {
     let helper = McpTestHelper::new().await?;
     helper.initialize_project().await?;
+    
+    // Set full configuration to enable all document types for testing
+    let db = helper.get_database()?;
+    let mut config_repo = db.configuration_repository().map_err(|e| anyhow::anyhow!("Failed to get config repo: {}", e))?;
+    config_repo.set("flight_levels", r#"{"strategies_enabled":true,"initiatives_enabled":true}"#).map_err(|e| anyhow::anyhow!("Failed to set config: {}", e))?;
 
     println!("=== Test Automatic Phase Transitions ===");
 
@@ -902,6 +922,11 @@ async fn test_automatic_phase_transitions() -> Result<()> {
 async fn test_invalid_phase_transitions() -> Result<()> {
     let helper = McpTestHelper::new().await?;
     helper.initialize_project().await?;
+    
+    // Set full configuration to enable all document types for testing
+    let db = helper.get_database()?;
+    let mut config_repo = db.configuration_repository().map_err(|e| anyhow::anyhow!("Failed to get config repo: {}", e))?;
+    config_repo.set("flight_levels", r#"{"strategies_enabled":true,"initiatives_enabled":true}"#).map_err(|e| anyhow::anyhow!("Failed to set config: {}", e))?;
 
     println!("=== Test Invalid Phase Transitions ===");
 
@@ -961,6 +986,11 @@ async fn test_invalid_phase_transitions() -> Result<()> {
 async fn test_phase_transitions_with_dependencies() -> Result<()> {
     let helper = McpTestHelper::new().await?;
     helper.initialize_project().await?;
+    
+    // Set full configuration to enable all document types for testing
+    let db = helper.get_database()?;
+    let mut config_repo = db.configuration_repository().map_err(|e| anyhow::anyhow!("Failed to get config repo: {}", e))?;
+    config_repo.set("flight_levels", r#"{"strategies_enabled":true,"initiatives_enabled":true}"#).map_err(|e| anyhow::anyhow!("Failed to set config: {}", e))?;
 
     println!("=== Test Phase Transitions with Dependencies ===");
 

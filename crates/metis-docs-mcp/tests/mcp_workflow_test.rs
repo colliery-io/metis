@@ -18,6 +18,11 @@ async fn test_mcp_complete_flight_levels_workflow() -> Result<()> {
     // Step 1: Initialize project (creates Vision document)
     println!("=== Step 1: Initialize Project with Vision Document ===");
     helper.initialize_project().await?;
+    
+    // Set full configuration to enable all document types for testing
+    let db = helper.get_database()?;
+    let mut config_repo = db.configuration_repository().map_err(|e| anyhow::anyhow!("Failed to get config repo: {}", e))?;
+    config_repo.set("flight_levels", r#"{"strategies_enabled":true,"initiatives_enabled":true}"#).map_err(|e| anyhow::anyhow!("Failed to set config: {}", e))?;
 
     // Verify vision document exists
     let vision_path = format!("{}/vision.md", helper.metis_dir());
@@ -500,6 +505,11 @@ async fn test_mcp_document_content_editing() -> Result<()> {
 async fn test_mcp_document_search_and_listing() -> Result<()> {
     let helper = McpTestHelper::new().await?;
     helper.initialize_project().await?;
+    
+    // Set full configuration to enable all document types for testing
+    let db = helper.get_database()?;
+    let mut config_repo = db.configuration_repository().map_err(|e| anyhow::anyhow!("Failed to get config repo: {}", e))?;
+    config_repo.set("flight_levels", r#"{"strategies_enabled":true,"initiatives_enabled":true}"#).map_err(|e| anyhow::anyhow!("Failed to set config: {}", e))?;
 
     // Create some documents to search
     let create_strategy = CreateDocumentTool {

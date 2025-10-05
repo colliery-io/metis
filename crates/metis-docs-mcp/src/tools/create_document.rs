@@ -1,6 +1,6 @@
 use metis_core::{
     application::services::document::{creation::DocumentCreationConfig, DocumentCreationService},
-    domain::documents::types::DocumentType,
+    domain::{documents::types::DocumentType, configuration::FlightLevelConfig},
     Application, Database,
 };
 use rust_mcp_sdk::{
@@ -13,7 +13,7 @@ use std::str::FromStr;
 
 #[mcp_tool(
     name = "create_document",
-    description = "Create a new Metis document (vision, strategy, initiative, task, adr). Parent documents should be referenced by their ID (kebab-case string)",
+    description = "Create a new Metis document (vision, strategy, initiative, task, adr). Parent documents should be referenced by their ID (kebab-case string). Document type availability depends on current flight level configuration.",
     idempotent_hint = false,
     destructive_hint = false,
     open_world_hint = false,
@@ -61,6 +61,49 @@ impl CreateDocumentTool {
                 format!("Invalid document type: {}", self.document_type),
             ))
         })?;
+
+        // Load current flight level configuration
+        let db_path = metis_dir.join("metis.db");
+        let database = Database::new(db_path.to_string_lossy().as_ref()).map_err(|e| {
+            CallToolError::new(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!("Failed to open database: {}", e),
+            ))
+        })?;
+        
+        let mut config_repo = database
+            .configuration_repository()
+            .map_err(|e| {
+                CallToolError::new(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    format!("Failed to access configuration repository: {}", e),
+                ))
+            })?;
+            
+        let flight_config = config_repo
+            .get_flight_level_config()
+            .map_err(|e| {
+                CallToolError::new(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    format!("Failed to load configuration: {}", e),
+                ))
+            })?;
+
+        // Validate document type is enabled in current configuration
+        let enabled_types = flight_config.enabled_document_types();
+        if !enabled_types.contains(&doc_type) {
+            let available_types: Vec<String> = enabled_types.iter().map(|t| t.to_string()).collect();
+            return Err(CallToolError::new(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                format!(
+                    "{} creation is disabled in current configuration ({} mode). Available document types: {}. To enable {}, use 'metis config set --preset full' or configure individually with 'metis config set --strategies true --initiatives true'",
+                    doc_type,
+                    flight_config.preset_name(),
+                    available_types.join(", "),
+                    doc_type
+                ),
+            )));
+        }
 
         // Create the document creation service
         let creation_service = DocumentCreationService::new(metis_dir);
@@ -131,7 +174,7 @@ impl CreateDocumentTool {
                     ))
                 })?;
                 creation_service
-                    .create_initiative(config, parent_id)
+                    .create_initiative_with_config(config, parent_id, &flight_config)
                     .await
                     .map_err(|e| CallToolError::new(e))?
             }
@@ -143,11 +186,11 @@ impl CreateDocumentTool {
                     let strategy_id = self.find_strategy_id_for_initiative(metis_dir, initiative_id)?;
 
                     creation_service
-                        .create_task(config, &strategy_id, initiative_id)
+                        .create_task_with_config(config, &strategy_id, initiative_id, &flight_config)
                         .await
                         .map_err(|e| CallToolError::new(e))?
                 } else {
-                    // Backlog item without parent
+                    // Backlog item without parent - these are always allowed regardless of configuration
                     creation_service
                         .create_backlog_item(config)
                         .await

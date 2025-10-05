@@ -107,9 +107,8 @@ impl McpServerProcess {
                 "name": "create_document",
                 "arguments": {
                     "project_path": self.metis_dir,
-                    "document_type": "strategy",
-                    "title": "Test Strategy to Archive",
-                    "parent_id": self.temp_dir.path().file_name().unwrap().to_str().unwrap()
+                    "document_type": "task",
+                    "title": "Test Task to Archive"
                 }
             }
         });

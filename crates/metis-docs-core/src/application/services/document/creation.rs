@@ -152,8 +152,13 @@ impl DocumentCreationService {
     ) -> Result<CreationResult> {
         // Validate that initiatives are enabled in this configuration
         if !flight_config.initiatives_enabled {
+            let enabled_types: Vec<String> = flight_config.enabled_document_types().iter().map(|t| t.to_string()).collect();
             return Err(MetisError::ValidationFailed {
-                message: "Initiative creation is disabled in current flight level configuration".to_string(),
+                message: format!(
+                    "Initiative creation is disabled in current configuration ({} mode). Available document types: {}. To enable initiatives, use 'metis config set --preset full' or 'metis config set --initiatives true'",
+                    flight_config.preset_name(),
+                    enabled_types.join(", ")
+                ),
             });
         }
 
@@ -165,7 +170,10 @@ impl DocumentCreationService {
             // Full configuration: use actual strategy_id
             if strategy_id == "NULL" {
                 return Err(MetisError::ValidationFailed {
-                    message: "Cannot create initiative with NULL strategy when strategies are enabled".to_string(),
+                    message: format!(
+                        "Cannot create initiative with NULL strategy when strategies are enabled in {} configuration. Provide a valid strategy_id",
+                        flight_config.preset_name()
+                    ),
                 });
             }
             
@@ -269,7 +277,10 @@ impl DocumentCreationService {
             // Initiatives are enabled, tasks go under initiatives
             if initiative_id == "NULL" {
                 return Err(MetisError::ValidationFailed {
-                    message: "Cannot create task with NULL initiative when initiatives are enabled".to_string(),
+                    message: format!(
+                        "Cannot create task with NULL initiative when initiatives are enabled in {} configuration. Provide a valid initiative_id or create the task as a backlog item",
+                        flight_config.preset_name()
+                    ),
                 });
             }
 
@@ -277,7 +288,10 @@ impl DocumentCreationService {
                 // Full configuration: use actual strategy_id
                 if strategy_id == "NULL" {
                     return Err(MetisError::ValidationFailed {
-                        message: "Cannot create task with NULL strategy when strategies are enabled".to_string(),
+                        message: format!(
+                            "Cannot create task with NULL strategy when strategies are enabled in {} configuration. Provide a valid strategy_id or create the task as a backlog item",
+                            flight_config.preset_name()
+                        ),
                     });
                 }
                 strategy_id

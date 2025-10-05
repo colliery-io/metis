@@ -1,5 +1,6 @@
 //! Functional integration tests for MCP tools
 
+use metis_core::Database;
 use metis_mcp_server::tools::*;
 use std::fs;
 use tempfile::tempdir;
@@ -47,6 +48,12 @@ async fn test_full_document_lifecycle() {
 
     let result = init_tool.call_tool().await;
     assert!(result.is_ok(), "Initialize should succeed");
+
+    // 1.5. Set full configuration to enable all document types for testing
+    let db_path = format!("{}/.metis/metis.db", project_path);
+    let db = Database::new(&db_path).unwrap();
+    let mut config_repo = db.configuration_repository().unwrap();
+    config_repo.set("flight_levels", r#"{"strategies_enabled":true,"initiatives_enabled":true}"#).unwrap();
 
     // 2. Create a strategy (use .metis directory path)
     let metis_path = format!("{}/.metis", project_path);
