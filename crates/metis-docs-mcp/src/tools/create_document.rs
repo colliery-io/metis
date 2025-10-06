@@ -167,32 +167,51 @@ impl CreateDocumentTool {
                 .await
                 .map_err(|e| CallToolError::new(e))?,
             DocumentType::Initiative => {
-                let parent_id = self.parent_id.as_ref().ok_or_else(|| {
-                    CallToolError::new(std::io::Error::new(
-                        std::io::ErrorKind::InvalidInput,
-                        "Initiative requires a parent strategy ID",
-                    ))
-                })?;
+                // Determine parent strategy ID based on configuration
+                let parent_strategy_id = if flight_config.strategies_enabled {
+                    // Full configuration: require explicit strategy parent
+                    self.parent_id.as_ref().ok_or_else(|| {
+                        CallToolError::new(std::io::Error::new(
+                            std::io::ErrorKind::InvalidInput,
+                            "Initiative requires a parent strategy ID in full configuration",
+                        ))
+                    })?.clone()
+                } else {
+                    // Streamlined/Direct configuration: use NULL strategy placeholder
+                    "NULL".to_string()
+                };
+                
                 creation_service
-                    .create_initiative_with_config(config, parent_id, &flight_config)
+                    .create_initiative_with_config(config, &parent_strategy_id, &flight_config)
                     .await
                     .map_err(|e| CallToolError::new(e))?
             }
             DocumentType::Task => {
+                // Determine task creation approach based on configuration and provided parent
                 if let Some(initiative_id) = self.parent_id.as_ref() {
-                    // Regular task with parent initiative
-                    // For tasks, we need to resolve the strategy ID from the initiative's location
-                    // The initiative file is at strategies/{strategy_id}/initiatives/{initiative_id}/initiative.md
-                    let strategy_id = self.find_strategy_id_for_initiative(metis_dir, initiative_id)?;
+                    // Task with parent initiative
+                    let strategy_id = if flight_config.strategies_enabled {
+                        // Full configuration: resolve actual strategy from initiative location
+                        self.find_strategy_id_for_initiative(metis_dir, initiative_id)?
+                    } else {
+                        // Streamlined/Direct: use NULL as strategy placeholder
+                        "NULL".to_string()
+                    };
 
                     creation_service
                         .create_task_with_config(config, &strategy_id, initiative_id, &flight_config)
                         .await
                         .map_err(|e| CallToolError::new(e))?
+                } else if flight_config.initiatives_enabled {
+                    // Initiatives enabled but no parent provided - this should be an error
+                    return Err(CallToolError::new(std::io::Error::new(
+                        std::io::ErrorKind::InvalidInput,
+                        format!("Task requires a parent initiative ID in {} configuration. Provide an initiative_id or create as a backlog item.", flight_config.preset_name()),
+                    )));
                 } else {
-                    // Backlog item without parent - these are always allowed regardless of configuration
+                    // Direct configuration: create task without parents (use NULL for both)
                     creation_service
-                        .create_backlog_item(config)
+                        .create_task_with_config(config, "NULL", "NULL", &flight_config)
                         .await
                         .map_err(|e| CallToolError::new(e))?
                 }

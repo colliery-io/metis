@@ -99,6 +99,7 @@ impl McpServerProcess {
 
     /// Create a test document to archive
     async fn create_test_document(&self, child: &mut std::process::Child) -> Result<String> {
+        // In streamlined mode (default), create an initiative that we can archive
         let request = json!({
             "jsonrpc": "2.0",
             "id": 2,
@@ -107,8 +108,9 @@ impl McpServerProcess {
                 "name": "create_document",
                 "arguments": {
                     "project_path": self.metis_dir,
-                    "document_type": "task",
-                    "title": "Test Task to Archive"
+                    "document_type": "initiative",
+                    "title": "Test Initiative to Archive",
+                    "complexity": "m"
                 }
             }
         });
