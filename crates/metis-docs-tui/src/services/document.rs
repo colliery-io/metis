@@ -127,7 +127,7 @@ impl DocumentService {
         let path = std::path::Path::new(file_path);
 
         // Try to determine document type from file path or load and inspect
-        if file_path.contains("/strategies/") {
+        if file_path.contains("/strategies/") && file_path.ends_with("/strategy.md") {
             let mut strategy = Strategy::from_file(path)
                 .await
                 .map_err(|e| anyhow::anyhow!("Failed to load strategy: {}", e))?;
@@ -138,7 +138,7 @@ impl DocumentService {
                 .to_file(path)
                 .await
                 .map_err(|e| anyhow::anyhow!("Failed to save strategy: {}", e))?;
-        } else if file_path.contains("/initiatives/") {
+        } else if file_path.contains("/initiatives/") && file_path.ends_with("/initiative.md") {
             let mut initiative = Initiative::from_file(path)
                 .await
                 .map_err(|e| anyhow::anyhow!("Failed to load initiative: {}", e))?;
