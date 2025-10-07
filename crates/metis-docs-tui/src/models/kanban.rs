@@ -57,6 +57,10 @@ impl KanbanItem {
             .parent_id()
             .map(|id| id.to_string())
     }
+
+    pub fn short_code(&self) -> &str {
+        &self.document.as_document().metadata().short_code
+    }
 }
 
 #[derive(Debug)]

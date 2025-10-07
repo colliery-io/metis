@@ -31,6 +31,7 @@ impl McpTestHelper {
     pub async fn initialize_project(&self) -> Result<()> {
         let init_tool = InitializeProjectTool {
             project_path: self.core_helper.project_path_string(),
+            prefix: None,
         };
 
         let result = init_tool.call_tool().await;

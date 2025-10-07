@@ -101,6 +101,7 @@ mod tests {
         // Create workspace
         let init_cmd = InitCommand {
             name: Some("Test Project".to_string()),
+            prefix: None,
             preset: None,
             strategies: None,
             initiatives: None,
@@ -134,6 +135,7 @@ mod tests {
         // Create workspace
         let init_cmd = InitCommand {
             name: Some("Test Project".to_string()),
+            prefix: None,
             preset: None,
             strategies: None,
             initiatives: None,

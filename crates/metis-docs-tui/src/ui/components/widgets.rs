@@ -26,9 +26,9 @@ pub fn draw_ticket(f: &mut Frame, item: &KanbanItem, area: Rect, is_selected: bo
 
     let mut lines = Vec::new();
 
-    // Line 1: Risk/Complexity + ID + Title
+    // Line 1: Risk/Complexity + Short Code + Title
     let mut title_line = vec![
-        Span::styled(format!(" [{}] ", item.id()), meta_style),
+        Span::styled(format!(" [{}] ", item.short_code()), meta_style),
         Span::styled(item.title().to_string(), base_style),
     ];
 

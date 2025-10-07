@@ -20,6 +20,15 @@ impl WorkspaceInitializationService {
         base_path: P,
         project_name: &str,
     ) -> Result<WorkspaceInitializationResult> {
+        Self::initialize_workspace_with_prefix(base_path, project_name, None).await
+    }
+
+    /// Initialize a new Metis workspace with an optional custom prefix
+    pub async fn initialize_workspace_with_prefix<P: AsRef<Path>>(
+        base_path: P,
+        project_name: &str,
+        prefix: Option<&str>,
+    ) -> Result<WorkspaceInitializationResult> {
         let base_path = base_path.as_ref();
 
         // Create .metis directory
@@ -46,9 +55,17 @@ impl WorkspaceInitializationService {
                     })?,
                 );
 
-                // Set default project prefix if not already set
+                // Set project prefix if not already set
                 if config_repo.get_project_prefix()?.is_none() {
-                    config_repo.set_project_prefix("PROJ")?;
+                    let default_prefix = {
+                        let p = prefix.unwrap_or("PROJ").to_uppercase();
+                        if p.len() > 6 {
+                            p.chars().take(6).collect()
+                        } else {
+                            p
+                        }
+                    };
+                    config_repo.set_project_prefix(&default_prefix)?;
                 }
             }
             Err(e) => {

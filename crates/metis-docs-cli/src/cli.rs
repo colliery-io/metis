@@ -103,6 +103,7 @@ mod tests {
         // 1. Initialize a new project
         let init_cmd = InitCommand {
             name: Some("Integration Test Project".to_string()),
+            prefix: None,
             preset: None,
             strategies: None,
             initiatives: None,

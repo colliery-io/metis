@@ -1,20 +1,25 @@
 ---
-id: project-vision
+id: metis
 level: vision
-title: "Project Vision"
-created_at: 2025-10-04T09:40:42.360031+00:00
-updated_at: 2025-10-04T09:40:42.360031+00:00
+title: "metis"
+short_code: "METI-V-0001"
+created_at: 2025-10-07T19:44:56.175995+00:00
+updated_at: 2025-10-07T19:44:56.175995+00:00
 archived: false
 
 tags:
   - "#vision"
   - "#phase/draft"
+  - "#vision"
+  - "#phase/draft"
 
 
 exit_criteria_met: false
+strategy_id: 
+initiative_id:
 ---
 
-# Project Vision Vision
+# metis Vision
 
 *This template includes sections for various types of vision documents. Delete sections that don't apply to your specific use case.*
 

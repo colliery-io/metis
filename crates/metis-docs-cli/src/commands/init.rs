@@ -13,6 +13,9 @@ pub struct InitCommand {
     /// Project name for the vision document
     #[arg(short, long)]
     pub name: Option<String>,
+    /// Project prefix for document short codes, up to 6 characters (e.g., PROJ, ACME, TEST)
+    #[arg(short = 'P', long)]
+    pub prefix: Option<String>,
     /// Configuration preset (full, streamlined, direct). Default: streamlined
     #[arg(short, long)]
     pub preset: Option<String>,
@@ -54,19 +57,27 @@ impl InitCommand {
             .set_flight_level_config(&flight_config)
             .map_err(|e| anyhow::anyhow!("Failed to set flight level configuration: {}", e))?;
 
-        // Set default project prefix for document creation
-        // Use "TEST" in test mode, or derive from project name in production
-        let project_prefix = if cfg!(test) {
+        // Set project prefix for document creation
+        let project_prefix = if let Some(prefix) = &self.prefix {
+            // Use explicitly provided prefix, but limit to 6 characters
+            let truncated = prefix.to_uppercase();
+            if truncated.len() > 6 {
+                truncated.chars().take(6).collect()
+            } else {
+                truncated
+            }
+        } else if cfg!(test) {
+            // Use "TEST" in test mode
             "TEST".to_string()
         } else {
-            // Extract first 4 uppercase letters from project name, or use "PROJ" as fallback
+            // Extract first 6 uppercase letters from project name, or use "PROJ" as fallback
             let project_name = self.name.as_deref().unwrap_or("Project Vision");
             project_name
                 .chars()
                 .filter(|c| c.is_alphabetic())
                 .map(|c| c.to_uppercase().collect::<String>())
                 .collect::<String>()
-                .get(0..4.min(project_name.len()))
+                .get(0..6.min(project_name.len()))
                 .unwrap_or("PROJ")
                 .to_string()
         };
@@ -84,6 +95,7 @@ impl InitCommand {
 
         println!("✓ Initialized Metis workspace in {}", current_dir.display());
         println!("✓ Created vision.md with project template");
+        println!("✓ Set project prefix: {}", project_prefix);
         println!(
             "✓ Set flight level configuration: {}",
             flight_config.preset_name()
@@ -167,6 +179,7 @@ mod tests {
             preset: None,
             strategies: None,
             initiatives: None,
+            prefix: None,
         };
 
         let result = cmd.execute().await;
@@ -234,6 +247,7 @@ mod tests {
             preset: None,
             strategies: None,
             initiatives: None,
+            prefix: None,
         };
 
         let result = cmd.execute().await;
@@ -263,6 +277,7 @@ mod tests {
             preset: None,
             strategies: None,
             initiatives: None,
+            prefix: None,
         };
 
         let result = cmd.execute().await;
@@ -293,6 +308,7 @@ mod tests {
             preset: Some("full".to_string()),
             strategies: None,
             initiatives: None,
+            prefix: None,
         };
 
         let result = cmd.execute().await;
@@ -334,6 +350,7 @@ mod tests {
             preset: None,
             strategies: Some(false),
             initiatives: Some(true),
+            prefix: None,
         };
 
         let result = cmd.execute().await;
@@ -370,6 +387,7 @@ mod tests {
             preset: None,
             strategies: None,
             initiatives: None,
+            prefix: None,
         };
 
         let result = cmd.execute().await;
@@ -408,6 +426,7 @@ mod tests {
             preset: Some("invalid".to_string()),
             strategies: None,
             initiatives: None,
+            prefix: None,
         };
 
         let result = cmd.execute().await;

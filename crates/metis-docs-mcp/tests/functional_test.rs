@@ -53,6 +53,7 @@ async fn test_initialize_and_create_documents() {
     // 1. Initialize project
     let init_tool = InitializeProjectTool {
         project_path: project_path.clone(),
+        prefix: None,
     };
     let result = init_tool.call_tool().await;
     assert!(result.is_ok(), "Initialize should succeed");
@@ -172,6 +173,7 @@ async fn test_archive_with_short_codes() {
     // Initialize and set up
     let init_tool = InitializeProjectTool {
         project_path: project_path.clone(),
+        prefix: None,
     };
     init_tool.call_tool().await.unwrap();
 

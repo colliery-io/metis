@@ -159,6 +159,7 @@ mod tests {
             preset: None,
             strategies: None,
             initiatives: None,
+            prefix: None,
         };
         if init_cmd.execute().await.is_err() {
             if let Some(original) = original_dir {

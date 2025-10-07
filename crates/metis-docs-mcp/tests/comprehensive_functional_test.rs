@@ -15,6 +15,7 @@ async fn setup_project_with_config(config: FlightLevelConfig) -> (TempDir, Strin
     // Initialize project
     let init_tool = InitializeProjectTool {
         project_path: project_path.clone(),
+        prefix: None,
     };
     let result = init_tool.call_tool().await;
     assert!(result.is_ok(), "Project initialization should succeed");

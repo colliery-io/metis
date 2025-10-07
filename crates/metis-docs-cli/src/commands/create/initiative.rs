@@ -203,6 +203,7 @@ mod tests {
             preset: None,
             strategies: None,
             initiatives: None,
+            prefix: None,
         };
         if init_cmd.execute().await.is_err() {
             std::env::set_current_dir(original_dir).unwrap();
@@ -256,6 +257,7 @@ mod tests {
             preset: None,
             strategies: None,
             initiatives: None,
+            prefix: None,
         };
         init_cmd.execute().await.unwrap();
 

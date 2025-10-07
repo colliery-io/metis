@@ -293,6 +293,7 @@ mod tests {
             preset: None,
             strategies: None,
             initiatives: None,
+            prefix: None,
         };
         init_cmd.execute().await.unwrap();
 
