@@ -160,9 +160,10 @@ mod tests {
         // Initialize database with configuration
         let db_path = metis_dir.join("metis.db");
         let db = Database::new(&db_path.to_string_lossy()).unwrap();
-        let mut config_repo = crate::dal::database::configuration_repository::ConfigurationRepository::new(
-            diesel::sqlite::SqliteConnection::establish(&db_path.to_string_lossy()).unwrap()
-        );
+        let mut config_repo =
+            crate::dal::database::configuration_repository::ConfigurationRepository::new(
+                diesel::sqlite::SqliteConnection::establish(&db_path.to_string_lossy()).unwrap(),
+            );
         config_repo.set_project_prefix("TEST").unwrap();
         let app = Application::new(db);
 
@@ -225,6 +226,17 @@ mod tests {
             .await
             .unwrap();
 
+        // Sync the strategy to database so it can be found by the initiative creation
+        let db_path = workspace_dir.join("metis.db");
+        let db = crate::Database::new(&db_path.to_string_lossy()).unwrap();
+        let mut db_service =
+            crate::application::services::DatabaseService::new(db.repository().unwrap());
+        let mut sync_service = crate::application::services::SyncService::new(&mut db_service);
+        sync_service
+            .import_from_file(&strategy_result.file_path)
+            .await
+            .unwrap();
+
         // Create initiative under strategy
         let initiative_config = DocumentCreationConfig {
             title: "Test Initiative".to_string(),
@@ -236,7 +248,13 @@ mod tests {
             risk_level: None,
         };
         let initiative_result = creation_service
-            .create_initiative(initiative_config, &strategy_result.document_id.to_string())
+            .create_initiative(initiative_config, &strategy_result.short_code)
+            .await
+            .unwrap();
+
+        // Sync the initiative to database so it can be found by the task creation
+        sync_service
+            .import_from_file(&initiative_result.file_path)
             .await
             .unwrap();
 
@@ -253,8 +271,8 @@ mod tests {
         let task_result = creation_service
             .create_task(
                 task_config,
-                &strategy_result.document_id.to_string(),
-                &initiative_result.document_id.to_string(),
+                &strategy_result.short_code,
+                &initiative_result.short_code,
             )
             .await
             .unwrap();
@@ -303,6 +321,17 @@ mod tests {
             .await
             .unwrap();
 
+        // Sync the strategy to database so it can be found by the initiative creation
+        let db_path = workspace_dir.join("metis.db");
+        let db = crate::Database::new(&db_path.to_string_lossy()).unwrap();
+        let mut db_service =
+            crate::application::services::DatabaseService::new(db.repository().unwrap());
+        let mut sync_service = crate::application::services::SyncService::new(&mut db_service);
+        sync_service
+            .import_from_file(&strategy_result.file_path)
+            .await
+            .unwrap();
+
         // Create initiative
         let initiative_config = DocumentCreationConfig {
             title: "Test Initiative".to_string(),
@@ -314,7 +343,13 @@ mod tests {
             risk_level: None,
         };
         let initiative_result = creation_service
-            .create_initiative(initiative_config, &strategy_result.document_id.to_string())
+            .create_initiative(initiative_config, &strategy_result.short_code)
+            .await
+            .unwrap();
+
+        // Sync the initiative to database so it can be found by the task creation
+        sync_service
+            .import_from_file(&initiative_result.file_path)
             .await
             .unwrap();
 
@@ -331,8 +366,8 @@ mod tests {
         let task1_result = creation_service
             .create_task(
                 task1_config,
-                &strategy_result.document_id.to_string(),
-                &initiative_result.document_id.to_string(),
+                &strategy_result.short_code,
+                &initiative_result.short_code,
             )
             .await
             .unwrap();
@@ -349,8 +384,8 @@ mod tests {
         let task2_result = creation_service
             .create_task(
                 task2_config,
-                &strategy_result.document_id.to_string(),
-                &initiative_result.document_id.to_string(),
+                &strategy_result.short_code,
+                &initiative_result.short_code,
             )
             .await
             .unwrap();
@@ -414,6 +449,17 @@ mod tests {
             .await
             .unwrap();
 
+        // Sync the strategy to database so it can be found by the initiative creation
+        let db_path = workspace_dir.join("metis.db");
+        let db = crate::Database::new(&db_path.to_string_lossy()).unwrap();
+        let mut db_service =
+            crate::application::services::DatabaseService::new(db.repository().unwrap());
+        let mut sync_service = crate::application::services::SyncService::new(&mut db_service);
+        sync_service
+            .import_from_file(&strategy_result.file_path)
+            .await
+            .unwrap();
+
         let initiative_config = DocumentCreationConfig {
             title: "Test Initiative".to_string(),
             description: Some("Test initiative".to_string()),
@@ -424,7 +470,13 @@ mod tests {
             risk_level: None,
         };
         let initiative_result = creation_service
-            .create_initiative(initiative_config, &strategy_result.document_id.to_string())
+            .create_initiative(initiative_config, &strategy_result.short_code)
+            .await
+            .unwrap();
+
+        // Sync the initiative to database so it can be found by the task creation
+        sync_service
+            .import_from_file(&initiative_result.file_path)
             .await
             .unwrap();
 
@@ -440,8 +492,8 @@ mod tests {
         let task_result = creation_service
             .create_task(
                 task_config,
-                &strategy_result.document_id.to_string(),
-                &initiative_result.document_id.to_string(),
+                &strategy_result.short_code,
+                &initiative_result.short_code,
             )
             .await
             .unwrap();

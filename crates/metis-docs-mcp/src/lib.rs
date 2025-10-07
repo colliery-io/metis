@@ -13,8 +13,7 @@ pub use server::MetisServerHandler;
 
 use anyhow::Result as AnyhowResult;
 use metis_core::{
-    application::services::workspace::WorkspaceDetectionService,
-    dal::database::Database,
+    application::services::workspace::WorkspaceDetectionService, dal::database::Database,
     domain::configuration::FlightLevelConfig,
 };
 use rust_mcp_sdk::{
@@ -29,7 +28,7 @@ use tracing::info;
 
 fn find_metis_log_path() -> Option<String> {
     let detection_service = WorkspaceDetectionService::new();
-    
+
     // Use core service to find workspace
     if let Ok(Some(metis_dir)) = detection_service.find_workspace() {
         return Some(
@@ -45,7 +44,7 @@ fn find_metis_log_path() -> Option<String> {
 
 fn get_current_configuration() -> Option<FlightLevelConfig> {
     let detection_service = WorkspaceDetectionService::new();
-    
+
     // Try to find workspace and load configuration
     if let Ok(Some(metis_dir)) = detection_service.find_workspace() {
         let db_path = metis_dir.join("metis.db");
@@ -57,14 +56,14 @@ fn get_current_configuration() -> Option<FlightLevelConfig> {
             }
         }
     }
-    
+
     None
 }
 
 fn generate_dynamic_instructions() -> String {
     let config = get_current_configuration();
     let static_instructions = include_str!("../instructions.md");
-    
+
     if let Some(config) = config {
         let config_section = format!(
             r#"
@@ -83,11 +82,16 @@ fn generate_dynamic_instructions() -> String {
 
 "#,
             config.preset_name(),
-            config.enabled_document_types().iter().map(|t| t.to_string()).collect::<Vec<_>>().join(", "),
+            config
+                .enabled_document_types()
+                .iter()
+                .map(|t| t.to_string())
+                .collect::<Vec<_>>()
+                .join(", "),
             config.hierarchy_display(),
             generate_operation_notes(&config)
         );
-        
+
         format!("{}{}", config_section, static_instructions)
     } else {
         format!(
@@ -104,15 +108,15 @@ fn generate_dynamic_instructions() -> String {
 
 fn generate_operation_notes(config: &FlightLevelConfig) -> String {
     let mut notes = Vec::new();
-    
+
     if !config.strategies_enabled {
         notes.push("- Strategy creation is disabled in this configuration");
     }
-    
+
     if !config.initiatives_enabled {
         notes.push("- Initiative creation is disabled in this configuration");
     }
-    
+
     if config.strategies_enabled && config.initiatives_enabled {
         notes.push("- All document types are available for creation");
     } else if !config.strategies_enabled && config.initiatives_enabled {
@@ -122,7 +126,7 @@ fn generate_operation_notes(config: &FlightLevelConfig) -> String {
     } else {
         notes.push("- Minimal workflow: Vision → Task (direct mode)");
     }
-    
+
     notes.join("\n")
 }
 

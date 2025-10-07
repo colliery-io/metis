@@ -31,7 +31,7 @@ impl SearchDocumentsTool {
     fn sanitize_search_query(&self, query: &str) -> String {
         // If query is very short or contains problematic FTS characters, quote it
         let problematic_chars = ['#', '*', ':', '(', ')', '[', ']', '{', '}', '^', '~', '?'];
-        
+
         if query.len() <= 2 || query.chars().any(|c| problematic_chars.contains(&c)) {
             // Wrap in double quotes and escape any internal quotes
             format!("\"{}\"", query.replace('"', "\"\""))

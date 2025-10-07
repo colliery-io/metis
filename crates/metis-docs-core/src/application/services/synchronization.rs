@@ -1,6 +1,8 @@
 use crate::application::services::{DatabaseService, FilesystemService};
 use crate::dal::database::models::{Document, NewDocument};
-use crate::domain::documents::{factory::DocumentFactory, traits::Document as DocumentTrait, types::DocumentId};
+use crate::domain::documents::{
+    factory::DocumentFactory, traits::Document as DocumentTrait, types::DocumentId,
+};
 use crate::{MetisError, Result};
 use serde_json;
 use std::path::Path;
@@ -13,12 +15,12 @@ pub struct SyncService<'a> {
 
 impl<'a> SyncService<'a> {
     pub fn new(db_service: &'a mut DatabaseService) -> Self {
-        Self { 
+        Self {
             db_service,
             workspace_dir: None,
         }
     }
-    
+
     /// Set the workspace directory for lineage extraction
     pub fn with_workspace_dir(mut self, workspace_dir: &'a Path) -> Self {
         self.workspace_dir = Some(workspace_dir);
@@ -99,7 +101,7 @@ impl<'a> SyncService<'a> {
         } else {
             (None, None)
         };
-        
+
         // Use filesystem lineage if available, otherwise use document lineage
         let final_strategy_id = fs_strategy_id
             .or_else(|| core.strategy_id.clone())
@@ -134,18 +136,18 @@ impl<'a> SyncService<'a> {
         workspace_dir: &Path,
     ) -> (Option<DocumentId>, Option<DocumentId>) {
         let path = file_path.as_ref();
-        
+
         // Get relative path from workspace
         let relative_path = match path.strip_prefix(workspace_dir) {
             Ok(rel) => rel,
             Err(_) => return (None, None),
         };
-        
+
         let path_parts: Vec<&str> = relative_path
             .components()
             .filter_map(|c| c.as_os_str().to_str())
             .collect();
-            
+
         // Match the path structure
         match path_parts.as_slice() {
             // strategies/{strategy-id}/strategy.md
@@ -158,29 +160,29 @@ impl<'a> SyncService<'a> {
             }
             // strategies/{strategy-id}/initiatives/{initiative-id}/initiative.md
             ["strategies", strategy_id, "initiatives", initiative_id, "initiative.md"] => {
-                let strat_id = if strategy_id == &"NULL" { 
-                    None 
-                } else { 
-                    Some(DocumentId::from(*strategy_id)) 
+                let strat_id = if strategy_id == &"NULL" {
+                    None
+                } else {
+                    Some(DocumentId::from(*strategy_id))
                 };
-                let init_id = if initiative_id == &"NULL" { 
-                    None 
-                } else { 
-                    Some(DocumentId::from(*initiative_id)) 
+                let init_id = if initiative_id == &"NULL" {
+                    None
+                } else {
+                    Some(DocumentId::from(*initiative_id))
                 };
                 (strat_id, init_id)
             }
             // strategies/{strategy-id}/initiatives/{initiative-id}/tasks/{task-id}.md
             ["strategies", strategy_id, "initiatives", initiative_id, "tasks", _] => {
-                let strat_id = if strategy_id == &"NULL" { 
-                    None 
-                } else { 
-                    Some(DocumentId::from(*strategy_id)) 
+                let strat_id = if strategy_id == &"NULL" {
+                    None
+                } else {
+                    Some(DocumentId::from(*strategy_id))
                 };
-                let init_id = if initiative_id == &"NULL" { 
-                    None 
-                } else { 
-                    Some(DocumentId::from(*initiative_id)) 
+                let init_id = if initiative_id == &"NULL" {
+                    None
+                } else {
+                    Some(DocumentId::from(*initiative_id))
                 };
                 (strat_id, init_id)
             }

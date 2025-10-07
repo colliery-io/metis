@@ -34,7 +34,8 @@ impl StatusCommand {
     }
 
     /// Initialize database connection from workspace
-    async fn connect_to_database() -> Result<metis_core::dal::database::repository::DocumentRepository> {
+    async fn connect_to_database(
+    ) -> Result<metis_core::dal::database::repository::DocumentRepository> {
         let (workspace_exists, metis_dir) = workspace::has_metis_vault();
         if !workspace_exists {
             anyhow::bail!("Not in a Metis workspace. Run 'metis init' to create one.");
@@ -100,7 +101,10 @@ impl StatusCommand {
     }
 
     /// Count documents by phase for insights
-    fn count_documents_by_phase(&self, documents: &[metis_core::dal::database::models::Document]) -> (usize, usize, usize) {
+    fn count_documents_by_phase(
+        &self,
+        documents: &[metis_core::dal::database::models::Document],
+    ) -> (usize, usize, usize) {
         let blocked_count = documents.iter().filter(|d| d.phase == "blocked").count();
         let todo_count = documents.iter().filter(|d| d.phase == "todo").count();
         let active_count = documents.iter().filter(|d| d.phase == "active").count();
@@ -124,7 +128,6 @@ impl StatusCommand {
         self.display_status(&documents);
         Ok(())
     }
-
 
     fn get_action_priority(&self, doc: &metis_core::dal::database::models::Document) -> u8 {
         // Lower numbers = higher priority (more actionable)

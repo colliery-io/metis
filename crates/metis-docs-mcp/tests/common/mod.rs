@@ -48,7 +48,8 @@ impl McpTestHelper {
     }
 
     pub fn get_project_name(&self) -> String {
-        self.core_helper.temp_dir
+        self.core_helper
+            .temp_dir
             .path()
             .file_name()
             .unwrap()

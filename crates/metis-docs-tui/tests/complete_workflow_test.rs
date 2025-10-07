@@ -99,7 +99,7 @@ async fn test_complete_flight_levels_workflow() -> Result<()> {
     assert_eq!(db_strategies.len(), 1, "Should have 1 strategy in database");
     assert_eq!(db_strategies[0].title, "Improve Customer Experience");
     assert_eq!(db_strategies[0].phase, "shaping");
-    assert_eq!(db_strategies[0].archived, false);
+    assert!(!db_strategies[0].archived);
 
     println!("✅ Strategy created successfully in shaping phase");
     println!("   - File: {:?}", strategy_file);
@@ -202,7 +202,7 @@ async fn test_complete_flight_levels_workflow() -> Result<()> {
     );
     assert_eq!(db_initiatives[0].title, "Redesign User Onboarding");
     assert_eq!(db_initiatives[0].phase, "discovery");
-    assert_eq!(db_initiatives[0].archived, false);
+    assert!(!db_initiatives[0].archived);
 
     println!("✅ Initiative created successfully in discovery phase");
     println!("   - File: {:?}", initiative_file);
@@ -259,7 +259,9 @@ async fn test_complete_flight_levels_workflow() -> Result<()> {
     // Verify task was created in the correct location
     // Tasks are stored in a tasks/ subdirectory under the initiative
     let initiative_dir = strategy_initiative_dir.join("redesign-user-onboarding");
-    let task_file = initiative_dir.join("tasks").join("create-wireframes-for-onboarding.md");
+    let task_file = initiative_dir
+        .join("tasks")
+        .join("create-wireframes-for-onboarding.md");
     assert!(task_file.exists(), "Task file should exist");
 
     let task_content = std::fs::read_to_string(&task_file)?;
@@ -287,7 +289,7 @@ async fn test_complete_flight_levels_workflow() -> Result<()> {
     assert_eq!(db_tasks.len(), 1, "Should have 1 task in database");
     assert_eq!(db_tasks[0].title, "Create wireframes for onboarding flow");
     assert_eq!(db_tasks[0].phase, "todo");
-    assert_eq!(db_tasks[0].archived, false);
+    assert!(!db_tasks[0].archived);
 
     println!("✅ Task created successfully in todo phase");
     println!("   - File: {:?}", task_file);
@@ -329,7 +331,9 @@ async fn test_complete_flight_levels_workflow() -> Result<()> {
         .map_err(|e| anyhow::anyhow!("Find error: {}", e))?;
     assert_eq!(db_tasks.len(), 2, "Should have 2 tasks in database");
 
-    let second_task_file = initiative_dir.join("tasks").join("write-user-research-plan.md");
+    let second_task_file = initiative_dir
+        .join("tasks")
+        .join("write-user-research-plan.md");
     assert!(second_task_file.exists(), "Second task file should exist");
 
     println!("✅ Second task created successfully");
@@ -392,12 +396,12 @@ async fn test_complete_flight_levels_workflow() -> Result<()> {
         .find_by_type("strategy")
         .map_err(|e| anyhow::anyhow!("Find error: {}", e))?;
 
-    assert_eq!(
-        db_initiatives_after_single_archive[0].archived, false,
+    assert!(
+        !db_initiatives_after_single_archive[0].archived,
         "Initiative should still be active"
     );
-    assert_eq!(
-        db_strategies_after_single_archive[0].archived, false,
+    assert!(
+        !db_strategies_after_single_archive[0].archived,
         "Strategy should still be active"
     );
 
@@ -474,8 +478,8 @@ async fn test_complete_flight_levels_workflow() -> Result<()> {
     // Test what actually happened vs what we expected
     if db_strategies_final[0].archived {
         // Full cascade worked
-        assert_eq!(
-            db_initiatives_final[0].archived, true,
+        assert!(
+            db_initiatives_final[0].archived,
             "Initiative should be archived due to cascade"
         );
         assert_eq!(
@@ -495,8 +499,8 @@ async fn test_complete_flight_levels_workflow() -> Result<()> {
             1,
             "Should still have the 1 task we archived manually"
         );
-        assert_eq!(
-            db_initiatives_final[0].archived, false,
+        assert!(
+            !db_initiatives_final[0].archived,
             "Initiative should still be active due to failed cascade"
         );
 

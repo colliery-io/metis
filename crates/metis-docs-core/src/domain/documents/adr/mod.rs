@@ -19,6 +19,7 @@ pub struct Adr {
 
 impl Adr {
     /// Create a new ADR document with content rendered from template
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         number: u32,
         title: String,
@@ -59,8 +60,8 @@ impl Adr {
                 blocked_by: Vec::new(), // ADRs cannot be blocked
                 tags,
                 archived,
-                strategy_id: None,     // ADRs are not part of strategies
-                initiative_id: None,   // ADRs are not part of initiatives
+                strategy_id: None,   // ADRs are not part of strategies
+                initiative_id: None, // ADRs are not part of initiatives
             },
             number,
             decision_maker,
@@ -90,8 +91,8 @@ impl Adr {
                 blocked_by: Vec::new(), // ADRs cannot be blocked
                 tags,
                 archived,
-                strategy_id: None,     // ADRs are not part of strategies
-                initiative_id: None,   // ADRs are not part of initiatives
+                strategy_id: None,   // ADRs are not part of strategies
+                initiative_id: None, // ADRs are not part of initiatives
             },
             number,
             decision_maker,
@@ -173,8 +174,12 @@ impl Adr {
 
         // Create metadata and content
         let short_code = FrontmatterParser::extract_string(&fm_map, "short_code")?;
-        let metadata =
-            DocumentMetadata::from_frontmatter(created_at, updated_at, exit_criteria_met, short_code);
+        let metadata = DocumentMetadata::from_frontmatter(
+            created_at,
+            updated_at,
+            exit_criteria_met,
+            short_code,
+        );
         let content = DocumentContent::from_markdown(&parsed.content);
 
         Ok(Self::from_parts(
@@ -263,7 +268,7 @@ impl Adr {
         // Convert tags to strings
         let tag_strings: Vec<String> = self.tags().iter().map(|tag| tag.to_str()).collect();
         context.insert("tags", &tag_strings);
-        
+
         // Add lineage fields (empty for ADR documents)
         context.insert("strategy_id", "");
         context.insert("initiative_id", "");

@@ -16,11 +16,12 @@ pub struct Task {
 
 impl Task {
     /// Create a new Task document with content rendered from template
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         title: String,
-        parent_id: Option<DocumentId>, // Usually an Initiative
-        parent_title: Option<String>,  // Title of parent for template rendering
-        strategy_id: Option<DocumentId>, // The strategy this task belongs to
+        parent_id: Option<DocumentId>,     // Usually an Initiative
+        parent_title: Option<String>,      // Title of parent for template rendering
+        strategy_id: Option<DocumentId>,   // The strategy this task belongs to
         initiative_id: Option<DocumentId>, // The initiative this task belongs to
         blocked_by: Vec<DocumentId>,
         tags: Vec<Tag>,
@@ -67,6 +68,7 @@ impl Task {
     }
 
     /// Create a Task document from existing data (used when loading from file)
+    #[allow(clippy::too_many_arguments)]
     pub fn from_parts(
         title: String,
         metadata: DocumentMetadata,
@@ -156,8 +158,12 @@ impl Task {
 
         // Create metadata and content
         let short_code = FrontmatterParser::extract_string(&fm_map, "short_code")?;
-        let metadata =
-            DocumentMetadata::from_frontmatter(created_at, updated_at, exit_criteria_met, short_code);
+        let metadata = DocumentMetadata::from_frontmatter(
+            created_at,
+            updated_at,
+            exit_criteria_met,
+            short_code,
+        );
         let content = DocumentContent::from_markdown(&parsed.content);
 
         // Extract lineage from frontmatter
@@ -165,9 +171,17 @@ impl Task {
             .map(DocumentId::from);
         let initiative_id = FrontmatterParser::extract_optional_string(&fm_map, "initiative_id")
             .map(DocumentId::from);
-        
+
         Ok(Self::from_parts(
-            title, metadata, content, parent_id, strategy_id, initiative_id, blocked_by, tags, archived,
+            title,
+            metadata,
+            content,
+            parent_id,
+            strategy_id,
+            initiative_id,
+            blocked_by,
+            tags,
+            archived,
         ))
     }
 
@@ -175,7 +189,7 @@ impl Task {
     fn next_phase_in_sequence(current: Phase) -> Option<Phase> {
         use Phase::*;
         match current {
-            Backlog => None,   // Backlog doesn't auto-transition - must be explicitly assigned
+            Backlog => None, // Backlog doesn't auto-transition - must be explicitly assigned
             Todo => Some(Active),
             Active => Some(Completed),
             Completed => None, // Final phase
@@ -238,18 +252,22 @@ impl Task {
         // Convert tags to strings
         let tag_strings: Vec<String> = self.tags().iter().map(|tag| tag.to_str()).collect();
         context.insert("tags", &tag_strings);
-        
+
         // Add lineage fields
         context.insert(
             "strategy_id",
-            &self.core.strategy_id
+            &self
+                .core
+                .strategy_id
                 .as_ref()
                 .map(|id| id.to_string())
                 .unwrap_or_default(),
         );
         context.insert(
             "initiative_id",
-            &self.core.initiative_id
+            &self
+                .core
+                .initiative_id
                 .as_ref()
                 .map(|id| id.to_string())
                 .unwrap_or_default(),
@@ -526,10 +544,10 @@ exit_criteria_met: false
         let task = Task::new(
             "Test Task".to_string(),
             Some(DocumentId::from("parent-initiative")), // parent_id
-            Some("Parent Initiative".to_string()), // parent_title
-            Some(DocumentId::from("parent-strategy")), // strategy_id
+            Some("Parent Initiative".to_string()),       // parent_title
+            Some(DocumentId::from("parent-strategy")),   // strategy_id
             Some(DocumentId::from("parent-initiative")), // initiative_id
-            vec![], // blocked_by
+            vec![],                                      // blocked_by
             vec![Tag::Label("task".to_string()), Tag::Phase(Phase::Todo)],
             false,
             "TEST-T-0401".to_string(),
@@ -541,10 +559,10 @@ exit_criteria_met: false
         // Test validation failure - no parent
         let task_no_parent = Task::new(
             "Test Task".to_string(),
-            None, // No parent
-            None, // No parent title
-            None, // No strategy
-            None, // No initiative
+            None,   // No parent
+            None,   // No parent title
+            None,   // No strategy
+            None,   // No initiative
             vec![], // blocked_by
             vec![Tag::Phase(Phase::Todo)],
             false,
@@ -561,10 +579,10 @@ exit_criteria_met: false
         let blocked_task = Task::new(
             "Blocked Task".to_string(),
             Some(DocumentId::from("parent-initiative")), // parent_id
-            Some("Parent Initiative".to_string()), // parent_title
-            Some(DocumentId::from("parent-strategy")), // strategy_id
+            Some("Parent Initiative".to_string()),       // parent_title
+            Some(DocumentId::from("parent-strategy")),   // strategy_id
             Some(DocumentId::from("parent-initiative")), // initiative_id
-            vec![], // No blocking documents
+            vec![],                                      // No blocking documents
             vec![Tag::Phase(Phase::Blocked)],
             false,
             "TEST-T-0401".to_string(),
@@ -577,8 +595,8 @@ exit_criteria_met: false
         let properly_blocked_task = Task::new(
             "Blocked Task".to_string(),
             Some(DocumentId::from("parent-initiative")), // parent_id
-            Some("Parent Initiative".to_string()), // parent_title
-            Some(DocumentId::from("parent-strategy")), // strategy_id
+            Some("Parent Initiative".to_string()),       // parent_title
+            Some(DocumentId::from("parent-strategy")),   // strategy_id
             Some(DocumentId::from("parent-initiative")), // initiative_id
             vec![DocumentId::from("blocking-task")],
             vec![Tag::Phase(Phase::Blocked)],
@@ -595,8 +613,8 @@ exit_criteria_met: false
         let task = Task::new(
             "Test Task".to_string(),
             Some(DocumentId::from("parent-initiative")), // parent_id
-            Some("Parent Initiative".to_string()), // parent_title
-            Some(DocumentId::from("parent-strategy")), // strategy_id
+            Some("Parent Initiative".to_string()),       // parent_title
+            Some(DocumentId::from("parent-strategy")),   // strategy_id
             Some(DocumentId::from("parent-initiative")), // initiative_id
             vec![],
             vec![Tag::Phase(Phase::Todo)],
@@ -616,8 +634,8 @@ exit_criteria_met: false
         let active_task = Task::new(
             "Active Task".to_string(),
             Some(DocumentId::from("parent-initiative")), // parent_id
-            Some("Parent Initiative".to_string()), // parent_title
-            Some(DocumentId::from("parent-strategy")), // strategy_id
+            Some("Parent Initiative".to_string()),       // parent_title
+            Some(DocumentId::from("parent-strategy")),   // strategy_id
             Some(DocumentId::from("parent-initiative")), // initiative_id
             vec![],
             vec![Tag::Phase(Phase::Active)],
@@ -636,8 +654,8 @@ exit_criteria_met: false
         let blocked_task = Task::new(
             "Blocked Task".to_string(),
             Some(DocumentId::from("parent-initiative")), // parent_id
-            Some("Parent Initiative".to_string()), // parent_title
-            Some(DocumentId::from("parent-strategy")), // strategy_id
+            Some("Parent Initiative".to_string()),       // parent_title
+            Some(DocumentId::from("parent-strategy")),   // strategy_id
             Some(DocumentId::from("parent-initiative")), // initiative_id
             vec![DocumentId::from("blocking-task")],
             vec![Tag::Phase(Phase::Blocked)],
@@ -656,8 +674,8 @@ exit_criteria_met: false
         let mut task = Task::new(
             "Test Task".to_string(),
             Some(DocumentId::from("parent-initiative")), // parent_id
-            Some("Parent Initiative".to_string()), // parent_title
-            Some(DocumentId::from("parent-strategy")), // strategy_id
+            Some("Parent Initiative".to_string()),       // parent_title
+            Some(DocumentId::from("parent-strategy")),   // strategy_id
             Some(DocumentId::from("parent-initiative")), // initiative_id
             vec![],
             vec![Tag::Phase(Phase::Todo)],
@@ -687,8 +705,8 @@ exit_criteria_met: false
         let mut task = Task::new(
             "Test Task".to_string(),
             Some(DocumentId::from("parent-initiative")), // parent_id
-            Some("Parent Initiative".to_string()), // parent_title
-            Some(DocumentId::from("parent-strategy")), // strategy_id
+            Some("Parent Initiative".to_string()),       // parent_title
+            Some(DocumentId::from("parent-strategy")),   // strategy_id
             Some(DocumentId::from("parent-initiative")), // initiative_id
             vec![DocumentId::from("blocking-task")],
             vec![Tag::Phase(Phase::Todo)],
@@ -719,8 +737,8 @@ exit_criteria_met: false
         let mut task = Task::new(
             "Test Task".to_string(),
             Some(DocumentId::from("parent-initiative")), // parent_id
-            Some("Parent Initiative".to_string()), // parent_title
-            Some(DocumentId::from("parent-strategy")), // strategy_id
+            Some("Parent Initiative".to_string()),       // parent_title
+            Some(DocumentId::from("parent-strategy")),   // strategy_id
             Some(DocumentId::from("parent-initiative")), // initiative_id
             vec![],
             vec![Tag::Phase(Phase::Todo)],
@@ -750,8 +768,8 @@ exit_criteria_met: false
         let mut task = Task::new(
             "Test Task".to_string(),
             Some(DocumentId::from("parent-initiative")), // parent_id
-            Some("Parent Initiative".to_string()), // parent_title
-            Some(DocumentId::from("parent-strategy")), // strategy_id
+            Some("Parent Initiative".to_string()),       // parent_title
+            Some(DocumentId::from("parent-strategy")),   // strategy_id
             Some(DocumentId::from("parent-initiative")), // initiative_id
             vec![],
             vec![Tag::Phase(Phase::Todo)],

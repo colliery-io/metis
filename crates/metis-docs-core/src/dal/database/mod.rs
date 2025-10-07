@@ -1,7 +1,7 @@
+pub mod configuration_repository;
 pub mod models;
 pub mod repository;
 pub mod schema;
-pub mod configuration_repository;
 
 use diesel::prelude::*;
 use diesel::sqlite::SqliteConnection;
@@ -61,8 +61,13 @@ impl Database {
     /// Get a configuration repository with a new connection
     pub fn configuration_repository(
         &self,
-    ) -> Result<configuration_repository::ConfigurationRepository, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<
+        configuration_repository::ConfigurationRepository,
+        Box<dyn std::error::Error + Send + Sync>,
+    > {
         let connection = self.get_connection()?;
-        Ok(configuration_repository::ConfigurationRepository::new(connection))
+        Ok(configuration_repository::ConfigurationRepository::new(
+            connection,
+        ))
     }
 }

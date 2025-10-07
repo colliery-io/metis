@@ -117,7 +117,7 @@ impl FrontmatterParser {
             )),
         }
     }
-    
+
     /// Extract an optional string field from frontmatter
     pub fn extract_optional_string(
         map: &std::collections::HashMap<String, gray_matter::Pod>,

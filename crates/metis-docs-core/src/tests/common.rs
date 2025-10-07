@@ -1,8 +1,8 @@
 //! Common test utilities for Metis core and other crates
 
-use anyhow::Result;
 use crate::application::services::workspace::WorkspaceInitializationService;
 use crate::dal::Database;
+use anyhow::Result;
 use std::path::PathBuf;
 
 /// Shared test helper for workspace setup
@@ -20,8 +20,7 @@ impl MetisTestHelper {
         let project_path = temp_dir.path().to_path_buf();
 
         // Initialize metis workspace
-        WorkspaceInitializationService::initialize_workspace(&project_path, "Test Project")
-            .await?;
+        WorkspaceInitializationService::initialize_workspace(&project_path, "Test Project").await?;
 
         let metis_dir = project_path.join(".metis");
         let db_path = metis_dir.join("metis.db");
@@ -85,25 +84,29 @@ impl MetisTestHelper {
     /// Create additional directories for testing
     pub fn create_test_subdirs(&self, subdirs: &[&str]) -> Result<Vec<PathBuf>> {
         let mut created_paths = Vec::new();
-        
+
         for subdir in subdirs {
             let path = self.project_path.join(subdir);
             std::fs::create_dir_all(&path)?;
             created_paths.push(path);
         }
-        
+
         Ok(created_paths)
     }
 
     /// Write a test file to the workspace
-    pub fn write_test_file<P: AsRef<std::path::Path>>(&self, relative_path: P, content: &str) -> Result<PathBuf> {
+    pub fn write_test_file<P: AsRef<std::path::Path>>(
+        &self,
+        relative_path: P,
+        content: &str,
+    ) -> Result<PathBuf> {
         let full_path = self.project_path.join(relative_path);
-        
+
         // Create parent directories if they don't exist
         if let Some(parent) = full_path.parent() {
             std::fs::create_dir_all(parent)?;
         }
-        
+
         std::fs::write(&full_path, content)?;
         Ok(full_path)
     }

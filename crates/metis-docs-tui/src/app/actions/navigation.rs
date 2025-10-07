@@ -5,23 +5,31 @@ use crate::models::AppState;
 impl App {
     // Board navigation methods
     pub fn next_board(&mut self) {
-        self.ui_state.next_board_with_config(&self.core_state.flight_config);
+        self.ui_state
+            .next_board_with_config(&self.core_state.flight_config);
     }
 
     pub fn previous_board(&mut self) {
-        self.ui_state.previous_board_with_config(&self.core_state.flight_config);
+        self.ui_state
+            .previous_board_with_config(&self.core_state.flight_config);
     }
 
     pub fn jump_to_strategy_board(&mut self) {
         use crate::app::state::UiState;
-        if UiState::is_board_enabled(crate::models::BoardType::Strategy, &self.core_state.flight_config) {
+        if UiState::is_board_enabled(
+            crate::models::BoardType::Strategy,
+            &self.core_state.flight_config,
+        ) {
             self.ui_state.current_board = crate::models::BoardType::Strategy;
         }
     }
 
     pub fn jump_to_initiative_board(&mut self) {
         use crate::app::state::UiState;
-        if UiState::is_board_enabled(crate::models::BoardType::Initiative, &self.core_state.flight_config) {
+        if UiState::is_board_enabled(
+            crate::models::BoardType::Initiative,
+            &self.core_state.flight_config,
+        ) {
             self.ui_state.current_board = crate::models::BoardType::Initiative;
         }
     }
@@ -83,7 +91,8 @@ impl App {
                     Ok(_) => {
                         // Set viewing state to simulate selecting the vision document
                         // We'll use a special board type and position that doesn't exist
-                        self.ui_state.viewing_ticket = Some((crate::models::BoardType::Strategy, 999, 999));
+                        self.ui_state.viewing_ticket =
+                            Some((crate::models::BoardType::Strategy, 999, 999));
 
                         // Go directly to edit mode
                         self.start_content_editing_for_vision(vision_path);

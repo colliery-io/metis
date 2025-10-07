@@ -66,19 +66,19 @@ pub fn get_adr_column_index(adr: &Adr) -> usize {
 /// Columns: backlog(0), bugs(1), features(2), tech-debt(3)
 pub fn get_backlog_column_index(task: &Task) -> usize {
     use metis_core::domain::documents::types::Tag;
-    
+
     // Check task tags to determine type
     for tag in &task.core().tags {
         if let Tag::Label(label) = tag {
             match label.as_str() {
-                "bug" => return 1, // bugs column
-                "feature" => return 2, // features column
+                "bug" => return 1,       // bugs column
+                "feature" => return 2,   // features column
                 "tech-debt" => return 3, // tech-debt column
                 _ => {}
             }
         }
     }
-    
+
     // Default to backlog column (general items)
     0
 }

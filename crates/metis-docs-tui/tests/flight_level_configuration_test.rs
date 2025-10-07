@@ -35,7 +35,8 @@ async fn create_app_with_config(config: FlightLevelConfig) -> Result<App> {
     app.transition_service = Some(metis_docs_tui::services::TransitionService::new(metis_dir));
 
     // Ensure the current board is valid for the configuration
-    app.ui_state.ensure_valid_board(&app.core_state.flight_config);
+    app.ui_state
+        .ensure_valid_board(&app.core_state.flight_config);
 
     Ok(app)
 }
@@ -43,7 +44,7 @@ async fn create_app_with_config(config: FlightLevelConfig) -> Result<App> {
 #[tokio::test]
 async fn test_full_configuration_navigation() -> Result<()> {
     let mut app = create_app_with_config(FlightLevelConfig::full()).await?;
-    
+
     // In full configuration, should start with strategy board
     assert_eq!(app.ui_state.current_board, BoardType::Strategy);
 
@@ -92,7 +93,7 @@ async fn test_full_configuration_navigation() -> Result<()> {
 #[tokio::test]
 async fn test_streamlined_configuration_navigation() -> Result<()> {
     let mut app = create_app_with_config(FlightLevelConfig::streamlined()).await?;
-    
+
     // In streamlined configuration, should start with initiative board (not strategy)
     assert_eq!(app.ui_state.current_board, BoardType::Initiative);
 
@@ -144,7 +145,7 @@ async fn test_streamlined_configuration_navigation() -> Result<()> {
 #[tokio::test]
 async fn test_direct_configuration_navigation() -> Result<()> {
     let mut app = create_app_with_config(FlightLevelConfig::direct()).await?;
-    
+
     // In direct configuration, should start with task board (no strategy or initiative)
     assert_eq!(app.ui_state.current_board, BoardType::Task);
 
@@ -193,30 +194,35 @@ async fn test_enabled_boards_lists() -> Result<()> {
 
     // Test full configuration enabled boards
     let full_boards = UiState::get_enabled_boards(&FlightLevelConfig::full());
-    assert_eq!(full_boards, vec![
-        BoardType::Strategy,
-        BoardType::Initiative,
-        BoardType::Task,
-        BoardType::Adr,
-        BoardType::Backlog
-    ]);
+    assert_eq!(
+        full_boards,
+        vec![
+            BoardType::Strategy,
+            BoardType::Initiative,
+            BoardType::Task,
+            BoardType::Adr,
+            BoardType::Backlog
+        ]
+    );
 
     // Test streamlined configuration enabled boards
     let streamlined_boards = UiState::get_enabled_boards(&FlightLevelConfig::streamlined());
-    assert_eq!(streamlined_boards, vec![
-        BoardType::Initiative,
-        BoardType::Task,
-        BoardType::Adr,
-        BoardType::Backlog
-    ]);
+    assert_eq!(
+        streamlined_boards,
+        vec![
+            BoardType::Initiative,
+            BoardType::Task,
+            BoardType::Adr,
+            BoardType::Backlog
+        ]
+    );
 
     // Test direct configuration enabled boards
     let direct_boards = UiState::get_enabled_boards(&FlightLevelConfig::direct());
-    assert_eq!(direct_boards, vec![
-        BoardType::Task,
-        BoardType::Adr,
-        BoardType::Backlog
-    ]);
+    assert_eq!(
+        direct_boards,
+        vec![BoardType::Task, BoardType::Adr, BoardType::Backlog]
+    );
 
     Ok(())
 }
@@ -231,24 +237,51 @@ async fn test_board_enabled_checks() -> Result<()> {
 
     // Full configuration - all boards enabled
     assert!(UiState::is_board_enabled(BoardType::Strategy, &full_config));
-    assert!(UiState::is_board_enabled(BoardType::Initiative, &full_config));
+    assert!(UiState::is_board_enabled(
+        BoardType::Initiative,
+        &full_config
+    ));
     assert!(UiState::is_board_enabled(BoardType::Task, &full_config));
     assert!(UiState::is_board_enabled(BoardType::Adr, &full_config));
     assert!(UiState::is_board_enabled(BoardType::Backlog, &full_config));
 
     // Streamlined configuration - no strategy
-    assert!(!UiState::is_board_enabled(BoardType::Strategy, &streamlined_config));
-    assert!(UiState::is_board_enabled(BoardType::Initiative, &streamlined_config));
-    assert!(UiState::is_board_enabled(BoardType::Task, &streamlined_config));
-    assert!(UiState::is_board_enabled(BoardType::Adr, &streamlined_config));
-    assert!(UiState::is_board_enabled(BoardType::Backlog, &streamlined_config));
+    assert!(!UiState::is_board_enabled(
+        BoardType::Strategy,
+        &streamlined_config
+    ));
+    assert!(UiState::is_board_enabled(
+        BoardType::Initiative,
+        &streamlined_config
+    ));
+    assert!(UiState::is_board_enabled(
+        BoardType::Task,
+        &streamlined_config
+    ));
+    assert!(UiState::is_board_enabled(
+        BoardType::Adr,
+        &streamlined_config
+    ));
+    assert!(UiState::is_board_enabled(
+        BoardType::Backlog,
+        &streamlined_config
+    ));
 
     // Direct configuration - no strategy or initiative
-    assert!(!UiState::is_board_enabled(BoardType::Strategy, &direct_config));
-    assert!(!UiState::is_board_enabled(BoardType::Initiative, &direct_config));
+    assert!(!UiState::is_board_enabled(
+        BoardType::Strategy,
+        &direct_config
+    ));
+    assert!(!UiState::is_board_enabled(
+        BoardType::Initiative,
+        &direct_config
+    ));
     assert!(UiState::is_board_enabled(BoardType::Task, &direct_config));
     assert!(UiState::is_board_enabled(BoardType::Adr, &direct_config));
-    assert!(UiState::is_board_enabled(BoardType::Backlog, &direct_config));
+    assert!(UiState::is_board_enabled(
+        BoardType::Backlog,
+        &direct_config
+    ));
 
     Ok(())
 }
@@ -258,19 +291,19 @@ async fn test_ensure_valid_board_function() -> Result<()> {
     // Test starting with strategy board but using streamlined config
     let mut app = App::new();
     app.ui_state.current_board = BoardType::Strategy; // Start with strategy
-    
+
     let streamlined_config = FlightLevelConfig::streamlined();
     app.ui_state.ensure_valid_board(&streamlined_config);
-    
+
     // Should switch to initiative (first enabled board in streamlined)
     assert_eq!(app.ui_state.current_board, BoardType::Initiative);
 
     // Test starting with initiative board but using direct config
     app.ui_state.current_board = BoardType::Initiative; // Start with initiative
-    
+
     let direct_config = FlightLevelConfig::direct();
     app.ui_state.ensure_valid_board(&direct_config);
-    
+
     // Should switch to task (first enabled board in direct)
     assert_eq!(app.ui_state.current_board, BoardType::Task);
 
@@ -278,7 +311,7 @@ async fn test_ensure_valid_board_function() -> Result<()> {
     app.ui_state.current_board = BoardType::Task;
     let full_config = FlightLevelConfig::full();
     app.ui_state.ensure_valid_board(&full_config);
-    
+
     // Should stay on task (it's valid in full config)
     assert_eq!(app.ui_state.current_board, BoardType::Task);
 

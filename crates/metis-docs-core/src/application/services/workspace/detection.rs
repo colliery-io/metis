@@ -113,7 +113,7 @@ mod tests {
         let service = WorkspaceDetectionService::new();
         let temp_dir = TempDir::new().unwrap();
         let metis_dir = temp_dir.path().join(METIS_DIR_NAME);
-        
+
         fs::create_dir_all(&metis_dir).unwrap();
 
         let result = service.validate_workspace(&metis_dir);
@@ -126,7 +126,7 @@ mod tests {
         let service = WorkspaceDetectionService::new();
         let temp_dir = TempDir::new().unwrap();
         let metis_dir = temp_dir.path().join(METIS_DIR_NAME);
-        
+
         fs::create_dir_all(&metis_dir).unwrap();
         fs::File::create(metis_dir.join(DATABASE_FILE_NAME)).unwrap();
 
@@ -142,7 +142,7 @@ mod tests {
         let project_root = temp_dir.path();
         let metis_dir = project_root.join(".metis");
         let nested_dir = project_root.join("src").join("deep").join("nested");
-        
+
         fs::create_dir_all(&metis_dir).unwrap();
         fs::File::create(metis_dir.join(DATABASE_FILE_NAME)).unwrap();
         fs::create_dir_all(&nested_dir).unwrap();
@@ -159,7 +159,7 @@ mod tests {
         let project_root = temp_dir.path();
         let metis_dir = project_root.join(".metis");
         let nested_dir = project_root.join("src").join("deep");
-        
+
         fs::create_dir_all(&metis_dir).unwrap();
         fs::File::create(metis_dir.join(DATABASE_FILE_NAME)).unwrap();
         fs::create_dir_all(&nested_dir).unwrap();

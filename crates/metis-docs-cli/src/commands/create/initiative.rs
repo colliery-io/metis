@@ -4,7 +4,7 @@ use dialoguer::Select;
 use metis_core::{
     application::services::document::creation::{DocumentCreationConfig, DocumentCreationService},
     domain::documents::{initiative::Complexity, types::DocumentId},
-    Document, Phase, Strategy, Tag,
+    Database, Document, Phase, Strategy, Tag,
 };
 use std::path::Path;
 
@@ -17,7 +17,7 @@ pub async fn create_new_initiative(title: &str, strategy_id: &str) -> Result<()>
     }
     let metis_dir = metis_dir.unwrap();
 
-    // 2. Verify the strategy exists and get its document ID
+    // 2. Verify the strategy exists and get its document ID and short code
     let (strategy_doc_id, _strategy_path) = find_strategy(&metis_dir, strategy_id).await?;
 
     // 3. Prompt for complexity level
@@ -25,7 +25,7 @@ pub async fn create_new_initiative(title: &str, strategy_id: &str) -> Result<()>
 
     // 4. Use DocumentCreationService to create the initiative
     let creation_service = DocumentCreationService::new(&metis_dir);
-    
+
     let config = DocumentCreationConfig {
         title: title.to_string(),
         description: None,
@@ -40,7 +40,7 @@ pub async fn create_new_initiative(title: &str, strategy_id: &str) -> Result<()>
     };
 
     let result = creation_service
-        .create_initiative(config, &strategy_doc_id.to_string())
+        .create_initiative(config, strategy_id)
         .await
         .map_err(|e| anyhow::anyhow!("Failed to create initiative: {}", e))?;
 
@@ -65,35 +65,51 @@ async fn find_strategy(
         anyhow::bail!("No strategies directory found. Create a strategy first.");
     }
 
-    // Look for the strategy directory
-    let strategy_dir = strategies_dir.join(strategy_id);
-    if !strategy_dir.exists() || !strategy_dir.is_dir() {
-        // Try to list available strategies for a helpful error
-        let available = list_available_strategies(&strategies_dir)?;
-        if available.is_empty() {
-            anyhow::bail!("No strategies found. Create a strategy first.");
-        } else {
-            anyhow::bail!(
-                "Strategy '{}' not found. Available strategies: {}",
-                strategy_id,
-                available.join(", ")
-            );
+    // First try to find strategy directory by document ID (legacy path structure)
+    let legacy_strategy_dir = strategies_dir.join(strategy_id);
+    if legacy_strategy_dir.exists() && legacy_strategy_dir.is_dir() {
+        // Found using legacy path, use it directly
+        let strategy_path = legacy_strategy_dir.join("strategy.md");
+        if strategy_path.exists() {
+            let strategy = Strategy::from_file(&strategy_path).await?;
+            return Ok((strategy.id().clone(), strategy_path));
         }
     }
 
-    // Parse the strategy document to get its actual ID
-    let strategy_path = strategy_dir.join("strategy.md");
-    if !strategy_path.exists() {
-        anyhow::bail!("Strategy file not found: {}", strategy_path.display());
+    // Legacy lookup failed, try database lookup to find short code
+    let db_path = workspace_dir.join("metis.db");
+    if db_path.exists() {
+        let db = Database::new(&db_path.to_string_lossy())
+            .map_err(|e| anyhow::anyhow!("Database error: {}", e))?;
+        let mut repo = db
+            .repository()
+            .map_err(|e| anyhow::anyhow!("Repository error: {}", e))?;
+
+        // Try to find strategy by short code in database
+        if let Ok(Some(strategy_doc)) = repo.find_by_short_code(strategy_id) {
+            // Found in database, use its short code to find directory
+            let short_code_dir = strategies_dir.join(&strategy_doc.short_code);
+            if short_code_dir.exists() && short_code_dir.is_dir() {
+                let strategy_path = short_code_dir.join("strategy.md");
+                if strategy_path.exists() {
+                    let strategy = Strategy::from_file(&strategy_path).await?;
+                    return Ok((strategy.id().clone(), strategy_path));
+                }
+            }
+        }
     }
 
-    let strategy = Strategy::from_file(&strategy_path)
-        .await
-        .map_err(|e| anyhow::anyhow!("Failed to parse strategy document: {}", e))?;
-
-    let strategy_id = strategy.id();
-
-    Ok((strategy_id, strategy_path))
+    // Strategy not found, provide helpful error
+    let available = list_available_strategies(&strategies_dir)?;
+    if available.is_empty() {
+        anyhow::bail!("No strategies found. Create a strategy first.");
+    } else {
+        anyhow::bail!(
+            "Strategy '{}' not found. Available strategies: {}",
+            strategy_id,
+            available.join(", ")
+        );
+    }
 }
 
 /// List available strategy IDs
@@ -251,16 +267,15 @@ mod tests {
         // Test the helper functions for initiative creation
         let metis_dir = temp_dir.path().join(".metis");
 
-        // Test finding the strategy
-        let (strategy_id, strategy_path) =
-            find_strategy(&metis_dir, "test-strategy").await.unwrap();
+        // Test finding the strategy by short code
+        let (strategy_id, strategy_path) = find_strategy(&metis_dir, "TEST-S-0001").await.unwrap();
         assert_eq!(strategy_id.to_string(), "test-strategy");
         assert!(strategy_path.exists());
 
         // Verify the strategy path structure
         let expected_strategy_path = metis_dir
             .join("strategies")
-            .join("test-strategy")
+            .join("TEST-S-0001")
             .join("strategy.md");
         assert_eq!(strategy_path, expected_strategy_path);
 

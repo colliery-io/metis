@@ -49,7 +49,9 @@ impl App {
             }
             // Initiative board: Create initiatives (streamlined config) or tasks (other configs)
             BoardType::Initiative => {
-                if !self.core_state.flight_config.strategies_enabled && self.core_state.flight_config.initiatives_enabled {
+                if !self.core_state.flight_config.strategies_enabled
+                    && self.core_state.flight_config.initiatives_enabled
+                {
                     // Streamlined config: Create root initiative (no parent strategies)
                     self.ui_state.set_app_state(AppState::CreatingDocument);
                 } else {
@@ -60,7 +62,9 @@ impl App {
             }
             // Task board: Create tasks (direct config) or show error (other configs)
             BoardType::Task => {
-                if !self.core_state.flight_config.strategies_enabled && !self.core_state.flight_config.initiatives_enabled {
+                if !self.core_state.flight_config.strategies_enabled
+                    && !self.core_state.flight_config.initiatives_enabled
+                {
                     // Direct config: Create root task (no parent strategies/initiatives)
                     self.ui_state.set_app_state(AppState::CreatingDocument);
                     self.ui_state.reset_input();
@@ -76,7 +80,8 @@ impl App {
             }
             // Backlog board: Create backlog item (standalone)
             BoardType::Backlog => {
-                self.ui_state.set_app_state(AppState::SelectingBacklogCategory);
+                self.ui_state
+                    .set_app_state(AppState::SelectingBacklogCategory);
                 self.ui_state.reset_input();
             }
         }

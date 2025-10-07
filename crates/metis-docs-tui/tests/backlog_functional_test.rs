@@ -58,13 +58,25 @@ async fn test_backlog_board_structure() -> Result<()> {
     // Verify backlog board has correct columns
     let backlog_board = &app.ui_state.backlog_board;
     assert_eq!(backlog_board.columns.len(), 4);
-    
-    let column_titles: Vec<&str> = backlog_board.columns.iter().map(|c| c.title.as_str()).collect();
-    assert_eq!(column_titles, vec!["backlog", "bugs", "features", "tech-debt"]);
+
+    let column_titles: Vec<&str> = backlog_board
+        .columns
+        .iter()
+        .map(|c| c.title.as_str())
+        .collect();
+    assert_eq!(
+        column_titles,
+        vec!["backlog", "bugs", "features", "tech-debt"]
+    );
 
     // Verify all columns start empty
     for column in &backlog_board.columns {
-        assert_eq!(column.items.len(), 0, "Column '{}' should start empty", column.title);
+        assert_eq!(
+            column.items.len(),
+            0,
+            "Column '{}' should start empty",
+            column.title
+        );
     }
 
     Ok(())
@@ -78,11 +90,11 @@ async fn test_backlog_item_detection_and_placement() -> Result<()> {
     // Create a backlog task with bug tag using the document service
     let mut app = helper.create_app();
     app.jump_to_backlog_board();
-    
+
     // Set up the document creation with bug tag
     app.start_document_creation();
-    
-    // Add title 
+
+    // Add title
     let title = "Test Backlog Task";
     for ch in title.chars() {
         app.ui_state
@@ -94,20 +106,23 @@ async fn test_backlog_item_detection_and_placement() -> Result<()> {
                 ),
             ));
     }
-    
+
     // Create the backlog item
     app.create_new_document().await?;
-    
+
     // Now manually add the bug tag to the created document
     if let Some(ref doc_service) = app.document_service {
         let docs = doc_service.load_documents_from_database().await?;
-        let backlog_task = docs.iter().find(|d| d.title == "Test Backlog Task").unwrap();
-        
+        let backlog_task = docs
+            .iter()
+            .find(|d| d.title == "Test Backlog Task")
+            .unwrap();
+
         // Read the file and add bug tag
         let task_content = std::fs::read_to_string(&backlog_task.filepath)?;
         let updated_content = task_content.replace(
             "tags:\n  - \"#task\"\n  - \"#phase/backlog\"",
-            "tags:\n  - \"#task\"\n  - \"#phase/backlog\"\n  - \"#bug\""
+            "tags:\n  - \"#task\"\n  - \"#phase/backlog\"\n  - \"#bug\"",
         );
         std::fs::write(&backlog_task.filepath, updated_content)?;
     }
@@ -117,13 +132,20 @@ async fn test_backlog_item_detection_and_placement() -> Result<()> {
 
     // Jump to backlog board
     app.jump_to_backlog_board();
-    
+
     // Verify the backlog task was detected and placed in the bugs column
     let backlog_board = &app.ui_state.backlog_board;
-    
+
     // Should be in bugs column (index 1) because "- [x] Bug" is checked
-    assert_eq!(backlog_board.columns[1].items.len(), 1, "Bugs column should have 1 item");
-    assert_eq!(backlog_board.columns[1].items[0].title(), "Test Backlog Task");
+    assert_eq!(
+        backlog_board.columns[1].items.len(),
+        1,
+        "Bugs column should have 1 item"
+    );
+    assert_eq!(
+        backlog_board.columns[1].items[0].title(),
+        "Test Backlog Task"
+    );
 
     Ok(())
 }
@@ -135,12 +157,12 @@ async fn test_backlog_item_feature_categorization() -> Result<()> {
 
     // Create app and create backlog task using TUI, then add feature tag
     let mut app = helper.create_app();
-    
+
     // Use TUI to create backlog task
     app.jump_to_backlog_board();
     app.start_document_creation();
-    
-    // Add title 
+
+    // Add title
     let title = "Feature Request Task";
     for ch in title.chars() {
         app.ui_state
@@ -152,20 +174,23 @@ async fn test_backlog_item_feature_categorization() -> Result<()> {
                 ),
             ));
     }
-    
+
     // Create the backlog item
     app.create_new_document().await?;
-    
+
     // Now manually add the feature tag to the created document
     if let Some(ref doc_service) = app.document_service {
         let docs = doc_service.load_documents_from_database().await?;
-        let backlog_task = docs.iter().find(|d| d.title == "Feature Request Task").unwrap();
-        
+        let backlog_task = docs
+            .iter()
+            .find(|d| d.title == "Feature Request Task")
+            .unwrap();
+
         // Read the file and add feature tag
         let task_content = std::fs::read_to_string(&backlog_task.filepath)?;
         let updated_content = task_content.replace(
             "tags:\n  - \"#task\"\n  - \"#phase/backlog\"",
-            "tags:\n  - \"#task\"\n  - \"#phase/backlog\"\n  - \"#feature\""
+            "tags:\n  - \"#task\"\n  - \"#phase/backlog\"\n  - \"#feature\"",
         );
         std::fs::write(&backlog_task.filepath, updated_content)?;
     }
@@ -176,10 +201,17 @@ async fn test_backlog_item_feature_categorization() -> Result<()> {
     // Jump to backlog board and verify placement in features column
     app.jump_to_backlog_board();
     let backlog_board = &app.ui_state.backlog_board;
-    
+
     // Should be in features column (index 2)
-    assert_eq!(backlog_board.columns[2].items.len(), 1, "Features column should have 1 item");
-    assert_eq!(backlog_board.columns[2].items[0].title(), "Feature Request Task");
+    assert_eq!(
+        backlog_board.columns[2].items.len(),
+        1,
+        "Features column should have 1 item"
+    );
+    assert_eq!(
+        backlog_board.columns[2].items[0].title(),
+        "Feature Request Task"
+    );
 
     Ok(())
 }
@@ -191,12 +223,12 @@ async fn test_backlog_item_tech_debt_categorization() -> Result<()> {
 
     // Create app and create backlog task using TUI, then add tech-debt tag
     let mut app = helper.create_app();
-    
+
     // Use TUI to create backlog task
     app.jump_to_backlog_board();
     app.start_document_creation();
-    
-    // Add title 
+
+    // Add title
     let title = "Tech Debt Refactor";
     for ch in title.chars() {
         app.ui_state
@@ -208,20 +240,23 @@ async fn test_backlog_item_tech_debt_categorization() -> Result<()> {
                 ),
             ));
     }
-    
+
     // Create the backlog item
     app.create_new_document().await?;
-    
+
     // Now manually add the tech-debt tag to the created document
     if let Some(ref doc_service) = app.document_service {
         let docs = doc_service.load_documents_from_database().await?;
-        let backlog_task = docs.iter().find(|d| d.title == "Tech Debt Refactor").unwrap();
-        
+        let backlog_task = docs
+            .iter()
+            .find(|d| d.title == "Tech Debt Refactor")
+            .unwrap();
+
         // Read the file and add tech-debt tag
         let task_content = std::fs::read_to_string(&backlog_task.filepath)?;
         let updated_content = task_content.replace(
             "tags:\n  - \"#task\"\n  - \"#phase/backlog\"",
-            "tags:\n  - \"#task\"\n  - \"#phase/backlog\"\n  - \"#tech-debt\""
+            "tags:\n  - \"#task\"\n  - \"#phase/backlog\"\n  - \"#tech-debt\"",
         );
         std::fs::write(&backlog_task.filepath, updated_content)?;
     }
@@ -232,10 +267,17 @@ async fn test_backlog_item_tech_debt_categorization() -> Result<()> {
     // Jump to backlog board and verify placement in tech-debt column
     app.jump_to_backlog_board();
     let backlog_board = &app.ui_state.backlog_board;
-    
+
     // Should be in tech-debt column (index 3)
-    assert_eq!(backlog_board.columns[3].items.len(), 1, "Tech-debt column should have 1 item");
-    assert_eq!(backlog_board.columns[3].items[0].title(), "Tech Debt Refactor");
+    assert_eq!(
+        backlog_board.columns[3].items.len(),
+        1,
+        "Tech-debt column should have 1 item"
+    );
+    assert_eq!(
+        backlog_board.columns[3].items[0].title(),
+        "Tech Debt Refactor"
+    );
 
     Ok(())
 }
@@ -247,12 +289,12 @@ async fn test_backlog_item_default_categorization() -> Result<()> {
 
     // Create app and create backlog task using TUI (no additional tags)
     let mut app = helper.create_app();
-    
+
     // Use TUI to create backlog task
     app.jump_to_backlog_board();
     app.start_document_creation();
-    
-    // Add title 
+
+    // Add title
     let title = "General Backlog Item";
     for ch in title.chars() {
         app.ui_state
@@ -264,20 +306,27 @@ async fn test_backlog_item_default_categorization() -> Result<()> {
                 ),
             ));
     }
-    
+
     // Create the backlog item (no additional tags)
     app.create_new_document().await?;
-    
+
     // Load documents
     app.load_documents().await?;
 
     // Jump to backlog board and verify placement in default backlog column
     app.jump_to_backlog_board();
     let backlog_board = &app.ui_state.backlog_board;
-    
+
     // Should be in backlog column (index 0) as default
-    assert_eq!(backlog_board.columns[0].items.len(), 1, "Backlog column should have 1 item");
-    assert_eq!(backlog_board.columns[0].items[0].title(), "General Backlog Item");
+    assert_eq!(
+        backlog_board.columns[0].items.len(),
+        1,
+        "Backlog column should have 1 item"
+    );
+    assert_eq!(
+        backlog_board.columns[0].items[0].title(),
+        "General Backlog Item"
+    );
 
     Ok(())
 }
@@ -289,23 +338,39 @@ async fn test_backlog_selection_state() -> Result<()> {
 
     // Jump to backlog board
     app.jump_to_backlog_board();
-    
+
     // Test selection state is properly initialized for backlog
-    let selection = app.selection_state.get_current_selection(BoardType::Backlog);
+    let selection = app
+        .selection_state
+        .get_current_selection(BoardType::Backlog);
     assert_eq!(selection, (0, 0), "Backlog selection should start at (0,0)");
 
     // Test selection movement within backlog board
     app.move_selection_right();
-    let selection = app.selection_state.get_current_selection(BoardType::Backlog);
+    let selection = app
+        .selection_state
+        .get_current_selection(BoardType::Backlog);
     assert_eq!(selection, (1, 0), "After moving right, should be at (1,0)");
 
     app.move_selection_right();
-    let selection = app.selection_state.get_current_selection(BoardType::Backlog);
-    assert_eq!(selection, (2, 0), "After moving right again, should be at (2,0)");
+    let selection = app
+        .selection_state
+        .get_current_selection(BoardType::Backlog);
+    assert_eq!(
+        selection,
+        (2, 0),
+        "After moving right again, should be at (2,0)"
+    );
 
     app.move_selection_left();
-    let selection = app.selection_state.get_current_selection(BoardType::Backlog);
-    assert_eq!(selection, (1, 0), "After moving left, should be back at (1,0)");
+    let selection = app
+        .selection_state
+        .get_current_selection(BoardType::Backlog);
+    assert_eq!(
+        selection,
+        (1, 0),
+        "After moving left, should be back at (1,0)"
+    );
 
     Ok(())
 }

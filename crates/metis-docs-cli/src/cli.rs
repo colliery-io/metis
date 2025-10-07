@@ -3,8 +3,8 @@ use clap::{Parser, Subcommand};
 use tracing_subscriber::filter::LevelFilter;
 
 use crate::commands::{
-    ArchiveCommand, ConfigCommand, CreateCommand, InitCommand, ListCommand, McpCommand, SearchCommand,
-    StatusCommand, SyncCommand, TransitionCommand, TuiCommand, ValidateCommand,
+    ArchiveCommand, ConfigCommand, CreateCommand, InitCommand, ListCommand, McpCommand,
+    SearchCommand, StatusCommand, SyncCommand, TransitionCommand, TuiCommand, ValidateCommand,
 };
 
 #[derive(Parser)]
@@ -142,7 +142,7 @@ mod tests {
         let create_initiative_cmd = CreateCommand {
             document_type: CreateCommands::Initiative {
                 title: "Test Initiative".to_string(),
-                strategy: "test-strategy-for-integration".to_string(),
+                strategy: "TEST-S-0001".to_string(),
             },
         };
         create_initiative_cmd
@@ -154,7 +154,7 @@ mod tests {
         let create_task_cmd = CreateCommand {
             document_type: CreateCommands::Task {
                 title: "Test Task".to_string(),
-                initiative: "test-initiative".to_string(),
+                initiative: "TEST-I-0001".to_string(),
             },
         };
         create_task_cmd

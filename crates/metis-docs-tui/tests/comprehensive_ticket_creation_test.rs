@@ -1,5 +1,5 @@
 use anyhow::Result;
-use metis_docs_tui::models::{BoardType, AppState};
+use metis_docs_tui::models::{AppState, BoardType};
 use tui_input::backend::crossterm::EventHandler;
 
 mod common;
@@ -50,12 +50,19 @@ async fn test_create_strategy_ticket() -> Result<()> {
         for item in &column.items {
             if item.title() == "Test Strategy" {
                 found_strategy = true;
-                println!("Found strategy '{}' in column '{}'", item.title(), column.title);
+                println!(
+                    "Found strategy '{}' in column '{}'",
+                    item.title(),
+                    column.title
+                );
                 break;
             }
         }
     }
-    assert!(found_strategy, "Should find the created strategy in one of the columns");
+    assert!(
+        found_strategy,
+        "Should find the created strategy in one of the columns"
+    );
 
     Ok(())
 }
@@ -96,9 +103,15 @@ async fn test_create_initiative_ticket() -> Result<()> {
     // Check database after creation
     if let Some(ref doc_service) = app.document_service {
         let docs = doc_service.load_documents_from_database().await?;
-        println!("Documents in database after initiative creation: {}", docs.len());
+        println!(
+            "Documents in database after initiative creation: {}",
+            docs.len()
+        );
         for doc in &docs {
-            println!("  - '{}' (type: {:?}, path: {})", doc.title, doc.document_type, doc.filepath);
+            println!(
+                "  - '{}' (type: {:?}, path: {})",
+                doc.title, doc.document_type, doc.filepath
+            );
         }
     }
 
@@ -113,12 +126,19 @@ async fn test_create_initiative_ticket() -> Result<()> {
         for item in &column.items {
             if item.title() == "Test Initiative" {
                 found_initiative = true;
-                println!("Found initiative '{}' in column '{}'", item.title(), column.title);
+                println!(
+                    "Found initiative '{}' in column '{}'",
+                    item.title(),
+                    column.title
+                );
                 break;
             }
         }
     }
-    assert!(found_initiative, "Should find the created initiative in one of the columns");
+    assert!(
+        found_initiative,
+        "Should find the created initiative in one of the columns"
+    );
 
     Ok(())
 }
@@ -154,12 +174,17 @@ async fn test_create_task_ticket() -> Result<()> {
     println!("=== Creating Task ===");
     println!("Initiative board items before task creation:");
     for (i, column) in app.ui_state.initiative_board.columns.iter().enumerate() {
-        println!("  Column {}: '{}' has {} items", i, column.title, column.items.len());
+        println!(
+            "  Column {}: '{}' has {} items",
+            i,
+            column.title,
+            column.items.len()
+        );
         for item in &column.items {
             println!("    - '{}'", item.title());
         }
     }
-    
+
     match app.create_new_document().await {
         Ok(_) => println!("Task creation returned Ok"),
         Err(e) => {
@@ -174,7 +199,10 @@ async fn test_create_task_ticket() -> Result<()> {
         let docs = doc_service.load_documents_from_database().await?;
         println!("Documents in database after task creation: {}", docs.len());
         for doc in &docs {
-            println!("  - '{}' (type: {:?}, path: {})", doc.title, doc.document_type, doc.filepath);
+            println!(
+                "  - '{}' (type: {:?}, path: {})",
+                doc.title, doc.document_type, doc.filepath
+            );
         }
     }
 
@@ -194,7 +222,10 @@ async fn test_create_task_ticket() -> Result<()> {
             }
         }
     }
-    assert!(found_task, "Should find the created task in one of the columns");
+    assert!(
+        found_task,
+        "Should find the created task in one of the columns"
+    );
 
     Ok(())
 }
@@ -235,7 +266,10 @@ async fn test_create_adr_ticket() -> Result<()> {
             }
         }
     }
-    assert!(found_adr, "Should find the created ADR in one of the columns");
+    assert!(
+        found_adr,
+        "Should find the created ADR in one of the columns"
+    );
 
     Ok(())
 }
@@ -271,12 +305,19 @@ async fn test_create_backlog_ticket() -> Result<()> {
         for item in &column.items {
             if item.title() == "Test Backlog Item" {
                 found_backlog = true;
-                println!("Found backlog item '{}' in column '{}'", item.title(), column.title);
+                println!(
+                    "Found backlog item '{}' in column '{}'",
+                    item.title(),
+                    column.title
+                );
                 break;
             }
         }
     }
-    assert!(found_backlog, "Should find the created backlog item in one of the columns");
+    assert!(
+        found_backlog,
+        "Should find the created backlog item in one of the columns"
+    );
 
     Ok(())
 }
@@ -287,7 +328,7 @@ async fn test_create_multiple_ticket_types() -> Result<()> {
     let mut app = helper.create_app();
 
     // Create one of each ticket type
-    
+
     // 1. Strategy
     app.jump_to_strategy_board();
     app.start_document_creation();
@@ -323,21 +364,39 @@ async fn test_create_multiple_ticket_types() -> Result<()> {
     // Verify all tickets were created by checking database
     if let Some(ref doc_service) = app.document_service {
         let docs = doc_service.load_documents_from_database().await?;
-        
+
         println!("Total documents found: {}", docs.len());
         for doc in &docs {
-            println!("  - '{}' (type: {:?}, path: {})", doc.title, doc.document_type, doc.filepath);
+            println!(
+                "  - '{}' (type: {:?}, path: {})",
+                doc.title, doc.document_type, doc.filepath
+            );
         }
-        
+
         // Should have 6 documents: 1 vision (created by test helper) + 5 we created
         assert_eq!(docs.len(), 6, "Should have 6 documents total");
 
         // Verify each type was created
-        let strategy_count = docs.iter().filter(|d| d.title.contains("Multi Test Strategy")).count();
-        let initiative_count = docs.iter().filter(|d| d.title.contains("Multi Test Initiative")).count();
-        let task_count = docs.iter().filter(|d| d.title.contains("Multi Test Task")).count();
-        let adr_count = docs.iter().filter(|d| d.title.contains("Multi Test ADR")).count();
-        let backlog_count = docs.iter().filter(|d| d.title.contains("Multi Test Backlog")).count();
+        let strategy_count = docs
+            .iter()
+            .filter(|d| d.title.contains("Multi Test Strategy"))
+            .count();
+        let initiative_count = docs
+            .iter()
+            .filter(|d| d.title.contains("Multi Test Initiative"))
+            .count();
+        let task_count = docs
+            .iter()
+            .filter(|d| d.title.contains("Multi Test Task"))
+            .count();
+        let adr_count = docs
+            .iter()
+            .filter(|d| d.title.contains("Multi Test ADR"))
+            .count();
+        let backlog_count = docs
+            .iter()
+            .filter(|d| d.title.contains("Multi Test Backlog"))
+            .count();
 
         assert_eq!(strategy_count, 1, "Should have 1 strategy");
         assert_eq!(initiative_count, 1, "Should have 1 initiative");
@@ -409,13 +468,13 @@ async fn test_create_child_documents() -> Result<()> {
     // Verify the hierarchy was created correctly
     if let Some(ref doc_service) = app.document_service {
         let docs = doc_service.load_documents_from_database().await?;
-        
+
         // Should have 4 documents: 1 vision + 3 we created
         assert_eq!(docs.len(), 4, "Should have 4 documents total");
 
         // Check that the documents exist
         let strategy = docs.iter().find(|d| d.title == "Parent Strategy");
-        let initiative = docs.iter().find(|d| d.title == "Child Initiative"); 
+        let initiative = docs.iter().find(|d| d.title == "Child Initiative");
         let task = docs.iter().find(|d| d.title == "Child Task");
 
         assert!(strategy.is_some(), "Should have created strategy");

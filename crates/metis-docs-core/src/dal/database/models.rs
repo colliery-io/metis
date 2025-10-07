@@ -92,9 +92,7 @@ pub struct NewDocumentSearch {
     pub document_type: Option<String>,
 }
 
-#[derive(
-    Queryable, Selectable, Insertable, AsChangeset, Debug, Clone, Serialize, Deserialize,
-)]
+#[derive(Queryable, Selectable, Insertable, AsChangeset, Debug, Clone, Serialize, Deserialize)]
 #[diesel(table_name = crate::dal::database::schema::configuration)]
 #[diesel(check_for_backend(diesel::sqlite::Sqlite))]
 pub struct Configuration {

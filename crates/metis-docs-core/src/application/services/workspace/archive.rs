@@ -34,14 +34,20 @@ impl ArchiveService {
     // Helper methods to reduce duplication
 
     /// Common helper for loading and marking a document as archived
-    async fn mark_as_archived_helper(&self, file_path: &Path, doc_type: DocumentType) -> Result<()> {
+    async fn mark_as_archived_helper(
+        &self,
+        file_path: &Path,
+        doc_type: DocumentType,
+    ) -> Result<()> {
         match doc_type {
             DocumentType::Vision => {
                 let mut vision = Vision::from_file(file_path)
                     .await
                     .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
                 vision.core_mut().archived = true;
-                vision.to_file(file_path).await
+                vision
+                    .to_file(file_path)
+                    .await
                     .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
             }
             DocumentType::Strategy => {
@@ -49,7 +55,9 @@ impl ArchiveService {
                     .await
                     .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
                 strategy.core_mut().archived = true;
-                strategy.to_file(file_path).await
+                strategy
+                    .to_file(file_path)
+                    .await
                     .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
             }
             DocumentType::Initiative => {
@@ -57,7 +65,9 @@ impl ArchiveService {
                     .await
                     .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
                 initiative.core_mut().archived = true;
-                initiative.to_file(file_path).await
+                initiative
+                    .to_file(file_path)
+                    .await
                     .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
             }
             DocumentType::Task => {
@@ -65,7 +75,8 @@ impl ArchiveService {
                     .await
                     .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
                 task.core_mut().archived = true;
-                task.to_file(file_path).await
+                task.to_file(file_path)
+                    .await
                     .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
             }
             DocumentType::Adr => {
@@ -73,13 +84,13 @@ impl ArchiveService {
                     .await
                     .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
                 adr.core_mut().archived = true;
-                adr.to_file(file_path).await
+                adr.to_file(file_path)
+                    .await
                     .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
             }
         }
         Ok(())
     }
-
 
     /// Create a new archive service for a workspace
     pub fn new<P: AsRef<Path>>(workspace_dir: P) -> Self {
@@ -94,37 +105,46 @@ impl ArchiveService {
 
     /// Archive a document and all its children using database lineage queries
     pub async fn archive_document(
-        &self, 
-        document_id: &str, 
-        db_service: &mut DatabaseService
+        &self,
+        document_id: &str,
+        db_service: &mut DatabaseService,
     ) -> Result<ArchiveResult> {
         // Find the document in the database
-        let doc = db_service.find_by_id(document_id)?.ok_or_else(|| {
-            MetisError::DocumentNotFound {
-                id: document_id.to_string(),
+        let doc =
+            db_service
+                .find_by_id(document_id)?
+                .ok_or_else(|| MetisError::DocumentNotFound {
+                    id: document_id.to_string(),
+                })?;
+
+        let doc_type = DocumentType::from_str(&doc.document_type).map_err(|e| {
+            MetisError::ValidationFailed {
+                message: format!("Invalid document type: {}", e),
             }
         })?;
-
-        let doc_type = DocumentType::from_str(&doc.document_type)
-            .map_err(|e| MetisError::ValidationFailed { message: format!("Invalid document type: {}", e) })?;
         let mut archived_documents = Vec::new();
 
         match doc_type {
             DocumentType::Vision | DocumentType::Task | DocumentType::Adr => {
                 // These document types don't have children, just archive the file
-                let archived_doc = self.archive_single_file(&PathBuf::from(&doc.filepath), doc_type).await?;
+                let archived_doc = self
+                    .archive_single_file(&PathBuf::from(&doc.filepath), doc_type)
+                    .await?;
                 archived_documents.push(archived_doc);
             }
 
             DocumentType::Strategy => {
                 // Use database query to find all documents in strategy hierarchy
                 let hierarchy_docs = db_service.find_strategy_hierarchy(document_id)?;
-                
+
                 // Mark all documents as archived first
                 for db_doc in &hierarchy_docs {
                     let path = PathBuf::from(&db_doc.filepath);
-                    let dt = DocumentType::from_str(&db_doc.document_type)
-                        .map_err(|e| MetisError::ValidationFailed { message: format!("Invalid document type: {}", e) })?;
+                    let dt = DocumentType::from_str(&db_doc.document_type).map_err(|e| {
+                        MetisError::ValidationFailed {
+                            message: format!("Invalid document type: {}", e),
+                        }
+                    })?;
                     self.mark_as_archived_helper(&path, dt).await?;
                 }
 
@@ -138,12 +158,15 @@ impl ArchiveService {
             DocumentType::Initiative => {
                 // Use database query to find all documents in initiative hierarchy
                 let hierarchy_docs = db_service.find_initiative_hierarchy(document_id)?;
-                
+
                 // Mark all documents as archived first
                 for db_doc in &hierarchy_docs {
                     let path = PathBuf::from(&db_doc.filepath);
-                    let dt = DocumentType::from_str(&db_doc.document_type)
-                        .map_err(|e| MetisError::ValidationFailed { message: format!("Invalid document type: {}", e) })?;
+                    let dt = DocumentType::from_str(&db_doc.document_type).map_err(|e| {
+                        MetisError::ValidationFailed {
+                            message: format!("Invalid document type: {}", e),
+                        }
+                    })?;
                     self.mark_as_archived_helper(&path, dt).await?;
                 }
 
@@ -160,8 +183,6 @@ impl ArchiveService {
             archived_documents,
         })
     }
-
-
 
     /// Archive a single file
     async fn archive_single_file(
@@ -257,7 +278,6 @@ impl ArchiveService {
         })
     }
 
-
     /// Merge directory contents by moving files/subdirs from source to target
     /// Handles conflicts by overwriting (source takes precedence)
     async fn merge_directory_contents(&self, source_dir: &Path, target_dir: &Path) -> Result<()> {
@@ -296,8 +316,6 @@ impl ArchiveService {
         }
         Ok(())
     }
-
-
 
     /// Get document ID from a file
     async fn get_document_id(&self, file_path: &Path, doc_type: DocumentType) -> Result<String> {
@@ -447,26 +465,35 @@ impl ArchiveService {
             }
         })?;
 
-        let doc_type = DocumentType::from_str(&doc.document_type)
-            .map_err(|e| MetisError::ValidationFailed { message: format!("Invalid document type: {}", e) })?;
+        let doc_type = DocumentType::from_str(&doc.document_type).map_err(|e| {
+            MetisError::ValidationFailed {
+                message: format!("Invalid document type: {}", e),
+            }
+        })?;
         let mut archived_documents = Vec::new();
 
         match doc_type {
             DocumentType::Vision | DocumentType::Task | DocumentType::Adr => {
                 // These document types don't have children, just archive the file
-                let archived_doc = self.archive_single_file(&PathBuf::from(&doc.filepath), doc_type).await?;
+                let archived_doc = self
+                    .archive_single_file(&PathBuf::from(&doc.filepath), doc_type)
+                    .await?;
                 archived_documents.push(archived_doc);
             }
 
             DocumentType::Strategy => {
                 // Use database query to find all documents in strategy hierarchy by short code
-                let hierarchy_docs = db_service.find_strategy_hierarchy_by_short_code(short_code)?;
-                
+                let hierarchy_docs =
+                    db_service.find_strategy_hierarchy_by_short_code(short_code)?;
+
                 // Mark all documents as archived first
                 for db_doc in &hierarchy_docs {
                     let path = PathBuf::from(&db_doc.filepath);
-                    let dt = DocumentType::from_str(&db_doc.document_type)
-                        .map_err(|e| MetisError::ValidationFailed { message: format!("Invalid document type: {}", e) })?;
+                    let dt = DocumentType::from_str(&db_doc.document_type).map_err(|e| {
+                        MetisError::ValidationFailed {
+                            message: format!("Invalid document type: {}", e),
+                        }
+                    })?;
                     self.mark_as_archived_helper(&path, dt).await?;
                 }
 
@@ -479,13 +506,17 @@ impl ArchiveService {
 
             DocumentType::Initiative => {
                 // Use database query to find all documents in initiative hierarchy by short code
-                let hierarchy_docs = db_service.find_initiative_hierarchy_by_short_code(short_code)?;
-                
+                let hierarchy_docs =
+                    db_service.find_initiative_hierarchy_by_short_code(short_code)?;
+
                 // Mark all documents as archived first
                 for db_doc in &hierarchy_docs {
                     let path = PathBuf::from(&db_doc.filepath);
-                    let dt = DocumentType::from_str(&db_doc.document_type)
-                        .map_err(|e| MetisError::ValidationFailed { message: format!("Invalid document type: {}", e) })?;
+                    let dt = DocumentType::from_str(&db_doc.document_type).map_err(|e| {
+                        MetisError::ValidationFailed {
+                            message: format!("Invalid document type: {}", e),
+                        }
+                    })?;
                     self.mark_as_archived_helper(&path, dt).await?;
                 }
 
@@ -514,7 +545,7 @@ impl ArchiveService {
         let db = crate::dal::Database::new(&db_path.to_string_lossy())
             .map_err(|e| MetisError::FileSystem(format!("Database error: {}", e)))?;
         let mut db_service = DatabaseService::new(db.into_repository());
-        
+
         // Find document by short code
         if let Some(doc) = db_service.find_by_short_code(short_code)? {
             self.is_document_archived(&doc.id).await
@@ -530,7 +561,7 @@ mod tests {
     use crate::application::services::document::creation::DocumentCreationConfig;
     use crate::application::services::document::DocumentCreationService;
     use crate::Database;
-    use diesel::{Connection, sqlite::SqliteConnection};
+    use diesel::{sqlite::SqliteConnection, Connection};
     use tempfile::tempdir;
 
     #[tokio::test]
@@ -542,11 +573,12 @@ mod tests {
         // Create and initialize database with proper schema
         let db_path = workspace_dir.join("metis.db");
         let _db = crate::Database::new(&db_path.to_string_lossy()).unwrap();
-        
+
         // Set up project prefix in configuration
-        let mut config_repo = crate::dal::database::configuration_repository::ConfigurationRepository::new(
-            diesel::sqlite::SqliteConnection::establish(&db_path.to_string_lossy()).unwrap()
-        );
+        let mut config_repo =
+            crate::dal::database::configuration_repository::ConfigurationRepository::new(
+                diesel::sqlite::SqliteConnection::establish(&db_path.to_string_lossy()).unwrap(),
+            );
         config_repo.set_project_prefix("TEST").unwrap();
 
         // Create a vision document
@@ -565,13 +597,14 @@ mod tests {
         // Archive the vision
         let archive_service = ArchiveService::new(&workspace_dir);
         let db = Database::new(":memory:").unwrap();
-        let mut db_service = crate::application::services::DatabaseService::new(db.into_repository());
-        
+        let mut db_service =
+            crate::application::services::DatabaseService::new(db.into_repository());
+
         // Sync the document to the database first
         let mut sync_service = crate::application::services::SyncService::new(&mut db_service)
             .with_workspace_dir(&workspace_dir);
         sync_service.sync_directory(&workspace_dir).await.unwrap();
-        
+
         let archive_result = archive_service
             .archive_document(&creation_result.document_id.to_string(), &mut db_service)
             .await
@@ -595,11 +628,12 @@ mod tests {
         // Create and initialize database with proper schema
         let db_path = workspace_dir.join("metis.db");
         let _db = crate::Database::new(&db_path.to_string_lossy()).unwrap();
-        
+
         // Set up project prefix in configuration
-        let mut config_repo = crate::dal::database::configuration_repository::ConfigurationRepository::new(
-            SqliteConnection::establish(&db_path.to_string_lossy()).unwrap()
-        );
+        let mut config_repo =
+            crate::dal::database::configuration_repository::ConfigurationRepository::new(
+                SqliteConnection::establish(&db_path.to_string_lossy()).unwrap(),
+            );
         config_repo.set_project_prefix("TEST").unwrap();
 
         let creation_service = DocumentCreationService::new(&workspace_dir);
@@ -621,9 +655,13 @@ mod tests {
 
         // Sync the strategy to database so it can be found by the initiative creation
         let db = crate::Database::new(&db_path.to_string_lossy()).unwrap();
-        let mut db_service = crate::application::services::DatabaseService::new(db.repository().unwrap());
+        let mut db_service =
+            crate::application::services::DatabaseService::new(db.repository().unwrap());
         let mut sync_service = crate::application::services::SyncService::new(&mut db_service);
-        sync_service.import_from_file(&strategy_result.file_path).await.unwrap();
+        sync_service
+            .import_from_file(&strategy_result.file_path)
+            .await
+            .unwrap();
 
         // Create an initiative under the strategy
         let initiative_config = DocumentCreationConfig {
@@ -643,13 +681,14 @@ mod tests {
         // Archive the strategy (should archive the initiative too)
         let archive_service = ArchiveService::new(&workspace_dir);
         let db = Database::new(":memory:").unwrap();
-        let mut db_service = crate::application::services::DatabaseService::new(db.into_repository());
-        
+        let mut db_service =
+            crate::application::services::DatabaseService::new(db.into_repository());
+
         // Sync documents to the database first
         let mut sync_service = crate::application::services::SyncService::new(&mut db_service)
             .with_workspace_dir(&workspace_dir);
         sync_service.sync_directory(&workspace_dir).await.unwrap();
-        
+
         let archive_result = archive_service
             .archive_document(&strategy_result.document_id.to_string(), &mut db_service)
             .await
@@ -669,11 +708,12 @@ mod tests {
         // Create and initialize database with proper schema
         let db_path = workspace_dir.join("metis.db");
         let _db = crate::Database::new(&db_path.to_string_lossy()).unwrap();
-        
+
         // Set up project prefix in configuration
-        let mut config_repo = crate::dal::database::configuration_repository::ConfigurationRepository::new(
-            SqliteConnection::establish(&db_path.to_string_lossy()).unwrap()
-        );
+        let mut config_repo =
+            crate::dal::database::configuration_repository::ConfigurationRepository::new(
+                SqliteConnection::establish(&db_path.to_string_lossy()).unwrap(),
+            );
         config_repo.set_project_prefix("TEST").unwrap();
 
         let creation_service = DocumentCreationService::new(&workspace_dir);
@@ -691,13 +731,14 @@ mod tests {
         };
         let creation_result = creation_service.create_vision(config).await.unwrap();
         let db = Database::new(":memory:").unwrap();
-        let mut db_service = crate::application::services::DatabaseService::new(db.into_repository());
-        
+        let mut db_service =
+            crate::application::services::DatabaseService::new(db.into_repository());
+
         // Sync the document to the database first
         let mut sync_service = crate::application::services::SyncService::new(&mut db_service)
             .with_workspace_dir(&workspace_dir);
         sync_service.sync_directory(&workspace_dir).await.unwrap();
-        
+
         archive_service
             .archive_document(&creation_result.document_id.to_string(), &mut db_service)
             .await
@@ -718,11 +759,12 @@ mod tests {
         // Create and initialize database with proper schema
         let db_path = workspace_dir.join("metis.db");
         let _db = crate::Database::new(&db_path.to_string_lossy()).unwrap();
-        
+
         // Set up project prefix in configuration
-        let mut config_repo = crate::dal::database::configuration_repository::ConfigurationRepository::new(
-            SqliteConnection::establish(&db_path.to_string_lossy()).unwrap()
-        );
+        let mut config_repo =
+            crate::dal::database::configuration_repository::ConfigurationRepository::new(
+                SqliteConnection::establish(&db_path.to_string_lossy()).unwrap(),
+            );
         config_repo.set_project_prefix("TEST").unwrap();
 
         let creation_service = DocumentCreationService::new(&workspace_dir);
@@ -749,13 +791,14 @@ mod tests {
 
         // Archive the document
         let db = Database::new(":memory:").unwrap();
-        let mut db_service = crate::application::services::DatabaseService::new(db.into_repository());
-        
+        let mut db_service =
+            crate::application::services::DatabaseService::new(db.into_repository());
+
         // Sync the document to the database first
         let mut sync_service = crate::application::services::SyncService::new(&mut db_service)
             .with_workspace_dir(&workspace_dir);
         sync_service.sync_directory(&workspace_dir).await.unwrap();
-        
+
         archive_service
             .archive_document(&document_id, &mut db_service)
             .await

@@ -69,7 +69,7 @@ impl Message {
         if !self.auto_clear {
             return false;
         }
-        
+
         let age = self.created_at.elapsed();
         age >= self.message_type.duration()
     }
@@ -149,7 +149,9 @@ impl MessageState {
 
     /// Get the current message if it's not expired
     pub fn get_current_message(&self) -> Option<&Message> {
-        self.current_message.as_ref().filter(|msg| !msg.should_clear())
+        self.current_message
+            .as_ref()
+            .filter(|msg| !msg.should_clear())
     }
 
     /// Check if there is an active message
@@ -161,7 +163,6 @@ impl MessageState {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
 
     #[test]
     fn test_message_creation() {
@@ -188,14 +189,14 @@ mod tests {
     #[test]
     fn test_message_state_operations() {
         let mut state = MessageState::new();
-        
+
         // Initially no message
         assert!(!state.has_messages());
-        
+
         // Add error message
         state.add_error("Error 1".to_string());
         assert!(state.has_messages());
-        
+
         // Add success message (replaces error)
         state.add_success("Success 1".to_string());
         assert!(state.has_messages());
@@ -203,7 +204,7 @@ mod tests {
             assert_eq!(msg.message_type, MessageType::Success);
             assert_eq!(msg.content, "Success 1");
         }
-        
+
         // Clear message
         state.clear_message();
         assert!(!state.has_messages());

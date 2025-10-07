@@ -7,7 +7,9 @@ use tempfile::tempdir;
 
 /// Helper to extract short code from MCP response JSON
 fn extract_short_code(result: &rust_mcp_sdk::schema::CallToolResult) -> String {
-    if let Some(rust_mcp_sdk::schema::ContentBlock::TextContent(text_content)) = result.content.first() {
+    if let Some(rust_mcp_sdk::schema::ContentBlock::TextContent(text_content)) =
+        result.content.first()
+    {
         if let Ok(json) = serde_json::from_str::<Value>(&text_content.text) {
             if let Some(short_code) = json["short_code"].as_str() {
                 return short_code.to_string();
@@ -23,8 +25,10 @@ async fn get_vision_short_code(metis_path: &str) -> String {
         project_path: metis_path.to_string(),
     };
     let result = list_tool.call_tool().await.unwrap();
-    
-    if let Some(rust_mcp_sdk::schema::ContentBlock::TextContent(text_content)) = result.content.first() {
+
+    if let Some(rust_mcp_sdk::schema::ContentBlock::TextContent(text_content)) =
+        result.content.first()
+    {
         if let Ok(json) = serde_json::from_str::<Value>(&text_content.text) {
             if let Some(documents) = json["documents"].as_array() {
                 for doc in documents {
@@ -57,7 +61,12 @@ async fn test_initialize_and_create_documents() {
     let db_path = format!("{}/metis.db", metis_path);
     let db = Database::new(&db_path).unwrap();
     let mut config_repo = db.configuration_repository().unwrap();
-    config_repo.set("flight_levels", r#"{"strategies_enabled":true,"initiatives_enabled":true}"#).unwrap();
+    config_repo
+        .set(
+            "flight_levels",
+            r#"{"strategies_enabled":true,"initiatives_enabled":true}"#,
+        )
+        .unwrap();
 
     // 3. Get vision short code
     let vision_short_code = get_vision_short_code(&metis_path).await;
@@ -108,10 +117,12 @@ async fn test_initialize_and_create_documents() {
 
     let result = read_tool.call_tool().await;
     assert!(result.is_ok(), "Read document should succeed");
-    
+
     // Let's see what the strategy content looks like
     if let Ok(ref read_result) = result {
-        if let Some(rust_mcp_sdk::schema::ContentBlock::TextContent(text_content)) = read_result.content.first() {
+        if let Some(rust_mcp_sdk::schema::ContentBlock::TextContent(text_content)) =
+            read_result.content.first()
+        {
             if let Ok(json) = serde_json::from_str::<serde_json::Value>(&text_content.text) {
                 if let Some(content) = json["content"].as_str() {
                     println!("Strategy content:\n{}", content);
@@ -125,7 +136,9 @@ async fn test_initialize_and_create_documents() {
         project_path: metis_path.clone(),
         short_code: strategy_short_code.clone(),
         search: "{Describe the problem and why it matters - 1-2 paragraphs}".to_string(),
-        replace: "This strategy addresses the need for better short code interfaces in our MCP server.".to_string(),
+        replace:
+            "This strategy addresses the need for better short code interfaces in our MCP server."
+                .to_string(),
         replace_all: None,
     };
 
@@ -165,7 +178,12 @@ async fn test_archive_with_short_codes() {
     let db_path = format!("{}/metis.db", metis_path);
     let db = Database::new(&db_path).unwrap();
     let mut config_repo = db.configuration_repository().unwrap();
-    config_repo.set("flight_levels", r#"{"strategies_enabled":true,"initiatives_enabled":true}"#).unwrap();
+    config_repo
+        .set(
+            "flight_levels",
+            r#"{"strategies_enabled":true,"initiatives_enabled":true}"#,
+        )
+        .unwrap();
 
     let vision_short_code = get_vision_short_code(&metis_path).await;
 

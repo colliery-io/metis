@@ -47,12 +47,12 @@ pub fn draw_creation_dialog(f: &mut Frame, app: &App, area: Rect) {
     // Dialog title - dynamic based on current board
     let doc_type_name = match app.ui_state.current_board {
         BoardType::Strategy => "Strategy",
-        BoardType::Initiative => "Initiative", 
+        BoardType::Initiative => "Initiative",
         BoardType::Task => "Task",
         BoardType::Adr => "ADR",
         BoardType::Backlog => "Backlog Item",
     };
-    
+
     let title = Paragraph::new(format!("Create New {}", doc_type_name)).style(
         Style::default()
             .fg(Color::Cyan)
@@ -79,15 +79,20 @@ pub fn draw_creation_dialog(f: &mut Frame, app: &App, area: Rect) {
         .block(
             Block::default()
                 .borders(Borders::ALL)
-                .title(format!("{} Title ({}/30)", doc_type_name, input_value.len()))
+                .title(format!(
+                    "{} Title ({}/30)",
+                    doc_type_name,
+                    input_value.len()
+                ))
                 .style(Style::default().fg(Color::Cyan)),
         );
     f.render_widget(input_widget, dialog_chunks[2]);
 
     // Instructions
-    let instructions = Paragraph::new(
-        format!("Enter a title for your new {}.\nPress Enter to create or Escape to cancel.", doc_type_name.to_lowercase()),
-    )
+    let instructions = Paragraph::new(format!(
+        "Enter a title for your new {}.\nPress Enter to create or Escape to cancel.",
+        doc_type_name.to_lowercase()
+    ))
     .style(Style::default().fg(Color::Gray))
     .wrap(Wrap { trim: true });
     f.render_widget(instructions, dialog_chunks[4]);
@@ -154,7 +159,7 @@ pub fn draw_child_creation_dialog(f: &mut Frame, app: &App, area: Rect) {
     } else {
         "No parent selected".to_string()
     };
-    
+
     let parent_widget = Paragraph::new(parent_info)
         .style(Style::default().fg(Color::Yellow))
         .block(
@@ -184,7 +189,11 @@ pub fn draw_child_creation_dialog(f: &mut Frame, app: &App, area: Rect) {
         .block(
             Block::default()
                 .borders(Borders::ALL)
-                .title(format!("{} Title ({}/30)", child_doc_type, input_value.len()))
+                .title(format!(
+                    "{} Title ({}/30)",
+                    child_doc_type,
+                    input_value.len()
+                ))
                 .style(Style::default().fg(Color::Cyan)),
         );
     f.render_widget(input_widget, dialog_chunks[4]);
@@ -245,12 +254,15 @@ pub fn draw_adr_creation_dialog(f: &mut Frame, app: &App, area: Rect) {
 
     // Context info
     let context_info = if let Some(selected_item) = app.get_selected_item() {
-        format!("Context will be extracted from:\n{}: {}", 
-            selected_item.doc_type(), selected_item.title())
+        format!(
+            "Context will be extracted from:\n{}: {}",
+            selected_item.doc_type(),
+            selected_item.title()
+        )
     } else {
         "No context document selected.\nADR will be created without context.".to_string()
     };
-    
+
     let context_widget = Paragraph::new(context_info)
         .style(Style::default().fg(Color::Yellow))
         .block(

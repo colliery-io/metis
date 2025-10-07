@@ -1,5 +1,5 @@
-use std::path::PathBuf;
 use metis_core::domain::configuration::FlightLevelConfig;
+use std::path::PathBuf;
 
 /// Core application state that persists across the application lifecycle
 #[derive(Debug, Clone)]

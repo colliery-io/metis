@@ -33,17 +33,30 @@ impl EditDocumentTool {
     /// Resolve short code to file path
     fn resolve_short_code_to_path(&self, metis_dir: &Path) -> Result<String, CallToolError> {
         let db_path = metis_dir.join("metis.db");
-        let db = Database::new(db_path.to_str().unwrap())
-            .map_err(|e| CallToolError::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Database error: {}", e))))?;
-        
-        let mut repo = db.repository()
-            .map_err(|e| CallToolError::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Repository error: {}", e))))?;
-        
+        let db = Database::new(db_path.to_str().unwrap()).map_err(|e| {
+            CallToolError::new(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!("Database error: {}", e),
+            ))
+        })?;
+
+        let mut repo = db.repository().map_err(|e| {
+            CallToolError::new(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!("Repository error: {}", e),
+            ))
+        })?;
+
         // Use the core DAL method
         repo.resolve_short_code_to_filepath(&self.short_code)
-            .map_err(|e| CallToolError::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Resolution error: {}", e))))
+            .map_err(|e| {
+                CallToolError::new(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    format!("Resolution error: {}", e),
+                ))
+            })
     }
-    
+
     pub async fn call_tool(&self) -> std::result::Result<CallToolResult, CallToolError> {
         let metis_dir = Path::new(&self.project_path);
 
@@ -117,7 +130,7 @@ impl EditDocumentTool {
 
     fn perform_edit(&self, content: &str) -> Result<(String, usize), CallToolError> {
         let replace_all = self.replace_all.unwrap_or(false);
-        
+
         if replace_all {
             // Replace all occurrences
             let replacements = content.matches(&self.search).count();

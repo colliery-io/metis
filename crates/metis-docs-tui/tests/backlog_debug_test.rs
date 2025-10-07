@@ -44,16 +44,19 @@ Test backlog item detection
     // Write the task file to root metis directory first to test recognition
     let task_path = helper.metis_dir().join("debug-task.md");
     tokio::fs::write(&task_path, task_content).await?;
-    
+
     println!("Created task file at: {:?}", task_path);
     println!("Task content: {}", task_content);
 
     // Create app and load documents
     let mut app = helper.create_app();
-    
+
     // Check if document service is available
-    println!("Document service available: {}", app.document_service.is_some());
-    
+    println!(
+        "Document service available: {}",
+        app.document_service.is_some()
+    );
+
     // Sync database first (this is the missing step!)
     if let Some(sync_service) = &app.sync_service {
         match sync_service.sync_database().await {
@@ -61,8 +64,8 @@ Test backlog item detection
             Err(e) => println!("Error syncing database: {:?}", e),
         }
     }
-    
-    // Then load documents 
+
+    // Then load documents
     match app.load_documents().await {
         Ok(_) => println!("Documents loaded successfully"),
         Err(e) => println!("Error loading documents: {:?}", e),
@@ -70,23 +73,47 @@ Test backlog item detection
 
     // Check all boards for content
     println!("\n=== Board Contents ===");
-    
+
     // Check strategy board
-    println!("Strategy board columns: {}", app.ui_state.strategy_board.columns.len());
+    println!(
+        "Strategy board columns: {}",
+        app.ui_state.strategy_board.columns.len()
+    );
     for (i, column) in app.ui_state.strategy_board.columns.iter().enumerate() {
-        println!("  Column {}: '{}' has {} items", i, column.title, column.items.len());
+        println!(
+            "  Column {}: '{}' has {} items",
+            i,
+            column.title,
+            column.items.len()
+        );
     }
-    
+
     // Check task board
-    println!("Task board columns: {}", app.ui_state.task_board.columns.len());
+    println!(
+        "Task board columns: {}",
+        app.ui_state.task_board.columns.len()
+    );
     for (i, column) in app.ui_state.task_board.columns.iter().enumerate() {
-        println!("  Column {}: '{}' has {} items", i, column.title, column.items.len());
+        println!(
+            "  Column {}: '{}' has {} items",
+            i,
+            column.title,
+            column.items.len()
+        );
     }
-    
+
     // Check backlog board
-    println!("Backlog board columns: {}", app.ui_state.backlog_board.columns.len());
+    println!(
+        "Backlog board columns: {}",
+        app.ui_state.backlog_board.columns.len()
+    );
     for (i, column) in app.ui_state.backlog_board.columns.iter().enumerate() {
-        println!("  Column {}: '{}' has {} items", i, column.title, column.items.len());
+        println!(
+            "  Column {}: '{}' has {} items",
+            i,
+            column.title,
+            column.items.len()
+        );
         for (j, item) in column.items.iter().enumerate() {
             println!("    Item {}: '{}'", j, item.title());
         }
@@ -98,7 +125,10 @@ Test backlog item detection
             Ok(docs) => {
                 println!("\n=== Documents found by service ===");
                 for doc in docs {
-                    println!("Document: '{}' type: {:?} path: {}", doc.title, doc.document_type, doc.filepath);
+                    println!(
+                        "Document: '{}' type: {:?} path: {}",
+                        doc.title, doc.document_type, doc.filepath
+                    );
                 }
             }
             Err(e) => println!("Error loading from database: {:?}", e),

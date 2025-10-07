@@ -1,5 +1,5 @@
 use anyhow::Result;
-use metis_docs_tui::models::{BoardType, AppState};
+use metis_docs_tui::models::{AppState, BoardType};
 use tui_input::backend::crossterm::EventHandler;
 
 mod common;
@@ -45,10 +45,13 @@ async fn test_create_backlog_item_via_tui() -> Result<()> {
 
     // Verify the backlog item was created and is visible
     let backlog_board = &app.ui_state.backlog_board;
-    
+
     // Count total items in all columns
     let total_items: usize = backlog_board.columns.iter().map(|c| c.items.len()).sum();
-    assert_eq!(total_items, 1, "Should have exactly 1 item in backlog board");
+    assert_eq!(
+        total_items, 1,
+        "Should have exactly 1 item in backlog board"
+    );
 
     // Find the created item
     let mut found_item = false;
@@ -56,12 +59,19 @@ async fn test_create_backlog_item_via_tui() -> Result<()> {
         for item in &column.items {
             if item.title() == "Fix login bug" {
                 found_item = true;
-                println!("Found backlog item '{}' in column '{}'", item.title(), column.title);
+                println!(
+                    "Found backlog item '{}' in column '{}'",
+                    item.title(),
+                    column.title
+                );
                 break;
             }
         }
     }
-    assert!(found_item, "Should find the created backlog item in one of the columns");
+    assert!(
+        found_item,
+        "Should find the created backlog item in one of the columns"
+    );
 
     Ok(())
 }
@@ -111,7 +121,10 @@ async fn test_multiple_backlog_items() -> Result<()> {
     // Verify both items exist
     let backlog_board = &app.ui_state.backlog_board;
     let total_items: usize = backlog_board.columns.iter().map(|c| c.items.len()).sum();
-    assert_eq!(total_items, 2, "Should have exactly 2 items in backlog board");
+    assert_eq!(
+        total_items, 2,
+        "Should have exactly 2 items in backlog board"
+    );
 
     Ok(())
 }
@@ -127,15 +140,28 @@ async fn test_backlog_board_columns_exist() -> Result<()> {
 
     // Verify we have 4 columns with correct names
     assert_eq!(backlog_board.columns.len(), 4);
-    
+
     let expected_columns = vec!["backlog", "bugs", "features", "tech-debt"];
-    let actual_columns: Vec<&str> = backlog_board.columns.iter().map(|c| c.title.as_str()).collect();
-    
-    assert_eq!(actual_columns, expected_columns, "Backlog board should have correct column structure");
+    let actual_columns: Vec<&str> = backlog_board
+        .columns
+        .iter()
+        .map(|c| c.title.as_str())
+        .collect();
+
+    assert_eq!(
+        actual_columns, expected_columns,
+        "Backlog board should have correct column structure"
+    );
 
     // All columns should start empty
     for (i, column) in backlog_board.columns.iter().enumerate() {
-        assert_eq!(column.items.len(), 0, "Column {} '{}' should start empty", i, column.title);
+        assert_eq!(
+            column.items.len(),
+            0,
+            "Column {} '{}' should start empty",
+            i,
+            column.title
+        );
     }
 
     Ok(())

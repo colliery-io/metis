@@ -1,6 +1,6 @@
+use crate::dal::database::configuration_repository::ConfigurationRepository;
 use crate::dal::database::models::*;
 use crate::dal::database::schema;
-use crate::dal::database::configuration_repository::ConfigurationRepository;
 use crate::{MetisError, Result};
 use diesel::prelude::*;
 use diesel::sqlite::SqliteConnection;
@@ -204,7 +204,7 @@ impl DocumentRepository {
         documents
             .filter(
                 id.eq(strategy_document_id)
-                    .or(strategy_id.eq(strategy_document_id))
+                    .or(strategy_id.eq(strategy_document_id)),
             )
             .order((document_type.asc(), updated_at.desc()))
             .load(&mut self.connection)
@@ -212,13 +212,17 @@ impl DocumentRepository {
     }
 
     /// Get all documents in a strategy hierarchy by short code (strategy + its initiatives + their tasks)
-    pub fn find_strategy_hierarchy_by_short_code(&mut self, strategy_short_code: &str) -> Result<Vec<Document>> {
+    pub fn find_strategy_hierarchy_by_short_code(
+        &mut self,
+        strategy_short_code: &str,
+    ) -> Result<Vec<Document>> {
         use schema::documents::dsl::*;
 
         documents
             .filter(
-                short_code.eq(strategy_short_code)
-                    .or(strategy_id.eq(strategy_short_code))
+                short_code
+                    .eq(strategy_short_code)
+                    .or(strategy_id.eq(strategy_short_code)),
             )
             .order((document_type.asc(), updated_at.desc()))
             .load(&mut self.connection)
@@ -226,13 +230,16 @@ impl DocumentRepository {
     }
 
     /// Get all documents in an initiative hierarchy (initiative + its tasks)
-    pub fn find_initiative_hierarchy(&mut self, initiative_document_id: &str) -> Result<Vec<Document>> {
+    pub fn find_initiative_hierarchy(
+        &mut self,
+        initiative_document_id: &str,
+    ) -> Result<Vec<Document>> {
         use schema::documents::dsl::*;
 
         documents
             .filter(
                 id.eq(initiative_document_id)
-                    .or(initiative_id.eq(initiative_document_id))
+                    .or(initiative_id.eq(initiative_document_id)),
             )
             .order((document_type.asc(), updated_at.desc()))
             .load(&mut self.connection)
@@ -240,13 +247,17 @@ impl DocumentRepository {
     }
 
     /// Get all documents in an initiative hierarchy by short code (initiative + its tasks)
-    pub fn find_initiative_hierarchy_by_short_code(&mut self, initiative_short_code: &str) -> Result<Vec<Document>> {
+    pub fn find_initiative_hierarchy_by_short_code(
+        &mut self,
+        initiative_short_code: &str,
+    ) -> Result<Vec<Document>> {
         use schema::documents::dsl::*;
-        
+
         documents
             .filter(
-                short_code.eq(initiative_short_code)
-                    .or(initiative_id.eq(initiative_short_code))
+                short_code
+                    .eq(initiative_short_code)
+                    .or(initiative_id.eq(initiative_short_code)),
             )
             .order((document_type.asc(), updated_at.desc()))
             .load(&mut self.connection)
@@ -255,11 +266,13 @@ impl DocumentRepository {
 
     /// Generate a short code for a document type using the database configuration
     pub fn generate_short_code(&mut self, doc_type: &str, db_path: &str) -> Result<String> {
-        let mut config_repo = ConfigurationRepository::new(
-            SqliteConnection::establish(db_path)
-                .map_err(|e| MetisError::ConfigurationError(crate::domain::configuration::ConfigurationError::InvalidValue(e.to_string())))?
-        );
-        
+        let mut config_repo =
+            ConfigurationRepository::new(SqliteConnection::establish(db_path).map_err(|e| {
+                MetisError::ConfigurationError(
+                    crate::domain::configuration::ConfigurationError::InvalidValue(e.to_string()),
+                )
+            })?);
+
         config_repo.generate_short_code(doc_type)
     }
 

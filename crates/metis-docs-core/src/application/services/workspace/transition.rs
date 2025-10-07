@@ -35,11 +35,19 @@ impl PhaseTransitionService {
         document_id: &str,
         target_phase: Phase,
     ) -> Result<TransitionResult> {
-        // Find the document
-        let discovery_result = self
+        // Find the document - try short code first, then document ID
+        let discovery_result = match self
             .discovery_service
-            .find_document_by_id(document_id)
-            .await?;
+            .find_document_by_short_code(document_id)
+            .await
+        {
+            Ok(result) => result,
+            Err(_) => {
+                self.discovery_service
+                    .find_document_by_id(document_id)
+                    .await?
+            }
+        };
 
         // Load the document and get current phase
         let current_phase = self
@@ -68,11 +76,19 @@ impl PhaseTransitionService {
 
     /// Transition a document to the next phase in its natural sequence
     pub async fn transition_to_next_phase(&self, document_id: &str) -> Result<TransitionResult> {
-        // Find the document
-        let discovery_result = self
+        // Find the document - try short code first, then document ID
+        let discovery_result = match self
             .discovery_service
-            .find_document_by_id(document_id)
-            .await?;
+            .find_document_by_short_code(document_id)
+            .await
+        {
+            Ok(result) => result,
+            Err(_) => {
+                self.discovery_service
+                    .find_document_by_id(document_id)
+                    .await?
+            }
+        };
 
         // Load the document and get current phase
         let current_phase = self
@@ -401,7 +417,7 @@ mod tests {
     use crate::application::services::document::DocumentCreationService;
     use crate::dal::Database;
     use diesel::Connection;
-    use std::fs;
+    
     use std::path::PathBuf;
     use tempfile::tempdir;
 
@@ -413,9 +429,10 @@ mod tests {
         // Initialize database with configuration
         let db_path = workspace_dir.join("metis.db");
         let _db = Database::new(&db_path.to_string_lossy()).unwrap();
-        let mut config_repo = crate::dal::database::configuration_repository::ConfigurationRepository::new(
-            diesel::sqlite::SqliteConnection::establish(&db_path.to_string_lossy()).unwrap()
-        );
+        let mut config_repo =
+            crate::dal::database::configuration_repository::ConfigurationRepository::new(
+                diesel::sqlite::SqliteConnection::establish(&db_path.to_string_lossy()).unwrap(),
+            );
         config_repo.set_project_prefix("TEST").unwrap();
 
         (temp_dir, workspace_dir)

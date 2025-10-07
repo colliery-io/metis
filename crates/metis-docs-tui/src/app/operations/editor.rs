@@ -11,18 +11,10 @@ impl App {
         // Initialize text editor with current document content
         if let Some(selected_item) = self.get_viewed_ticket() {
             let content = match &selected_item.document {
-                DocumentObject::Strategy(strategy) => {
-                    strategy.content().full_content()
-                }
-                DocumentObject::Initiative(initiative) => {
-                    initiative.content().full_content()
-                }
-                DocumentObject::Task(task) => {
-                    task.content().full_content()
-                }
-                DocumentObject::Adr(adr) => {
-                    adr.content().full_content()
-                }
+                DocumentObject::Strategy(strategy) => strategy.content().full_content(),
+                DocumentObject::Initiative(initiative) => initiative.content().full_content(),
+                DocumentObject::Task(task) => task.content().full_content(),
+                DocumentObject::Adr(adr) => adr.content().full_content(),
             };
 
             // Create and initialize textarea

@@ -30,7 +30,7 @@ impl McpServerProcess {
     /// Build the MCP server binary
     fn build_server() -> Result<()> {
         let output = Command::new("cargo")
-            .args(&["build", "--bin", "metis-mcp", "--release"])
+            .args(["build", "--bin", "metis-mcp", "--release"])
             .current_dir("../../") // Go up to metis root
             .output()?;
 
@@ -69,7 +69,7 @@ impl McpServerProcess {
         let mut response_line = String::new();
         reader.read_line(&mut response_line)?;
 
-        let response: Value = serde_json::from_str(&response_line.trim())?;
+        let response: Value = serde_json::from_str(response_line.trim())?;
         Ok(response)
     }
 

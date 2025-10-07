@@ -5,8 +5,8 @@ use ratatui::{
     Frame,
 };
 
-use crate::app::App;
 use crate::app::state::BacklogCategory;
+use crate::app::App;
 
 pub fn draw_backlog_category_selection_dialog(f: &mut Frame, app: &App, area: Rect) {
     // Create a centered dialog
@@ -61,9 +61,12 @@ pub fn draw_backlog_category_selection_dialog(f: &mut Frame, app: &App, area: Re
 
     for (i, category) in categories.iter().enumerate() {
         let is_selected = i == app.ui_state.backlog_category_selection;
-        
+
         let style = if is_selected {
-            Style::default().fg(Color::Black).bg(Color::Cyan).add_modifier(Modifier::BOLD)
+            Style::default()
+                .fg(Color::Black)
+                .bg(Color::Cyan)
+                .add_modifier(Modifier::BOLD)
         } else {
             Style::default().fg(Color::White)
         };
@@ -76,16 +79,13 @@ pub fn draw_backlog_category_selection_dialog(f: &mut Frame, app: &App, area: Re
         };
 
         // Category name only
-        let name_paragraph = Paragraph::new(format!("  {}", category.display_name()))
-            .style(style);
+        let name_paragraph = Paragraph::new(format!("  {}", category.display_name())).style(style);
         f.render_widget(name_paragraph, option_area);
     }
 
     // Instructions
-    let instructions = Paragraph::new(
-        "↑↓: Navigate | Enter: Select | Esc: Cancel",
-    )
-    .style(Style::default().fg(Color::Gray))
-    .wrap(Wrap { trim: true });
+    let instructions = Paragraph::new("↑↓: Navigate | Enter: Select | Esc: Cancel")
+        .style(Style::default().fg(Color::Gray))
+        .wrap(Wrap { trim: true });
     f.render_widget(instructions, dialog_chunks[4]);
 }

@@ -1,5 +1,5 @@
 use anyhow::Result;
-use metis_docs_tui::models::{BoardType, AppState};
+use metis_docs_tui::models::{AppState, BoardType};
 use tui_input::backend::crossterm::EventHandler;
 
 mod common;
@@ -15,7 +15,10 @@ async fn test_debug_backlog_creation() -> Result<()> {
 
     // Jump to backlog board
     app.jump_to_backlog_board();
-    println!("After jump - Current board: {:?}", app.ui_state.current_board);
+    println!(
+        "After jump - Current board: {:?}",
+        app.ui_state.current_board
+    );
     assert_eq!(app.ui_state.current_board, BoardType::Backlog);
 
     // Check initial backlog board state
@@ -25,7 +28,10 @@ async fn test_debug_backlog_creation() -> Result<()> {
 
     // Start document creation
     app.start_document_creation();
-    println!("App state after start_document_creation: {:?}", app.app_state());
+    println!(
+        "App state after start_document_creation: {:?}",
+        app.app_state()
+    );
     assert_eq!(*app.app_state(), AppState::CreatingDocument);
 
     // Simulate user typing a title
@@ -56,14 +62,17 @@ async fn test_debug_backlog_creation() -> Result<()> {
     println!("App state after create_new_document: {:?}", app.app_state());
 
     // Check if document service exists
-    println!("Document service exists: {}", app.document_service.is_some());
+    println!(
+        "Document service exists: {}",
+        app.document_service.is_some()
+    );
 
     // Check what files were created
     println!("=== File System Check ===");
     let metis_dir = &helper.metis_dir();
     if let Ok(entries) = std::fs::read_dir(metis_dir) {
         for entry in entries.flatten() {
-            if entry.path().is_file() && entry.path().extension().map_or(false, |ext| ext == "md") {
+            if entry.path().is_file() && entry.path().extension().is_some_and(|ext| ext == "md") {
                 println!("Found .md file: {:?}", entry.path());
             }
         }
@@ -88,7 +97,9 @@ async fn test_debug_backlog_creation() -> Result<()> {
 
     // Debug filesystem scanning
     println!("=== Filesystem Scanning Debug ===");
-    match metis_core::application::services::FilesystemService::find_markdown_files(&helper.metis_dir()) {
+    match metis_core::application::services::FilesystemService::find_markdown_files(
+        helper.metis_dir(),
+    ) {
         Ok(files) => {
             println!("FilesystemService found {} files:", files.len());
             for file in &files {
@@ -105,7 +116,7 @@ async fn test_debug_backlog_creation() -> Result<()> {
     let db_path = helper.metis_dir().join("metis.db");
     let db = metis_core::dal::Database::new(&db_path.to_string_lossy()).unwrap();
     let app_core = metis_core::application::Application::new(db);
-    
+
     match app_core.sync_directory(&helper.metis_dir()).await {
         Ok(results) => {
             println!("Sync completed with {} results:", results.len());
@@ -123,7 +134,10 @@ async fn test_debug_backlog_creation() -> Result<()> {
             Ok(docs) => {
                 println!("Documents in database: {}", docs.len());
                 for doc in docs {
-                    println!("  - '{}' type: {:?} path: {}", doc.title, doc.document_type, doc.filepath);
+                    println!(
+                        "  - '{}' type: {:?} path: {}",
+                        doc.title, doc.document_type, doc.filepath
+                    );
                 }
             }
             Err(e) => println!("Error loading from database: {:?}", e),
@@ -135,9 +149,14 @@ async fn test_debug_backlog_creation() -> Result<()> {
     let backlog_board = &app.ui_state.backlog_board;
     let final_total: usize = backlog_board.columns.iter().map(|c| c.items.len()).sum();
     println!("Final backlog items: {}", final_total);
-    
+
     for (i, column) in backlog_board.columns.iter().enumerate() {
-        println!("Column {}: '{}' has {} items", i, column.title, column.items.len());
+        println!(
+            "Column {}: '{}' has {} items",
+            i,
+            column.title,
+            column.items.len()
+        );
         for (j, item) in column.items.iter().enumerate() {
             println!("  Item {}: '{}'", j, item.title());
         }

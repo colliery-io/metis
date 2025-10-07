@@ -57,7 +57,7 @@ async fn handle_normal_state_input(app: &mut App, key: crossterm::event::KeyEven
     if !matches!(key.code, KeyCode::Char(' ')) {
         app.clear_messages();
     }
-    
+
     match key.code {
         KeyCode::Char('q') => return Ok(true), // Signal to quit
         KeyCode::Tab => {
@@ -141,10 +141,8 @@ async fn handle_normal_state_input(app: &mut App, key: crossterm::event::KeyEven
         KeyCode::Char('r') | KeyCode::Char('R') => {
             if app.is_ready() && app.get_selected_item().is_some() {
                 if let Err(e) = app.archive_selected_document().await {
-                    app.error_handler.handle_with_context(
-                        AppError::from(e),
-                        "Archive operation",
-                    );
+                    app.error_handler
+                        .handle_with_context(AppError::from(e), "Archive operation");
                 }
             }
         }
@@ -152,10 +150,8 @@ async fn handle_normal_state_input(app: &mut App, key: crossterm::event::KeyEven
             if app.is_ready() {
                 if let Err(e) = app.sync_and_reload().await {
                     app.add_error_message(format!("Sync failed: {}", e));
-                    app.error_handler.handle_with_context(
-                        AppError::from(e),
-                        "Sync operation",
-                    );
+                    app.error_handler
+                        .handle_with_context(AppError::from(e), "Sync operation");
                 }
             }
         }
@@ -170,7 +166,11 @@ async fn handle_normal_state_input(app: &mut App, key: crossterm::event::KeyEven
 }
 
 /// Handle keyboard input for document creation states
-async fn handle_creation_state_input(app: &mut App, key: crossterm::event::KeyEvent, state: AppState) -> Result<()> {
+async fn handle_creation_state_input(
+    app: &mut App,
+    key: crossterm::event::KeyEvent,
+    state: AppState,
+) -> Result<()> {
     match key.code {
         KeyCode::Esc => {
             app.cancel_document_creation();
@@ -182,15 +182,16 @@ async fn handle_creation_state_input(app: &mut App, key: crossterm::event::KeyEv
                 AppState::CreatingAdr => app.create_adr_from_ticket().await,
                 _ => return Ok(()),
             };
-            
+
             if let Err(e) = result {
                 let context = match state {
                     AppState::CreatingDocument => "Document creation",
-                    AppState::CreatingChildDocument => "Child document creation", 
+                    AppState::CreatingChildDocument => "Child document creation",
                     AppState::CreatingAdr => "ADR creation",
                     _ => "Creation",
                 };
-                app.error_handler.handle_with_context(AppError::from(e), context);
+                app.error_handler
+                    .handle_with_context(AppError::from(e), context);
             }
         }
         _ => {
@@ -207,18 +208,14 @@ async fn handle_confirmation_input(app: &mut App, key: crossterm::event::KeyEven
             match app.ui_state.confirmation_type {
                 Some(ConfirmationType::Delete) => {
                     if let Err(e) = app.delete_selected_document().await {
-                        app.error_handler.handle_with_context(
-                            AppError::from(e),
-                            "Document deletion",
-                        );
+                        app.error_handler
+                            .handle_with_context(AppError::from(e), "Document deletion");
                     }
                 }
                 Some(ConfirmationType::Transition) => {
                     if let Err(e) = app.transition_selected_document().await {
-                        app.error_handler.handle_with_context(
-                            AppError::from(e),
-                            "Document transition",
-                        );
+                        app.error_handler
+                            .handle_with_context(AppError::from(e), "Document transition");
                     }
                 }
                 None => {}
@@ -253,14 +250,18 @@ fn handle_backlog_category_input(app: &mut App, key: crossterm::event::KeyEvent)
 }
 
 /// Handle keyboard input for content editing
-async fn handle_content_editing_input(app: &mut App, key: crossterm::event::KeyEvent) -> Result<()> {
+async fn handle_content_editing_input(
+    app: &mut App,
+    key: crossterm::event::KeyEvent,
+) -> Result<()> {
     match key.code {
         KeyCode::Esc => {
             app.cancel_content_editing();
         }
         KeyCode::Char('s') if key.modifiers.contains(KeyModifiers::CONTROL) => {
             if let Err(e) = app.save_content_edit().await {
-                app.error_handler.handle_with_context(AppError::from(e), "Document save");
+                app.error_handler
+                    .handle_with_context(AppError::from(e), "Document save");
             }
             app.cancel_content_editing();
         }
@@ -297,7 +298,7 @@ async fn run_app<B: ratatui::backend::Backend>(
         if crossterm::event::poll(std::time::Duration::from_millis(50))? {
             if let Event::Key(key) = event::read()? {
                 let current_state = app.app_state();
-                
+
                 match current_state {
                     AppState::Normal => {
                         if handle_normal_state_input(app, key).await? {
@@ -308,7 +309,8 @@ async fn run_app<B: ratatui::backend::Backend>(
                         handle_creation_state_input(app, key, AppState::CreatingDocument).await?;
                     }
                     AppState::CreatingChildDocument => {
-                        handle_creation_state_input(app, key, AppState::CreatingChildDocument).await?;
+                        handle_creation_state_input(app, key, AppState::CreatingChildDocument)
+                            .await?;
                     }
                     AppState::CreatingAdr => {
                         handle_creation_state_input(app, key, AppState::CreatingAdr).await?;

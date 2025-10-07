@@ -110,7 +110,7 @@ mod tests {
     #[tokio::test]
     async fn test_sync_command_no_workspace() {
         let temp_dir = tempdir().unwrap();
-        let original_dir = std::env::current_dir().unwrap();
+        let original_dir = std::env::current_dir().ok();
 
         // Change to temp directory without workspace
         std::env::set_current_dir(temp_dir.path()).unwrap();
@@ -125,13 +125,15 @@ mod tests {
             .contains("Not in a Metis workspace"));
 
         // Restore original directory
-        std::env::set_current_dir(original_dir).unwrap();
+        if let Some(original) = original_dir {
+            let _ = std::env::set_current_dir(&original);
+        }
     }
 
     #[tokio::test]
     async fn test_sync_command_with_workspace() {
         let temp_dir = tempdir().unwrap();
-        let original_dir = std::env::current_dir().unwrap();
+        let original_dir = std::env::current_dir().ok();
 
         // Change to temp directory
         std::env::set_current_dir(temp_dir.path()).unwrap();
@@ -163,6 +165,8 @@ mod tests {
         assert!(test_strategy.exists());
 
         // Restore original directory
-        std::env::set_current_dir(original_dir).unwrap();
+        if let Some(original) = original_dir {
+            let _ = std::env::set_current_dir(&original);
+        }
     }
 }

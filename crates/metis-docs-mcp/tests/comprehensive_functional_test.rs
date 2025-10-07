@@ -34,8 +34,10 @@ async fn get_vision_short_code(metis_path: &str) -> String {
         project_path: metis_path.to_string(),
     };
     let result = list_tool.call_tool().await.unwrap();
-    
-    if let Some(rust_mcp_sdk::schema::ContentBlock::TextContent(text_content)) = result.content.first() {
+
+    if let Some(rust_mcp_sdk::schema::ContentBlock::TextContent(text_content)) =
+        result.content.first()
+    {
         if let Ok(json) = serde_json::from_str::<serde_json::Value>(&text_content.text) {
             if let Some(documents) = json["documents"].as_array() {
                 for doc in documents {
@@ -53,7 +55,9 @@ async fn get_vision_short_code(metis_path: &str) -> String {
 
 /// Helper to extract short code from MCP response JSON
 fn extract_short_code(result: &rust_mcp_sdk::schema::CallToolResult) -> String {
-    if let Some(rust_mcp_sdk::schema::ContentBlock::TextContent(text_content)) = result.content.first() {
+    if let Some(rust_mcp_sdk::schema::ContentBlock::TextContent(text_content)) =
+        result.content.first()
+    {
         if let Ok(json) = serde_json::from_str::<serde_json::Value>(&text_content.text) {
             if let Some(short_code) = json["short_code"].as_str() {
                 return short_code.to_string();
@@ -66,8 +70,9 @@ fn extract_short_code(result: &rust_mcp_sdk::schema::CallToolResult) -> String {
 #[tokio::test]
 async fn test_full_configuration_workflow() {
     println!("=== Testing Full Configuration Complete Workflow ===");
-    
-    let (_temp_dir, _project_path, metis_path) = setup_project_with_config(FlightLevelConfig::full()).await;
+
+    let (_temp_dir, _project_path, metis_path) =
+        setup_project_with_config(FlightLevelConfig::full()).await;
 
     // Step 1: Init (done in setup)
     println!("✅ Init complete");
@@ -78,7 +83,8 @@ async fn test_full_configuration_workflow() {
         project_path: metis_path.clone(),
         short_code: vision_short_code.clone(),
         search: "{Why this vision exists and what it aims to achieve}".to_string(),
-        replace: "Create an amazing work management system using Flight Levels methodology".to_string(),
+        replace: "Create an amazing work management system using Flight Levels methodology"
+            .to_string(),
         replace_all: None,
     };
     let result = edit_vision.call_tool().await;
@@ -128,7 +134,7 @@ async fn test_full_configuration_workflow() {
     let initiative_short_code = extract_short_code(&result.unwrap());
     println!("✅ Initiative created: {}", initiative_short_code);
 
-    // Step 6: Move initiative  
+    // Step 6: Move initiative
     let transition_initiative = TransitionPhaseTool {
         project_path: metis_path.clone(),
         short_code: initiative_short_code.clone(),
@@ -221,15 +227,16 @@ async fn test_full_configuration_workflow() {
     };
     let final_list = list_tool.call_tool().await;
     assert!(final_list.is_ok(), "Final document listing should succeed");
-    
+
     println!("✅ Full configuration workflow complete!");
 }
 
 #[tokio::test]
 async fn test_streamlined_configuration_workflow() {
     println!("=== Testing Streamlined Configuration Workflow ===");
-    
-    let (_temp_dir, _project_path, metis_path) = setup_project_with_config(FlightLevelConfig::streamlined()).await;
+
+    let (_temp_dir, _project_path, metis_path) =
+        setup_project_with_config(FlightLevelConfig::streamlined()).await;
 
     // Step 1: Init (done in setup)
     println!("✅ Init complete");
@@ -334,15 +341,16 @@ async fn test_streamlined_configuration_workflow() {
     };
     let final_list = list_tool.call_tool().await;
     assert!(final_list.is_ok(), "Final document listing should succeed");
-    
+
     println!("✅ Streamlined configuration workflow complete!");
 }
 
 #[tokio::test]
 async fn test_direct_configuration_workflow() {
     println!("=== Testing Direct Configuration Workflow ===");
-    
-    let (_temp_dir, _project_path, metis_path) = setup_project_with_config(FlightLevelConfig::direct()).await;
+
+    let (_temp_dir, _project_path, metis_path) =
+        setup_project_with_config(FlightLevelConfig::direct()).await;
 
     // Step 1: Init (done in setup)
     println!("✅ Init complete");
@@ -447,6 +455,6 @@ async fn test_direct_configuration_workflow() {
     };
     let final_list = list_tool.call_tool().await;
     assert!(final_list.is_ok(), "Final document listing should succeed");
-    
+
     println!("✅ Direct configuration workflow complete!");
 }

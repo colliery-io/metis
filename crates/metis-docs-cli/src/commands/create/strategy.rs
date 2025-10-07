@@ -25,7 +25,7 @@ pub async fn create_new_strategy(title: &str, vision_slug: Option<&str>) -> Resu
 
     // 3. Use DocumentCreationService to create the strategy
     let creation_service = DocumentCreationService::new(&metis_dir);
-    
+
     let config = DocumentCreationConfig {
         title: title.to_string(),
         description: None,

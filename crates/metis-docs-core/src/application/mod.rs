@@ -50,8 +50,8 @@ impl Application {
     ) -> Result<Vec<services::synchronization::SyncResult>> {
         let workspace_path = dir_path.as_ref().to_path_buf();
         let mut db_service = services::DatabaseService::new(self.database.into_repository());
-        let mut sync_service = services::SyncService::new(&mut db_service)
-            .with_workspace_dir(&workspace_path);
+        let mut sync_service =
+            services::SyncService::new(&mut db_service).with_workspace_dir(&workspace_path);
         sync_service.sync_directory(dir_path).await
     }
 

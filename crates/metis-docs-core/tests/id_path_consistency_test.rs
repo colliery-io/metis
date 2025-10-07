@@ -4,7 +4,7 @@ use metis_core::application::services::document::creation::{
 use metis_core::application::services::document::discovery::DocumentDiscoveryService;
 use metis_core::application::services::workspace::initialization::WorkspaceInitializationService;
 use metis_core::domain::documents::types::{DocumentType, Tag};
-use metis_core::{Complexity, RiskLevel, Database};
+use metis_core::{Complexity, Database, RiskLevel};
 use std::path::PathBuf;
 use tempfile::tempdir;
 
@@ -12,7 +12,7 @@ use tempfile::tempdir;
 async fn setup_test_workspace(project_name: &str) -> (tempfile::TempDir, PathBuf) {
     let temp_dir = tempdir().unwrap();
     let workspace_dir = temp_dir.path().join(".metis");
-    
+
     // Initialize workspace
     WorkspaceInitializationService::initialize_workspace(&workspace_dir, project_name)
         .await
@@ -23,12 +23,12 @@ async fn setup_test_workspace(project_name: &str) -> (tempfile::TempDir, PathBuf
     let db = Database::new(&db_path.to_string_lossy()).unwrap();
     let mut config_repo = db.configuration_repository().unwrap();
     config_repo.set_project_prefix("TEST").unwrap();
-    
+
     (temp_dir, workspace_dir)
 }
 
 #[tokio::test]
-async fn test_document_id_matches_path() {
+async fn test_document_short_code_matches_path() {
     let (_temp_dir, workspace_dir) = setup_test_workspace("test-project").await;
     let creation_service = DocumentCreationService::new(&workspace_dir);
     let discovery_service = DocumentDiscoveryService::new(&workspace_dir);
@@ -49,16 +49,16 @@ async fn test_document_id_matches_path() {
         .await
         .unwrap();
 
-    // Verify the ID matches the expected slug
+    // Verify the ID still uses kebab-case for compatibility
     assert_eq!(
         strategy_result.document_id.to_string(),
         "semantic-search-rag-strategy"
     );
 
-    // Verify the directory path matches the ID
+    // Verify the directory path uses the short code (not the document ID)
     let expected_path = workspace_dir
         .join("strategies")
-        .join("semantic-search-rag-strategy");
+        .join(&strategy_result.short_code);
     assert!(expected_path.exists());
     assert!(expected_path.join("strategy.md").exists());
 
@@ -91,6 +91,17 @@ async fn test_initiative_id_path_consistency() {
         .await
         .unwrap();
 
+    // Sync strategy to database so it can be found by initiative creation
+    let db_path = workspace_dir.join("metis.db");
+    let db = Database::new(&db_path.to_string_lossy()).unwrap();
+    let mut db_service =
+        metis_core::application::services::DatabaseService::new(db.repository().unwrap());
+    let mut sync_service = metis_core::application::services::SyncService::new(&mut db_service);
+    sync_service
+        .import_from_file(&strategy.file_path)
+        .await
+        .unwrap();
+
     // Create initiative with complex title
     let initiative_config = DocumentCreationConfig {
         title: "Build AI-Powered Search & Retrieval System".to_string(),
@@ -103,22 +114,22 @@ async fn test_initiative_id_path_consistency() {
     };
 
     let initiative_result = creation_service
-        .create_initiative(initiative_config, &strategy.document_id.to_string())
+        .create_initiative(initiative_config, &strategy.short_code)
         .await
         .unwrap();
 
-    // Verify ID generation (truncated at word boundary)
+    // Verify ID generation still uses kebab-case (for compatibility)
     assert_eq!(
         initiative_result.document_id.to_string(),
         "build-ai-powered-search-retrieval"
     );
 
-    // Verify path consistency
+    // Verify path now uses short codes instead of document IDs
     let expected_path = workspace_dir
         .join("strategies")
-        .join("test-strategy")
+        .join(&strategy.short_code)
         .join("initiatives")
-        .join("build-ai-powered-search-retrieval");
+        .join(&initiative_result.short_code);
 
     assert!(expected_path.exists());
     assert!(expected_path.join("initiative.md").exists());
@@ -144,6 +155,17 @@ async fn test_task_id_path_consistency() {
         .await
         .unwrap();
 
+    // Sync strategy to database
+    let db_path = workspace_dir.join("metis.db");
+    let db = Database::new(&db_path.to_string_lossy()).unwrap();
+    let mut db_service =
+        metis_core::application::services::DatabaseService::new(db.repository().unwrap());
+    let mut sync_service = metis_core::application::services::SyncService::new(&mut db_service);
+    sync_service
+        .import_from_file(&strategy.file_path)
+        .await
+        .unwrap();
+
     let initiative_config = DocumentCreationConfig {
         title: "Initiative One".to_string(),
         description: None,
@@ -154,7 +176,13 @@ async fn test_task_id_path_consistency() {
         risk_level: None,
     };
     let initiative = creation_service
-        .create_initiative(initiative_config, &strategy.document_id.to_string())
+        .create_initiative(initiative_config, &strategy.short_code)
+        .await
+        .unwrap();
+
+    // Sync initiative to database for task creation
+    sync_service
+        .import_from_file(&initiative.file_path)
         .await
         .unwrap();
 
@@ -170,28 +198,24 @@ async fn test_task_id_path_consistency() {
     };
 
     let task_result = creation_service
-        .create_task(
-            task_config,
-            &strategy.document_id.to_string(),
-            &initiative.document_id.to_string(),
-        )
+        .create_task(task_config, &strategy.short_code, &initiative.short_code)
         .await
         .unwrap();
 
-    // Verify ID generation handles special chars (truncated at word boundary)
+    // Verify ID generation still handles special chars (for compatibility)
     assert_eq!(
         task_result.document_id.to_string(),
         "setup-ci-cd-pipeline-testing"
     );
 
-    // Verify file path with NULL-based directory structure
+    // Verify file path now uses short codes in directory structure
     let expected_file = workspace_dir
         .join("strategies")
-        .join("strategy-one")
+        .join(&strategy.short_code)
         .join("initiatives")
-        .join("initiative-one")
+        .join(&initiative.short_code)
         .join("tasks")
-        .join("setup-ci-cd-pipeline-testing.md");
+        .join(format!("{}.md", task_result.short_code));
 
     assert!(expected_file.exists());
     assert_eq!(task_result.file_path, expected_file);
@@ -218,14 +242,14 @@ async fn test_adr_id_consistency() {
 
     let adr_result = creation_service.create_adr(adr_config).await.unwrap();
 
-    // ADRs have ID format: NNN-slug (truncated to 35 chars)
+    // ADRs still have ID format: NNN-slug (for compatibility)
     let expected_id = "001-use-postgresql-for-primary-data";
     assert_eq!(adr_result.document_id.to_string(), expected_id);
 
-    // Verify file name has format NNN-slug.md
+    // Verify file name now uses short code format: TEST-A-0001.md
     let file_name = adr_result.file_path.file_name().unwrap().to_str().unwrap();
-    assert!(file_name.starts_with("001-"));
-    assert!(file_name.contains("use-postgresql"));
+    assert_eq!(file_name, format!("{}.md", adr_result.short_code));
+    assert!(adr_result.short_code.starts_with("TEST-A-"));
     assert!(file_name.ends_with(".md"));
 }
 
@@ -252,13 +276,11 @@ async fn test_long_title_id_path_consistency() {
         .await
         .unwrap();
 
-    // Verify ID is truncated appropriately
+    // Verify ID is still truncated appropriately (for compatibility)
     assert!(result.document_id.to_string().len() <= 35); // MAX_ID_LENGTH
 
-    // Verify path exists and is valid
-    let strategy_dir = workspace_dir
-        .join("strategies")
-        .join(&result.document_id.to_string());
+    // Verify path now uses short code instead of document ID
+    let strategy_dir = workspace_dir.join("strategies").join(&result.short_code);
     assert!(strategy_dir.exists());
     assert!(strategy_dir.join("strategy.md").exists());
 
@@ -276,13 +298,11 @@ async fn test_unicode_title_id_path_consistency() {
     let creation_service = DocumentCreationService::new(&workspace_dir);
 
     // Test various Unicode titles
-    let unicode_titles = vec![
-        "Café Strategy für München",
+    let unicode_titles = ["Café Strategy für München",
         "日本語 テスト 戦略",
         "Стратегия для России",
         "🚀 Rocket Launch Strategy 🌟",
-        "Strategy with émojis and àccents",
-    ];
+        "Strategy with émojis and àccents"];
 
     for (i, title) in unicode_titles.iter().enumerate() {
         let config = DocumentCreationConfig {
@@ -310,10 +330,8 @@ async fn test_unicode_title_id_path_consistency() {
             id
         );
 
-        // Verify path exists
-        let strategy_dir = workspace_dir
-            .join("strategies")
-            .join(&result.document_id.to_string());
+        // Verify path exists using short code
+        let strategy_dir = workspace_dir.join("strategies").join(&result.short_code);
         assert!(
             strategy_dir.exists(),
             "Directory should exist for Unicode title: {}",
@@ -351,16 +369,21 @@ async fn test_regression_id_path_mismatch_bug() {
         .create_strategy(strategy_config)
         .await
         .unwrap();
-    let strategy_id = strategy_result.document_id.to_string();
+    let strategy_id = strategy_result.short_code.clone();
 
-    // The ID should be the full slug
-    assert_eq!(strategy_id, "semantic-search-rag-strategy");
+    // The document ID should still be the full slug (for compatibility)
+    assert_eq!(
+        strategy_result.document_id.to_string(),
+        "semantic-search-rag-strategy"
+    );
 
-    // The directory path should match the ID exactly
-    let strategy_dir = workspace_dir.join("strategies").join(&strategy_id);
+    // The directory path now uses short code instead of document ID
+    let strategy_dir = workspace_dir
+        .join("strategies")
+        .join(&strategy_result.short_code);
     assert!(
         strategy_dir.exists(),
-        "Strategy directory should exist at path matching ID"
+        "Strategy directory should exist at path using short code"
     );
     assert!(
         strategy_dir.join("strategy.md").exists(),
@@ -370,16 +393,27 @@ async fn test_regression_id_path_mismatch_bug() {
     // Verify the frontmatter ID matches
     let strategy_content = std::fs::read_to_string(strategy_dir.join("strategy.md")).unwrap();
     assert!(
-        strategy_content.contains(&format!("id: {}", strategy_id)),
+        strategy_content.contains(&format!("id: {}", strategy_result.document_id)),
         "Frontmatter ID should match"
     );
 
     // Verify discovery by ID works
     let found = discovery_service
-        .find_document_by_id(&strategy_id)
+        .find_document_by_id(&strategy_result.document_id.to_string())
         .await
         .unwrap();
     assert_eq!(found.file_path, strategy_dir.join("strategy.md"));
+
+    // Sync strategy to database before creating initiative
+    let db_path = workspace_dir.join("metis.db");
+    let db = Database::new(&db_path.to_string_lossy()).unwrap();
+    let mut db_service =
+        metis_core::application::services::DatabaseService::new(db.repository().unwrap());
+    let mut sync_service = metis_core::application::services::SyncService::new(&mut db_service);
+    sync_service
+        .import_from_file(&strategy_result.file_path)
+        .await
+        .unwrap();
 
     // Now create an initiative under this strategy to ensure child paths work correctly
     let initiative_config = DocumentCreationConfig {
@@ -399,10 +433,10 @@ async fn test_regression_id_path_mismatch_bug() {
         .await
         .unwrap();
 
-    // Verify initiative is created under the correct parent path
+    // Verify initiative is created under the correct parent path using short code
     let initiative_path = strategy_dir
         .join("initiatives")
-        .join(initiative_result.document_id.to_string());
+        .join(&initiative_result.short_code);
 
     assert!(
         initiative_path.exists(),

@@ -134,8 +134,12 @@ impl DatabaseService {
     }
 
     /// Get all documents in a strategy hierarchy by short code (strategy + its initiatives + their tasks)
-    pub fn find_strategy_hierarchy_by_short_code(&mut self, strategy_short_code: &str) -> Result<Vec<Document>> {
-        self.repository.find_strategy_hierarchy_by_short_code(strategy_short_code)
+    pub fn find_strategy_hierarchy_by_short_code(
+        &mut self,
+        strategy_short_code: &str,
+    ) -> Result<Vec<Document>> {
+        self.repository
+            .find_strategy_hierarchy_by_short_code(strategy_short_code)
     }
 
     /// Get all documents in an initiative hierarchy (initiative + its tasks)
@@ -144,8 +148,12 @@ impl DatabaseService {
     }
 
     /// Get all documents in an initiative hierarchy by short code (initiative + its tasks)
-    pub fn find_initiative_hierarchy_by_short_code(&mut self, initiative_short_code: &str) -> Result<Vec<Document>> {
-        self.repository.find_initiative_hierarchy_by_short_code(initiative_short_code)
+    pub fn find_initiative_hierarchy_by_short_code(
+        &mut self,
+        initiative_short_code: &str,
+    ) -> Result<Vec<Document>> {
+        self.repository
+            .find_initiative_hierarchy_by_short_code(initiative_short_code)
     }
 }
 
@@ -180,11 +188,11 @@ mod tests {
     }
 
     fn create_test_document_with_lineage(
-        id: &str, 
-        doc_type: &str, 
+        id: &str,
+        doc_type: &str,
         filepath: &str,
         strategy_id: Option<String>,
-        initiative_id: Option<String>
+        initiative_id: Option<String>,
     ) -> NewDocument {
         NewDocument {
             filepath: filepath.to_string(),
@@ -201,11 +209,12 @@ mod tests {
             phase: "draft".to_string(),
             strategy_id,
             initiative_id,
-            short_code: format!("TEST-{}-{:04}", 
+            short_code: format!(
+                "TEST-{}-{:04}",
                 doc_type.chars().next().unwrap().to_uppercase(),
                 match doc_type {
                     "vision" => 701,
-                    "strategy" => 702, 
+                    "strategy" => 702,
                     "initiative" => 703,
                     "task" => 704,
                     "adr" => 705,
@@ -305,63 +314,82 @@ mod tests {
 
         // Create strategy
         let strategy = create_test_document_with_lineage(
-            "strategy-1", 
-            "strategy", 
+            "strategy-1",
+            "strategy",
             "/strategies/strategy-1/strategy.md",
-            None, 
-            None
+            None,
+            None,
         );
-        service.create_document(strategy).expect("Failed to create strategy");
+        service
+            .create_document(strategy)
+            .expect("Failed to create strategy");
 
         // Create initiative under strategy
         let initiative = create_test_document_with_lineage(
-            "initiative-1", 
-            "initiative", 
+            "initiative-1",
+            "initiative",
             "/strategies/strategy-1/initiatives/initiative-1/initiative.md",
-            Some("strategy-1".to_string()), 
-            None
+            Some("strategy-1".to_string()),
+            None,
         );
-        service.create_document(initiative).expect("Failed to create initiative");
+        service
+            .create_document(initiative)
+            .expect("Failed to create initiative");
 
         // Create tasks under initiative
         let mut task1 = create_test_document_with_lineage(
-            "task-1", 
-            "task", 
+            "task-1",
+            "task",
             "/strategies/strategy-1/initiatives/initiative-1/tasks/task-1.md",
-            Some("strategy-1".to_string()), 
-            Some("initiative-1".to_string())
+            Some("strategy-1".to_string()),
+            Some("initiative-1".to_string()),
         );
         task1.short_code = "TEST-T-0704".to_string();
-        
+
         let mut task2 = create_test_document_with_lineage(
-            "task-2", 
-            "task", 
+            "task-2",
+            "task",
             "/strategies/strategy-1/initiatives/initiative-1/tasks/task-2.md",
-            Some("strategy-1".to_string()), 
-            Some("initiative-1".to_string())
+            Some("strategy-1".to_string()),
+            Some("initiative-1".to_string()),
         );
         task2.short_code = "TEST-T-0705".to_string();
-        service.create_document(task1).expect("Failed to create task1");
-        service.create_document(task2).expect("Failed to create task2");
+        service
+            .create_document(task1)
+            .expect("Failed to create task1");
+        service
+            .create_document(task2)
+            .expect("Failed to create task2");
 
         // Test find by strategy ID
-        let strategy_docs = service.find_by_strategy_id("strategy-1").expect("Failed to find by strategy");
+        let strategy_docs = service
+            .find_by_strategy_id("strategy-1")
+            .expect("Failed to find by strategy");
         assert_eq!(strategy_docs.len(), 3); // initiative + 2 tasks
 
         // Test find by initiative ID
-        let initiative_docs = service.find_by_initiative_id("initiative-1").expect("Failed to find by initiative");
+        let initiative_docs = service
+            .find_by_initiative_id("initiative-1")
+            .expect("Failed to find by initiative");
         assert_eq!(initiative_docs.len(), 2); // 2 tasks
 
         // Test strategy hierarchy (should include strategy itself + its children)
-        let strategy_hierarchy = service.find_strategy_hierarchy("strategy-1").expect("Failed to find strategy hierarchy");
+        let strategy_hierarchy = service
+            .find_strategy_hierarchy("strategy-1")
+            .expect("Failed to find strategy hierarchy");
         assert_eq!(strategy_hierarchy.len(), 4); // strategy + initiative + 2 tasks
 
         // Test initiative hierarchy (should include initiative itself + its tasks)
-        let initiative_hierarchy = service.find_initiative_hierarchy("initiative-1").expect("Failed to find initiative hierarchy");
+        let initiative_hierarchy = service
+            .find_initiative_hierarchy("initiative-1")
+            .expect("Failed to find initiative hierarchy");
         assert_eq!(initiative_hierarchy.len(), 3); // initiative + 2 tasks
 
         // Verify document types in strategy hierarchy
-        let doc_types: Vec<&str> = strategy_hierarchy.iter().map(|d| d.document_type.as_str()).collect();
+        let doc_types: Vec<&str> = strategy_hierarchy
+            .iter()
+            .map(|d| d.document_type.as_str())
+            .collect();
         assert!(doc_types.contains(&"strategy"));
         assert!(doc_types.contains(&"initiative"));
         assert!(doc_types.iter().filter(|&&t| t == "task").count() == 2);

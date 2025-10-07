@@ -23,15 +23,22 @@ fn should_show_messages(app: &App) -> bool {
     let has_messages = app.ui_state.message_state.has_messages();
     let in_dialog = matches!(
         app.app_state(),
-        AppState::CreatingDocument | AppState::CreatingChildDocument | 
-        AppState::CreatingAdr | AppState::Confirming | AppState::SelectingBacklogCategory
+        AppState::CreatingDocument
+            | AppState::CreatingChildDocument
+            | AppState::CreatingAdr
+            | AppState::Confirming
+            | AppState::SelectingBacklogCategory
     );
     has_messages && !in_dialog
 }
 
 /// Calculate message area height based on app state
 fn calculate_message_height(app: &App) -> u16 {
-    if should_show_messages(app) { 3 } else { 0 }
+    if should_show_messages(app) {
+        3
+    } else {
+        0
+    }
 }
 
 /// Render the appropriate main content based on app state
@@ -46,7 +53,7 @@ fn draw_main_content(f: &mut Frame, app: &App, area: Rect) {
             } else {
                 draw_kanban_board(f, app, area);
             }
-            
+
             // Render any modal dialogs on top
             draw_modal_dialogs(f, app, f.area());
         }
@@ -92,7 +99,7 @@ fn get_normal_state_footer_text(app: &App) -> &'static str {
     if !app.is_ready() {
         return "q: Quit";
     }
-    
+
     use crate::models::BoardType;
     match app.ui_state.current_board {
         BoardType::Strategy => "↑↓←→: Navigate | 1-5: Jump to board | v: Vision | Tab: Switch | Enter: Edit | Ctrl+n: Create Initiative | d: Del | r: Archive | t: Trans | y: Sync | q: Quit",
@@ -127,10 +134,10 @@ pub fn draw(f: &mut Frame, app: &App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(3),          // Header
-            Constraint::Min(0),             // Main content  
+            Constraint::Length(3),              // Header
+            Constraint::Min(0),                 // Main content
             Constraint::Length(message_height), // Messages
-            Constraint::Length(3),          // Footer
+            Constraint::Length(3),              // Footer
         ])
         .split(f.area());
 
@@ -145,7 +152,7 @@ pub fn draw(f: &mut Frame, app: &App) {
         draw_message_area(f, &app.ui_state.message_state, chunks[2]);
     }
 
-    // Footer  
+    // Footer
     draw_footer(f, app, chunks[3]);
 }
 

@@ -1,7 +1,7 @@
 use crate::workspace;
 use anyhow::Result;
 use clap::{Args, Subcommand};
-use metis_core::{Database, domain::configuration::FlightLevelConfig};
+use metis_core::{domain::configuration::FlightLevelConfig, Database};
 
 #[derive(Args)]
 pub struct ConfigCommand {
@@ -45,20 +45,29 @@ impl ConfigCommand {
         let db_path = metis_dir.join("metis.db");
         let db = Database::new(db_path.to_str().unwrap())
             .map_err(|e| anyhow::anyhow!("Database connection failed: {}", e))?;
-        let mut config_repo = db.configuration_repository()
+        let mut config_repo = db
+            .configuration_repository()
             .map_err(|e| anyhow::anyhow!("Failed to create configuration repository: {}", e))?;
 
         // 3. Execute the requested action
         match &self.action {
             ConfigAction::Show => self.show_config(&mut config_repo).await,
-            ConfigAction::Set { preset, strategies, initiatives } => {
-                self.set_config(&mut config_repo, preset, *strategies, *initiatives).await
+            ConfigAction::Set {
+                preset,
+                strategies,
+                initiatives,
+            } => {
+                self.set_config(&mut config_repo, preset, *strategies, *initiatives)
+                    .await
             }
             ConfigAction::Get { key } => self.get_config(&mut config_repo, key).await,
         }
     }
 
-    async fn show_config(&self, config_repo: &mut metis_core::dal::database::configuration_repository::ConfigurationRepository) -> Result<()> {
+    async fn show_config(
+        &self,
+        config_repo: &mut metis_core::dal::database::configuration_repository::ConfigurationRepository,
+    ) -> Result<()> {
         let flight_config = config_repo
             .get_flight_level_config()
             .map_err(|e| anyhow::anyhow!("Failed to get flight level configuration: {}", e))?;
@@ -66,7 +75,10 @@ impl ConfigCommand {
         println!("Current Flight Level Configuration:");
         println!("  Preset: {}", flight_config.preset_name());
         println!("  Strategies enabled: {}", flight_config.strategies_enabled);
-        println!("  Initiatives enabled: {}", flight_config.initiatives_enabled);
+        println!(
+            "  Initiatives enabled: {}",
+            flight_config.initiatives_enabled
+        );
         println!();
         println!("Hierarchy: {}", flight_config.hierarchy_display());
         println!();
@@ -110,7 +122,9 @@ impl ConfigCommand {
             FlightLevelConfig::new(strategies_enabled, initiatives_enabled)
                 .map_err(|e| anyhow::anyhow!("Invalid configuration: {}", e))?
         } else {
-            anyhow::bail!("Must specify either --preset or at least one of --strategies/--initiatives");
+            anyhow::bail!(
+                "Must specify either --preset or at least one of --strategies/--initiatives"
+            );
         };
 
         // Save the new configuration
@@ -272,7 +286,10 @@ mod tests {
 
         let result = config_cmd.execute().await;
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Not in a Metis workspace"));
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Not in a Metis workspace"));
 
         // Restore original directory
         if let Some(dir) = original_dir {

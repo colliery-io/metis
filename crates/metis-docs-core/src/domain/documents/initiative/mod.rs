@@ -57,9 +57,10 @@ pub struct Initiative {
 
 impl Initiative {
     /// Create a new Initiative document with content rendered from template
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         title: String,
-        parent_id: Option<DocumentId>, // Usually a Strategy
+        parent_id: Option<DocumentId>,   // Usually a Strategy
         strategy_id: Option<DocumentId>, // The strategy this initiative belongs to
         blocked_by: Vec<DocumentId>,
         tags: Vec<Tag>,
@@ -89,7 +90,7 @@ impl Initiative {
 
         // For initiatives, the initiative_id is self and strategy_id comes from parent
         let initiative_id = Some(DocumentId::from_title(&title));
-        
+
         Ok(Self {
             core: super::traits::DocumentCore {
                 title,
@@ -121,7 +122,7 @@ impl Initiative {
     ) -> Self {
         // For initiatives, the initiative_id is self and strategy_id comes from parameter
         let initiative_id = Some(DocumentId::from_title(&title));
-        
+
         Self {
             core: super::traits::DocumentCore {
                 title,
@@ -233,14 +234,18 @@ impl Initiative {
 
         // Create metadata and content
         let short_code = FrontmatterParser::extract_string(&fm_map, "short_code")?;
-        let metadata =
-            DocumentMetadata::from_frontmatter(created_at, updated_at, exit_criteria_met, short_code);
+        let metadata = DocumentMetadata::from_frontmatter(
+            created_at,
+            updated_at,
+            exit_criteria_met,
+            short_code,
+        );
         let content = DocumentContent::from_markdown(&parsed.content);
 
         // Extract lineage from frontmatter
         let strategy_id = FrontmatterParser::extract_optional_string(&fm_map, "strategy_id")
             .map(DocumentId::from);
-        
+
         Ok(Self::from_parts(
             title,
             metadata,
@@ -302,18 +307,22 @@ impl Initiative {
         // Convert tags to strings
         let tag_strings: Vec<String> = self.tags().iter().map(|tag| tag.to_str()).collect();
         context.insert("tags", &tag_strings);
-        
+
         // Add lineage fields
         context.insert(
             "strategy_id",
-            &self.core.strategy_id
+            &self
+                .core
+                .strategy_id
                 .as_ref()
                 .map(|id| id.to_string())
                 .unwrap_or_default(),
         );
         context.insert(
             "initiative_id",
-            &self.core.initiative_id
+            &self
+                .core
+                .initiative_id
                 .as_ref()
                 .map(|id| id.to_string())
                 .unwrap_or_default(),
@@ -592,7 +601,7 @@ exit_criteria_met: false
             "Test Initiative".to_string(),
             Some(DocumentId::from("parent-strategy")), // parent_id
             Some(DocumentId::from("parent-strategy")), // strategy_id (same as parent for initiatives)
-            vec![],  // blocked_by
+            vec![],                                    // blocked_by
             vec![
                 Tag::Label("initiative".to_string()),
                 Tag::Phase(Phase::Discovery),
@@ -622,8 +631,8 @@ exit_criteria_met: false
         // Test validation failure - no parent
         let initiative_no_parent = Initiative::new(
             "Test Initiative".to_string(),
-            None, // No parent
-            None, // No strategy
+            None,   // No parent
+            None,   // No strategy
             vec![], // blocked_by
             vec![Tag::Phase(Phase::Discovery)],
             false,
@@ -641,7 +650,7 @@ exit_criteria_met: false
             "Test Initiative".to_string(),
             Some(DocumentId::from("parent-strategy")), // parent_id
             Some(DocumentId::from("parent-strategy")), // strategy_id
-            vec![], // blocked_by
+            vec![],                                    // blocked_by
             vec![Tag::Phase(Phase::Discovery)],
             false,
             Complexity::M,

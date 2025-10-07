@@ -33,17 +33,30 @@ impl TransitionPhaseTool {
     /// Resolve short code to document ID
     fn resolve_short_code_to_id(&self, metis_dir: &Path) -> Result<String, CallToolError> {
         let db_path = metis_dir.join("metis.db");
-        let db = Database::new(db_path.to_str().unwrap())
-            .map_err(|e| CallToolError::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Database error: {}", e))))?;
-        
-        let mut repo = db.repository()
-            .map_err(|e| CallToolError::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Repository error: {}", e))))?;
-        
+        let db = Database::new(db_path.to_str().unwrap()).map_err(|e| {
+            CallToolError::new(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!("Database error: {}", e),
+            ))
+        })?;
+
+        let mut repo = db.repository().map_err(|e| {
+            CallToolError::new(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!("Repository error: {}", e),
+            ))
+        })?;
+
         // Use the core DAL method
         repo.resolve_short_code_to_document_id(&self.short_code)
-            .map_err(|e| CallToolError::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Resolution error: {}", e))))
+            .map_err(|e| {
+                CallToolError::new(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    format!("Resolution error: {}", e),
+                ))
+            })
     }
-    
+
     pub async fn call_tool(&self) -> std::result::Result<CallToolResult, CallToolError> {
         let metis_dir = Path::new(&self.project_path);
 
@@ -60,7 +73,7 @@ impl TransitionPhaseTool {
 
         // Resolve short code to document ID
         let document_id = self.resolve_short_code_to_id(metis_dir)?;
-        
+
         // Create the phase transition service
         let transition_service = PhaseTransitionService::new(metis_dir);
 

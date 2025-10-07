@@ -52,7 +52,11 @@ impl DocumentService {
                     // Create initiative without parent (streamlined configuration)
                     // Use "NULL" as strategy_id which the core service handles correctly
                     creation_service
-                        .create_initiative_with_config(config, "NULL", &metis_core::domain::configuration::FlightLevelConfig::streamlined())
+                        .create_initiative_with_config(
+                            config,
+                            "NULL",
+                            &metis_core::domain::configuration::FlightLevelConfig::streamlined(),
+                        )
                         .await?
                 }
             }

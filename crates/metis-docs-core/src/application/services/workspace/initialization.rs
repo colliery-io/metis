@@ -1,6 +1,6 @@
-use crate::{Database, MetisError, Phase, Result, Tag, Vision};
 use crate::dal::database::configuration_repository::ConfigurationRepository;
-use diesel::{Connection, sqlite::SqliteConnection};
+use crate::{Database, MetisError, Phase, Result, Tag, Vision};
+use diesel::{sqlite::SqliteConnection, Connection};
 use std::path::{Path, PathBuf};
 
 /// Service for initializing new Metis workspaces
@@ -37,10 +37,15 @@ impl WorkspaceInitializationService {
             Ok(_db) => {
                 // Database is valid, set up project configuration
                 let mut config_repo = ConfigurationRepository::new(
-                    SqliteConnection::establish(db_path.to_str().unwrap())
-                        .map_err(|e| MetisError::ConfigurationError(crate::domain::configuration::ConfigurationError::InvalidValue(e.to_string())))?
+                    SqliteConnection::establish(db_path.to_str().unwrap()).map_err(|e| {
+                        MetisError::ConfigurationError(
+                            crate::domain::configuration::ConfigurationError::InvalidValue(
+                                e.to_string(),
+                            ),
+                        )
+                    })?,
                 );
-                
+
                 // Set default project prefix if not already set
                 if config_repo.get_project_prefix()?.is_none() {
                     config_repo.set_project_prefix("PROJ")?;
@@ -91,8 +96,11 @@ impl WorkspaceInitializationService {
         // Generate short code for vision using the database
         let db_path = workspace_dir.join("metis.db");
         let mut config_repo = ConfigurationRepository::new(
-            SqliteConnection::establish(&db_path.to_string_lossy())
-                .map_err(|e| MetisError::ConfigurationError(crate::domain::configuration::ConfigurationError::InvalidValue(e.to_string())))?
+            SqliteConnection::establish(&db_path.to_string_lossy()).map_err(|e| {
+                MetisError::ConfigurationError(
+                    crate::domain::configuration::ConfigurationError::InvalidValue(e.to_string()),
+                )
+            })?,
         );
         let short_code = config_repo.generate_short_code("vision")?;
 

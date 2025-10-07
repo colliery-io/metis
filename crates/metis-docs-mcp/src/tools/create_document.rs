@@ -40,20 +40,6 @@ pub struct CreateDocumentTool {
 }
 
 impl CreateDocumentTool {
-    /// Resolve short code to document ID for parent relationships
-    fn resolve_short_code_to_document_id(&self, short_code: &str, metis_dir: &Path) -> Result<String, CallToolError> {
-        let db_path = metis_dir.join("metis.db");
-        let db = Database::new(db_path.to_str().unwrap())
-            .map_err(|e| CallToolError::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Database error: {}", e))))?;
-        
-        let mut repo = db.repository()
-            .map_err(|e| CallToolError::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Repository error: {}", e))))?;
-        
-        // Use the core DAL method
-        repo.resolve_short_code_to_document_id(short_code)
-            .map_err(|e| CallToolError::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Resolution error: {}", e))))
-    }
-    
     pub async fn call_tool(&self) -> std::result::Result<CallToolResult, CallToolError> {
         let metis_dir = Path::new(&self.project_path);
 
@@ -84,29 +70,26 @@ impl CreateDocumentTool {
                 format!("Failed to open database: {}", e),
             ))
         })?;
-        
-        let mut config_repo = database
-            .configuration_repository()
-            .map_err(|e| {
-                CallToolError::new(std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    format!("Failed to access configuration repository: {}", e),
-                ))
-            })?;
-            
-        let flight_config = config_repo
-            .get_flight_level_config()
-            .map_err(|e| {
-                CallToolError::new(std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    format!("Failed to load configuration: {}", e),
-                ))
-            })?;
+
+        let mut config_repo = database.configuration_repository().map_err(|e| {
+            CallToolError::new(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!("Failed to access configuration repository: {}", e),
+            ))
+        })?;
+
+        let flight_config = config_repo.get_flight_level_config().map_err(|e| {
+            CallToolError::new(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!("Failed to load configuration: {}", e),
+            ))
+        })?;
 
         // Validate document type is enabled in current configuration
         let enabled_types = flight_config.enabled_document_types();
         if !enabled_types.contains(&doc_type) {
-            let available_types: Vec<String> = enabled_types.iter().map(|t| t.to_string()).collect();
+            let available_types: Vec<String> =
+                enabled_types.iter().map(|t| t.to_string()).collect();
             return Err(CallToolError::new(std::io::Error::new(
                 std::io::ErrorKind::InvalidInput,
                 format!(
@@ -148,20 +131,9 @@ impl CreateDocumentTool {
                 ))
             })?;
 
-        // Build configuration - resolve short codes to document IDs
-        let resolved_parent_id = if let Some(parent_id) = &self.parent_id {
-            // Check if parent_id looks like a short code (contains hyphen and ends with digits)
-            if parent_id.contains('-') && parent_id.chars().last().map_or(false, |c| c.is_ascii_digit()) {
-                // Looks like a short code, resolve it
-                Some(self.resolve_short_code_to_document_id(parent_id, metis_dir)?)
-            } else {
-                // Assume it's already a document ID
-                Some(parent_id.clone())
-            }
-        } else {
-            None
-        };
-        
+        // Pass parent_id as-is (short codes are now handled directly by core services)
+        let resolved_parent_id = self.parent_id.clone();
+
         let config = DocumentCreationConfig {
             title: self.title.clone(),
             description: None,
@@ -199,14 +171,14 @@ impl CreateDocumentTool {
                     resolved_parent_id.as_ref().ok_or_else(|| {
                         CallToolError::new(std::io::Error::new(
                             std::io::ErrorKind::InvalidInput,
-                            "Initiative requires a parent strategy ID in full configuration",
+                            "Initiative requires a parent strategy short code in full configuration",
                         ))
                     })?.clone()
                 } else {
                     // Streamlined/Direct configuration: use NULL strategy placeholder
                     "NULL".to_string()
                 };
-                
+
                 creation_service
                     .create_initiative_with_config(config, &parent_strategy_id, &flight_config)
                     .await
@@ -217,15 +189,20 @@ impl CreateDocumentTool {
                 if let Some(initiative_id) = resolved_parent_id.as_ref() {
                     // Task with parent initiative
                     let strategy_id = if flight_config.strategies_enabled {
-                        // Full configuration: resolve actual strategy from initiative location
-                        self.find_strategy_id_for_initiative(metis_dir, initiative_id)?
+                        // Full configuration: use actual strategy short code from initiative location
+                        self.find_strategy_short_code_for_initiative(metis_dir, initiative_id)?
                     } else {
                         // Streamlined/Direct: use NULL as strategy placeholder
                         "NULL".to_string()
                     };
 
                     creation_service
-                        .create_task_with_config(config, &strategy_id, initiative_id, &flight_config)
+                        .create_task_with_config(
+                            config,
+                            &strategy_id,
+                            initiative_id,
+                            &flight_config,
+                        )
                         .await
                         .map_err(|e| CallToolError::new(e))?
                 } else if flight_config.initiatives_enabled {
@@ -267,42 +244,67 @@ impl CreateDocumentTool {
         )]))
     }
 
-    fn find_strategy_id_for_initiative(
+    fn find_strategy_short_code_for_initiative(
         &self,
         metis_dir: &Path,
         initiative_id: &str,
     ) -> Result<String, CallToolError> {
-        let strategies_dir = metis_dir.join("strategies");
+        let db_path = metis_dir.join("metis.db");
+        let db = Database::new(db_path.to_str().unwrap()).map_err(|e| {
+            CallToolError::new(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!("Database error: {}", e),
+            ))
+        })?;
 
-        if !strategies_dir.exists() {
-            return Err(CallToolError::new(std::io::Error::new(
-                std::io::ErrorKind::NotFound,
-                "No strategies directory found",
-            )));
-        }
+        let mut repo = db.repository().map_err(|e| {
+            CallToolError::new(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!("Repository error: {}", e),
+            ))
+        })?;
 
-        // Search through all strategy directories to find the one containing this initiative
-        for entry in std::fs::read_dir(&strategies_dir).map_err(CallToolError::new)? {
-            let entry = entry.map_err(CallToolError::new)?;
-            let strategy_path = entry.path();
+        // Find the initiative document in the database by short code
+        let initiative = repo
+            .find_by_short_code(initiative_id)
+            .map_err(|e| {
+                CallToolError::new(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    format!("Database lookup error: {}", e),
+                ))
+            })?
+            .ok_or_else(|| {
+                CallToolError::new(std::io::Error::new(
+                    std::io::ErrorKind::NotFound,
+                    format!("Initiative '{}' not found in database", initiative_id),
+                ))
+            })?;
 
-            if strategy_path.is_dir() {
-                let initiatives_dir = strategy_path.join("initiatives").join(initiative_id);
-                if initiatives_dir.exists() && initiatives_dir.is_dir() {
-                    // Found the strategy containing this initiative
-                    if let Some(strategy_name) = strategy_path.file_name() {
-                        if let Some(strategy_id) = strategy_name.to_str() {
-                            return Ok(strategy_id.to_string());
-                        }
-                    }
-                }
-            }
-        }
+        // Get the strategy ID from the initiative, then find the strategy's short code
+        let strategy_id = initiative.strategy_id.ok_or_else(|| {
+            CallToolError::new(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                format!("Initiative '{}' has no parent strategy", initiative_id),
+            ))
+        })?;
 
-        Err(CallToolError::new(std::io::Error::new(
-            std::io::ErrorKind::NotFound,
-            format!("Parent initiative '{}' not found", initiative_id),
-        )))
+        // Find the strategy by its short code (strategy_id now contains short codes)
+        let strategy = repo
+            .find_by_short_code(&strategy_id)
+            .map_err(|e| {
+                CallToolError::new(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    format!("Database lookup error: {}", e),
+                ))
+            })?
+            .ok_or_else(|| {
+                CallToolError::new(std::io::Error::new(
+                    std::io::ErrorKind::NotFound,
+                    format!("Strategy '{}' not found in database", strategy_id),
+                ))
+            })?;
+
+        Ok(strategy.short_code)
     }
 
     async fn sync_workspace(&self, metis_dir: &Path) -> Result<(), CallToolError> {

@@ -27,17 +27,30 @@ impl ReadDocumentTool {
     /// Resolve short code to file path
     fn resolve_short_code_to_path(&self, metis_dir: &Path) -> Result<String, CallToolError> {
         let db_path = metis_dir.join("metis.db");
-        let db = Database::new(db_path.to_str().unwrap())
-            .map_err(|e| CallToolError::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Database error: {}", e))))?;
-        
-        let mut repo = db.repository()
-            .map_err(|e| CallToolError::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Repository error: {}", e))))?;
-        
+        let db = Database::new(db_path.to_str().unwrap()).map_err(|e| {
+            CallToolError::new(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!("Database error: {}", e),
+            ))
+        })?;
+
+        let mut repo = db.repository().map_err(|e| {
+            CallToolError::new(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!("Repository error: {}", e),
+            ))
+        })?;
+
         // Use the core DAL method
         repo.resolve_short_code_to_filepath(&self.short_code)
-            .map_err(|e| CallToolError::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Resolution error: {}", e))))
+            .map_err(|e| {
+                CallToolError::new(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    format!("Resolution error: {}", e),
+                ))
+            })
     }
-    
+
     pub async fn call_tool(&self) -> std::result::Result<CallToolResult, CallToolError> {
         let metis_dir = Path::new(&self.project_path);
 
@@ -70,7 +83,7 @@ impl ReadDocumentTool {
 
         // Extract sections for convenience
         let sections = self.extract_sections(&content);
-        
+
         // Extract exit criteria completion info
         let exit_criteria = self.extract_exit_criteria(&content);
         let completed_criteria = exit_criteria.iter().filter(|c| c.completed).count();
@@ -104,7 +117,7 @@ impl ReadDocumentTool {
 
     fn extract_sections(&self, content: &str) -> Vec<String> {
         let mut sections = Vec::new();
-        
+
         for line in content.lines() {
             let trimmed = line.trim();
             if trimmed.starts_with("## ") && !trimmed.starts_with("### ") {
@@ -112,30 +125,31 @@ impl ReadDocumentTool {
                 sections.push(section_name);
             }
         }
-        
+
         sections
     }
 
     fn extract_exit_criteria(&self, content: &str) -> Vec<ExitCriterion> {
         let mut criteria = Vec::new();
-        
+
         for line in content.lines() {
             let trimmed = line.trim();
-            
+
             // Look for markdown checkbox patterns
             if trimmed.starts_with("- [") {
                 if let Some(checkbox_end) = trimmed.find(']') {
                     if checkbox_end >= 3 {
                         let checkbox_content = &trimmed[3..checkbox_end];
-                        let completed = checkbox_content.trim() == "x" || checkbox_content.trim() == "X";
-                        
+                        let completed =
+                            checkbox_content.trim() == "x" || checkbox_content.trim() == "X";
+
                         // Extract the criterion text after the checkbox
                         let criterion_text = if trimmed.len() > checkbox_end + 1 {
                             trimmed[checkbox_end + 1..].trim().to_string()
                         } else {
                             "".to_string()
                         };
-                        
+
                         if !criterion_text.is_empty() {
                             criteria.push(ExitCriterion {
                                 text: criterion_text,
@@ -146,7 +160,7 @@ impl ReadDocumentTool {
                 }
             }
         }
-        
+
         criteria
     }
 }

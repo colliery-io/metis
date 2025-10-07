@@ -1,5 +1,5 @@
 /// Shared constants for the Metis documentation system
-
+///
 /// Directory and file names
 pub const METIS_DIR_NAME: &str = ".metis";
 pub const DATABASE_FILE_NAME: &str = "metis.db";

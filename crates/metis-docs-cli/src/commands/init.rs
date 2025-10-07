@@ -3,7 +3,8 @@ use anyhow::Result;
 use clap::Args;
 use metis_core::{
     application::services::document::creation::{DocumentCreationConfig, DocumentCreationService},
-    Database, Phase, Tag, domain::configuration::FlightLevelConfig
+    domain::configuration::FlightLevelConfig,
+    Database, Phase, Tag,
 };
 use std::path::Path;
 
@@ -46,9 +47,11 @@ impl InitCommand {
 
         // Set up flight level configuration
         let flight_config = self.determine_flight_config()?;
-        let mut config_repo = db.configuration_repository()
+        let mut config_repo = db
+            .configuration_repository()
             .map_err(|e| anyhow::anyhow!("Failed to create configuration repository: {}", e))?;
-        config_repo.set_flight_level_config(&flight_config)
+        config_repo
+            .set_flight_level_config(&flight_config)
             .map_err(|e| anyhow::anyhow!("Failed to set flight level configuration: {}", e))?;
 
         // Set default project prefix for document creation
@@ -67,7 +70,8 @@ impl InitCommand {
                 .unwrap_or("PROJ")
                 .to_string()
         };
-        config_repo.set_project_prefix(&project_prefix)
+        config_repo
+            .set_project_prefix(&project_prefix)
             .map_err(|e| anyhow::anyhow!("Failed to set project prefix: {}", e))?;
 
         // Create strategies directory
@@ -80,7 +84,10 @@ impl InitCommand {
 
         println!("✓ Initialized Metis workspace in {}", current_dir.display());
         println!("✓ Created vision.md with project template");
-        println!("✓ Set flight level configuration: {}", flight_config.preset_name());
+        println!(
+            "✓ Set flight level configuration: {}",
+            flight_config.preset_name()
+        );
 
         Ok(())
     }
@@ -104,7 +111,9 @@ impl InitCommand {
             // Use custom configuration, with streamlined as default base
             let default_config = FlightLevelConfig::streamlined();
             let strategies_enabled = self.strategies.unwrap_or(default_config.strategies_enabled);
-            let initiatives_enabled = self.initiatives.unwrap_or(default_config.initiatives_enabled);
+            let initiatives_enabled = self
+                .initiatives
+                .unwrap_or(default_config.initiatives_enabled);
 
             FlightLevelConfig::new(strategies_enabled, initiatives_enabled)
                 .map_err(|e| anyhow::anyhow!("Invalid configuration: {}", e))
@@ -119,7 +128,7 @@ impl InitCommand {
 async fn create_default_vision(workspace_dir: &Path, title: &str) -> Result<()> {
     // Use DocumentCreationService to create the vision
     let creation_service = DocumentCreationService::new(workspace_dir);
-    
+
     let config = DocumentCreationConfig {
         title: title.to_string(),
         description: None,
@@ -147,7 +156,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_command_creates_workspace() {
         let temp_dir = tempdir().unwrap();
-        let original_dir = std::env::current_dir().unwrap();
+        let original_dir = std::env::current_dir().ok();
 
         // Change to temp directory
         std::env::set_current_dir(temp_dir.path()).unwrap();
@@ -200,13 +209,15 @@ mod tests {
         assert!(vision_content.contains("## Constraints"));
 
         // Restore original directory
-        std::env::set_current_dir(original_dir).unwrap();
+        if let Some(original) = original_dir {
+            let _ = std::env::set_current_dir(&original);
+        }
     }
 
     #[tokio::test]
     async fn test_init_command_workspace_already_exists() {
         let temp_dir = tempdir().unwrap();
-        let original_dir = std::env::current_dir().unwrap();
+        let original_dir = std::env::current_dir().ok();
         let metis_dir = temp_dir.path().join(".metis");
         let db_path = metis_dir.join("metis.db");
 
@@ -233,13 +244,15 @@ mod tests {
         assert_eq!(db_content, "existing");
 
         // Restore original directory
-        std::env::set_current_dir(original_dir).unwrap();
+        if let Some(original) = original_dir {
+            let _ = std::env::set_current_dir(&original);
+        }
     }
 
     #[tokio::test]
     async fn test_init_command_default_name() {
         let temp_dir = tempdir().unwrap();
-        let original_dir = std::env::current_dir().unwrap();
+        let original_dir = std::env::current_dir().ok();
 
         // Change to temp directory
         std::env::set_current_dir(temp_dir.path()).unwrap();
@@ -261,13 +274,15 @@ mod tests {
         assert!(vision_content.contains("Project Vision"));
 
         // Restore original directory
-        std::env::set_current_dir(original_dir).unwrap();
+        if let Some(original) = original_dir {
+            let _ = std::env::set_current_dir(&original);
+        }
     }
 
     #[tokio::test]
     async fn test_init_command_with_preset() {
         let temp_dir = tempdir().unwrap();
-        let original_dir = std::env::current_dir().unwrap();
+        let original_dir = std::env::current_dir().ok();
 
         // Change to temp directory
         std::env::set_current_dir(temp_dir.path()).unwrap();
@@ -293,17 +308,22 @@ mod tests {
         let db = Database::new(db_path.to_str().unwrap()).unwrap();
         let mut config_repo = db.configuration_repository().unwrap();
         let config = config_repo.get_flight_level_config().unwrap();
-        
-        assert_eq!(config, metis_core::domain::configuration::FlightLevelConfig::full());
+
+        assert_eq!(
+            config,
+            metis_core::domain::configuration::FlightLevelConfig::full()
+        );
 
         // Restore original directory
-        std::env::set_current_dir(original_dir).unwrap();
+        if let Some(original) = original_dir {
+            let _ = std::env::set_current_dir(&original);
+        }
     }
 
     #[tokio::test]
     async fn test_init_command_with_custom_flags() {
         let temp_dir = tempdir().unwrap();
-        let original_dir = std::env::current_dir().unwrap();
+        let original_dir = std::env::current_dir().ok();
 
         // Change to temp directory
         std::env::set_current_dir(temp_dir.path()).unwrap();
@@ -326,18 +346,20 @@ mod tests {
         let db = Database::new(db_path.to_str().unwrap()).unwrap();
         let mut config_repo = db.configuration_repository().unwrap();
         let config = config_repo.get_flight_level_config().unwrap();
-        
+
         assert!(!config.strategies_enabled);
         assert!(config.initiatives_enabled);
 
         // Restore original directory
-        std::env::set_current_dir(original_dir).unwrap();
+        if let Some(original) = original_dir {
+            let _ = std::env::set_current_dir(&original);
+        }
     }
 
     #[tokio::test]
     async fn test_init_command_default_streamlined() {
         let temp_dir = tempdir().unwrap();
-        let original_dir = std::env::current_dir().unwrap();
+        let original_dir = std::env::current_dir().ok();
 
         // Change to temp directory
         std::env::set_current_dir(temp_dir.path()).unwrap();
@@ -360,17 +382,22 @@ mod tests {
         let db = Database::new(db_path.to_str().unwrap()).unwrap();
         let mut config_repo = db.configuration_repository().unwrap();
         let config = config_repo.get_flight_level_config().unwrap();
-        
-        assert_eq!(config, metis_core::domain::configuration::FlightLevelConfig::streamlined());
+
+        assert_eq!(
+            config,
+            metis_core::domain::configuration::FlightLevelConfig::streamlined()
+        );
 
         // Restore original directory
-        std::env::set_current_dir(original_dir).unwrap();
+        if let Some(original) = original_dir {
+            let _ = std::env::set_current_dir(&original);
+        }
     }
 
     #[tokio::test]
     async fn test_init_command_invalid_preset() {
         let temp_dir = tempdir().unwrap();
-        let original_dir = std::env::current_dir().unwrap();
+        let original_dir = std::env::current_dir().ok();
 
         // Change to temp directory
         std::env::set_current_dir(temp_dir.path()).unwrap();
@@ -388,6 +415,8 @@ mod tests {
         assert!(result.unwrap_err().to_string().contains("Invalid preset"));
 
         // Restore original directory
-        std::env::set_current_dir(original_dir).unwrap();
+        if let Some(original) = original_dir {
+            let _ = std::env::set_current_dir(&original);
+        }
     }
 }

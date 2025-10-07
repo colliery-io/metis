@@ -110,7 +110,7 @@ async fn test_create_strategy() -> Result<()> {
     assert_eq!(db_strategies.len(), 1, "Should have 1 strategy in database");
     assert_eq!(db_strategies[0].title, "Test Strategy");
     assert_eq!(db_strategies[0].phase, "shaping");
-    assert_eq!(db_strategies[0].archived, false);
+    assert!(!db_strategies[0].archived);
 
     println!("✅ Strategy created successfully!");
     println!("   - UI shows strategy in Shaping column");

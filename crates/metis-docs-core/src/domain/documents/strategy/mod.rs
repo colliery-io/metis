@@ -55,6 +55,7 @@ pub struct Strategy {
 
 impl Strategy {
     /// Create a new Strategy document with content rendered from template
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         title: String,
         parent_id: Option<DocumentId>, // Usually a Vision
@@ -87,7 +88,7 @@ impl Strategy {
 
         // For strategies, the strategy_id is self and initiative_id is None
         let strategy_id = Some(DocumentId::from_title(&title));
-        
+
         Ok(Self {
             core: super::traits::DocumentCore {
                 title,
@@ -120,7 +121,7 @@ impl Strategy {
     ) -> Self {
         // For strategies, the strategy_id is self and initiative_id is None
         let strategy_id = Some(DocumentId::from_title(&title));
-        
+
         Self {
             core: super::traits::DocumentCore {
                 title,
@@ -237,8 +238,12 @@ impl Strategy {
 
         // Create metadata and content
         let short_code = FrontmatterParser::extract_string(&fm_map, "short_code")?;
-        let metadata =
-            DocumentMetadata::from_frontmatter(created_at, updated_at, exit_criteria_met, short_code);
+        let metadata = DocumentMetadata::from_frontmatter(
+            created_at,
+            updated_at,
+            exit_criteria_met,
+            short_code,
+        );
         let content = DocumentContent::from_markdown(&parsed.content);
 
         Ok(Self::from_parts(
@@ -302,18 +307,22 @@ impl Strategy {
         // Convert tags to strings
         let tag_strings: Vec<String> = self.tags().iter().map(|tag| tag.to_str()).collect();
         context.insert("tags", &tag_strings);
-        
+
         // Add lineage fields
         context.insert(
             "strategy_id",
-            &self.core.strategy_id
+            &self
+                .core
+                .strategy_id
                 .as_ref()
                 .map(|id| id.to_string())
                 .unwrap_or_default(),
         );
         context.insert(
             "initiative_id",
-            &self.core.initiative_id
+            &self
+                .core
+                .initiative_id
                 .as_ref()
                 .map(|id| id.to_string())
                 .unwrap_or_default(),

@@ -1,6 +1,6 @@
+use crate::domain::documents::types::DocumentType;
 use serde::{Deserialize, Serialize};
 use std::fmt;
-use crate::domain::documents::types::DocumentType;
 
 /// Flight level configuration defining which levels are enabled
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -13,14 +13,17 @@ pub struct FlightLevelConfig {
 
 impl FlightLevelConfig {
     /// Create a new configuration
-    pub fn new(strategies_enabled: bool, initiatives_enabled: bool) -> Result<Self, ConfigurationError> {
+    pub fn new(
+        strategies_enabled: bool,
+        initiatives_enabled: bool,
+    ) -> Result<Self, ConfigurationError> {
         // Validation: If initiatives are disabled, strategies must also be disabled
         if !initiatives_enabled && strategies_enabled {
             return Err(ConfigurationError::InvalidConfiguration(
                 "Cannot enable strategies without initiatives - this would create a gap in the hierarchy".to_string()
             ));
         }
-        
+
         Ok(Self {
             strategies_enabled,
             initiatives_enabled,
@@ -55,7 +58,7 @@ impl FlightLevelConfig {
     pub fn is_document_type_allowed(&self, doc_type: DocumentType) -> bool {
         match doc_type {
             DocumentType::Vision | DocumentType::Adr => true, // Always allowed
-            DocumentType::Task => true, // Always allowed
+            DocumentType::Task => true,                       // Always allowed
             DocumentType::Strategy => self.strategies_enabled,
             DocumentType::Initiative => self.initiatives_enabled,
         }
@@ -87,7 +90,7 @@ impl FlightLevelConfig {
     pub fn preset_name(&self) -> &'static str {
         match (self.strategies_enabled, self.initiatives_enabled) {
             (true, true) => "full",
-            (false, true) => "streamlined", 
+            (false, true) => "streamlined",
             (false, false) => "direct",
             (true, false) => "invalid", // This shouldn't happen due to validation
         }
@@ -96,35 +99,35 @@ impl FlightLevelConfig {
     /// Get enabled document types in hierarchical order
     pub fn enabled_document_types(&self) -> Vec<DocumentType> {
         let mut types = vec![DocumentType::Vision];
-        
+
         if self.strategies_enabled {
             types.push(DocumentType::Strategy);
         }
-        
+
         if self.initiatives_enabled {
             types.push(DocumentType::Initiative);
         }
-        
+
         types.push(DocumentType::Task);
         types.push(DocumentType::Adr); // ADRs are always available
-        
+
         types
     }
 
     /// Get the hierarchy display string
     pub fn hierarchy_display(&self) -> String {
         let mut hierarchy = vec!["Vision"];
-        
+
         if self.strategies_enabled {
             hierarchy.push("Strategy");
         }
-        
+
         if self.initiatives_enabled {
             hierarchy.push("Initiative");
         }
-        
+
         hierarchy.push("Task");
-        
+
         hierarchy.join(" → ")
     }
 }
@@ -153,10 +156,16 @@ pub enum ConfigurationError {
 impl fmt::Display for ConfigurationError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ConfigurationError::InvalidConfiguration(msg) => write!(f, "Invalid configuration: {}", msg),
-            ConfigurationError::SerializationError(msg) => write!(f, "Serialization error: {}", msg),
+            ConfigurationError::InvalidConfiguration(msg) => {
+                write!(f, "Invalid configuration: {}", msg)
+            }
+            ConfigurationError::SerializationError(msg) => {
+                write!(f, "Serialization error: {}", msg)
+            }
             ConfigurationError::InvalidValue(msg) => write!(f, "Invalid value: {}", msg),
-            ConfigurationError::MissingConfiguration(msg) => write!(f, "Missing configuration: {}", msg),
+            ConfigurationError::MissingConfiguration(msg) => {
+                write!(f, "Missing configuration: {}", msg)
+            }
         }
     }
 }
@@ -224,54 +233,86 @@ mod tests {
     fn test_parent_type_resolution() {
         let full = FlightLevelConfig::full();
         assert_eq!(full.get_parent_type(DocumentType::Vision), None);
-        assert_eq!(full.get_parent_type(DocumentType::Strategy), Some(DocumentType::Vision));
-        assert_eq!(full.get_parent_type(DocumentType::Initiative), Some(DocumentType::Strategy));
-        assert_eq!(full.get_parent_type(DocumentType::Task), Some(DocumentType::Initiative));
+        assert_eq!(
+            full.get_parent_type(DocumentType::Strategy),
+            Some(DocumentType::Vision)
+        );
+        assert_eq!(
+            full.get_parent_type(DocumentType::Initiative),
+            Some(DocumentType::Strategy)
+        );
+        assert_eq!(
+            full.get_parent_type(DocumentType::Task),
+            Some(DocumentType::Initiative)
+        );
         assert_eq!(full.get_parent_type(DocumentType::Adr), None);
 
         let streamlined = FlightLevelConfig::streamlined();
-        assert_eq!(streamlined.get_parent_type(DocumentType::Initiative), Some(DocumentType::Vision));
-        assert_eq!(streamlined.get_parent_type(DocumentType::Task), Some(DocumentType::Initiative));
+        assert_eq!(
+            streamlined.get_parent_type(DocumentType::Initiative),
+            Some(DocumentType::Vision)
+        );
+        assert_eq!(
+            streamlined.get_parent_type(DocumentType::Task),
+            Some(DocumentType::Initiative)
+        );
 
         let direct = FlightLevelConfig::direct();
-        assert_eq!(direct.get_parent_type(DocumentType::Task), Some(DocumentType::Vision));
+        assert_eq!(
+            direct.get_parent_type(DocumentType::Task),
+            Some(DocumentType::Vision)
+        );
     }
 
     #[test]
     fn test_enabled_document_types() {
         let full = FlightLevelConfig::full();
         let full_types = full.enabled_document_types();
-        assert_eq!(full_types, vec![
-            DocumentType::Vision,
-            DocumentType::Strategy,
-            DocumentType::Initiative,
-            DocumentType::Task,
-            DocumentType::Adr
-        ]);
+        assert_eq!(
+            full_types,
+            vec![
+                DocumentType::Vision,
+                DocumentType::Strategy,
+                DocumentType::Initiative,
+                DocumentType::Task,
+                DocumentType::Adr
+            ]
+        );
 
         let streamlined = FlightLevelConfig::streamlined();
         let streamlined_types = streamlined.enabled_document_types();
-        assert_eq!(streamlined_types, vec![
-            DocumentType::Vision,
-            DocumentType::Initiative,
-            DocumentType::Task,
-            DocumentType::Adr
-        ]);
+        assert_eq!(
+            streamlined_types,
+            vec![
+                DocumentType::Vision,
+                DocumentType::Initiative,
+                DocumentType::Task,
+                DocumentType::Adr
+            ]
+        );
 
         let direct = FlightLevelConfig::direct();
         let direct_types = direct.enabled_document_types();
-        assert_eq!(direct_types, vec![
-            DocumentType::Vision,
-            DocumentType::Task,
-            DocumentType::Adr
-        ]);
+        assert_eq!(
+            direct_types,
+            vec![DocumentType::Vision, DocumentType::Task, DocumentType::Adr]
+        );
     }
 
     #[test]
     fn test_hierarchy_display() {
-        assert_eq!(FlightLevelConfig::full().hierarchy_display(), "Vision → Strategy → Initiative → Task");
-        assert_eq!(FlightLevelConfig::streamlined().hierarchy_display(), "Vision → Initiative → Task");
-        assert_eq!(FlightLevelConfig::direct().hierarchy_display(), "Vision → Task");
+        assert_eq!(
+            FlightLevelConfig::full().hierarchy_display(),
+            "Vision → Strategy → Initiative → Task"
+        );
+        assert_eq!(
+            FlightLevelConfig::streamlined().hierarchy_display(),
+            "Vision → Initiative → Task"
+        );
+        assert_eq!(
+            FlightLevelConfig::direct().hierarchy_display(),
+            "Vision → Task"
+        );
     }
 
     #[test]

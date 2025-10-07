@@ -9,7 +9,9 @@ use serde_json::Value;
 
 /// Helper to extract short code from MCP response JSON
 fn extract_short_code(result: &rust_mcp_sdk::schema::CallToolResult) -> String {
-    if let Some(rust_mcp_sdk::schema::ContentBlock::TextContent(text_content)) = result.content.first() {
+    if let Some(rust_mcp_sdk::schema::ContentBlock::TextContent(text_content)) =
+        result.content.first()
+    {
         if let Ok(json) = serde_json::from_str::<serde_json::Value>(&text_content.text) {
             if let Some(short_code) = json["short_code"].as_str() {
                 return short_code.to_string();
@@ -25,8 +27,10 @@ async fn get_vision_short_code(metis_path: &str) -> String {
         project_path: metis_path.to_string(),
     };
     let result = list_tool.call_tool().await.unwrap();
-    
-    if let Some(rust_mcp_sdk::schema::ContentBlock::TextContent(text_content)) = result.content.first() {
+
+    if let Some(rust_mcp_sdk::schema::ContentBlock::TextContent(text_content)) =
+        result.content.first()
+    {
         if let Ok(json) = serde_json::from_str::<Value>(&text_content.text) {
             if let Some(documents) = json["documents"].as_array() {
                 for doc in documents {
@@ -48,17 +52,24 @@ async fn get_vision_short_code(metis_path: &str) -> String {
 async fn test_mcp_archive_cascading_behavior() -> Result<()> {
     let helper = McpTestHelper::new().await?;
     helper.initialize_project().await?;
-    
+
     // Set full configuration to enable all document types for testing
     let db = helper.get_database()?;
-    let mut config_repo = db.configuration_repository().map_err(|e| anyhow::anyhow!("Failed to get config repo: {}", e))?;
-    config_repo.set("flight_levels", r#"{"strategies_enabled":true,"initiatives_enabled":true}"#).map_err(|e| anyhow::anyhow!("Failed to set config: {}", e))?;
+    let mut config_repo = db
+        .configuration_repository()
+        .map_err(|e| anyhow::anyhow!("Failed to get config repo: {}", e))?;
+    config_repo
+        .set(
+            "flight_levels",
+            r#"{"strategies_enabled":true,"initiatives_enabled":true}"#,
+        )
+        .map_err(|e| anyhow::anyhow!("Failed to set config: {}", e))?;
 
     println!("=== MCP Archive Cascading Test ===");
 
     // Step 1: Get vision short code and create full hierarchy - Vision -> Strategy -> Initiative -> 2 Tasks
     let vision_short_code = get_vision_short_code(&helper.metis_dir()).await;
-    
+
     let create_strategy = CreateDocumentTool {
         project_path: helper.metis_dir().clone(),
         document_type: "strategy".to_string(),
@@ -144,12 +155,12 @@ async fn test_mcp_archive_cascading_behavior() -> Result<()> {
     assert_eq!(db_tasks.len(), 2, "Should have 2 tasks");
 
     // All should be active (not archived)
-    assert_eq!(
-        db_strategies[0].archived, false,
+    assert!(
+        !db_strategies[0].archived,
         "Strategy should be active"
     );
-    assert_eq!(
-        db_initiatives[0].archived, false,
+    assert!(
+        !db_initiatives[0].archived,
         "Initiative should be active"
     );
     assert_eq!(
@@ -191,12 +202,12 @@ async fn test_mcp_archive_cascading_behavior() -> Result<()> {
 
     assert_eq!(archived_tasks, 1, "Should have 1 archived task");
     assert_eq!(active_tasks, 1, "Should have 1 active task");
-    assert_eq!(
-        db_strategies_after_single[0].archived, false,
+    assert!(
+        !db_strategies_after_single[0].archived,
         "Strategy should still be active"
     );
-    assert_eq!(
-        db_initiatives_after_single[0].archived, false,
+    assert!(
+        !db_initiatives_after_single[0].archived,
         "Initiative should still be active"
     );
 
@@ -207,8 +218,13 @@ async fn test_mcp_archive_cascading_behavior() -> Result<()> {
 
     // Add debugging - check directory structure before archive
     // Get the actual strategy document to get its path
-    let strategy_doc = repo.find_by_short_code(&strategy_short_code).map_err(|e| anyhow::anyhow!("Find strategy error: {}", e))?.unwrap();
-    let strategy_dir = helper.metis_dir().to_string() + "/" + &strategy_doc.filepath.rsplitn(2, '/').nth(1).unwrap_or("");
+    let strategy_doc = repo
+        .find_by_short_code(&strategy_short_code)
+        .map_err(|e| anyhow::anyhow!("Find strategy error: {}", e))?
+        .unwrap();
+    let strategy_dir = helper.metis_dir().to_string()
+        + "/"
+        + strategy_doc.filepath.rsplit_once('/').map(|x| x.0).unwrap_or("");
 
     println!("Before MCP archive - Strategy directory structure:");
     if let Ok(entries) = std::fs::read_dir(&strategy_dir) {
@@ -255,12 +271,12 @@ async fn test_mcp_archive_cascading_behavior() -> Result<()> {
             .find_by_type("task")
             .map_err(|e| anyhow::anyhow!("Find error: {}", e))?;
 
-        assert_eq!(
-            db_strategies_final[0].archived, true,
+        assert!(
+            db_strategies_final[0].archived,
             "Strategy should be archived"
         );
-        assert_eq!(
-            db_initiatives_final[0].archived, true,
+        assert!(
+            db_initiatives_final[0].archived,
             "Initiative should be archived due to cascade"
         );
 
@@ -316,12 +332,12 @@ async fn test_mcp_archive_cascading_behavior() -> Result<()> {
             .find_by_type("task")
             .map_err(|e| anyhow::anyhow!("Find error: {}", e))?;
 
-        assert_eq!(
-            db_strategies_final[0].archived, false,
+        assert!(
+            !db_strategies_final[0].archived,
             "Strategy should still be active due to failed archive"
         );
-        assert_eq!(
-            db_initiatives_final[0].archived, false,
+        assert!(
+            !db_initiatives_final[0].archived,
             "Initiative should still be active"
         );
 
@@ -387,11 +403,18 @@ async fn test_mcp_archive_cascading_behavior() -> Result<()> {
 async fn test_mcp_archive_error_handling() -> Result<()> {
     let helper = McpTestHelper::new().await?;
     helper.initialize_project().await?;
-    
+
     // Set full configuration to enable all document types for testing
     let db = helper.get_database()?;
-    let mut config_repo = db.configuration_repository().map_err(|e| anyhow::anyhow!("Failed to get config repo: {}", e))?;
-    config_repo.set("flight_levels", r#"{"strategies_enabled":true,"initiatives_enabled":true}"#).map_err(|e| anyhow::anyhow!("Failed to set config: {}", e))?;
+    let mut config_repo = db
+        .configuration_repository()
+        .map_err(|e| anyhow::anyhow!("Failed to get config repo: {}", e))?;
+    config_repo
+        .set(
+            "flight_levels",
+            r#"{"strategies_enabled":true,"initiatives_enabled":true}"#,
+        )
+        .map_err(|e| anyhow::anyhow!("Failed to set config: {}", e))?;
 
     println!("=== MCP Archive Error Handling Test ===");
 
@@ -408,7 +431,7 @@ async fn test_mcp_archive_error_handling() -> Result<()> {
 
     // Try to archive same document twice
     let vision_short_code = get_vision_short_code(&helper.metis_dir()).await;
-    
+
     let create_strategy = CreateDocumentTool {
         project_path: helper.metis_dir().clone(),
         document_type: "strategy".to_string(),

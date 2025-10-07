@@ -16,7 +16,7 @@ pub async fn create_new_adr(title: &str) -> Result<()> {
 
     // 2. Use DocumentCreationService to create the ADR
     let creation_service = DocumentCreationService::new(&metis_dir);
-    
+
     let config = DocumentCreationConfig {
         title: title.to_string(),
         description: None,
@@ -40,7 +40,6 @@ pub async fn create_new_adr(title: &str) -> Result<()> {
     Ok(())
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -48,7 +47,6 @@ mod tests {
     use metis_core::{Adr, Document};
     use std::fs;
     use tempfile::tempdir;
-
 
     #[tokio::test]
     async fn test_create_new_adr_no_workspace() {
@@ -109,12 +107,8 @@ mod tests {
         let adr_file = adr_files[0].path();
         let filename = adr_file.file_stem().unwrap().to_str().unwrap();
         assert!(
-            filename.starts_with("001-"),
-            "ADR filename should start with 001-"
-        );
-        assert!(
-            filename.contains("test-adr"),
-            "ADR filename should contain the slug"
+            filename.starts_with("TEST-A-"),
+            "ADR filename should be in short code format"
         );
 
         // Verify file content has proper structure

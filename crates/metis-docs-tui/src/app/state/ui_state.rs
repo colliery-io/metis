@@ -125,30 +125,33 @@ impl UiState {
     /// Get enabled board types based on flight level configuration
     pub fn get_enabled_boards(flight_config: &FlightLevelConfig) -> Vec<BoardType> {
         let mut boards = vec![];
-        
+
         if flight_config.strategies_enabled {
             boards.push(BoardType::Strategy);
         }
-        
+
         if flight_config.initiatives_enabled {
             boards.push(BoardType::Initiative);
         }
-        
+
         // Task board is always available
         boards.push(BoardType::Task);
-        
+
         // ADR and Backlog are always available
         boards.push(BoardType::Adr);
         boards.push(BoardType::Backlog);
-        
+
         boards
     }
 
     /// Navigate to next enabled board based on configuration
     pub fn next_board_with_config(&mut self, flight_config: &FlightLevelConfig) {
         let enabled_boards = Self::get_enabled_boards(flight_config);
-        
-        if let Some(current_index) = enabled_boards.iter().position(|&board| board == self.current_board) {
+
+        if let Some(current_index) = enabled_boards
+            .iter()
+            .position(|&board| board == self.current_board)
+        {
             let next_index = (current_index + 1) % enabled_boards.len();
             self.current_board = enabled_boards[next_index];
         } else {
@@ -162,8 +165,11 @@ impl UiState {
     /// Navigate to previous enabled board based on configuration
     pub fn previous_board_with_config(&mut self, flight_config: &FlightLevelConfig) {
         let enabled_boards = Self::get_enabled_boards(flight_config);
-        
-        if let Some(current_index) = enabled_boards.iter().position(|&board| board == self.current_board) {
+
+        if let Some(current_index) = enabled_boards
+            .iter()
+            .position(|&board| board == self.current_board)
+        {
             let previous_index = if current_index == 0 {
                 enabled_boards.len() - 1
             } else {
@@ -214,39 +220,44 @@ mod tests {
     fn test_get_enabled_boards_full_config() {
         let config = FlightLevelConfig::full();
         let enabled_boards = UiState::get_enabled_boards(&config);
-        
-        assert_eq!(enabled_boards, vec![
-            BoardType::Strategy,
-            BoardType::Initiative, 
-            BoardType::Task,
-            BoardType::Adr,
-            BoardType::Backlog
-        ]);
+
+        assert_eq!(
+            enabled_boards,
+            vec![
+                BoardType::Strategy,
+                BoardType::Initiative,
+                BoardType::Task,
+                BoardType::Adr,
+                BoardType::Backlog
+            ]
+        );
     }
 
     #[test]
     fn test_get_enabled_boards_streamlined_config() {
         let config = FlightLevelConfig::streamlined();
         let enabled_boards = UiState::get_enabled_boards(&config);
-        
-        assert_eq!(enabled_boards, vec![
-            BoardType::Initiative,
-            BoardType::Task,
-            BoardType::Adr,
-            BoardType::Backlog
-        ]);
+
+        assert_eq!(
+            enabled_boards,
+            vec![
+                BoardType::Initiative,
+                BoardType::Task,
+                BoardType::Adr,
+                BoardType::Backlog
+            ]
+        );
     }
 
     #[test]
     fn test_get_enabled_boards_direct_config() {
         let config = FlightLevelConfig::direct();
         let enabled_boards = UiState::get_enabled_boards(&config);
-        
-        assert_eq!(enabled_boards, vec![
-            BoardType::Task,
-            BoardType::Adr,
-            BoardType::Backlog
-        ]);
+
+        assert_eq!(
+            enabled_boards,
+            vec![BoardType::Task, BoardType::Adr, BoardType::Backlog]
+        );
     }
 
     #[test]
@@ -254,44 +265,71 @@ mod tests {
         let full_config = FlightLevelConfig::full();
         let streamlined_config = FlightLevelConfig::streamlined();
         let direct_config = FlightLevelConfig::direct();
-        
+
         // Full configuration
         assert!(UiState::is_board_enabled(BoardType::Strategy, &full_config));
-        assert!(UiState::is_board_enabled(BoardType::Initiative, &full_config));
+        assert!(UiState::is_board_enabled(
+            BoardType::Initiative,
+            &full_config
+        ));
         assert!(UiState::is_board_enabled(BoardType::Task, &full_config));
         assert!(UiState::is_board_enabled(BoardType::Adr, &full_config));
         assert!(UiState::is_board_enabled(BoardType::Backlog, &full_config));
-        
+
         // Streamlined configuration
-        assert!(!UiState::is_board_enabled(BoardType::Strategy, &streamlined_config));
-        assert!(UiState::is_board_enabled(BoardType::Initiative, &streamlined_config));
-        assert!(UiState::is_board_enabled(BoardType::Task, &streamlined_config));
-        assert!(UiState::is_board_enabled(BoardType::Adr, &streamlined_config));
-        assert!(UiState::is_board_enabled(BoardType::Backlog, &streamlined_config));
-        
+        assert!(!UiState::is_board_enabled(
+            BoardType::Strategy,
+            &streamlined_config
+        ));
+        assert!(UiState::is_board_enabled(
+            BoardType::Initiative,
+            &streamlined_config
+        ));
+        assert!(UiState::is_board_enabled(
+            BoardType::Task,
+            &streamlined_config
+        ));
+        assert!(UiState::is_board_enabled(
+            BoardType::Adr,
+            &streamlined_config
+        ));
+        assert!(UiState::is_board_enabled(
+            BoardType::Backlog,
+            &streamlined_config
+        ));
+
         // Direct configuration
-        assert!(!UiState::is_board_enabled(BoardType::Strategy, &direct_config));
-        assert!(!UiState::is_board_enabled(BoardType::Initiative, &direct_config));
+        assert!(!UiState::is_board_enabled(
+            BoardType::Strategy,
+            &direct_config
+        ));
+        assert!(!UiState::is_board_enabled(
+            BoardType::Initiative,
+            &direct_config
+        ));
         assert!(UiState::is_board_enabled(BoardType::Task, &direct_config));
         assert!(UiState::is_board_enabled(BoardType::Adr, &direct_config));
-        assert!(UiState::is_board_enabled(BoardType::Backlog, &direct_config));
+        assert!(UiState::is_board_enabled(
+            BoardType::Backlog,
+            &direct_config
+        ));
     }
 
     #[test]
     fn test_ensure_valid_board() {
         let mut ui_state = UiState::new();
-        
+
         // Start with strategy board in full config (valid)
         ui_state.current_board = BoardType::Strategy;
         let full_config = FlightLevelConfig::full();
         ui_state.ensure_valid_board(&full_config);
         assert_eq!(ui_state.current_board, BoardType::Strategy); // Should stay the same
-        
+
         // Switch to streamlined config where strategy is disabled
         let streamlined_config = FlightLevelConfig::streamlined();
         ui_state.ensure_valid_board(&streamlined_config);
         assert_eq!(ui_state.current_board, BoardType::Initiative); // Should move to first enabled
-        
+
         // Switch to direct config where initiative is also disabled
         let direct_config = FlightLevelConfig::direct();
         ui_state.ensure_valid_board(&direct_config);

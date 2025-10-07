@@ -344,17 +344,17 @@ mod tests {
         let create_initiative_cmd = crate::commands::CreateCommand {
             document_type: crate::commands::create::CreateCommands::Initiative {
                 title: "Test Initiative".to_string(),
-                strategy: "parent-strategy".to_string(),
+                strategy: "TEST-S-0001".to_string(),
             },
         };
         create_initiative_cmd.execute().await.unwrap();
 
-        let doc_id = "test-initiative";
+        let doc_id = "TEST-I-0001";
 
         // Check what phase the initiative actually starts with
         let initiative_path = temp_dir
             .path()
-            .join(".metis/strategies/parent-strategy/initiatives/test-initiative/initiative.md");
+            .join(".metis/strategies/TEST-S-0001/initiatives/TEST-I-0001/initiative.md");
         let initiative = Initiative::from_file(&initiative_path).await.unwrap();
         println!("Initiative starts with phase: {:?}", initiative.phase());
 
@@ -426,7 +426,7 @@ mod tests {
         let create_initiative_cmd = crate::commands::CreateCommand {
             document_type: crate::commands::create::CreateCommands::Initiative {
                 title: "Parent Initiative".to_string(),
-                strategy: "parent-strategy".to_string(),
+                strategy: "TEST-S-0001".to_string(),
             },
         };
         create_initiative_cmd.execute().await.unwrap();
@@ -435,12 +435,12 @@ mod tests {
         let create_task_cmd = crate::commands::CreateCommand {
             document_type: crate::commands::create::CreateCommands::Task {
                 title: "Test Task".to_string(),
-                initiative: "parent-initiative".to_string(),
+                initiative: "TEST-I-0001".to_string(),
             },
         };
         create_task_cmd.execute().await.unwrap();
 
-        let doc_id = "test-task";
+        let doc_id = "TEST-T-0001";
 
         // 1. Todo → Active
         let cmd = TransitionCommand {
@@ -463,12 +463,12 @@ mod tests {
         let create_task_cmd2 = crate::commands::CreateCommand {
             document_type: crate::commands::create::CreateCommands::Task {
                 title: "Blocked Task".to_string(),
-                initiative: "parent-initiative".to_string(),
+                initiative: "TEST-I-0001".to_string(),
             },
         };
         create_task_cmd2.execute().await.unwrap();
 
-        let blocked_doc_id = "blocked-task";
+        let blocked_doc_id = "TEST-T-0002";
 
         // Todo → Blocked
         let cmd = TransitionCommand {
@@ -517,7 +517,7 @@ mod tests {
         };
         create_adr_cmd.execute().await.unwrap();
 
-        let doc_id = "001-test-adr";
+        let doc_id = "TEST-A-0001";
 
         // 1. Auto-transition: Draft → Discussion
         let cmd = TransitionCommand {

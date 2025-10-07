@@ -8,11 +8,7 @@ use crate::error::*;
 use crate::models::*;
 use crate::services::*;
 use anyhow::Result;
-use metis_core::{
-    domain::documents::types::DocumentType,
-    Initiative, Strategy, Task,
-};
-
+use metis_core::{domain::documents::types::DocumentType, Initiative, Strategy, Task};
 
 pub struct App {
     // Core application state
@@ -28,6 +24,12 @@ pub struct App {
     pub document_service: Option<DocumentService>,
     pub sync_service: Option<SyncService>,
     pub transition_service: Option<TransitionService>,
+}
+
+impl Default for App {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl App {
@@ -99,9 +101,11 @@ impl App {
     }
 
     pub fn error_message(&self) -> Option<String> {
-        self.ui_state.message_state.get_current_message().map(|msg| msg.content.clone())
+        self.ui_state
+            .message_state
+            .get_current_message()
+            .map(|msg| msg.content.clone())
     }
-
 
     pub fn get_selected_item(&self) -> Option<&KanbanItem> {
         let current_board = self.ui_state.current_board;
@@ -151,9 +155,6 @@ impl App {
             .handle_event(&crossterm::event::Event::Key(key));
     }
 
-
-
-
     pub async fn load_flight_config(&mut self) -> Result<()> {
         if let Some(workspace_dir) = &self.core_state.workspace_dir {
             // Create database connection and load configuration
@@ -165,25 +166,29 @@ impl App {
                         Ok(config) => {
                             self.core_state.set_flight_config(config);
                             // Ensure the current board is valid for the new configuration
-                            self.ui_state.ensure_valid_board(&self.core_state.flight_config);
+                            self.ui_state
+                                .ensure_valid_board(&self.core_state.flight_config);
                         }
                         Err(e) => {
                             // Log error but continue with default configuration
                             eprintln!("Warning: Failed to load flight level configuration: {}", e);
                             eprintln!("Using default (full) configuration");
                             // Ensure the current board is valid for the default configuration
-                            self.ui_state.ensure_valid_board(&self.core_state.flight_config);
+                            self.ui_state
+                                .ensure_valid_board(&self.core_state.flight_config);
                         }
                     }
                 } else {
                     eprintln!("Warning: Failed to create configuration repository, using default configuration");
                     // Ensure the current board is valid for the default configuration
-                    self.ui_state.ensure_valid_board(&self.core_state.flight_config);
+                    self.ui_state
+                        .ensure_valid_board(&self.core_state.flight_config);
                 }
             } else {
                 eprintln!("Warning: Failed to connect to database, using default configuration");
                 // Ensure the current board is valid for the default configuration
-                self.ui_state.ensure_valid_board(&self.core_state.flight_config);
+                self.ui_state
+                    .ensure_valid_board(&self.core_state.flight_config);
             }
         }
         Ok(())
@@ -207,14 +212,14 @@ impl App {
             for column in &mut self.ui_state.backlog_board.columns {
                 column.items.clear();
             }
-            
+
             // Reset selection state to avoid referencing non-existent items
             self.selection_state.strategy_selection = (0, 0);
             self.selection_state.initiative_selection = (0, 0);
             self.selection_state.task_selection = (0, 0);
             self.selection_state.adr_selection = (0, 0);
             self.selection_state.backlog_selection = (0, 0);
-            
+
             let mut documents = document_service.load_documents_from_database().await?;
 
             // Sort documents by type first, then by appropriate criteria
@@ -303,10 +308,10 @@ impl App {
                         if let Ok(task) = Task::from_file(std::path::Path::new(&doc.filepath)).await
                         {
                             use metis_core::{domain::documents::types::Phase, Document};
-                            
+
                             // Check if this is a backlog item (only Phase::Backlog)
                             let is_backlog = task.phase() == Ok(Phase::Backlog);
-                            
+
                             if is_backlog {
                                 // Place in backlog board
                                 let column_index = get_backlog_column_index(&task);
@@ -365,8 +370,4 @@ impl App {
 
         Ok(())
     }
-
-
-
-
 }

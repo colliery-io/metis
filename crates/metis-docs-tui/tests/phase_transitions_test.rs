@@ -184,8 +184,8 @@ async fn test_strategy_phase_transitions() -> Result<()> {
         db_strategies[0].phase, "shaping",
         "Database should have correct phase"
     );
-    assert_eq!(
-        db_strategies[0].archived, false,
+    assert!(
+        !db_strategies[0].archived,
         "Strategy should not be archived"
     );
 
@@ -362,8 +362,8 @@ async fn test_initiative_phase_transitions() -> Result<()> {
         db_initiatives[0].phase, "discovery",
         "Database should have correct phase"
     );
-    assert_eq!(
-        db_initiatives[0].archived, false,
+    assert!(
+        !db_initiatives[0].archived,
         "Initiative should not be archived"
     );
 
@@ -552,7 +552,7 @@ async fn test_task_phase_transitions() -> Result<()> {
         db_tasks[0].phase, "todo",
         "Database should have correct phase"
     );
-    assert_eq!(db_tasks[0].archived, false, "Task should not be archived");
+    assert!(!db_tasks[0].archived, "Task should not be archived");
 
     // Validate complete state including file hash
     let task_path = "strategies/technical-excellence/initiatives/upgrade-infrastructure/setup-ci-cd-pipeline.md";
@@ -672,7 +672,7 @@ async fn test_adr_phase_transitions() -> Result<()> {
         db_adrs[0].phase, "draft",
         "Database should have correct phase"
     );
-    assert_eq!(db_adrs[0].archived, false, "ADR should not be archived");
+    assert!(!db_adrs[0].archived, "ADR should not be archived");
 
     // Validate complete state including file hash
     let adr_path = "adrs/001-use-rust-for-backend-services.md";

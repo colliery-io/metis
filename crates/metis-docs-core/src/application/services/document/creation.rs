@@ -1,12 +1,12 @@
+use crate::dal::database::configuration_repository::ConfigurationRepository;
+use crate::domain::configuration::FlightLevelConfig;
 use crate::domain::documents::initiative::Complexity;
 use crate::domain::documents::strategy::RiskLevel;
 use crate::domain::documents::traits::Document;
-use crate::domain::documents::types::{DocumentId, DocumentType, Phase, Tag, ParentReference};
-use crate::domain::configuration::FlightLevelConfig;
-use crate::dal::database::configuration_repository::ConfigurationRepository;
+use crate::domain::documents::types::{DocumentId, DocumentType, ParentReference, Phase, Tag};
 use crate::Result;
-use crate::{Adr, Initiative, MetisError, Strategy, Task, Vision};
-use diesel::{Connection, sqlite::SqliteConnection};
+use crate::{Adr, Database, Initiative, MetisError, Strategy, Task, Vision};
+use diesel::{sqlite::SqliteConnection, Connection};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -51,10 +51,13 @@ impl DocumentCreationService {
     /// Generate a short code for a document type
     fn generate_short_code(&self, doc_type: &str) -> Result<String> {
         let mut config_repo = ConfigurationRepository::new(
-            SqliteConnection::establish(&self.db_path.to_string_lossy())
-                .map_err(|e| MetisError::ConfigurationError(crate::domain::configuration::ConfigurationError::InvalidValue(e.to_string())))?
+            SqliteConnection::establish(&self.db_path.to_string_lossy()).map_err(|e| {
+                MetisError::ConfigurationError(
+                    crate::domain::configuration::ConfigurationError::InvalidValue(e.to_string()),
+                )
+            })?,
         );
-        
+
         config_repo.generate_short_code(doc_type)
     }
 
@@ -109,20 +112,17 @@ impl DocumentCreationService {
 
     /// Create a new strategy document
     pub async fn create_strategy(&self, config: DocumentCreationConfig) -> Result<CreationResult> {
-        // Generate strategy ID from title
-        let strategy_id = self.generate_id_from_title(&config.title);
-        let strategy_dir = self.workspace_dir.join("strategies").join(&strategy_id);
+        // Generate short code for strategy (used for both ID and file path)
+        let short_code = self.generate_short_code("strategy")?;
+        let strategy_dir = self.workspace_dir.join("strategies").join(&short_code);
         let file_path = strategy_dir.join("strategy.md");
 
         // Check if strategy already exists
         if file_path.exists() {
             return Err(MetisError::ValidationFailed {
-                message: format!("Strategy with ID '{}' already exists", strategy_id),
+                message: format!("Strategy with short code '{}' already exists", short_code),
             });
         }
-
-        // Generate short code for strategy
-        let short_code = self.generate_short_code("strategy")?;
 
         // Create strategy with defaults
         let mut tags = vec![
@@ -167,7 +167,8 @@ impl DocumentCreationService {
         strategy_id: &str,
     ) -> Result<CreationResult> {
         // Use full configuration for backward compatibility
-        self.create_initiative_with_config(config, strategy_id, &FlightLevelConfig::full()).await
+        self.create_initiative_with_config(config, strategy_id, &FlightLevelConfig::full())
+            .await
     }
 
     /// Create a new initiative document with flight level configuration
@@ -179,7 +180,11 @@ impl DocumentCreationService {
     ) -> Result<CreationResult> {
         // Validate that initiatives are enabled in this configuration
         if !flight_config.initiatives_enabled {
-            let enabled_types: Vec<String> = flight_config.enabled_document_types().iter().map(|t| t.to_string()).collect();
+            let enabled_types: Vec<String> = flight_config
+                .enabled_document_types()
+                .iter()
+                .map(|t| t.to_string())
+                .collect();
             return Err(MetisError::ValidationFailed {
                 message: format!(
                     "Initiative creation is disabled in current configuration ({} mode). Available document types: {}. To enable initiatives, use 'metis config set --preset full' or 'metis config set --initiatives true'",
@@ -189,9 +194,45 @@ impl DocumentCreationService {
             });
         }
 
-        // Generate initiative ID from title
-        let initiative_id = self.generate_id_from_title(&config.title);
-        
+        // Generate short code for initiative (used for both ID and file path)
+        let short_code = self.generate_short_code("initiative")?;
+
+        // Determine the strategy short code first (outside conditionals to avoid lifetime issues)
+        let strategy_short_code = if flight_config.strategies_enabled && strategy_id != "NULL" {
+            // Validate parent strategy exists by looking up its short code in database
+            let db_path = self.workspace_dir.join("metis.db");
+            let db = Database::new(db_path.to_str().unwrap())
+                .map_err(|e| MetisError::FileSystem(format!("Database error: {}", e)))?;
+            let mut repo = db
+                .repository()
+                .map_err(|e| MetisError::FileSystem(format!("Repository error: {}", e)))?;
+
+            // Find the strategy by short code
+            let strategy = repo
+                .find_by_short_code(strategy_id)
+                .map_err(|e| MetisError::FileSystem(format!("Database lookup error: {}", e)))?
+                .ok_or_else(|| {
+                    MetisError::NotFound(format!("Parent strategy '{}' not found", strategy_id))
+                })?;
+
+            // Use the short code to build the file path
+            let strategy_file = self
+                .workspace_dir
+                .join("strategies")
+                .join(&strategy.short_code)
+                .join("strategy.md");
+            if !strategy_file.exists() {
+                return Err(MetisError::NotFound(format!(
+                    "Parent strategy '{}' not found at expected path",
+                    strategy_id
+                )));
+            }
+
+            strategy.short_code
+        } else {
+            "NULL".to_string()
+        };
+
         // Determine directory structure using consistent NULL-based paths
         let (parent_ref, effective_strategy_id) = if flight_config.strategies_enabled {
             // Full configuration: use actual strategy_id
@@ -203,40 +244,30 @@ impl DocumentCreationService {
                     ),
                 });
             }
-            
-            // Validate parent strategy exists
-            let strategy_file = self
-                .workspace_dir
-                .join("strategies")
-                .join(strategy_id)
-                .join("strategy.md");
-            if !strategy_file.exists() {
-                return Err(MetisError::NotFound(format!(
-                    "Parent strategy '{}' not found",
-                    strategy_id
-                )));
-            }
-            
-            (ParentReference::Some(DocumentId::from(strategy_id)), strategy_id)
+
+            (
+                ParentReference::Some(DocumentId::from(strategy_id)),
+                strategy_short_code.as_str(),
+            )
         } else {
             // Streamlined configuration: use NULL as strategy placeholder
             (ParentReference::Null, "NULL")
         };
-        
-        // Consistent directory structure: strategies/{strategy_id}/initiatives/{initiative_id}
+
+        // Consistent directory structure: strategies/{strategy_short_code}/initiatives/{initiative_short_code}
         let initiative_dir = self
             .workspace_dir
             .join("strategies")
             .join(effective_strategy_id)
             .join("initiatives")
-            .join(&initiative_id);
+            .join(&short_code);
 
         let file_path = initiative_dir.join("initiative.md");
 
         // Check if initiative already exists
         if file_path.exists() {
             return Err(MetisError::ValidationFailed {
-                message: format!("Initiative with ID '{}' already exists", initiative_id),
+                message: format!("Initiative with short code '{}' already exists", short_code),
             });
         }
 
@@ -247,17 +278,17 @@ impl DocumentCreationService {
         ];
         tags.extend(config.tags);
 
-        // Generate short code for initiative
-        let short_code = self.generate_short_code("initiative")?;
-
         // Use the parent reference from configuration, or explicit parent_id from config
-        let parent_id = config.parent_id.map(ParentReference::Some).unwrap_or(parent_ref);
+        let parent_id = config
+            .parent_id
+            .map(ParentReference::Some)
+            .unwrap_or(parent_ref);
 
         let initiative = Initiative::new(
             config.title.clone(),
             parent_id.parent_id().cloned(), // Extract actual parent ID for document creation
             Some(DocumentId::from(effective_strategy_id)), // strategy_id from configuration
-            Vec::new(), // blocked_by
+            Vec::new(),                     // blocked_by
             tags,
             false,                                      // not archived
             config.complexity.unwrap_or(Complexity::M), // use config complexity or default to M
@@ -290,7 +321,13 @@ impl DocumentCreationService {
         initiative_id: &str,
     ) -> Result<CreationResult> {
         // Use full configuration for backward compatibility
-        self.create_task_with_config(config, strategy_id, initiative_id, &FlightLevelConfig::full()).await
+        self.create_task_with_config(
+            config,
+            strategy_id,
+            initiative_id,
+            &FlightLevelConfig::full(),
+        )
+        .await
     }
 
     /// Create a new task document with flight level configuration
@@ -301,60 +338,98 @@ impl DocumentCreationService {
         initiative_id: &str,
         flight_config: &FlightLevelConfig,
     ) -> Result<CreationResult> {
-        // Generate task ID from title
-        let task_id = self.generate_id_from_title(&config.title);
-        
+        // Generate short code for task (used for both ID and file path)
+        let short_code = self.generate_short_code("task")?;
+
+        // Resolve short codes first (outside conditionals to avoid lifetime issues)
+        let (strategy_short_code, initiative_short_code) = if flight_config.initiatives_enabled
+            && initiative_id != "NULL"
+        {
+            // Validate parent initiative exists by looking up its short codes in database
+            let db_path = self.workspace_dir.join("metis.db");
+            let db = Database::new(db_path.to_str().unwrap())
+                .map_err(|e| MetisError::FileSystem(format!("Database error: {}", e)))?;
+            let mut repo = db
+                .repository()
+                .map_err(|e| MetisError::FileSystem(format!("Repository error: {}", e)))?;
+
+            // Find the initiative by short code
+            let initiative = repo
+                .find_by_short_code(initiative_id)
+                .map_err(|e| MetisError::FileSystem(format!("Database lookup error: {}", e)))?
+                .ok_or_else(|| {
+                    MetisError::NotFound(format!("Parent initiative '{}' not found", initiative_id))
+                })?;
+
+            // If strategies are enabled, also get the strategy short code
+            let strategy_short_code = if flight_config.strategies_enabled && strategy_id != "NULL" {
+                let strategy = repo
+                    .find_by_short_code(strategy_id)
+                    .map_err(|e| MetisError::FileSystem(format!("Database lookup error: {}", e)))?
+                    .ok_or_else(|| {
+                        MetisError::NotFound(format!("Parent strategy '{}' not found", strategy_id))
+                    })?;
+                strategy.short_code
+            } else {
+                "NULL".to_string()
+            };
+
+            // Use the short codes to build the file path
+            let initiative_file = self
+                .workspace_dir
+                .join("strategies")
+                .join(&strategy_short_code)
+                .join("initiatives")
+                .join(&initiative.short_code)
+                .join("initiative.md");
+
+            if !initiative_file.exists() {
+                return Err(MetisError::NotFound(format!(
+                    "Parent initiative '{}' not found at expected path",
+                    initiative_id
+                )));
+            }
+
+            (strategy_short_code, initiative.short_code)
+        } else {
+            ("NULL".to_string(), "NULL".to_string())
+        };
+
         // Determine directory structure using consistent NULL-based paths
-        let (parent_ref, parent_title, effective_strategy_id, effective_initiative_id) = if flight_config.initiatives_enabled {
-            // Initiatives are enabled, tasks go under initiatives
-            if initiative_id == "NULL" {
-                return Err(MetisError::ValidationFailed {
+        let (parent_ref, parent_title, effective_strategy_id, effective_initiative_id) =
+            if flight_config.initiatives_enabled {
+                // Initiatives are enabled, tasks go under initiatives
+                if initiative_id == "NULL" {
+                    return Err(MetisError::ValidationFailed {
                     message: format!(
                         "Cannot create task with NULL initiative when initiatives are enabled in {} configuration. Provide a valid initiative_id or create the task as a backlog item",
                         flight_config.preset_name()
                     ),
                 });
-            }
-
-            let eff_strategy_id = if flight_config.strategies_enabled {
-                // Full configuration: use actual strategy_id
-                if strategy_id == "NULL" {
-                    return Err(MetisError::ValidationFailed {
-                        message: format!(
-                            "Cannot create task with NULL strategy when strategies are enabled in {} configuration. Provide a valid strategy_id or create the task as a backlog item",
-                            flight_config.preset_name()
-                        ),
-                    });
                 }
-                strategy_id
+
+                // Validation was done earlier, use the pre-computed short codes
+                if flight_config.strategies_enabled && strategy_id == "NULL" {
+                    return Err(MetisError::ValidationFailed {
+                    message: format!(
+                        "Cannot create task with NULL strategy when strategies are enabled in {} configuration. Provide a valid strategy_id or create the task as a backlog item",
+                        flight_config.preset_name()
+                    ),
+                });
+                }
+
+                (
+                    ParentReference::Some(DocumentId::from(initiative_id)),
+                    Some(initiative_id.to_string()),
+                    strategy_short_code.as_str(),
+                    initiative_short_code.as_str(),
+                )
             } else {
-                // Streamlined configuration: use NULL as strategy placeholder
-                "NULL"
+                // Direct configuration: use NULL placeholders for both strategy and initiative
+                (ParentReference::Null, None, "NULL", "NULL")
             };
 
-            // Validate parent initiative exists using the consistent path structure
-            let initiative_file = self
-                .workspace_dir
-                .join("strategies")
-                .join(eff_strategy_id)
-                .join("initiatives")
-                .join(initiative_id)
-                .join("initiative.md");
-            
-            if !initiative_file.exists() {
-                return Err(MetisError::NotFound(format!(
-                    "Parent initiative '{}' not found",
-                    initiative_id
-                )));
-            }
-
-            (ParentReference::Some(DocumentId::from(initiative_id)), Some(initiative_id.to_string()), eff_strategy_id, initiative_id)
-        } else {
-            // Direct configuration: use NULL placeholders for both strategy and initiative
-            (ParentReference::Null, None, "NULL", "NULL")
-        };
-
-        // Consistent directory structure: strategies/{strategy_id}/initiatives/{initiative_id}/tasks/{task_id}
+        // Consistent directory structure: strategies/{strategy_short_code}/initiatives/{initiative_short_code}/tasks/{task_short_code}
         let task_dir = self
             .workspace_dir
             .join("strategies")
@@ -363,12 +438,12 @@ impl DocumentCreationService {
             .join(effective_initiative_id)
             .join("tasks");
 
-        let file_path = task_dir.join(format!("{}.md", task_id));
+        let file_path = task_dir.join(format!("{}.md", short_code));
 
         // Check if task already exists
         if file_path.exists() {
             return Err(MetisError::ValidationFailed {
-                message: format!("Task with ID '{}' already exists", task_id),
+                message: format!("Task with short code '{}' already exists", short_code),
             });
         }
 
@@ -379,19 +454,27 @@ impl DocumentCreationService {
         ];
         tags.extend(config.tags);
 
-        // Generate short code for task
-        let short_code = self.generate_short_code("task")?;
-
         // Use the parent reference from configuration, or explicit parent_id from config
-        let parent_id = config.parent_id.map(ParentReference::Some).unwrap_or(parent_ref);
+        let parent_id = config
+            .parent_id
+            .map(ParentReference::Some)
+            .unwrap_or(parent_ref);
 
         let task = Task::new(
             config.title.clone(),
             parent_id.parent_id().cloned(), // Extract actual parent ID for document creation
             parent_title,                   // parent title for template
-            if effective_strategy_id == "NULL" { None } else { Some(DocumentId::from(effective_strategy_id)) },
-            if effective_initiative_id == "NULL" { None } else { Some(DocumentId::from(effective_initiative_id)) },
-            Vec::new(),                     // blocked_by
+            if effective_strategy_id == "NULL" {
+                None
+            } else {
+                Some(DocumentId::from(effective_strategy_id))
+            },
+            if effective_initiative_id == "NULL" {
+                None
+            } else {
+                Some(DocumentId::from(effective_initiative_id))
+            },
+            Vec::new(), // blocked_by
             tags,
             false, // not archived
             short_code.clone(),
@@ -400,8 +483,7 @@ impl DocumentCreationService {
 
         // Create parent directory if needed
         if !task_dir.exists() {
-            fs::create_dir_all(&task_dir)
-                .map_err(|e| MetisError::FileSystem(e.to_string()))?;
+            fs::create_dir_all(&task_dir).map_err(|e| MetisError::FileSystem(e.to_string()))?;
         }
 
         // Write to file
@@ -418,10 +500,13 @@ impl DocumentCreationService {
     }
 
     /// Create a new backlog item (task without parent)
-    pub async fn create_backlog_item(&self, config: DocumentCreationConfig) -> Result<CreationResult> {
+    pub async fn create_backlog_item(
+        &self,
+        config: DocumentCreationConfig,
+    ) -> Result<CreationResult> {
         // Generate task ID from title
         let task_id = self.generate_id_from_title(&config.title);
-        
+
         // Create backlog directory structure based on tags
         let backlog_dir = self.determine_backlog_directory(&config.tags);
         let file_path = backlog_dir.join(format!("{}.md", task_id));
@@ -445,11 +530,11 @@ impl DocumentCreationService {
 
         let task = Task::new(
             config.title.clone(),
-            None,                            // No parent for backlog items
-            None,                            // No parent title for template
-            None,                            // No strategy for backlog items
-            None,                            // No initiative for backlog items
-            Vec::new(),                      // blocked_by
+            None,       // No parent for backlog items
+            None,       // No parent title for template
+            None,       // No strategy for backlog items
+            None,       // No initiative for backlog items
+            Vec::new(), // blocked_by
             tags,
             false, // not archived
             short_code.clone(),
@@ -458,8 +543,7 @@ impl DocumentCreationService {
 
         // Create parent directory if needed
         if !backlog_dir.exists() {
-            fs::create_dir_all(&backlog_dir)
-                .map_err(|e| MetisError::FileSystem(e.to_string()))?;
+            fs::create_dir_all(&backlog_dir).map_err(|e| MetisError::FileSystem(e.to_string()))?;
         }
 
         // Write to file
@@ -478,7 +562,7 @@ impl DocumentCreationService {
     /// Determine the backlog directory based on tags
     fn determine_backlog_directory(&self, tags: &[Tag]) -> PathBuf {
         let base_backlog_dir = self.workspace_dir.join("backlog");
-        
+
         // Check for type tags to determine subdirectory
         for tag in tags {
             if let Tag::Label(label) = tag {
@@ -490,26 +574,28 @@ impl DocumentCreationService {
                 }
             }
         }
-        
+
         // Default to general backlog if no specific type found
         base_backlog_dir
     }
 
     /// Create a new ADR document
     pub async fn create_adr(&self, config: DocumentCreationConfig) -> Result<CreationResult> {
-        // Find the next ADR number
-        let adr_number = self.get_next_adr_number()?;
-        let adr_slug = self.generate_id_from_title(&config.title);
-        let adr_filename = format!("{:03}-{}.md", adr_number, adr_slug);
+        // Generate short code for ADR (used for both ID and file path)
+        let short_code = self.generate_short_code("adr")?;
+        let adr_filename = format!("{}.md", short_code);
         let adrs_dir = self.workspace_dir.join("adrs");
         let file_path = adrs_dir.join(&adr_filename);
 
         // Check if ADR already exists
         if file_path.exists() {
             return Err(MetisError::ValidationFailed {
-                message: format!("ADR with filename '{}' already exists", adr_filename),
+                message: format!("ADR with short code '{}' already exists", short_code),
             });
         }
+
+        // Find the next ADR number for the document content (still needed for ADR numbering)
+        let adr_number = self.get_next_adr_number()?;
 
         // Create ADR with defaults
         let mut tags = vec![
@@ -517,9 +603,6 @@ impl DocumentCreationService {
             Tag::Phase(config.phase.unwrap_or(Phase::Draft)),
         ];
         tags.extend(config.tags);
-
-        // Generate short code for ADR
-        let short_code = self.generate_short_code("adr")?;
 
         let adr = Adr::new(
             adr_number,
@@ -596,10 +679,10 @@ mod tests {
         // Create and initialize database with proper schema
         let db_path = workspace_dir.join("metis.db");
         let _db = crate::Database::new(&db_path.to_string_lossy()).unwrap();
-        
+
         // Set up project prefix in configuration
         let mut config_repo = ConfigurationRepository::new(
-            SqliteConnection::establish(&db_path.to_string_lossy()).unwrap()
+            SqliteConnection::establish(&db_path.to_string_lossy()).unwrap(),
         );
         config_repo.set_project_prefix("TEST").unwrap();
 
@@ -633,10 +716,10 @@ mod tests {
         // Create and initialize database with proper schema
         let db_path = workspace_dir.join("metis.db");
         let _db = crate::Database::new(&db_path.to_string_lossy()).unwrap();
-        
+
         // Set up project prefix in configuration
         let mut config_repo = ConfigurationRepository::new(
-            SqliteConnection::establish(&db_path.to_string_lossy()).unwrap()
+            SqliteConnection::establish(&db_path.to_string_lossy()).unwrap(),
         );
         config_repo.set_project_prefix("TEST").unwrap();
 
@@ -670,10 +753,10 @@ mod tests {
         // Create and initialize database with proper schema
         let db_path = workspace_dir.join("metis.db");
         let _db = crate::Database::new(&db_path.to_string_lossy()).unwrap();
-        
+
         // Set up project prefix in configuration
         let mut config_repo = ConfigurationRepository::new(
-            SqliteConnection::establish(&db_path.to_string_lossy()).unwrap()
+            SqliteConnection::establish(&db_path.to_string_lossy()).unwrap(),
         );
         config_repo.set_project_prefix("TEST").unwrap();
 
@@ -690,7 +773,17 @@ mod tests {
             risk_level: None,
         };
         let strategy_result = service.create_strategy(strategy_config).await.unwrap();
-        let strategy_id = strategy_result.document_id.to_string();
+        let strategy_id = strategy_result.short_code.clone();
+
+        // Sync the strategy to database so it can be found by the initiative creation
+        let db = crate::Database::new(&db_path.to_string_lossy()).unwrap();
+        let mut db_service =
+            crate::application::services::DatabaseService::new(db.repository().unwrap());
+        let mut sync_service = crate::application::services::SyncService::new(&mut db_service);
+        sync_service
+            .import_from_file(&strategy_result.file_path)
+            .await
+            .unwrap();
 
         // Now create an initiative
         let initiative_config = DocumentCreationConfig {
@@ -767,10 +860,10 @@ mod tests {
         // Create and initialize database with proper schema
         let db_path = workspace_dir.join("metis.db");
         let _db = crate::Database::new(&db_path.to_string_lossy()).unwrap();
-        
+
         // Set up project prefix in configuration
         let mut config_repo = ConfigurationRepository::new(
-            SqliteConnection::establish(&db_path.to_string_lossy()).unwrap()
+            SqliteConnection::establish(&db_path.to_string_lossy()).unwrap(),
         );
         config_repo.set_project_prefix("TEST").unwrap();
 
@@ -780,7 +873,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_initiative_full_configuration() {
-        let (service, _temp) = setup_test_service_temp();
+        let (service, temp) = setup_test_service_temp();
         let flight_config = FlightLevelConfig::full();
 
         // First create a strategy
@@ -796,6 +889,17 @@ mod tests {
 
         let strategy_result = service.create_strategy(strategy_config).await.unwrap();
 
+        // Sync the strategy to database so it can be found by the initiative creation
+        let db_path = temp.path().join(".metis/metis.db");
+        let db = crate::Database::new(&db_path.to_string_lossy()).unwrap();
+        let mut db_service =
+            crate::application::services::DatabaseService::new(db.repository().unwrap());
+        let mut sync_service = crate::application::services::SyncService::new(&mut db_service);
+        sync_service
+            .import_from_file(&strategy_result.file_path)
+            .await
+            .unwrap();
+
         // Now create an initiative under the strategy
         let initiative_config = DocumentCreationConfig {
             title: "Test Initiative".to_string(),
@@ -810,7 +914,7 @@ mod tests {
         let result = service
             .create_initiative_with_config(
                 initiative_config,
-                &strategy_result.document_id.to_string(),
+                &strategy_result.short_code,
                 &flight_config,
             )
             .await
@@ -818,7 +922,7 @@ mod tests {
 
         assert_eq!(result.document_type, DocumentType::Initiative);
         assert!(result.file_path.exists());
-        
+
         // Verify the path structure for full configuration
         assert!(result.file_path.to_string_lossy().contains("strategies"));
         assert!(result.file_path.to_string_lossy().contains("initiatives"));
@@ -847,10 +951,13 @@ mod tests {
 
         assert_eq!(result.document_type, DocumentType::Initiative);
         assert!(result.file_path.exists());
-        
+
         // Verify the NULL-based path structure for streamlined configuration
         assert!(result.file_path.to_string_lossy().contains("initiatives"));
-        assert!(result.file_path.to_string_lossy().contains("strategies/NULL"));
+        assert!(result
+            .file_path
+            .to_string_lossy()
+            .contains("strategies/NULL"));
     }
 
     #[tokio::test]
@@ -874,7 +981,10 @@ mod tests {
             .await;
 
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Initiative creation is disabled"));
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Initiative creation is disabled"));
     }
 
     #[tokio::test]
@@ -900,9 +1010,12 @@ mod tests {
 
         assert_eq!(result.document_type, DocumentType::Task);
         assert!(result.file_path.exists());
-        
+
         // Verify the NULL-based path structure for direct configuration
         assert!(result.file_path.to_string_lossy().contains("tasks"));
-        assert!(result.file_path.to_string_lossy().contains("strategies/NULL/initiatives/NULL"));
+        assert!(result
+            .file_path
+            .to_string_lossy()
+            .contains("strategies/NULL/initiatives/NULL"));
     }
 }

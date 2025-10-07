@@ -25,7 +25,8 @@ impl TestHelper {
         let mut app = App::new();
 
         // Set the workspace and mark as ready
-        app.core_state.set_workspace(self.core_helper.metis_dir.clone());
+        app.core_state
+            .set_workspace(self.core_helper.metis_dir.clone());
         app.core_state.set_sync_complete();
 
         // Initialize services

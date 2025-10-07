@@ -215,7 +215,7 @@ async fn test_tui_exit_criteria_per_document_type() -> Result<()> {
     app.transition_selected_document().await?;
 
     let adr_board = &app.ui_state.adr_board;
-    if adr_board.columns[1].items.len() > 0 {
+    if !adr_board.columns[1].items.is_empty() {
         println!("✅ ADR transitioned to discussion phase");
     }
 
