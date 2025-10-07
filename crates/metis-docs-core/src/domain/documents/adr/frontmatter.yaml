@@ -2,6 +2,7 @@ id: {{ formatted_number }}-{{ slug }}
 level: adr
 title: "{{ title }}"
 number: {{ number }}
+short_code: "{{ short_code }}"
 created_at: {{ created_at }}
 updated_at: {{ updated_at }}
 decision_date: {{ decision_date }}

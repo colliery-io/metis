@@ -123,6 +123,7 @@ impl<'a> SyncService<'a> {
             phase,
             strategy_id: final_strategy_id,
             initiative_id: final_initiative_id,
+            short_code: core.metadata.short_code.clone(),
         })
     }
 
@@ -448,6 +449,7 @@ mod tests {
             + "created_at: \"2021-01-01T00:00:00Z\"\n"
             + "updated_at: \"2021-01-01T00:00:00Z\"\n"
             + "archived: false\n"
+            + "short_code: TEST-V-9003\n"
             + "exit_criteria_met: false\n"
             + "tags:\n"
             + "  - \"#phase/draft\"\n"
@@ -573,11 +575,12 @@ mod tests {
             ("subdir/nested/doc3.md", "test-3"),
         ];
 
-        for (file_path, id) in &files {
+        for (i, (file_path, id)) in files.iter().enumerate() {
             let full_path = temp_dir.path().join(file_path);
             let content = &create_test_document_content()
                 .replace("Test Document", &format!("Test Document {}", id))
-                .replace("test-document", id);
+                .replace("test-document", id)
+                .replace("TEST-V-9003", &format!("TEST-V-900{}", i + 3));
             FilesystemService::write_file(&full_path, content).expect("Failed to write");
         }
 

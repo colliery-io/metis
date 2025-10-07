@@ -65,9 +65,10 @@ impl Initiative {
         tags: Vec<Tag>,
         archived: bool,
         estimated_complexity: Complexity,
+        short_code: String,
     ) -> Result<Self, DocumentValidationError> {
         // Create fresh metadata
-        let metadata = DocumentMetadata::new();
+        let metadata = DocumentMetadata::new(short_code);
 
         // Render the content template
         let template_content = include_str!("content.md");
@@ -231,8 +232,9 @@ impl Initiative {
                 .and_then(|s| s.parse::<Complexity>())?;
 
         // Create metadata and content
+        let short_code = FrontmatterParser::extract_string(&fm_map, "short_code")?;
         let metadata =
-            DocumentMetadata::from_frontmatter(created_at, updated_at, exit_criteria_met);
+            DocumentMetadata::from_frontmatter(created_at, updated_at, exit_criteria_met, short_code);
         let content = DocumentContent::from_markdown(&parsed.content);
 
         // Extract lineage from frontmatter
@@ -274,6 +276,7 @@ impl Initiative {
         let mut context = Context::new();
         context.insert("slug", &self.id().to_string());
         context.insert("title", self.title());
+        context.insert("short_code", &self.metadata().short_code);
         context.insert("created_at", &self.metadata().created_at.to_rfc3339());
         context.insert("updated_at", &self.metadata().updated_at.to_rfc3339());
         context.insert("archived", &self.archived().to_string());
@@ -486,6 +489,7 @@ archived: false
 parent: strategy-001
 blocked_by: []
 estimated_complexity: "L"
+short_code: TEST-I-9001
 
 tags:
   - "#initiative"
@@ -595,6 +599,7 @@ exit_criteria_met: false
             ],
             false,
             Complexity::M,
+            "TEST-I-0301".to_string(),
         )
         .expect("Failed to create initiative");
 
@@ -623,6 +628,7 @@ exit_criteria_met: false
             vec![Tag::Phase(Phase::Discovery)],
             false,
             Complexity::M,
+            "TEST-I-0301".to_string(),
         )
         .expect("Failed to create initiative");
 
@@ -639,6 +645,7 @@ exit_criteria_met: false
             vec![Tag::Phase(Phase::Discovery)],
             false,
             Complexity::M,
+            "TEST-I-0301".to_string(),
         )
         .expect("Failed to create initiative");
 

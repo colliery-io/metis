@@ -8,7 +8,7 @@ use std::path::Path;
 
 #[mcp_tool(
     name = "archive_document",
-    description = "Archive a document and all its children. The document and its children will be moved to the archived folder and marked as archived.",
+    description = "Archive a document and all its children using its short code (e.g., PROJ-V-0001). The document and its children will be moved to the archived folder and marked as archived.",
     idempotent_hint = true,
     destructive_hint = true,
     open_world_hint = false,
@@ -18,11 +18,25 @@ use std::path::Path;
 pub struct ArchiveDocumentTool {
     /// Path to the .metis folder containing the document
     pub project_path: String,
-    /// Document ID to archive
-    pub document_id: String,
+    /// Document short code (e.g., PROJ-V-0001) to identify the document
+    pub short_code: String,
 }
 
 impl ArchiveDocumentTool {
+    /// Resolve short code to document ID
+    fn resolve_short_code_to_id(&self, metis_dir: &Path) -> Result<String, CallToolError> {
+        let db_path = metis_dir.join("metis.db");
+        let db = Database::new(db_path.to_str().unwrap())
+            .map_err(|e| CallToolError::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Database error: {}", e))))?;
+        
+        let mut repo = db.repository()
+            .map_err(|e| CallToolError::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Repository error: {}", e))))?;
+        
+        // Use the core DAL method
+        repo.resolve_short_code_to_document_id(&self.short_code)
+            .map_err(|e| CallToolError::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Resolution error: {}", e))))
+    }
+    
     pub async fn call_tool(&self) -> std::result::Result<CallToolResult, CallToolError> {
         let metis_dir = Path::new(&self.project_path);
 
@@ -37,6 +51,9 @@ impl ArchiveDocumentTool {
             )));
         }
 
+        // Resolve short code to document ID
+        let document_id = self.resolve_short_code_to_id(metis_dir)?;
+        
         // Create the archive service with database optimization
         let db = metis_core::dal::Database::new(&metis_dir.join("metis.db").to_string_lossy())
             .map_err(|e| CallToolError::new(std::io::Error::new(
@@ -48,13 +65,13 @@ impl ArchiveDocumentTool {
 
         // Check if document is already archived
         match archive_service
-            .is_document_archived(&self.document_id)
+            .is_document_archived(&document_id)
             .await
         {
             Ok(true) => {
                 return Err(CallToolError::new(std::io::Error::new(
                     std::io::ErrorKind::AlreadyExists,
-                    format!("Document '{}' is already archived", self.document_id),
+                    format!("Document '{}' is already archived", self.short_code),
                 )));
             }
             Ok(false) => {
@@ -70,7 +87,7 @@ impl ArchiveDocumentTool {
 
         // Archive the document using database optimization
         let archive_result = archive_service
-            .archive_document(&self.document_id, &mut db_service)
+            .archive_document(&document_id, &mut db_service)
             .await
             .map_err(|e| {
                 CallToolError::new(std::io::Error::new(
@@ -97,7 +114,8 @@ impl ArchiveDocumentTool {
 
         let response = serde_json::json!({
             "success": true,
-            "document_id": self.document_id,
+            "short_code": self.short_code,
+            "document_id": document_id,
             "total_archived": archive_result.total_archived,
             "archived_documents": archived_docs,
             "auto_synced": true

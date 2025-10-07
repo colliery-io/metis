@@ -5,18 +5,47 @@ import angreal
 
 @angreal.command(
     name='test',
-    about='Run all tests across workspace crates independently',
+    about='Run all tests across workspace crates independently with optimized test selection',
     when_to_use=['During development', 'Before committing changes', 'In CI/CD pipelines'],
     when_not_to_use=['When only checking syntax', 'For quick formatting fixes']
 )
 def run_tests():
     """Run all tests in the workspace by testing each crate independently."""
-    crates = ['metis-docs-core', 'metis-docs-cli', 'metis-docs-mcp']
+    # Define crates with their optimal test strategies
+    crate_configs = [
+        {
+            'name': 'metis-docs-core',
+            'strategy': 'full',  # Has comprehensive unit tests + integration tests
+            'description': 'Running comprehensive tests (unit + integration + doc)'
+        },
+        {
+            'name': 'metis-docs-cli', 
+            'strategy': 'integration_only',  # Binary crate, only integration tests
+            'description': 'Running integration tests only (binary crate)'
+        },
+        {
+            'name': 'metis-docs-mcp',
+            'strategy': 'integration_only',  # Library with only integration tests
+            'description': 'Running integration tests only (no unit tests defined)'
+        }
+    ]
     
-    for crate in crates:
+    for config in crate_configs:
+        crate = config['name']
+        strategy = config['strategy']
+        description = config['description']
+        
         try:
             print(f"Running tests for {crate}...")
-            result = subprocess.run(['cargo', 'test', '--package', crate, '--', '--test-threads=1'], check=True)
+            print(f"  Strategy: {description}")
+            
+            if strategy == 'full':
+                # Run all test types
+                result = subprocess.run(['cargo', 'test', '--package', crate, '--', '--test-threads=1'], check=True)
+            elif strategy == 'integration_only':
+                # Run only integration tests to avoid empty unit test runs
+                result = subprocess.run(['cargo', 'test', '--package', crate, '--tests', '--', '--test-threads=1'], check=True)
+            
             print(f"✓ {crate} tests passed!")
         except subprocess.CalledProcessError as e:
             print(f"✗ {crate} tests failed with exit code {e.returncode}")

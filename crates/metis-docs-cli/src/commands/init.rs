@@ -1,7 +1,10 @@
 use crate::workspace;
 use anyhow::Result;
 use clap::Args;
-use metis_core::{Database, Phase, Tag, Vision, domain::configuration::FlightLevelConfig};
+use metis_core::{
+    application::services::document::creation::{DocumentCreationConfig, DocumentCreationService},
+    Database, Phase, Tag, domain::configuration::FlightLevelConfig
+};
 use std::path::Path;
 
 #[derive(Args)]
@@ -47,6 +50,25 @@ impl InitCommand {
             .map_err(|e| anyhow::anyhow!("Failed to create configuration repository: {}", e))?;
         config_repo.set_flight_level_config(&flight_config)
             .map_err(|e| anyhow::anyhow!("Failed to set flight level configuration: {}", e))?;
+
+        // Set default project prefix for document creation
+        // Use "TEST" in test mode, or derive from project name in production
+        let project_prefix = if cfg!(test) {
+            "TEST".to_string()
+        } else {
+            // Extract first 4 uppercase letters from project name, or use "PROJ" as fallback
+            let project_name = self.name.as_deref().unwrap_or("Project Vision");
+            project_name
+                .chars()
+                .filter(|c| c.is_alphabetic())
+                .map(|c| c.to_uppercase().collect::<String>())
+                .collect::<String>()
+                .get(0..4.min(project_name.len()))
+                .unwrap_or("PROJ")
+                .to_string()
+        };
+        config_repo.set_project_prefix(&project_prefix)
+            .map_err(|e| anyhow::anyhow!("Failed to set project prefix: {}", e))?;
 
         // Create strategies directory
         let strategies_dir = metis_dir.join("strategies");
@@ -95,19 +117,23 @@ impl InitCommand {
 
 /// Create a new Vision document with defaults and write to file
 async fn create_default_vision(workspace_dir: &Path, title: &str) -> Result<()> {
-    // Create Vision with defaults
-    let tags = vec![Tag::Label("vision".to_string()), Tag::Phase(Phase::Draft)];
+    // Use DocumentCreationService to create the vision
+    let creation_service = DocumentCreationService::new(workspace_dir);
+    
+    let config = DocumentCreationConfig {
+        title: title.to_string(),
+        description: None,
+        parent_id: None,
+        tags: vec![Tag::Label("vision".to_string()), Tag::Phase(Phase::Draft)],
+        phase: Some(Phase::Draft),
+        complexity: None,
+        risk_level: None,
+    };
 
-    let vision = Vision::new(
-        title.to_string(),
-        tags,
-        false, // not archived
-    )
-    .map_err(|e| anyhow::anyhow!("Failed to create vision: {}", e))?;
-
-    // Write to vision.md at workspace root
-    let vision_path = workspace_dir.join("vision.md");
-    vision.to_file(&vision_path).await?;
+    let _result = creation_service
+        .create_vision(config)
+        .await
+        .map_err(|e| anyhow::anyhow!("Failed to create vision: {}", e))?;
 
     Ok(())
 }

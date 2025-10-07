@@ -68,12 +68,8 @@ impl DocumentService {
                         Err(e) => return Err(anyhow::anyhow!("Failed to create task: {}", e)),
                     }
                 } else {
-                    // For tasks without parent, check if it's a backlog or direct config task
-                    // For now, we'll handle the direct configuration case by using the task creation service
-                    // Use "NULL" for strategy_id and initiative_id which the core service handles
-                    creation_service
-                        .create_task_with_config(config, "NULL", "NULL", &metis_core::domain::configuration::FlightLevelConfig::direct())
-                        .await?
+                    // For tasks without parent, create as backlog item
+                    creation_service.create_backlog_item(config).await?
                 }
             }
             DocumentType::Adr => creation_service.create_adr(config).await?,

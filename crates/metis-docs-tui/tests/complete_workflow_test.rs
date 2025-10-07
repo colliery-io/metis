@@ -257,9 +257,9 @@ async fn test_complete_flight_levels_workflow() -> Result<()> {
     assert_eq!(*app.app_state(), AppState::Normal);
 
     // Verify task was created in the correct location
-    // Tasks are stored directly in the initiative directory, not in a subdirectory
+    // Tasks are stored in a tasks/ subdirectory under the initiative
     let initiative_dir = strategy_initiative_dir.join("redesign-user-onboarding");
-    let task_file = initiative_dir.join("create-wireframes-for-onboarding.md");
+    let task_file = initiative_dir.join("tasks").join("create-wireframes-for-onboarding.md");
     assert!(task_file.exists(), "Task file should exist");
 
     let task_content = std::fs::read_to_string(&task_file)?;
@@ -329,7 +329,7 @@ async fn test_complete_flight_levels_workflow() -> Result<()> {
         .map_err(|e| anyhow::anyhow!("Find error: {}", e))?;
     assert_eq!(db_tasks.len(), 2, "Should have 2 tasks in database");
 
-    let second_task_file = initiative_dir.join("write-user-research-plan.md");
+    let second_task_file = initiative_dir.join("tasks").join("write-user-research-plan.md");
     assert!(second_task_file.exists(), "Second task file should exist");
 
     println!("✅ Second task created successfully");

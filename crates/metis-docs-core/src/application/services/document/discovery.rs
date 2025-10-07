@@ -563,6 +563,7 @@ level: vision
 created_at: 2023-01-01T00:00:00Z
 updated_at: 2023-01-01T00:00:00Z
 archived: false
+short_code: TEST-V-9004
 tags:
   - "#vision"
   - "#phase/draft"

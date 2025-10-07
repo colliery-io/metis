@@ -25,9 +25,10 @@ impl Task {
         blocked_by: Vec<DocumentId>,
         tags: Vec<Tag>,
         archived: bool,
+        short_code: String,
     ) -> Result<Self, DocumentValidationError> {
         // Create fresh metadata
-        let metadata = DocumentMetadata::new();
+        let metadata = DocumentMetadata::new(short_code);
 
         // Render the content template
         let template_content = include_str!("content.md");
@@ -154,8 +155,9 @@ impl Task {
             .collect();
 
         // Create metadata and content
+        let short_code = FrontmatterParser::extract_string(&fm_map, "short_code")?;
         let metadata =
-            DocumentMetadata::from_frontmatter(created_at, updated_at, exit_criteria_met);
+            DocumentMetadata::from_frontmatter(created_at, updated_at, exit_criteria_met, short_code);
         let content = DocumentContent::from_markdown(&parsed.content);
 
         // Extract lineage from frontmatter
@@ -214,6 +216,7 @@ impl Task {
         let mut context = Context::new();
         context.insert("slug", &self.id().to_string());
         context.insert("title", self.title());
+        context.insert("short_code", &self.metadata().short_code);
         context.insert("created_at", &self.metadata().created_at.to_rfc3339());
         context.insert("updated_at", &self.metadata().updated_at.to_rfc3339());
         context.insert("archived", &self.archived().to_string());
@@ -442,6 +445,7 @@ updated_at: 2025-01-01T00:00:00Z
 archived: false
 parent: initiative-001
 blocked_by: []
+short_code: TEST-T-9001
 
 tags:
   - "#task"
@@ -528,6 +532,7 @@ exit_criteria_met: false
             vec![], // blocked_by
             vec![Tag::Label("task".to_string()), Tag::Phase(Phase::Todo)],
             false,
+            "TEST-T-0401".to_string(),
         )
         .expect("Failed to create task");
 
@@ -543,6 +548,7 @@ exit_criteria_met: false
             vec![], // blocked_by
             vec![Tag::Phase(Phase::Todo)],
             false,
+            "TEST-T-0401".to_string(),
         )
         .expect("Failed to create task");
 
@@ -561,6 +567,7 @@ exit_criteria_met: false
             vec![], // No blocking documents
             vec![Tag::Phase(Phase::Blocked)],
             false,
+            "TEST-T-0401".to_string(),
         )
         .expect("Failed to create task");
 
@@ -576,6 +583,7 @@ exit_criteria_met: false
             vec![DocumentId::from("blocking-task")],
             vec![Tag::Phase(Phase::Blocked)],
             false,
+            "TEST-T-0401".to_string(),
         )
         .expect("Failed to create task");
 
@@ -593,6 +601,7 @@ exit_criteria_met: false
             vec![],
             vec![Tag::Phase(Phase::Todo)],
             false,
+            "TEST-T-0401".to_string(),
         )
         .expect("Failed to create task");
 
@@ -613,6 +622,7 @@ exit_criteria_met: false
             vec![],
             vec![Tag::Phase(Phase::Active)],
             false,
+            "TEST-T-0401".to_string(),
         )
         .expect("Failed to create task");
 
@@ -632,6 +642,7 @@ exit_criteria_met: false
             vec![DocumentId::from("blocking-task")],
             vec![Tag::Phase(Phase::Blocked)],
             false,
+            "TEST-T-0401".to_string(),
         )
         .expect("Failed to create task");
 
@@ -651,6 +662,7 @@ exit_criteria_met: false
             vec![],
             vec![Tag::Phase(Phase::Todo)],
             false,
+            "TEST-T-0401".to_string(),
         )
         .expect("Failed to create task");
 
@@ -681,6 +693,7 @@ exit_criteria_met: false
             vec![DocumentId::from("blocking-task")],
             vec![Tag::Phase(Phase::Todo)],
             false,
+            "TEST-T-0401".to_string(),
         )
         .expect("Failed to create task");
 
@@ -712,6 +725,7 @@ exit_criteria_met: false
             vec![],
             vec![Tag::Phase(Phase::Todo)],
             false,
+            "TEST-T-0401".to_string(),
         )
         .expect("Failed to create task");
 
@@ -742,6 +756,7 @@ exit_criteria_met: false
             vec![],
             vec![Tag::Phase(Phase::Todo)],
             false,
+            "TEST-T-0401".to_string(),
         )
         .expect("Failed to create task");
 

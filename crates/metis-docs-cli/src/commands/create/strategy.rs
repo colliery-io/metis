@@ -1,8 +1,9 @@
 use crate::workspace;
 use anyhow::Result;
 use metis_core::{
+    application::services::document::creation::{DocumentCreationConfig, DocumentCreationService},
     domain::documents::{strategy::RiskLevel, types::DocumentId},
-    Document, Phase, Strategy, Tag, Vision,
+    Document, Phase, Tag, Vision,
 };
 use std::path::Path;
 
@@ -22,39 +23,30 @@ pub async fn create_new_strategy(title: &str, vision_slug: Option<&str>) -> Resu
         None
     };
 
-    // 3. Create Strategy with defaults
-    let tags = vec![
-        Tag::Label("strategy".to_string()),
-        Tag::Phase(Phase::Shaping),
-    ];
+    // 3. Use DocumentCreationService to create the strategy
+    let creation_service = DocumentCreationService::new(&metis_dir);
+    
+    let config = DocumentCreationConfig {
+        title: title.to_string(),
+        description: None,
+        parent_id: parent_id.clone(),
+        tags: vec![
+            Tag::Label("strategy".to_string()),
+            Tag::Phase(Phase::Shaping),
+        ],
+        phase: Some(Phase::Shaping),
+        complexity: None,
+        risk_level: Some(RiskLevel::Medium),
+    };
 
-    let strategy = Strategy::new(
-        title.to_string(),
-        parent_id.clone(),
-        Vec::new(), // blocked_by
-        tags,
-        false,             // not archived
-        RiskLevel::Medium, // default risk level
-        Vec::new(),        // stakeholders - empty by default
-    )
-    .map_err(|e| anyhow::anyhow!("Failed to create strategy: {}", e))?;
+    let result = creation_service
+        .create_strategy(config)
+        .await
+        .map_err(|e| anyhow::anyhow!("Failed to create strategy: {}", e))?;
 
-    // 4. Determine hierarchical file path: /strategies/{strategy-id}/strategy.md
-    let doc_id = strategy.id();
-    let strategy_dir = metis_dir.join("strategies").join(doc_id.to_string());
-    std::fs::create_dir_all(&strategy_dir)?;
-    let file_path = strategy_dir.join("strategy.md");
-
-    // Check if file already exists
-    if file_path.exists() {
-        anyhow::bail!("Strategy document already exists: {}", file_path.display());
-    }
-
-    // 5. Write to file
-    strategy.to_file(&file_path).await?;
-
-    println!("✓ Created strategy: {}", file_path.display());
-    println!("  ID: {}", doc_id);
+    println!("✓ Created strategy: {}", result.file_path.display());
+    println!("  ID: {}", result.document_id);
+    println!("  Short Code: {}", result.short_code);
     println!("  Title: {}", title);
     if let Some(parent) = parent_id {
         println!("  Parent Vision: {}", parent);
@@ -98,7 +90,7 @@ async fn get_vision_document_id(workspace_dir: &Path, vision_slug: &str) -> Resu
 mod tests {
     use super::*;
     use crate::commands::InitCommand;
-    use metis_core::DocumentType;
+    use metis_core::{Document, DocumentType, Strategy};
     use std::fs;
     use tempfile::tempdir;
 

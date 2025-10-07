@@ -115,6 +115,63 @@ impl ConfigurationRepository {
         Ok(deleted_rows > 0)
     }
 
+    /// Get project prefix for short codes
+    pub fn get_project_prefix(&mut self) -> Result<Option<String>> {
+        self.get("project_prefix")
+    }
+
+    /// Set project prefix for short codes (validates 2-8 uppercase letters)
+    pub fn set_project_prefix(&mut self, prefix: &str) -> Result<()> {
+        // Validate prefix format: 2-8 uppercase letters
+        if !prefix.chars().all(|c| c.is_ascii_uppercase()) || prefix.len() < 2 || prefix.len() > 8 {
+            return Err(crate::MetisError::ConfigurationError(
+                ConfigurationError::InvalidValue(
+                    "Project prefix must be 2-8 uppercase letters".to_string()
+                )
+            ));
+        }
+
+        self.set("project_prefix", prefix)
+    }
+
+    /// Get next short code number for a document type and increment the counter
+    pub fn get_next_short_code_number(&mut self, doc_type: &str) -> Result<u32> {
+        let counter_key = format!("short_code_counter_{}", doc_type.to_lowercase());
+        let current_value = self.get(&counter_key)?
+            .unwrap_or_else(|| "0".to_string())
+            .parse::<u32>()
+            .unwrap_or(0);
+        
+        let next_value = current_value + 1;
+        self.set(&counter_key, &next_value.to_string())?;
+        
+        Ok(next_value)
+    }
+
+    /// Generate a short code for a document type (PREFIX-TYPE-NNNN)
+    pub fn generate_short_code(&mut self, doc_type: &str) -> Result<String> {
+        let prefix = self.get_project_prefix()?
+            .ok_or_else(|| crate::MetisError::ConfigurationError(
+                ConfigurationError::MissingConfiguration("project_prefix".to_string())
+            ))?;
+
+        let type_letter = match doc_type.to_lowercase().as_str() {
+            "vision" => "V",
+            "strategy" => "S", 
+            "initiative" => "I",
+            "task" => "T",
+            "adr" => "A",
+            _ => return Err(crate::MetisError::ConfigurationError(
+                ConfigurationError::InvalidValue(
+                    format!("Unknown document type: {}", doc_type)
+                )
+            )),
+        };
+
+        let number = self.get_next_short_code_number(doc_type)?;
+        Ok(format!("{}-{}-{:04}", prefix, type_letter, number))
+    }
+
     /// Clear all configuration (for testing)
     #[cfg(test)]
     pub fn clear_all(&mut self) -> Result<()> {

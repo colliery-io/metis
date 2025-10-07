@@ -147,6 +147,7 @@ mod tests {
 
     use crate::application::Application;
     use crate::dal::Database;
+    use diesel::Connection;
 
     async fn setup_test_workspace() -> (tempfile::TempDir, PathBuf) {
         let temp_dir = tempdir().unwrap();
@@ -156,9 +157,13 @@ mod tests {
         let metis_dir = workspace_dir.join(".metis");
         fs::create_dir_all(&metis_dir).unwrap();
 
-        // Initialize database
-        let db_path = workspace_dir.join("metis.db");
+        // Initialize database with configuration
+        let db_path = metis_dir.join("metis.db");
         let db = Database::new(&db_path.to_string_lossy()).unwrap();
+        let mut config_repo = crate::dal::database::configuration_repository::ConfigurationRepository::new(
+            diesel::sqlite::SqliteConnection::establish(&db_path.to_string_lossy()).unwrap()
+        );
+        config_repo.set_project_prefix("TEST").unwrap();
         let app = Application::new(db);
 
         // Create vision (required as root)

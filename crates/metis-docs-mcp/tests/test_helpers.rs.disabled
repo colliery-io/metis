@@ -1,0 +1,37 @@
+//! Helper functions for MCP tests
+
+use rust_mcp_sdk::schema::{CallToolResult, TextContent};
+use serde_json::Value;
+
+/// Extract short code from MCP create document result
+pub fn extract_short_code_from_result(result: &CallToolResult) -> String {
+    if let Some(text_content) = result.content.first() {
+        let json: Value = serde_json::from_str(&text_content.text).expect("Invalid JSON in result");
+        json["short_code"].as_str().expect("No short_code in result").to_string()
+    } else {
+        panic!("Expected text content in result")
+    }
+}
+
+/// Extract vision short code by listing documents and finding the vision
+pub async fn get_vision_short_code(metis_path: &str) -> String {
+    use metis_mcp_server::tools::ListDocumentsTool;
+    
+    let list_tool = ListDocumentsTool {
+        project_path: metis_path.to_string(),
+    };
+    let result = list_tool.call_tool().await.unwrap();
+    
+    if let Some(text_content) = result.content.first() {
+        let json: Value = serde_json::from_str(&text_content.text).expect("Invalid JSON in result");
+        let documents = json["documents"].as_array().expect("No documents array");
+        
+        for doc in documents {
+            if doc["document_type"] == "vision" {
+                return doc["short_code"].as_str().expect("No short_code in vision").to_string();
+            }
+        }
+    }
+    
+    panic!("No vision document found")
+}

@@ -27,9 +27,10 @@ impl Adr {
         parent_id: Option<DocumentId>,
         tags: Vec<Tag>,
         archived: bool,
+        short_code: String,
     ) -> Result<Self, DocumentValidationError> {
         // Create fresh metadata
-        let metadata = DocumentMetadata::new();
+        let metadata = DocumentMetadata::new(short_code);
 
         // Render the content template
         let template_content = include_str!("content.md");
@@ -171,8 +172,9 @@ impl Adr {
             .map(DocumentId::from);
 
         // Create metadata and content
+        let short_code = FrontmatterParser::extract_string(&fm_map, "short_code")?;
         let metadata =
-            DocumentMetadata::from_frontmatter(created_at, updated_at, exit_criteria_met);
+            DocumentMetadata::from_frontmatter(created_at, updated_at, exit_criteria_met, short_code);
         let content = DocumentContent::from_markdown(&parsed.content);
 
         Ok(Self::from_parts(
@@ -232,6 +234,7 @@ impl Adr {
         let mut context = Context::new();
         context.insert("slug", &DocumentId::title_to_slug(self.title()));
         context.insert("title", self.title());
+        context.insert("short_code", &self.metadata().short_code);
         context.insert("created_at", &self.metadata().created_at.to_rfc3339());
         context.insert("updated_at", &self.metadata().updated_at.to_rfc3339());
         context.insert("archived", &self.archived().to_string());
@@ -441,6 +444,7 @@ number: 1
 decision_maker: "Architecture Team"
 decision_date: 2025-01-01T12:00:00Z
 parent: initiative-001
+short_code: TEST-A-9001
 
 tags:
   - "#adr"
@@ -486,6 +490,7 @@ This will allow us to leverage a large ecosystem.
             None,
             vec![Tag::Phase(Phase::Decided)],
             false,
+            "TEST-A-0042".to_string(),
         )
         .unwrap();
 
@@ -534,6 +539,7 @@ exit_criteria_met: false
             None,
             vec![Tag::Phase(Phase::Decided)],
             false,
+            "TEST-A-0101".to_string(),
         )
         .unwrap();
 
@@ -548,6 +554,7 @@ exit_criteria_met: false
             None,
             vec![Tag::Phase(Phase::Decided)],
             false,
+            "TEST-A-0101".to_string(),
         )
         .unwrap();
 
@@ -564,6 +571,7 @@ exit_criteria_met: false
             None,
             vec![Tag::Phase(Phase::Decided)],
             false,
+            "TEST-A-0101".to_string(),
         )
         .unwrap();
 
@@ -581,6 +589,7 @@ exit_criteria_met: false
             None,
             vec![Tag::Phase(Phase::Discussion)],
             false,
+            "TEST-A-0101".to_string(),
         )
         .unwrap();
 
@@ -596,6 +605,7 @@ exit_criteria_met: false
             None,
             vec![Tag::Phase(Phase::Decided)],
             false,
+            "TEST-A-0101".to_string(),
         )
         .unwrap();
 
@@ -613,6 +623,7 @@ exit_criteria_met: false
             None,
             vec![Tag::Phase(Phase::Decided)],
             false,
+            "TEST-A-0101".to_string(),
         )
         .unwrap();
 
@@ -624,6 +635,7 @@ exit_criteria_met: false
             None,
             vec![Tag::Phase(Phase::Decided)],
             false,
+            "TEST-A-0101".to_string(),
         )
         .unwrap();
 
@@ -635,6 +647,7 @@ exit_criteria_met: false
             None,
             vec![Tag::Phase(Phase::Decided)],
             false,
+            "TEST-A-0101".to_string(),
         )
         .unwrap();
 
@@ -653,6 +666,7 @@ exit_criteria_met: false
             None,
             vec![Tag::Phase(Phase::Draft)],
             false,
+            "TEST-A-0101".to_string(),
         )
         .unwrap();
 
@@ -687,6 +701,7 @@ exit_criteria_met: false
             None,
             vec![Tag::Phase(Phase::Discussion)],
             false,
+            "TEST-A-0101".to_string(),
         )
         .unwrap();
 
@@ -711,6 +726,7 @@ exit_criteria_met: false
             None,
             vec![Tag::Phase(Phase::Draft)],
             false,
+            "TEST-A-0101".to_string(),
         )
         .unwrap();
 
@@ -740,6 +756,7 @@ exit_criteria_met: false
             None,
             vec![Tag::Phase(Phase::Draft)],
             false,
+            "TEST-A-0101".to_string(),
         )
         .unwrap();
 

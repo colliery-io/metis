@@ -4,19 +4,32 @@ use metis_core::application::services::document::creation::{
 use metis_core::application::services::document::discovery::DocumentDiscoveryService;
 use metis_core::application::services::workspace::initialization::WorkspaceInitializationService;
 use metis_core::domain::documents::types::{DocumentType, Tag};
-use metis_core::{Complexity, RiskLevel};
+use metis_core::{Complexity, RiskLevel, Database};
+use std::path::PathBuf;
 use tempfile::tempdir;
 
-#[tokio::test]
-async fn test_document_id_matches_path() {
+// Helper function to setup workspace with configuration
+async fn setup_test_workspace(project_name: &str) -> (tempfile::TempDir, PathBuf) {
     let temp_dir = tempdir().unwrap();
     let workspace_dir = temp_dir.path().join(".metis");
-
+    
     // Initialize workspace
-    WorkspaceInitializationService::initialize_workspace(&workspace_dir, "test-project")
+    WorkspaceInitializationService::initialize_workspace(&workspace_dir, project_name)
         .await
         .unwrap();
 
+    // Setup database configuration
+    let db_path = workspace_dir.join("metis.db");
+    let db = Database::new(&db_path.to_string_lossy()).unwrap();
+    let mut config_repo = db.configuration_repository().unwrap();
+    config_repo.set_project_prefix("TEST").unwrap();
+    
+    (temp_dir, workspace_dir)
+}
+
+#[tokio::test]
+async fn test_document_id_matches_path() {
+    let (_temp_dir, workspace_dir) = setup_test_workspace("test-project").await;
     let creation_service = DocumentCreationService::new(&workspace_dir);
     let discovery_service = DocumentDiscoveryService::new(&workspace_dir);
 
@@ -60,13 +73,7 @@ async fn test_document_id_matches_path() {
 
 #[tokio::test]
 async fn test_initiative_id_path_consistency() {
-    let temp_dir = tempdir().unwrap();
-    let workspace_dir = temp_dir.path().join(".metis");
-
-    WorkspaceInitializationService::initialize_workspace(&workspace_dir, "test-project")
-        .await
-        .unwrap();
-
+    let (_temp_dir, workspace_dir) = setup_test_workspace("test-project").await;
     let creation_service = DocumentCreationService::new(&workspace_dir);
 
     // Create parent strategy
@@ -119,13 +126,7 @@ async fn test_initiative_id_path_consistency() {
 
 #[tokio::test]
 async fn test_task_id_path_consistency() {
-    let temp_dir = tempdir().unwrap();
-    let workspace_dir = temp_dir.path().join(".metis");
-
-    WorkspaceInitializationService::initialize_workspace(&workspace_dir, "test-project")
-        .await
-        .unwrap();
-
+    let (_temp_dir, workspace_dir) = setup_test_workspace("test-project").await;
     let creation_service = DocumentCreationService::new(&workspace_dir);
 
     // Create parent strategy and initiative
@@ -198,13 +199,7 @@ async fn test_task_id_path_consistency() {
 
 #[tokio::test]
 async fn test_adr_id_consistency() {
-    let temp_dir = tempdir().unwrap();
-    let workspace_dir = temp_dir.path().join(".metis");
-
-    WorkspaceInitializationService::initialize_workspace(&workspace_dir, "test-project")
-        .await
-        .unwrap();
-
+    let (_temp_dir, workspace_dir) = setup_test_workspace("test-project").await;
     let creation_service = DocumentCreationService::new(&workspace_dir);
 
     // Create ADR
@@ -236,13 +231,7 @@ async fn test_adr_id_consistency() {
 
 #[tokio::test]
 async fn test_long_title_id_path_consistency() {
-    let temp_dir = tempdir().unwrap();
-    let workspace_dir = temp_dir.path().join(".metis");
-
-    WorkspaceInitializationService::initialize_workspace(&workspace_dir, "test-project")
-        .await
-        .unwrap();
-
+    let (_temp_dir, workspace_dir) = setup_test_workspace("test-project").await;
     let creation_service = DocumentCreationService::new(&workspace_dir);
 
     // Create strategy with very long title
@@ -283,13 +272,7 @@ async fn test_long_title_id_path_consistency() {
 
 #[tokio::test]
 async fn test_unicode_title_id_path_consistency() {
-    let temp_dir = tempdir().unwrap();
-    let workspace_dir = temp_dir.path().join(".metis");
-
-    WorkspaceInitializationService::initialize_workspace(&workspace_dir, "test-project")
-        .await
-        .unwrap();
-
+    let (_temp_dir, workspace_dir) = setup_test_workspace("test-project").await;
     let creation_service = DocumentCreationService::new(&workspace_dir);
 
     // Test various Unicode titles
@@ -345,13 +328,7 @@ async fn test_unicode_title_id_path_consistency() {
 /// always matches the directory path on the filesystem
 #[tokio::test]
 async fn test_regression_id_path_mismatch_bug() {
-    let temp_dir = tempdir().unwrap();
-    let workspace_dir = temp_dir.path().join(".metis");
-
-    WorkspaceInitializationService::initialize_workspace(&workspace_dir, "test-project")
-        .await
-        .unwrap();
-
+    let (_temp_dir, workspace_dir) = setup_test_workspace("test-project").await;
     let creation_service = DocumentCreationService::new(&workspace_dir);
     let discovery_service = DocumentDiscoveryService::new(&workspace_dir);
 

@@ -2,8 +2,9 @@ use crate::workspace;
 use anyhow::Result;
 use dialoguer::Select;
 use metis_core::{
+    application::services::document::creation::{DocumentCreationConfig, DocumentCreationService},
     domain::documents::{initiative::Complexity, types::DocumentId},
-    Document, Initiative, Phase, Strategy, Tag,
+    Document, Phase, Strategy, Tag,
 };
 use std::path::Path;
 
@@ -17,51 +18,35 @@ pub async fn create_new_initiative(title: &str, strategy_id: &str) -> Result<()>
     let metis_dir = metis_dir.unwrap();
 
     // 2. Verify the strategy exists and get its document ID
-    let (strategy_doc_id, strategy_path) = find_strategy(&metis_dir, strategy_id).await?;
+    let (strategy_doc_id, _strategy_path) = find_strategy(&metis_dir, strategy_id).await?;
 
     // 3. Prompt for complexity level
     let complexity = prompt_for_complexity()?;
 
-    // 4. Create Initiative with defaults
-    let tags = vec![
-        Tag::Label("initiative".to_string()),
-        Tag::Phase(Phase::Discovery),
-    ];
+    // 4. Use DocumentCreationService to create the initiative
+    let creation_service = DocumentCreationService::new(&metis_dir);
+    
+    let config = DocumentCreationConfig {
+        title: title.to_string(),
+        description: None,
+        parent_id: Some(strategy_doc_id.clone()),
+        tags: vec![
+            Tag::Label("initiative".to_string()),
+            Tag::Phase(Phase::Discovery),
+        ],
+        phase: Some(Phase::Discovery),
+        complexity: Some(complexity),
+        risk_level: None,
+    };
 
-    let initiative = Initiative::new(
-        title.to_string(),
-        Some(strategy_doc_id.clone()),
-        Some(strategy_doc_id.clone()), // strategy_id (same as parent for initiatives)
-        Vec::new(), // blocked_by
-        tags,
-        false, // not archived
-        complexity,
-    )
-    .map_err(|e| anyhow::anyhow!("Failed to create initiative: {}", e))?;
+    let result = creation_service
+        .create_initiative(config, &strategy_doc_id.to_string())
+        .await
+        .map_err(|e| anyhow::anyhow!("Failed to create initiative: {}", e))?;
 
-    // 5. Determine hierarchical file path: /strategies/{strategy-id}/initiatives/{initiative-id}/initiative.md
-    let doc_id = initiative.id();
-    let initiative_dir = strategy_path
-        .parent()
-        .unwrap()
-        .join("initiatives")
-        .join(doc_id.to_string());
-    std::fs::create_dir_all(&initiative_dir)?;
-    let file_path = initiative_dir.join("initiative.md");
-
-    // Check if file already exists
-    if file_path.exists() {
-        anyhow::bail!(
-            "Initiative document already exists: {}",
-            file_path.display()
-        );
-    }
-
-    // 6. Write to file
-    initiative.to_file(&file_path).await?;
-
-    println!("✓ Created initiative: {}", file_path.display());
-    println!("  ID: {}", doc_id);
+    println!("✓ Created initiative: {}", result.file_path.display());
+    println!("  ID: {}", result.document_id);
+    println!("  Short Code: {}", result.short_code);
     println!("  Title: {}", title);
     println!("  Parent Strategy: {}", strategy_doc_id);
     println!("  Complexity: {:?}", complexity);

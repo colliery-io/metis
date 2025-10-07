@@ -7,6 +7,18 @@ use crate::common::McpTestHelper;
 
 mod common;
 
+/// Helper to extract short code from MCP response JSON
+fn extract_short_code(result: &rust_mcp_sdk::schema::CallToolResult) -> String {
+    if let Some(rust_mcp_sdk::schema::ContentBlock::TextContent(text_content)) = result.content.first() {
+        if let Ok(json) = serde_json::from_str::<serde_json::Value>(&text_content.text) {
+            if let Some(short_code) = json.get("short_code").and_then(|v| v.as_str()) {
+                return short_code.to_string();
+            }
+        }
+    }
+    panic!("Failed to extract short_code from MCP response");
+}
+
 /// Test MCP server behavior with default streamlined configuration
 /// Streamlined: strategies disabled, initiatives enabled (Vision → Initiative → Task)
 #[tokio::test]
@@ -56,13 +68,14 @@ async fn test_streamlined_configuration_workflows() -> Result<()> {
     
     let initiative_result = create_initiative.call_tool().await;
     assert!(initiative_result.is_ok(), "Initiative creation should succeed in streamlined mode without parent: {:?}", initiative_result);
+    let initiative_short_code = extract_short_code(&initiative_result.unwrap());
 
     // 3. Task creation with initiative parent should succeed
     let create_task = CreateDocumentTool {
         project_path: helper.metis_dir().clone(),
         document_type: "task".to_string(),
         title: "Test Task".to_string(),
-        parent_id: Some("test-initiative".to_string()), // Reference the initiative
+        parent_id: Some(initiative_short_code), // Reference the initiative by short code
         risk_level: None,
         complexity: None,
         stakeholders: None,
@@ -199,6 +212,7 @@ async fn test_full_configuration_workflows() -> Result<()> {
     
     let strategy_result = create_strategy.call_tool().await;
     assert!(strategy_result.is_ok(), "Strategy creation should succeed in full mode: {:?}", strategy_result);
+    let strategy_short_code = extract_short_code(&strategy_result.unwrap());
 
     // 2. Initiative creation should require strategy parent
     let create_initiative_no_parent = CreateDocumentTool {
@@ -222,7 +236,7 @@ async fn test_full_configuration_workflows() -> Result<()> {
         project_path: helper.metis_dir().clone(),
         document_type: "initiative".to_string(),
         title: "Test Initiative".to_string(),
-        parent_id: Some("test-strategy".to_string()),
+        parent_id: Some(strategy_short_code),
         risk_level: None,
         complexity: Some("m".to_string()),
         stakeholders: None,
@@ -231,6 +245,7 @@ async fn test_full_configuration_workflows() -> Result<()> {
     
     let initiative_result = create_initiative.call_tool().await;
     assert!(initiative_result.is_ok(), "Initiative with strategy parent should succeed: {:?}", initiative_result);
+    let initiative_short_code = extract_short_code(&initiative_result.unwrap());
 
     // 4. Task creation should require initiative parent
     let create_task_no_parent = CreateDocumentTool {
@@ -252,7 +267,7 @@ async fn test_full_configuration_workflows() -> Result<()> {
         project_path: helper.metis_dir().clone(),
         document_type: "task".to_string(),
         title: "Test Task".to_string(),
-        parent_id: Some("test-initiative".to_string()),
+        parent_id: Some(initiative_short_code),
         risk_level: None,
         complexity: None,
         stakeholders: None,

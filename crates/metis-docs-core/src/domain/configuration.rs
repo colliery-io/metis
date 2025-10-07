@@ -146,6 +146,8 @@ impl fmt::Display for FlightLevelConfig {
 pub enum ConfigurationError {
     InvalidConfiguration(String),
     SerializationError(String),
+    InvalidValue(String),
+    MissingConfiguration(String),
 }
 
 impl fmt::Display for ConfigurationError {
@@ -153,6 +155,8 @@ impl fmt::Display for ConfigurationError {
         match self {
             ConfigurationError::InvalidConfiguration(msg) => write!(f, "Invalid configuration: {}", msg),
             ConfigurationError::SerializationError(msg) => write!(f, "Serialization error: {}", msg),
+            ConfigurationError::InvalidValue(msg) => write!(f, "Invalid value: {}", msg),
+            ConfigurationError::MissingConfiguration(msg) => write!(f, "Missing configuration: {}", msg),
         }
     }
 }

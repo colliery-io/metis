@@ -8,7 +8,7 @@ use std::path::Path;
 
 #[mcp_tool(
     name = "list_documents",
-    description = "List documents in a project with optional filtering",
+    description = "List documents in a project with optional filtering. Returns document details including unique short codes (format: PREFIX-TYPE-NNNN).",
     idempotent_hint = true,
     destructive_hint = false,
     open_world_hint = false,
@@ -73,7 +73,8 @@ impl ListDocumentsTool {
                     "phase": doc.phase,
                     "filepath": doc.filepath,
                     "updated_at": updated,
-                    "archived": doc.archived
+                    "archived": doc.archived,
+                    "short_code": doc.short_code
                 })
             })
             .collect();

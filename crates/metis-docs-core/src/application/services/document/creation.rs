@@ -3,14 +3,17 @@ use crate::domain::documents::strategy::RiskLevel;
 use crate::domain::documents::traits::Document;
 use crate::domain::documents::types::{DocumentId, DocumentType, Phase, Tag, ParentReference};
 use crate::domain::configuration::FlightLevelConfig;
+use crate::dal::database::configuration_repository::ConfigurationRepository;
 use crate::Result;
 use crate::{Adr, Initiative, MetisError, Strategy, Task, Vision};
+use diesel::{Connection, sqlite::SqliteConnection};
 use std::fs;
 use std::path::{Path, PathBuf};
 
 /// Service for creating new documents with proper defaults and validation
 pub struct DocumentCreationService {
     workspace_dir: PathBuf,
+    db_path: PathBuf,
 }
 
 /// Configuration for creating a new document
@@ -31,14 +34,28 @@ pub struct CreationResult {
     pub document_id: DocumentId,
     pub document_type: DocumentType,
     pub file_path: PathBuf,
+    pub short_code: String,
 }
 
 impl DocumentCreationService {
     /// Create a new document creation service for a workspace
     pub fn new<P: AsRef<Path>>(workspace_dir: P) -> Self {
+        let workspace_path = workspace_dir.as_ref().to_path_buf();
+        let db_path = workspace_path.join("metis.db");
         Self {
-            workspace_dir: workspace_dir.as_ref().to_path_buf(),
+            workspace_dir: workspace_path,
+            db_path,
         }
+    }
+
+    /// Generate a short code for a document type
+    fn generate_short_code(&self, doc_type: &str) -> Result<String> {
+        let mut config_repo = ConfigurationRepository::new(
+            SqliteConnection::establish(&self.db_path.to_string_lossy())
+                .map_err(|e| MetisError::ConfigurationError(crate::domain::configuration::ConfigurationError::InvalidValue(e.to_string())))?
+        );
+        
+        config_repo.generate_short_code(doc_type)
     }
 
     /// Create a new vision document
@@ -53,6 +70,9 @@ impl DocumentCreationService {
             });
         }
 
+        // Generate short code for vision
+        let short_code = self.generate_short_code("vision")?;
+
         // Create vision with defaults
         let mut tags = vec![
             Tag::Label("vision".to_string()),
@@ -64,6 +84,7 @@ impl DocumentCreationService {
             config.title.clone(),
             tags,
             false, // not archived
+            short_code.clone(),
         )
         .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
 
@@ -82,6 +103,7 @@ impl DocumentCreationService {
             document_id: vision.id(),
             document_type: DocumentType::Vision,
             file_path,
+            short_code,
         })
     }
 
@@ -99,6 +121,9 @@ impl DocumentCreationService {
             });
         }
 
+        // Generate short code for strategy
+        let short_code = self.generate_short_code("strategy")?;
+
         // Create strategy with defaults
         let mut tags = vec![
             Tag::Label("strategy".to_string()),
@@ -114,6 +139,7 @@ impl DocumentCreationService {
             false,                                          // not archived
             config.risk_level.unwrap_or(RiskLevel::Medium), // use config risk_level or default to Medium
             Vec::new(),                                     // stakeholders - empty by default
+            short_code.clone(),
         )
         .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
 
@@ -130,6 +156,7 @@ impl DocumentCreationService {
             document_id: strategy.id(),
             document_type: DocumentType::Strategy,
             file_path,
+            short_code,
         })
     }
 
@@ -220,6 +247,9 @@ impl DocumentCreationService {
         ];
         tags.extend(config.tags);
 
+        // Generate short code for initiative
+        let short_code = self.generate_short_code("initiative")?;
+
         // Use the parent reference from configuration, or explicit parent_id from config
         let parent_id = config.parent_id.map(ParentReference::Some).unwrap_or(parent_ref);
 
@@ -231,6 +261,7 @@ impl DocumentCreationService {
             tags,
             false,                                      // not archived
             config.complexity.unwrap_or(Complexity::M), // use config complexity or default to M
+            short_code.clone(),
         )
         .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
 
@@ -247,6 +278,7 @@ impl DocumentCreationService {
             document_id: initiative.id(),
             document_type: DocumentType::Initiative,
             file_path,
+            short_code,
         })
     }
 
@@ -347,6 +379,9 @@ impl DocumentCreationService {
         ];
         tags.extend(config.tags);
 
+        // Generate short code for task
+        let short_code = self.generate_short_code("task")?;
+
         // Use the parent reference from configuration, or explicit parent_id from config
         let parent_id = config.parent_id.map(ParentReference::Some).unwrap_or(parent_ref);
 
@@ -359,6 +394,7 @@ impl DocumentCreationService {
             Vec::new(),                     // blocked_by
             tags,
             false, // not archived
+            short_code.clone(),
         )
         .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
 
@@ -377,6 +413,7 @@ impl DocumentCreationService {
             document_id: task.id(),
             document_type: DocumentType::Task,
             file_path,
+            short_code,
         })
     }
 
@@ -403,6 +440,9 @@ impl DocumentCreationService {
         ];
         tags.extend(config.tags);
 
+        // Generate short code for task
+        let short_code = self.generate_short_code("task")?;
+
         let task = Task::new(
             config.title.clone(),
             None,                            // No parent for backlog items
@@ -412,6 +452,7 @@ impl DocumentCreationService {
             Vec::new(),                      // blocked_by
             tags,
             false, // not archived
+            short_code.clone(),
         )
         .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
 
@@ -430,6 +471,7 @@ impl DocumentCreationService {
             document_id: task.id(),
             document_type: DocumentType::Task,
             file_path,
+            short_code,
         })
     }
 
@@ -476,6 +518,9 @@ impl DocumentCreationService {
         ];
         tags.extend(config.tags);
 
+        // Generate short code for ADR
+        let short_code = self.generate_short_code("adr")?;
+
         let adr = Adr::new(
             adr_number,
             config.title.clone(),
@@ -484,6 +529,7 @@ impl DocumentCreationService {
             config.parent_id,
             tags,
             false, // not archived
+            short_code.clone(),
         )
         .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
 
@@ -499,6 +545,7 @@ impl DocumentCreationService {
             document_id: adr.id(),
             document_type: DocumentType::Adr,
             file_path,
+            short_code,
         })
     }
 
@@ -546,6 +593,16 @@ mod tests {
         let workspace_dir = temp_dir.path().join(".metis");
         fs::create_dir_all(&workspace_dir).unwrap();
 
+        // Create and initialize database with proper schema
+        let db_path = workspace_dir.join("metis.db");
+        let _db = crate::Database::new(&db_path.to_string_lossy()).unwrap();
+        
+        // Set up project prefix in configuration
+        let mut config_repo = ConfigurationRepository::new(
+            SqliteConnection::establish(&db_path.to_string_lossy()).unwrap()
+        );
+        config_repo.set_project_prefix("TEST").unwrap();
+
         let service = DocumentCreationService::new(&workspace_dir);
         let config = DocumentCreationConfig {
             title: "Test Vision".to_string(),
@@ -573,6 +630,16 @@ mod tests {
         let workspace_dir = temp_dir.path().join(".metis");
         fs::create_dir_all(&workspace_dir).unwrap();
 
+        // Create and initialize database with proper schema
+        let db_path = workspace_dir.join("metis.db");
+        let _db = crate::Database::new(&db_path.to_string_lossy()).unwrap();
+        
+        // Set up project prefix in configuration
+        let mut config_repo = ConfigurationRepository::new(
+            SqliteConnection::establish(&db_path.to_string_lossy()).unwrap()
+        );
+        config_repo.set_project_prefix("TEST").unwrap();
+
         let service = DocumentCreationService::new(&workspace_dir);
         let config = DocumentCreationConfig {
             title: "Test Strategy".to_string(),
@@ -599,6 +666,16 @@ mod tests {
         let temp_dir = tempdir().unwrap();
         let workspace_dir = temp_dir.path().join(".metis");
         fs::create_dir_all(&workspace_dir).unwrap();
+
+        // Create and initialize database with proper schema
+        let db_path = workspace_dir.join("metis.db");
+        let _db = crate::Database::new(&db_path.to_string_lossy()).unwrap();
+        
+        // Set up project prefix in configuration
+        let mut config_repo = ConfigurationRepository::new(
+            SqliteConnection::establish(&db_path.to_string_lossy()).unwrap()
+        );
+        config_repo.set_project_prefix("TEST").unwrap();
 
         let service = DocumentCreationService::new(&workspace_dir);
 
@@ -684,7 +761,20 @@ mod tests {
 
     fn setup_test_service_temp() -> (DocumentCreationService, tempfile::TempDir) {
         let temp_dir = tempfile::TempDir::new().expect("Failed to create temp directory");
-        let service = DocumentCreationService::new(temp_dir.path());
+        let workspace_dir = temp_dir.path().join(".metis");
+        fs::create_dir_all(&workspace_dir).unwrap();
+
+        // Create and initialize database with proper schema
+        let db_path = workspace_dir.join("metis.db");
+        let _db = crate::Database::new(&db_path.to_string_lossy()).unwrap();
+        
+        // Set up project prefix in configuration
+        let mut config_repo = ConfigurationRepository::new(
+            SqliteConnection::establish(&db_path.to_string_lossy()).unwrap()
+        );
+        config_repo.set_project_prefix("TEST").unwrap();
+
+        let service = DocumentCreationService::new(&workspace_dir);
         (service, temp_dir)
     }
 

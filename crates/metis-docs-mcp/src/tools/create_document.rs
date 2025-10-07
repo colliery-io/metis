@@ -1,6 +1,6 @@
 use metis_core::{
     application::services::document::{creation::DocumentCreationConfig, DocumentCreationService},
-    domain::{documents::types::DocumentType, configuration::FlightLevelConfig},
+    domain::documents::types::DocumentType,
     Application, Database,
 };
 use rust_mcp_sdk::{
@@ -13,7 +13,7 @@ use std::str::FromStr;
 
 #[mcp_tool(
     name = "create_document",
-    description = "Create a new Metis document (vision, strategy, initiative, task, adr). Parent documents should be referenced by their ID (kebab-case string). Document type availability depends on current flight level configuration.",
+    description = "Create a new Metis document (vision, strategy, initiative, task, adr). Each document gets a unique short code in format PREFIX-TYPE-NNNN (e.g., PROJ-V-0001). Parent documents should be referenced by their ID (kebab-case string). Document type availability depends on current flight level configuration.",
     idempotent_hint = false,
     destructive_hint = false,
     open_world_hint = false,
@@ -40,6 +40,20 @@ pub struct CreateDocumentTool {
 }
 
 impl CreateDocumentTool {
+    /// Resolve short code to document ID for parent relationships
+    fn resolve_short_code_to_document_id(&self, short_code: &str, metis_dir: &Path) -> Result<String, CallToolError> {
+        let db_path = metis_dir.join("metis.db");
+        let db = Database::new(db_path.to_str().unwrap())
+            .map_err(|e| CallToolError::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Database error: {}", e))))?;
+        
+        let mut repo = db.repository()
+            .map_err(|e| CallToolError::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Repository error: {}", e))))?;
+        
+        // Use the core DAL method
+        repo.resolve_short_code_to_document_id(short_code)
+            .map_err(|e| CallToolError::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Resolution error: {}", e))))
+    }
+    
     pub async fn call_tool(&self) -> std::result::Result<CallToolResult, CallToolError> {
         let metis_dir = Path::new(&self.project_path);
 
@@ -134,12 +148,24 @@ impl CreateDocumentTool {
                 ))
             })?;
 
-        // Build configuration
+        // Build configuration - resolve short codes to document IDs
+        let resolved_parent_id = if let Some(parent_id) = &self.parent_id {
+            // Check if parent_id looks like a short code (contains hyphen and ends with digits)
+            if parent_id.contains('-') && parent_id.chars().last().map_or(false, |c| c.is_ascii_digit()) {
+                // Looks like a short code, resolve it
+                Some(self.resolve_short_code_to_document_id(parent_id, metis_dir)?)
+            } else {
+                // Assume it's already a document ID
+                Some(parent_id.clone())
+            }
+        } else {
+            None
+        };
+        
         let config = DocumentCreationConfig {
             title: self.title.clone(),
             description: None,
-            parent_id: self
-                .parent_id
+            parent_id: resolved_parent_id
                 .as_ref()
                 .map(|id| metis_core::domain::documents::types::DocumentId::from(id.clone())),
             tags: vec![],
@@ -170,7 +196,7 @@ impl CreateDocumentTool {
                 // Determine parent strategy ID based on configuration
                 let parent_strategy_id = if flight_config.strategies_enabled {
                     // Full configuration: require explicit strategy parent
-                    self.parent_id.as_ref().ok_or_else(|| {
+                    resolved_parent_id.as_ref().ok_or_else(|| {
                         CallToolError::new(std::io::Error::new(
                             std::io::ErrorKind::InvalidInput,
                             "Initiative requires a parent strategy ID in full configuration",
@@ -188,7 +214,7 @@ impl CreateDocumentTool {
             }
             DocumentType::Task => {
                 // Determine task creation approach based on configuration and provided parent
-                if let Some(initiative_id) = self.parent_id.as_ref() {
+                if let Some(initiative_id) = resolved_parent_id.as_ref() {
                     // Task with parent initiative
                     let strategy_id = if flight_config.strategies_enabled {
                         // Full configuration: resolve actual strategy from initiative location
@@ -228,6 +254,7 @@ impl CreateDocumentTool {
         let response = serde_json::json!({
             "success": true,
             "document_id": result.document_id.to_string(),
+            "short_code": result.short_code,
             "document_type": self.document_type,
             "title": self.title,
             "file_path": result.file_path.to_string_lossy(),

@@ -3,6 +3,22 @@
 ## Overview
 Metis implements Flight Levels methodology for managing work at different altitudes - from strategic vision down to individual tasks. Each level operates at a different time horizon and abstraction level, with work flowing downward through phases and feedback flowing upward.
 
+## Document Identification System
+All Metis documents are assigned unique **short codes** in the format `PREFIX-TYPE-NNNN`:
+- **PREFIX**: Project identifier (e.g., `PROJ`, `TEST`)
+- **TYPE**: Document type (`V`=Vision, `S`=Strategy, `I`=Initiative, `T`=Task, `A`=ADR)  
+- **NNNN**: Sequential number (e.g., `0001`, `0002`)
+
+**Examples**: `PROJ-V-0001` (Project Vision #1), `TEST-I-0042` (Test Initiative #42)
+
+Short codes provide:
+- **Quick Reference**: Easy to mention in discussions and documentation
+- **Unique Identity**: No confusion between documents with similar titles
+- **Sequential Tracking**: See document creation order within each type
+- **Cross-Reference**: Link related work items clearly
+
+Use short codes when referencing documents in content, discussions, or other documents.
+
 ## The Work Management System
 
 ### Flight Level 3: Vision (Strategic Direction)

@@ -10,6 +10,9 @@ async fn test_create_backlog_item_via_tui() -> Result<()> {
     let helper = TestHelper::new().await?;
     let mut app = helper.create_app();
 
+    // Load flight configuration from database
+    app.load_flight_config().await?;
+
     // Jump to backlog board
     app.jump_to_backlog_board();
     assert_eq!(app.ui_state.current_board, BoardType::Backlog);
@@ -67,6 +70,9 @@ async fn test_create_backlog_item_via_tui() -> Result<()> {
 async fn test_multiple_backlog_items() -> Result<()> {
     let helper = TestHelper::new().await?;
     let mut app = helper.create_app();
+
+    // Load flight configuration from database
+    app.load_flight_config().await?;
 
     // Jump to backlog board
     app.jump_to_backlog_board();

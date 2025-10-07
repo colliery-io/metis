@@ -8,7 +8,7 @@ use std::path::Path;
 
 #[mcp_tool(
     name = "search_documents",
-    description = "Search documents by content with optional filtering",
+    description = "Search documents by content with optional filtering. Returns matching documents with their unique short codes (format: PREFIX-TYPE-NNNN).",
     idempotent_hint = true,
     destructive_hint = false,
     open_world_hint = false,

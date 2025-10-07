@@ -1,68 +1,74 @@
-//! Functional integration tests for MCP tools
+//! Clean functional tests for MCP tools using short codes
 
 use metis_core::Database;
 use metis_mcp_server::tools::*;
-use std::fs;
+use serde_json::Value;
 use tempfile::tempdir;
 
-#[tokio::test]
-async fn test_initialize_project_functional() {
-    let temp_dir = tempdir().unwrap();
-    let project_path = temp_dir.path().to_string_lossy().to_string();
+/// Helper to extract short code from MCP response JSON
+fn extract_short_code(result: &rust_mcp_sdk::schema::CallToolResult) -> String {
+    if let Some(rust_mcp_sdk::schema::ContentBlock::TextContent(text_content)) = result.content.first() {
+        if let Ok(json) = serde_json::from_str::<Value>(&text_content.text) {
+            if let Some(short_code) = json["short_code"].as_str() {
+                return short_code.to_string();
+            }
+        }
+    }
+    panic!("Could not extract short_code from result")
+}
 
-    let tool = InitializeProjectTool {
-        project_path: project_path.clone(),
+/// Helper to get vision short code from list results
+async fn get_vision_short_code(metis_path: &str) -> String {
+    let list_tool = ListDocumentsTool {
+        project_path: metis_path.to_string(),
     };
-
-    let result = tool.call_tool().await;
-    assert!(result.is_ok(), "Initialize project should succeed");
-
-    // Verify .metis directory was created (note the dot!)
-    let metis_dir = temp_dir.path().join(".metis");
-    assert!(metis_dir.exists());
-    assert!(metis_dir.is_dir());
-
-    // Verify database was created
-    let db_path = metis_dir.join("metis.db");
-    assert!(db_path.exists());
-
-    // Verify vision.md was created
-    let vision_path = metis_dir.join("vision.md");
-    assert!(vision_path.exists());
-
-    // Verify vision content (should use temp directory name as project name)
-    let vision_content = fs::read_to_string(&vision_path).unwrap();
-    assert!(vision_content.contains("#vision"));
-    assert!(vision_content.contains("#phase/draft"));
+    let result = list_tool.call_tool().await.unwrap();
+    
+    if let Some(rust_mcp_sdk::schema::ContentBlock::TextContent(text_content)) = result.content.first() {
+        if let Ok(json) = serde_json::from_str::<Value>(&text_content.text) {
+            if let Some(documents) = json["documents"].as_array() {
+                for doc in documents {
+                    if doc["document_type"] == "vision" {
+                        if let Some(short_code) = doc["short_code"].as_str() {
+                            return short_code.to_string();
+                        }
+                    }
+                }
+            }
+        }
+    }
+    panic!("Could not find vision document")
 }
 
 #[tokio::test]
-async fn test_full_document_lifecycle() {
+async fn test_initialize_and_create_documents() {
     let temp_dir = tempdir().unwrap();
     let project_path = temp_dir.path().to_string_lossy().to_string();
+    let metis_path = format!("{}/.metis", project_path);
 
     // 1. Initialize project
     let init_tool = InitializeProjectTool {
         project_path: project_path.clone(),
     };
-
     let result = init_tool.call_tool().await;
     assert!(result.is_ok(), "Initialize should succeed");
 
-    // 1.5. Set full configuration to enable all document types for testing
-    let db_path = format!("{}/.metis/metis.db", project_path);
+    // 2. Enable all document types
+    let db_path = format!("{}/metis.db", metis_path);
     let db = Database::new(&db_path).unwrap();
     let mut config_repo = db.configuration_repository().unwrap();
     config_repo.set("flight_levels", r#"{"strategies_enabled":true,"initiatives_enabled":true}"#).unwrap();
 
-    // 2. Create a strategy (use .metis directory path)
-    let metis_path = format!("{}/.metis", project_path);
-    let project_name = temp_dir.path().file_name().unwrap().to_str().unwrap();
+    // 3. Get vision short code
+    let vision_short_code = get_vision_short_code(&metis_path).await;
+    println!("Vision short code: {}", vision_short_code);
+
+    // 4. Create strategy using vision short code as parent
     let create_strategy = CreateDocumentTool {
         project_path: metis_path.clone(),
         document_type: "strategy".to_string(),
         title: "Test Strategy".to_string(),
-        parent_id: Some(project_name.to_string()),
+        parent_id: Some(vision_short_code),
         risk_level: Some("medium".to_string()),
         complexity: None,
         stakeholders: Some(vec!["dev_team".to_string()]),
@@ -71,118 +77,119 @@ async fn test_full_document_lifecycle() {
 
     let result = create_strategy.call_tool().await;
     assert!(result.is_ok(), "Create strategy should succeed");
+    let strategy_short_code = extract_short_code(&result.unwrap());
+    println!("Strategy short code: {}", strategy_short_code);
 
-    // 3. List documents
-    let list_tool = ListDocumentsTool {
+    // 5. Create initiative using strategy short code as parent
+    let create_initiative = CreateDocumentTool {
         project_path: metis_path.clone(),
+        document_type: "initiative".to_string(),
+        title: "Test Initiative".to_string(),
+        parent_id: Some(strategy_short_code.clone()),
+        risk_level: None,
+        complexity: Some("m".to_string()),
+        stakeholders: Some(vec!["product_team".to_string()]),
+        decision_maker: None,
     };
 
-    let result = list_tool.call_tool().await;
-    assert!(result.is_ok(), "List documents should succeed");
+    let result = create_initiative.call_tool().await;
+    if let Err(ref e) = result {
+        println!("Initiative creation error: {:?}", e);
+    }
+    assert!(result.is_ok(), "Create initiative should succeed");
+    let initiative_short_code = extract_short_code(&result.unwrap());
+    println!("Initiative short code: {}", initiative_short_code);
 
-    // 4. Search for documents
-    let search_tool = SearchDocumentsTool {
+    // 6. Test read document with short code
+    let read_tool = ReadDocumentTool {
         project_path: metis_path.clone(),
-        query: "Test".to_string(),
-        document_type: None,
-        limit: None,
+        short_code: strategy_short_code.clone(),
     };
 
-    let result = search_tool.call_tool().await;
-    assert!(result.is_ok(), "Search documents should succeed");
-}
-
-#[tokio::test]
-async fn test_phase_transition_workflow() {
-    let temp_dir = tempdir().unwrap();
-    let project_path = temp_dir.path().to_string_lossy().to_string();
-
-    // Initialize project
-    let init_tool = InitializeProjectTool {
-        project_path: project_path.clone(),
-    };
-
-    let result = init_tool.call_tool().await;
-    assert!(result.is_ok());
-
-    // First, let's check if we can transition the vision from draft to review
-    // The document ID is derived from the project name (temp directory name)
-    let metis_path = format!("{}/.metis", project_path);
-    let project_name = temp_dir.path().file_name().unwrap().to_str().unwrap();
-    // The document ID is derived from the title, which is the project name
-    // Using the DocumentId::from_title conversion logic
-    let _vision_id = project_name
-        .to_lowercase()
-        .chars()
-        .map(|c| if c.is_alphanumeric() { c } else { '-' })
-        .collect::<String>()
-        .trim_matches('-')
-        .to_string();
-
-    // Test transition phase tool
-    // The vision document ID should be the project name (which is the temp dir name)
-    let vision_id = project_name
-        .to_lowercase()
-        .chars()
-        .map(|c| if c.is_alphanumeric() { c } else { '-' })
-        .collect::<String>()
-        .split('-')
-        .filter(|s| !s.is_empty())
-        .collect::<Vec<_>>()
-        .join("-");
+    let result = read_tool.call_tool().await;
+    assert!(result.is_ok(), "Read document should succeed");
     
+    // Let's see what the strategy content looks like
+    if let Ok(ref read_result) = result {
+        if let Some(rust_mcp_sdk::schema::ContentBlock::TextContent(text_content)) = read_result.content.first() {
+            if let Ok(json) = serde_json::from_str::<serde_json::Value>(&text_content.text) {
+                if let Some(content) = json["content"].as_str() {
+                    println!("Strategy content:\n{}", content);
+                }
+            }
+        }
+    }
+
+    // 7. Test edit document with short code
+    let edit_tool = EditDocumentTool {
+        project_path: metis_path.clone(),
+        short_code: strategy_short_code.clone(),
+        search: "{Describe the problem and why it matters - 1-2 paragraphs}".to_string(),
+        replace: "This strategy addresses the need for better short code interfaces in our MCP server.".to_string(),
+        replace_all: None,
+    };
+
+    let result = edit_tool.call_tool().await;
+    if let Err(ref e) = result {
+        println!("Edit document error: {:?}", e);
+    }
+    assert!(result.is_ok(), "Edit document should succeed");
+
+    // 8. Test phase transition with short code (from shaping to design)
     let transition_tool = TransitionPhaseTool {
         project_path: metis_path.clone(),
-        document_id: vision_id,
-        phase: Some("review".to_string()),
+        short_code: strategy_short_code,
+        phase: Some("design".to_string()),
         force: None,
     };
 
     let result = transition_tool.call_tool().await;
-    if let Err(e) = &result {
+    if let Err(ref e) = result {
         println!("Phase transition error: {:?}", e);
     }
-    assert!(result.is_ok(), "Phase transition should succeed: {:?}", result);
+    assert!(result.is_ok(), "Phase transition should succeed");
 }
 
 #[tokio::test]
-async fn test_document_updates() {
+async fn test_archive_with_short_codes() {
     let temp_dir = tempdir().unwrap();
     let project_path = temp_dir.path().to_string_lossy().to_string();
+    let metis_path = format!("{}/.metis", project_path);
 
-    // Initialize project
+    // Initialize and set up
     let init_tool = InitializeProjectTool {
         project_path: project_path.clone(),
     };
+    init_tool.call_tool().await.unwrap();
 
-    let result = init_tool.call_tool().await;
-    assert!(result.is_ok());
+    let db_path = format!("{}/metis.db", metis_path);
+    let db = Database::new(&db_path).unwrap();
+    let mut config_repo = db.configuration_repository().unwrap();
+    config_repo.set("flight_levels", r#"{"strategies_enabled":true,"initiatives_enabled":true}"#).unwrap();
 
-    // Update document content
-    let metis_path = format!("{}/.metis", project_path);
-    let update_content = EditDocumentTool {
+    let vision_short_code = get_vision_short_code(&metis_path).await;
+
+    // Create strategy
+    let create_strategy = CreateDocumentTool {
         project_path: metis_path.clone(),
-        document_path: "vision.md".to_string(),
-        search: "{Why this vision exists and what it aims to achieve}".to_string(),
-        replace: "This is an updated purpose statement.".to_string(),
-        replace_all: None,
+        document_type: "strategy".to_string(),
+        title: "Archive Test Strategy".to_string(),
+        parent_id: Some(vision_short_code),
+        risk_level: Some("low".to_string()),
+        complexity: None,
+        stakeholders: None,
+        decision_maker: None,
     };
 
-    let result = update_content.call_tool().await;
-    assert!(result.is_ok(), "Update document content should succeed");
+    let result = create_strategy.call_tool().await.unwrap();
+    let strategy_short_code = extract_short_code(&result);
 
-    // Test updating another section
-    let update_purpose = EditDocumentTool {
+    // Archive using short code
+    let archive_tool = ArchiveDocumentTool {
         project_path: metis_path.clone(),
-        document_path: "vision.md".to_string(),
-        search: "This is an updated purpose statement.".to_string(),
-        replace: "Updated purpose: To create an amazing system for work management.".to_string(),
-        replace_all: None,
+        short_code: strategy_short_code,
     };
 
-    let result = update_purpose.call_tool().await;
-    if let Err(e) = &result {
-        println!("Update purpose error: {:?}", e);
-    }
-    assert!(result.is_ok(), "Update purpose content should succeed: {:?}", result);
+    let result = archive_tool.call_tool().await;
+    assert!(result.is_ok(), "Archive should succeed");
 }

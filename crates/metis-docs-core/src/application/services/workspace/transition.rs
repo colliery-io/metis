@@ -399,14 +399,31 @@ mod tests {
     use super::*;
     use crate::application::services::document::creation::DocumentCreationConfig;
     use crate::application::services::document::DocumentCreationService;
+    use crate::dal::Database;
+    use diesel::Connection;
     use std::fs;
+    use std::path::PathBuf;
     use tempfile::tempdir;
+
+    async fn setup_test_workspace() -> (tempfile::TempDir, PathBuf) {
+        let temp_dir = tempdir().unwrap();
+        let workspace_dir = temp_dir.path().join(".metis");
+        std::fs::create_dir_all(&workspace_dir).unwrap();
+
+        // Initialize database with configuration
+        let db_path = workspace_dir.join("metis.db");
+        let _db = Database::new(&db_path.to_string_lossy()).unwrap();
+        let mut config_repo = crate::dal::database::configuration_repository::ConfigurationRepository::new(
+            diesel::sqlite::SqliteConnection::establish(&db_path.to_string_lossy()).unwrap()
+        );
+        config_repo.set_project_prefix("TEST").unwrap();
+
+        (temp_dir, workspace_dir)
+    }
 
     #[tokio::test]
     async fn test_transition_vision_to_next_phase() {
-        let temp_dir = tempdir().unwrap();
-        let workspace_dir = temp_dir.path().join(".metis");
-        fs::create_dir_all(&workspace_dir).unwrap();
+        let (_temp_dir, workspace_dir) = setup_test_workspace().await;
 
         // Create a vision document
         let creation_service = DocumentCreationService::new(&workspace_dir);
@@ -435,9 +452,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_transition_strategy_through_phases() {
-        let temp_dir = tempdir().unwrap();
-        let workspace_dir = temp_dir.path().join(".metis");
-        fs::create_dir_all(&workspace_dir).unwrap();
+        let (_temp_dir, workspace_dir) = setup_test_workspace().await;
 
         // Create a strategy document
         let creation_service = DocumentCreationService::new(&workspace_dir);
@@ -487,9 +502,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_transition_to_specific_phase() {
-        let temp_dir = tempdir().unwrap();
-        let workspace_dir = temp_dir.path().join(".metis");
-        fs::create_dir_all(&workspace_dir).unwrap();
+        let (_temp_dir, workspace_dir) = setup_test_workspace().await;
 
         // Create a vision document
         let creation_service = DocumentCreationService::new(&workspace_dir);
@@ -517,9 +530,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_invalid_transition() {
-        let temp_dir = tempdir().unwrap();
-        let workspace_dir = temp_dir.path().join(".metis");
-        fs::create_dir_all(&workspace_dir).unwrap();
+        let (_temp_dir, workspace_dir) = setup_test_workspace().await;
 
         // Create a vision document
         let creation_service = DocumentCreationService::new(&workspace_dir);

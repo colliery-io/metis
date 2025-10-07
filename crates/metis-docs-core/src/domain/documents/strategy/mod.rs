@@ -63,9 +63,10 @@ impl Strategy {
         archived: bool,
         risk_level: RiskLevel,
         stakeholders: Vec<String>,
+        short_code: String,
     ) -> Result<Self, DocumentValidationError> {
         // Create fresh metadata
-        let metadata = DocumentMetadata::new();
+        let metadata = DocumentMetadata::new(short_code);
 
         // Render the content template
         let template_content = include_str!("content.md");
@@ -235,8 +236,9 @@ impl Strategy {
         let stakeholders = FrontmatterParser::extract_string_array(&fm_map, "stakeholders")?;
 
         // Create metadata and content
+        let short_code = FrontmatterParser::extract_string(&fm_map, "short_code")?;
         let metadata =
-            DocumentMetadata::from_frontmatter(created_at, updated_at, exit_criteria_met);
+            DocumentMetadata::from_frontmatter(created_at, updated_at, exit_criteria_met, short_code);
         let content = DocumentContent::from_markdown(&parsed.content);
 
         Ok(Self::from_parts(
@@ -274,6 +276,7 @@ impl Strategy {
         let mut context = Context::new();
         context.insert("slug", &self.id().to_string());
         context.insert("title", self.title());
+        context.insert("short_code", &self.metadata().short_code);
         context.insert("created_at", &self.metadata().created_at.to_rfc3339());
         context.insert("updated_at", &self.metadata().updated_at.to_rfc3339());
         context.insert("archived", &self.archived().to_string());
@@ -485,6 +488,7 @@ mod tests {
             false,
             RiskLevel::Medium,
             vec!["stakeholder1".to_string(), "stakeholder2".to_string()],
+            "TEST-S-0201".to_string(),
         )
         .expect("Failed to create strategy");
 
@@ -520,6 +524,7 @@ updated_at: 2025-01-01T00:00:00Z
 parent: parent-vision
 blocked_by: []
 archived: false
+short_code: TEST-S-9001
 
 tags:
   - "#strategy"
@@ -579,6 +584,7 @@ We are here.
             false,
             RiskLevel::Medium,
             Vec::new(),
+            "TEST-S-0201".to_string(),
         )
         .expect("Failed to create strategy");
 
@@ -611,6 +617,7 @@ We are here.
             false,
             RiskLevel::High,
             vec!["key-stakeholder".to_string()],
+            "TEST-S-0201".to_string(),
         )
         .expect("Failed to create strategy");
 

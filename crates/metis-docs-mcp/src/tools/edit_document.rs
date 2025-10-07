@@ -9,7 +9,7 @@ use tokio::fs;
 
 #[mcp_tool(
     name = "edit_document",
-    description = "Edit document content using search-and-replace. Always read documents before editing them.",
+    description = "Edit document content using search-and-replace. Use short codes (e.g., PROJ-V-0001) to identify documents.",
     idempotent_hint = false,
     destructive_hint = false,
     open_world_hint = false,
@@ -19,8 +19,8 @@ use tokio::fs;
 pub struct EditDocumentTool {
     /// Path to the .metis folder containing the document
     pub project_path: String,
-    /// Path to the document file (relative to project root)
-    pub document_path: String,
+    /// Document short code (e.g., PROJ-V-0001) to identify the document
+    pub short_code: String,
     /// Text to search for (will be replaced)
     pub search: String,
     /// Text to replace the search text with
@@ -30,6 +30,20 @@ pub struct EditDocumentTool {
 }
 
 impl EditDocumentTool {
+    /// Resolve short code to file path
+    fn resolve_short_code_to_path(&self, metis_dir: &Path) -> Result<String, CallToolError> {
+        let db_path = metis_dir.join("metis.db");
+        let db = Database::new(db_path.to_str().unwrap())
+            .map_err(|e| CallToolError::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Database error: {}", e))))?;
+        
+        let mut repo = db.repository()
+            .map_err(|e| CallToolError::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Repository error: {}", e))))?;
+        
+        // Use the core DAL method
+        repo.resolve_short_code_to_filepath(&self.short_code)
+            .map_err(|e| CallToolError::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Resolution error: {}", e))))
+    }
+    
     pub async fn call_tool(&self) -> std::result::Result<CallToolResult, CallToolError> {
         let metis_dir = Path::new(&self.project_path);
 
@@ -44,13 +58,14 @@ impl EditDocumentTool {
             )));
         }
 
-        // Construct the full document path
-        let full_document_path = metis_dir.join(&self.document_path);
+        // Resolve short code to document path
+        let document_path = self.resolve_short_code_to_path(metis_dir)?;
+        let full_document_path = metis_dir.join(&document_path);
 
         if !full_document_path.exists() {
             return Err(CallToolError::new(std::io::Error::new(
                 std::io::ErrorKind::NotFound,
-                format!("Document not found at {}", full_document_path.display()),
+                format!("Document not found for short code {}", self.short_code),
             )));
         }
 
@@ -82,14 +97,15 @@ impl EditDocumentTool {
 
         let response = serde_json::json!({
             "success": true,
-            "document_path": self.document_path,
+            "short_code": self.short_code,
+            "document_path": document_path,
             "replacements_made": replacements_made,
             "search_text": self.search,
             "replace_text": self.replace,
             "replace_all": self.replace_all.unwrap_or(false),
             "message": format!(
-                "Successfully made {} replacement(s) in {}",
-                replacements_made, self.document_path
+                "Successfully made {} replacement(s) in document {}",
+                replacements_made, self.short_code
             ),
             "auto_synced": true
         });

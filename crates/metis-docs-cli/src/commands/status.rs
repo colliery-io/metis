@@ -330,6 +330,7 @@ mod tests {
             phase: "blocked".to_string(),
             strategy_id: Some("test-strategy".to_string()),
             initiative_id: Some("test-initiative".to_string()),
+            short_code: "TEST-T-0001".to_string(),
         };
 
         let todo_doc = metis_core::dal::database::models::Document {

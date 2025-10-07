@@ -433,6 +433,95 @@ impl ArchiveService {
             "Could not determine document type".to_string(),
         ))
     }
+
+    /// Archive a document by its short code
+    pub async fn archive_document_by_short_code(
+        &self,
+        short_code: &str,
+        db_service: &mut DatabaseService,
+    ) -> Result<ArchiveResult> {
+        // Find the document by short code
+        let doc = db_service.find_by_short_code(short_code)?.ok_or_else(|| {
+            MetisError::DocumentNotFound {
+                id: short_code.to_string(),
+            }
+        })?;
+
+        let doc_type = DocumentType::from_str(&doc.document_type)
+            .map_err(|e| MetisError::ValidationFailed { message: format!("Invalid document type: {}", e) })?;
+        let mut archived_documents = Vec::new();
+
+        match doc_type {
+            DocumentType::Vision | DocumentType::Task | DocumentType::Adr => {
+                // These document types don't have children, just archive the file
+                let archived_doc = self.archive_single_file(&PathBuf::from(&doc.filepath), doc_type).await?;
+                archived_documents.push(archived_doc);
+            }
+
+            DocumentType::Strategy => {
+                // Use database query to find all documents in strategy hierarchy by short code
+                let hierarchy_docs = db_service.find_strategy_hierarchy_by_short_code(short_code)?;
+                
+                // Mark all documents as archived first
+                for db_doc in &hierarchy_docs {
+                    let path = PathBuf::from(&db_doc.filepath);
+                    let dt = DocumentType::from_str(&db_doc.document_type)
+                        .map_err(|e| MetisError::ValidationFailed { message: format!("Invalid document type: {}", e) })?;
+                    self.mark_as_archived_helper(&path, dt).await?;
+                }
+
+                // Archive the strategy directory (which moves everything intact)
+                let strategy_path = PathBuf::from(&doc.filepath);
+                let strategy_dir = strategy_path.parent().unwrap();
+                let archived_doc = self.archive_directory(strategy_dir, doc_type).await?;
+                archived_documents.push(archived_doc);
+            }
+
+            DocumentType::Initiative => {
+                // Use database query to find all documents in initiative hierarchy by short code
+                let hierarchy_docs = db_service.find_initiative_hierarchy_by_short_code(short_code)?;
+                
+                // Mark all documents as archived first
+                for db_doc in &hierarchy_docs {
+                    let path = PathBuf::from(&db_doc.filepath);
+                    let dt = DocumentType::from_str(&db_doc.document_type)
+                        .map_err(|e| MetisError::ValidationFailed { message: format!("Invalid document type: {}", e) })?;
+                    self.mark_as_archived_helper(&path, dt).await?;
+                }
+
+                // Archive the initiative directory
+                let initiative_path = PathBuf::from(&doc.filepath);
+                let initiative_dir = initiative_path.parent().unwrap();
+                let archived_doc = self.archive_directory(initiative_dir, doc_type).await?;
+                archived_documents.push(archived_doc);
+            }
+        }
+
+        // Documents are already marked as archived in frontmatter via mark_as_archived_helper
+        // Database will be synced by the caller (MCP tool auto-sync)
+
+        let total_archived = archived_documents.len();
+        Ok(ArchiveResult {
+            archived_documents,
+            total_archived,
+        })
+    }
+
+    /// Check if a document is archived by its short code
+    pub async fn is_document_archived_by_short_code(&self, short_code: &str) -> Result<bool> {
+        // Create a temporary database service to resolve the short code
+        let db_path = self.workspace_dir.join("metis.db");
+        let db = crate::dal::Database::new(&db_path.to_string_lossy())
+            .map_err(|e| MetisError::FileSystem(format!("Database error: {}", e)))?;
+        let mut db_service = DatabaseService::new(db.into_repository());
+        
+        // Find document by short code
+        if let Some(doc) = db_service.find_by_short_code(short_code)? {
+            self.is_document_archived(&doc.id).await
+        } else {
+            Ok(false) // Document not found means not archived
+        }
+    }
 }
 
 #[cfg(test)]
@@ -441,6 +530,7 @@ mod tests {
     use crate::application::services::document::creation::DocumentCreationConfig;
     use crate::application::services::document::DocumentCreationService;
     use crate::Database;
+    use diesel::{Connection, sqlite::SqliteConnection};
     use tempfile::tempdir;
 
     #[tokio::test]
@@ -448,6 +538,16 @@ mod tests {
         let temp_dir = tempdir().unwrap();
         let workspace_dir = temp_dir.path().join(".metis");
         fs::create_dir_all(&workspace_dir).unwrap();
+
+        // Create and initialize database with proper schema
+        let db_path = workspace_dir.join("metis.db");
+        let _db = crate::Database::new(&db_path.to_string_lossy()).unwrap();
+        
+        // Set up project prefix in configuration
+        let mut config_repo = crate::dal::database::configuration_repository::ConfigurationRepository::new(
+            diesel::sqlite::SqliteConnection::establish(&db_path.to_string_lossy()).unwrap()
+        );
+        config_repo.set_project_prefix("TEST").unwrap();
 
         // Create a vision document
         let creation_service = DocumentCreationService::new(&workspace_dir);
@@ -492,6 +592,16 @@ mod tests {
         let workspace_dir = temp_dir.path().join(".metis");
         fs::create_dir_all(&workspace_dir).unwrap();
 
+        // Create and initialize database with proper schema
+        let db_path = workspace_dir.join("metis.db");
+        let _db = crate::Database::new(&db_path.to_string_lossy()).unwrap();
+        
+        // Set up project prefix in configuration
+        let mut config_repo = crate::dal::database::configuration_repository::ConfigurationRepository::new(
+            SqliteConnection::establish(&db_path.to_string_lossy()).unwrap()
+        );
+        config_repo.set_project_prefix("TEST").unwrap();
+
         let creation_service = DocumentCreationService::new(&workspace_dir);
 
         // Create a strategy
@@ -509,6 +619,12 @@ mod tests {
             .await
             .unwrap();
 
+        // Sync the strategy to database so it can be found by the initiative creation
+        let db = crate::Database::new(&db_path.to_string_lossy()).unwrap();
+        let mut db_service = crate::application::services::DatabaseService::new(db.repository().unwrap());
+        let mut sync_service = crate::application::services::SyncService::new(&mut db_service);
+        sync_service.import_from_file(&strategy_result.file_path).await.unwrap();
+
         // Create an initiative under the strategy
         let initiative_config = DocumentCreationConfig {
             title: "Test Initiative".to_string(),
@@ -520,7 +636,7 @@ mod tests {
             risk_level: None,
         };
         let _initiative_result = creation_service
-            .create_initiative(initiative_config, &strategy_result.document_id.to_string())
+            .create_initiative(initiative_config, &strategy_result.short_code)
             .await
             .unwrap();
 
@@ -549,6 +665,16 @@ mod tests {
         let temp_dir = tempdir().unwrap();
         let workspace_dir = temp_dir.path().join(".metis");
         fs::create_dir_all(&workspace_dir).unwrap();
+
+        // Create and initialize database with proper schema
+        let db_path = workspace_dir.join("metis.db");
+        let _db = crate::Database::new(&db_path.to_string_lossy()).unwrap();
+        
+        // Set up project prefix in configuration
+        let mut config_repo = crate::dal::database::configuration_repository::ConfigurationRepository::new(
+            SqliteConnection::establish(&db_path.to_string_lossy()).unwrap()
+        );
+        config_repo.set_project_prefix("TEST").unwrap();
 
         let creation_service = DocumentCreationService::new(&workspace_dir);
         let archive_service = ArchiveService::new(&workspace_dir);
@@ -588,6 +714,16 @@ mod tests {
         let temp_dir = tempdir().unwrap();
         let workspace_dir = temp_dir.path().join(".metis");
         fs::create_dir_all(&workspace_dir).unwrap();
+
+        // Create and initialize database with proper schema
+        let db_path = workspace_dir.join("metis.db");
+        let _db = crate::Database::new(&db_path.to_string_lossy()).unwrap();
+        
+        // Set up project prefix in configuration
+        let mut config_repo = crate::dal::database::configuration_repository::ConfigurationRepository::new(
+            SqliteConnection::establish(&db_path.to_string_lossy()).unwrap()
+        );
+        config_repo.set_project_prefix("TEST").unwrap();
 
         let creation_service = DocumentCreationService::new(&workspace_dir);
         let archive_service = ArchiveService::new(&workspace_dir);

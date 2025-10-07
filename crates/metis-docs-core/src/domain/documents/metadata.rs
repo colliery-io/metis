@@ -7,16 +7,18 @@ pub struct DocumentMetadata {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub exit_criteria_met: bool,
+    pub short_code: String,
 }
 
 impl DocumentMetadata {
-    /// Create new metadata with current timestamps
-    pub fn new() -> Self {
+    /// Create new metadata with current timestamps and short code
+    pub fn new(short_code: String) -> Self {
         let now = Utc::now();
         Self {
             created_at: now,
             updated_at: now,
             exit_criteria_met: false,
+            short_code,
         }
     }
 
@@ -25,11 +27,13 @@ impl DocumentMetadata {
         created_at: DateTime<Utc>,
         updated_at: DateTime<Utc>,
         exit_criteria_met: bool,
+        short_code: String,
     ) -> Self {
         Self {
             created_at,
             updated_at,
             exit_criteria_met,
+            short_code,
         }
     }
 
@@ -45,8 +49,4 @@ impl DocumentMetadata {
     }
 }
 
-impl Default for DocumentMetadata {
-    fn default() -> Self {
-        Self::new()
-    }
-}
+// Note: No Default implementation as short_code is required

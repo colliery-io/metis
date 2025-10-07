@@ -11,7 +11,7 @@ use std::path::Path;
 
 #[mcp_tool(
     name = "initialize_project",
-    description = "Initialize a new Metis project by creating a 'metis' subdirectory at the specified path",
+    description = "Initialize a new Metis project by creating a 'metis' subdirectory at the specified path. Sets up project configuration including short code generation (format: PREFIX-TYPE-NNNN).",
     idempotent_hint = true,
     destructive_hint = false,
     open_world_hint = false,

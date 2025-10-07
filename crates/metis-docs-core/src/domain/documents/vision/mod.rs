@@ -19,9 +19,10 @@ impl Vision {
         title: String,
         tags: Vec<Tag>,
         archived: bool,
+        short_code: String,
     ) -> Result<Self, DocumentValidationError> {
         // Create fresh metadata
-        let metadata = DocumentMetadata::new();
+        let metadata = DocumentMetadata::new(short_code);
 
         // Render the content template
         let template_content = include_str!("content.md");
@@ -130,8 +131,9 @@ impl Vision {
         }
 
         // Create metadata and content
+        let short_code = FrontmatterParser::extract_string(&fm_map, "short_code")?;
         let metadata =
-            DocumentMetadata::from_frontmatter(created_at, updated_at, exit_criteria_met);
+            DocumentMetadata::from_frontmatter(created_at, updated_at, exit_criteria_met, short_code);
         let content = DocumentContent::from_markdown(&parsed.content);
 
         Ok(Self::from_parts(title, metadata, content, tags, archived))
@@ -180,6 +182,7 @@ impl Vision {
         let mut context = Context::new();
         context.insert("slug", &self.id().to_string());
         context.insert("title", self.title());
+        context.insert("short_code", &self.metadata().short_code);
         context.insert("created_at", &self.metadata().created_at.to_rfc3339());
         context.insert("updated_at", &self.metadata().updated_at.to_rfc3339());
         context.insert("archived", &self.archived().to_string());
@@ -365,6 +368,7 @@ title: "Test Vision"
 created_at: 2025-01-01T00:00:00Z
 updated_at: 2025-01-01T00:00:00Z
 archived: false
+short_code: TEST-V-9001
 
 tags:
   - "#vision"
@@ -480,6 +484,7 @@ title: "Test Vision"
 created_at: 2025-01-01T00:00:00Z
 updated_at: 2025-01-01T00:00:00Z
 archived: false
+short_code: TEST-V-9002
 tags:
   - "#vision"
   - "#phase/review"
@@ -527,6 +532,7 @@ exit_criteria_met: false
             "Test Vision".to_string(),
             vec![Tag::Label("vision".to_string()), Tag::Phase(Phase::Draft)],
             false,
+            "TEST-V-0501".to_string(),
         )
         .expect("Failed to create vision");
 
@@ -558,6 +564,7 @@ exit_criteria_met: false
             "Test Vision".to_string(),
             vec![Tag::Phase(Phase::Draft)],
             false,
+            "TEST-V-0501".to_string(),
         )
         .expect("Failed to create vision");
 
@@ -585,6 +592,7 @@ exit_criteria_met: false
             "Test Vision".to_string(),
             vec![Tag::Phase(Phase::Draft)],
             false,
+            "TEST-V-0501".to_string(),
         )
         .expect("Failed to create vision");
 
@@ -627,6 +635,7 @@ exit_criteria_met: false
             "Test Vision".to_string(),
             vec![Tag::Phase(Phase::Draft)],
             false,
+            "TEST-V-0501".to_string(),
         )
         .expect("Failed to create vision");
 
@@ -661,6 +670,7 @@ exit_criteria_met: false
             "Test Vision".to_string(),
             vec![Tag::Phase(Phase::Draft)],
             false,
+            "TEST-V-0501".to_string(),
         )
         .expect("Failed to create vision");
 
@@ -693,6 +703,7 @@ exit_criteria_met: false
             "Test Vision".to_string(),
             vec![Tag::Phase(Phase::Draft)],
             false,
+            "TEST-V-0501".to_string(),
         )
         .expect("Failed to create vision");
 

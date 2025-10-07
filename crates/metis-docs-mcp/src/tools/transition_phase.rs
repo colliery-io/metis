@@ -11,7 +11,7 @@ use std::path::Path;
 
 #[mcp_tool(
     name = "transition_phase",
-    description = "Transition a document to a new phase. If phase is not provided, transitions to the next valid phase automatically",
+    description = "Transition a document to a new phase using its short code (e.g., PROJ-V-0001). If phase is not provided, transitions to the next valid phase automatically",
     idempotent_hint = false,
     destructive_hint = false,
     open_world_hint = false,
@@ -21,8 +21,8 @@ use std::path::Path;
 pub struct TransitionPhaseTool {
     /// Path to the .metis folder containing the document
     pub project_path: String,
-    /// Document ID to transition  
-    pub document_id: String,
+    /// Document short code (e.g., PROJ-V-0001) to identify the document
+    pub short_code: String,
     /// Phase to transition to (optional - if not provided, transitions to next phase)
     pub phase: Option<String>,
     /// Force transition even if exit criteria aren't met
@@ -30,6 +30,20 @@ pub struct TransitionPhaseTool {
 }
 
 impl TransitionPhaseTool {
+    /// Resolve short code to document ID
+    fn resolve_short_code_to_id(&self, metis_dir: &Path) -> Result<String, CallToolError> {
+        let db_path = metis_dir.join("metis.db");
+        let db = Database::new(db_path.to_str().unwrap())
+            .map_err(|e| CallToolError::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Database error: {}", e))))?;
+        
+        let mut repo = db.repository()
+            .map_err(|e| CallToolError::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Repository error: {}", e))))?;
+        
+        // Use the core DAL method
+        repo.resolve_short_code_to_document_id(&self.short_code)
+            .map_err(|e| CallToolError::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Resolution error: {}", e))))
+    }
+    
     pub async fn call_tool(&self) -> std::result::Result<CallToolResult, CallToolError> {
         let metis_dir = Path::new(&self.project_path);
 
@@ -44,6 +58,9 @@ impl TransitionPhaseTool {
             )));
         }
 
+        // Resolve short code to document ID
+        let document_id = self.resolve_short_code_to_id(metis_dir)?;
+        
         // Create the phase transition service
         let transition_service = PhaseTransitionService::new(metis_dir);
 
@@ -52,13 +69,13 @@ impl TransitionPhaseTool {
             // Transition to specific phase
             let target_phase = self.parse_phase(phase_str)?;
             transition_service
-                .transition_document(&self.document_id, target_phase)
+                .transition_document(&document_id, target_phase)
                 .await
                 .map_err(|e| CallToolError::new(e))?
         } else {
             // Auto-transition to next phase
             transition_service
-                .transition_to_next_phase(&self.document_id)
+                .transition_to_next_phase(&document_id)
                 .await
                 .map_err(|e| CallToolError::new(e))?
         };
@@ -68,6 +85,7 @@ impl TransitionPhaseTool {
 
         let response = serde_json::json!({
             "success": true,
+            "short_code": self.short_code,
             "document_id": result.document_id,
             "document_type": result.document_type,
             "from_phase": result.from_phase.to_string(),

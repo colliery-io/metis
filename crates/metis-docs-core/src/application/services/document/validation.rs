@@ -228,6 +228,7 @@ mod tests {
 id: test-vision
 title: Test Vision
 level: vision
+short_code: TEST-V-0801
 created_at: 2023-01-01T00:00:00Z
 updated_at: 2023-01-01T00:00:00Z
 archived: false
@@ -280,6 +281,7 @@ This has no frontmatter.
 id: test-vision
 title: Test Vision
 level: vision
+short_code: TEST-V-0802
 created_at: 2023-01-01T00:00:00Z
 updated_at: 2023-01-01T00:00:00Z
 archived: false
@@ -311,6 +313,7 @@ This is a test vision document.
 id: test-vision
 title: Test Vision
 level: vision
+short_code: TEST-V-0802
 created_at: 2023-01-01T00:00:00Z
 updated_at: 2023-01-01T00:00:00Z
 archived: false

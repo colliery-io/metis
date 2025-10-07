@@ -152,7 +152,14 @@ impl App {
         let needs_parent = match doc_type {
             DocumentType::Strategy | DocumentType::Adr => false, // Never need parents
             DocumentType::Initiative => self.core_state.flight_config.strategies_enabled, // Need parent only if strategies enabled
-            DocumentType::Task => self.core_state.flight_config.initiatives_enabled, // Need parent only if initiatives enabled  
+            DocumentType::Task => {
+                // Backlog tasks never need parents, regardless of configuration
+                if self.ui_state.current_board == BoardType::Backlog {
+                    false
+                } else {
+                    self.core_state.flight_config.initiatives_enabled // Need parent only if initiatives enabled  
+                }
+            }
             _ => false,
         };
         

@@ -27,6 +27,11 @@ impl DatabaseService {
         self.repository.find_by_id(id)
     }
 
+    /// Find a document by short code
+    pub fn find_by_short_code(&mut self, short_code: &str) -> Result<Option<Document>> {
+        self.repository.find_by_short_code(short_code)
+    }
+
     /// Update an existing document
     pub fn update_document(&mut self, filepath: &str, document: &Document) -> Result<Document> {
         self.repository.update_document(filepath, document)
@@ -128,9 +133,19 @@ impl DatabaseService {
         self.repository.find_strategy_hierarchy(strategy_id)
     }
 
+    /// Get all documents in a strategy hierarchy by short code (strategy + its initiatives + their tasks)
+    pub fn find_strategy_hierarchy_by_short_code(&mut self, strategy_short_code: &str) -> Result<Vec<Document>> {
+        self.repository.find_strategy_hierarchy_by_short_code(strategy_short_code)
+    }
+
     /// Get all documents in an initiative hierarchy (initiative + its tasks)
     pub fn find_initiative_hierarchy(&mut self, initiative_id: &str) -> Result<Vec<Document>> {
         self.repository.find_initiative_hierarchy(initiative_id)
+    }
+
+    /// Get all documents in an initiative hierarchy by short code (initiative + its tasks)
+    pub fn find_initiative_hierarchy_by_short_code(&mut self, initiative_short_code: &str) -> Result<Vec<Document>> {
+        self.repository.find_initiative_hierarchy_by_short_code(initiative_short_code)
     }
 }
 
@@ -160,6 +175,7 @@ mod tests {
             phase: "draft".to_string(),
             strategy_id: None,
             initiative_id: None,
+            short_code: "TEST-V-0601".to_string(),
         }
     }
 
@@ -185,6 +201,17 @@ mod tests {
             phase: "draft".to_string(),
             strategy_id,
             initiative_id,
+            short_code: format!("TEST-{}-{:04}", 
+                doc_type.chars().next().unwrap().to_uppercase(),
+                match doc_type {
+                    "vision" => 701,
+                    "strategy" => 702, 
+                    "initiative" => 703,
+                    "task" => 704,
+                    "adr" => 705,
+                    _ => 799,
+                }
+            ),
         }
     }
 
@@ -233,6 +260,7 @@ mod tests {
             id: "parent-1".to_string(),
             filepath: "/parent.md".to_string(),
             document_type: "strategy".to_string(),
+            short_code: "TEST-S-0601".to_string(),
             ..create_test_document()
         };
 
@@ -240,6 +268,7 @@ mod tests {
             id: "child-1".to_string(),
             filepath: "/child.md".to_string(),
             document_type: "initiative".to_string(),
+            short_code: "TEST-I-0601".to_string(),
             ..create_test_document()
         };
 
@@ -295,20 +324,23 @@ mod tests {
         service.create_document(initiative).expect("Failed to create initiative");
 
         // Create tasks under initiative
-        let task1 = create_test_document_with_lineage(
+        let mut task1 = create_test_document_with_lineage(
             "task-1", 
             "task", 
             "/strategies/strategy-1/initiatives/initiative-1/tasks/task-1.md",
             Some("strategy-1".to_string()), 
             Some("initiative-1".to_string())
         );
-        let task2 = create_test_document_with_lineage(
+        task1.short_code = "TEST-T-0704".to_string();
+        
+        let mut task2 = create_test_document_with_lineage(
             "task-2", 
             "task", 
             "/strategies/strategy-1/initiatives/initiative-1/tasks/task-2.md",
             Some("strategy-1".to_string()), 
             Some("initiative-1".to_string())
         );
+        task2.short_code = "TEST-T-0705".to_string();
         service.create_document(task1).expect("Failed to create task1");
         service.create_document(task2).expect("Failed to create task2");
 

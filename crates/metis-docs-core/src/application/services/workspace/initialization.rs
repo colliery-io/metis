@@ -1,4 +1,6 @@
 use crate::{Database, MetisError, Phase, Result, Tag, Vision};
+use crate::dal::database::configuration_repository::ConfigurationRepository;
+use diesel::{Connection, sqlite::SqliteConnection};
 use std::path::{Path, PathBuf};
 
 /// Service for initializing new Metis workspaces
@@ -33,7 +35,16 @@ impl WorkspaceInitializationService {
 
         match db_result {
             Ok(_db) => {
-                // Database is valid, continue
+                // Database is valid, set up project configuration
+                let mut config_repo = ConfigurationRepository::new(
+                    SqliteConnection::establish(db_path.to_str().unwrap())
+                        .map_err(|e| MetisError::ConfigurationError(crate::domain::configuration::ConfigurationError::InvalidValue(e.to_string())))?
+                );
+                
+                // Set default project prefix if not already set
+                if config_repo.get_project_prefix()?.is_none() {
+                    config_repo.set_project_prefix("PROJ")?;
+                }
             }
             Err(e) => {
                 if db_exists {
@@ -77,6 +88,14 @@ impl WorkspaceInitializationService {
 
     /// Create a new Vision document with defaults and write to file
     async fn create_default_vision(workspace_dir: &Path, title: &str) -> Result<PathBuf> {
+        // Generate short code for vision using the database
+        let db_path = workspace_dir.join("metis.db");
+        let mut config_repo = ConfigurationRepository::new(
+            SqliteConnection::establish(&db_path.to_string_lossy())
+                .map_err(|e| MetisError::ConfigurationError(crate::domain::configuration::ConfigurationError::InvalidValue(e.to_string())))?
+        );
+        let short_code = config_repo.generate_short_code("vision")?;
+
         // Create Vision with defaults
         let tags = vec![Tag::Label("vision".to_string()), Tag::Phase(Phase::Draft)];
 
@@ -84,6 +103,7 @@ impl WorkspaceInitializationService {
             title.to_string(),
             tags,
             false, // not archived
+            short_code,
         )?;
 
         // Write to vision.md at workspace root

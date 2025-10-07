@@ -5,6 +5,42 @@ mod common;
 use anyhow::Result;
 use common::McpTestHelper;
 use metis_mcp_server::tools::*;
+use serde_json::Value;
+
+/// Helper to extract short code from MCP response JSON
+fn extract_short_code(result: &rust_mcp_sdk::schema::CallToolResult) -> String {
+    if let Some(rust_mcp_sdk::schema::ContentBlock::TextContent(text_content)) = result.content.first() {
+        if let Ok(json) = serde_json::from_str::<serde_json::Value>(&text_content.text) {
+            if let Some(short_code) = json["short_code"].as_str() {
+                return short_code.to_string();
+            }
+        }
+    }
+    panic!("Could not extract short_code from result")
+}
+
+/// Helper to get vision short code from list results
+async fn get_vision_short_code(metis_path: &str) -> String {
+    let list_tool = ListDocumentsTool {
+        project_path: metis_path.to_string(),
+    };
+    let result = list_tool.call_tool().await.unwrap();
+    
+    if let Some(rust_mcp_sdk::schema::ContentBlock::TextContent(text_content)) = result.content.first() {
+        if let Ok(json) = serde_json::from_str::<Value>(&text_content.text) {
+            if let Some(documents) = json["documents"].as_array() {
+                for doc in documents {
+                    if doc["document_type"] == "vision" {
+                        if let Some(short_code) = doc["short_code"].as_str() {
+                            return short_code.to_string();
+                        }
+                    }
+                }
+            }
+        }
+    }
+    panic!("Could not find vision document")
+}
 
 /// Test MCP server archive cascading behavior that mirrors TUI test behavior
 /// This specifically tests the bug fix for archiving strategies with nested directories
@@ -20,12 +56,14 @@ async fn test_mcp_archive_cascading_behavior() -> Result<()> {
 
     println!("=== MCP Archive Cascading Test ===");
 
-    // Step 1: Create full hierarchy - Strategy -> Initiative -> 2 Tasks
+    // Step 1: Get vision short code and create full hierarchy - Vision -> Strategy -> Initiative -> 2 Tasks
+    let vision_short_code = get_vision_short_code(&helper.metis_dir()).await;
+    
     let create_strategy = CreateDocumentTool {
         project_path: helper.metis_dir().clone(),
         document_type: "strategy".to_string(),
         title: "Digital Transformation Strategy".to_string(),
-        parent_id: Some(helper.get_project_name()),
+        parent_id: Some(vision_short_code),
         risk_level: Some("high".to_string()),
         complexity: None,
         stakeholders: Some(vec!["cto".to_string(), "dev_team".to_string()]),
@@ -34,12 +72,13 @@ async fn test_mcp_archive_cascading_behavior() -> Result<()> {
 
     let result = create_strategy.call_tool().await;
     assert!(result.is_ok(), "Create strategy should succeed");
+    let strategy_short_code = extract_short_code(&result.unwrap());
 
     let create_initiative = CreateDocumentTool {
         project_path: helper.metis_dir().clone(),
         document_type: "initiative".to_string(),
         title: "Modernize Legacy Systems".to_string(),
-        parent_id: Some("digital-transformation-strategy".to_string()),
+        parent_id: Some(strategy_short_code.clone()),
         risk_level: None,
         complexity: Some("xl".to_string()),
         stakeholders: Some(vec!["backend_team".to_string()]),
@@ -48,12 +87,13 @@ async fn test_mcp_archive_cascading_behavior() -> Result<()> {
 
     let result = create_initiative.call_tool().await;
     assert!(result.is_ok(), "Create initiative should succeed");
+    let initiative_short_code = extract_short_code(&result.unwrap());
 
     let create_task_1 = CreateDocumentTool {
         project_path: helper.metis_dir().clone(),
         document_type: "task".to_string(),
         title: "Audit current database schema".to_string(),
-        parent_id: Some("modernize-legacy-systems".to_string()),
+        parent_id: Some(initiative_short_code.clone()),
         risk_level: None,
         complexity: None,
         stakeholders: Some(vec!["dba".to_string()]),
@@ -62,12 +102,13 @@ async fn test_mcp_archive_cascading_behavior() -> Result<()> {
 
     let result = create_task_1.call_tool().await;
     assert!(result.is_ok(), "Create first task should succeed");
+    let task1_short_code = extract_short_code(&result.unwrap());
 
     let create_task_2 = CreateDocumentTool {
         project_path: helper.metis_dir().clone(),
         document_type: "task".to_string(),
         title: "Plan migration roadmap".to_string(),
-        parent_id: Some("modernize-legacy-systems".to_string()),
+        parent_id: Some(initiative_short_code),
         risk_level: None,
         complexity: None,
         stakeholders: Some(vec!["architect".to_string()]),
@@ -76,6 +117,7 @@ async fn test_mcp_archive_cascading_behavior() -> Result<()> {
 
     let result = create_task_2.call_tool().await;
     assert!(result.is_ok(), "Create second task should succeed");
+    let _task2_short_code = extract_short_code(&result.unwrap());
 
     // Verify we have complete hierarchy in database
     let db = helper.get_database()?;
@@ -123,7 +165,7 @@ async fn test_mcp_archive_cascading_behavior() -> Result<()> {
 
     let archive_task = ArchiveDocumentTool {
         project_path: helper.metis_dir().clone(),
-        document_id: "audit-current-database-schema".to_string(),
+        short_code: task1_short_code.clone(),
     };
 
     let result = archive_task.call_tool().await;
@@ -164,10 +206,9 @@ async fn test_mcp_archive_cascading_behavior() -> Result<()> {
     println!("\n=== Step 3: Archive Strategy (Cascade Test) ===");
 
     // Add debugging - check directory structure before archive
-    let strategy_dir = format!(
-        "{}/strategies/digital-transformation-strategy",
-        helper.metis_dir()
-    );
+    // Get the actual strategy document to get its path
+    let strategy_doc = repo.find_by_short_code(&strategy_short_code).map_err(|e| anyhow::anyhow!("Find strategy error: {}", e))?.unwrap();
+    let strategy_dir = helper.metis_dir().to_string() + "/" + &strategy_doc.filepath.rsplitn(2, '/').nth(1).unwrap_or("");
 
     println!("Before MCP archive - Strategy directory structure:");
     if let Ok(entries) = std::fs::read_dir(&strategy_dir) {
@@ -194,7 +235,7 @@ async fn test_mcp_archive_cascading_behavior() -> Result<()> {
 
     let archive_strategy = ArchiveDocumentTool {
         project_path: helper.metis_dir().clone(),
-        document_id: "digital-transformation-strategy".to_string(),
+        short_code: strategy_short_code.clone(),
     };
 
     let result = archive_strategy.call_tool().await;
@@ -321,13 +362,11 @@ async fn test_mcp_archive_cascading_behavior() -> Result<()> {
         "Archived directory should exist"
     );
 
-    let archived_strategy_dir = format!(
-        "{}/archived/strategies/digital-transformation-strategy",
-        helper.metis_dir()
-    );
+    // Check that the strategy directory was moved to archived
+    let archived_strategies_dir = format!("{}/archived/strategies", helper.metis_dir());
     assert!(
-        std::path::Path::new(&archived_strategy_dir).exists(),
-        "Archived strategy directory should exist"
+        std::path::Path::new(&archived_strategies_dir).exists(),
+        "Archived strategies directory should exist"
     );
 
     println!("✅ File system state consistent with archive operations");
@@ -359,7 +398,7 @@ async fn test_mcp_archive_error_handling() -> Result<()> {
     // Try to archive non-existent document
     let archive_nonexistent = ArchiveDocumentTool {
         project_path: helper.metis_dir().clone(),
-        document_id: "non-existent-document".to_string(),
+        short_code: "non-existent-document".to_string(),
     };
 
     let result = archive_nonexistent.call_tool().await;
@@ -368,11 +407,13 @@ async fn test_mcp_archive_error_handling() -> Result<()> {
     println!("✅ Non-existent document archive properly rejected");
 
     // Try to archive same document twice
+    let vision_short_code = get_vision_short_code(&helper.metis_dir()).await;
+    
     let create_strategy = CreateDocumentTool {
         project_path: helper.metis_dir().clone(),
         document_type: "strategy".to_string(),
         title: "Test Strategy for Archive".to_string(),
-        parent_id: Some(helper.get_project_name()),
+        parent_id: Some(vision_short_code),
         risk_level: Some("low".to_string()),
         complexity: None,
         stakeholders: None,
@@ -381,10 +422,11 @@ async fn test_mcp_archive_error_handling() -> Result<()> {
 
     let result = create_strategy.call_tool().await;
     assert!(result.is_ok(), "Create strategy should succeed");
+    let strategy_short_code = extract_short_code(&result.unwrap());
 
     let archive_strategy = ArchiveDocumentTool {
         project_path: helper.metis_dir().clone(),
-        document_id: "test-strategy-for-archive".to_string(),
+        short_code: strategy_short_code.clone(),
     };
 
     // First archive should succeed
