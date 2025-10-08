@@ -1,0 +1,31 @@
+[package]
+name = "metis-docs-gui"
+version = "0.5.0"
+description = "Multi-project GUI for Metis Flight Levels project management"
+authors = ["Dylan Storey <contact@colliery.io>"]
+license = "Apache-2.0"
+repository = "https://github.com/dstorey/metis"
+edition = "2021"
+rust-version = "1.77.2"
+
+# Empty workspace table to prevent this from being part of parent workspace
+[workspace]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+name = "app_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.2.0", features = [] }
+
+[dependencies]
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+tauri = { version = "2.5.0", features = [] }
+tauri-plugin-log = "2.0.0-rc"
+tauri-plugin-shell = "2.0"
+log = "0.4"
+tracing = "0.1"
+metis-docs-core = { path = "../../metis-docs-core", version = "0.5.0" }

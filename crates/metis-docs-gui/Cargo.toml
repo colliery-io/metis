@@ -1,0 +1,17 @@
+[package]
+name = "metis-docs-gui"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Multi-project GUI for Metis Flight Levels project management"
+
+# This is a Tauri project - the actual binary is in src-tauri/
+# This Cargo.toml exists only to make this a proper workspace member
+
+[dependencies]
+# No dependencies needed at this level - everything is in src-tauri/

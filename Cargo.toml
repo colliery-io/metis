@@ -3,7 +3,8 @@ members = [
     "crates/metis-docs-cli",
     "crates/metis-docs-core",
     "crates/metis-docs-tui",
-    "crates/metis-docs-mcp"
+    "crates/metis-docs-mcp",
+    "crates/metis-docs-gui"
 ]
 resolver = "2"
 

@@ -175,3 +175,72 @@ def run_checks():
     return 0
 
 
+@angreal.command(
+    name='gui',
+    about='Launch Tauri GUI in development mode with hot reload',
+    when_to_use=['During GUI development', 'Testing GUI changes', 'Frontend/backend integration'],
+    when_not_to_use=['In CI/CD environments', 'For production builds', 'Headless environments']
+)
+def run_gui_dev():
+    """Launch the Tauri GUI application in development mode."""
+    import os
+    import signal
+    
+    
+    gui_path = os.path.join(angreal.get_root(),'..', 'crates','metis-docs-gui')
+    
+    # Check if GUI crate exists
+    if not os.path.exists(gui_path):
+        print(f"Error: GUI crate not found at {gui_path}")
+        print("Run this command from the workspace root directory.")
+        sys.exit(1)
+    
+    print("Starting Metis GUI in development mode...")
+    print("This will:")
+    print("  - Start the Vite frontend dev server")
+    print("  - Compile and launch the Tauri backend")
+    print("  - Enable hot reload for frontend changes")
+    print("  - Open the GUI application window")
+    print()
+    print("Press Ctrl+C to stop the development server")
+    print()
+    
+    try:
+        # Change to GUI directory and run build sequence
+        original_cwd = os.getcwd()
+        os.chdir(gui_path)
+        
+        def signal_handler(sig, frame):
+            print("\nShutting down development server...")
+            sys.exit(0)
+        
+        signal.signal(signal.SIGINT, signal_handler)
+        
+        # Build frontend first
+        print("Building frontend...")
+        subprocess.run(['npm', 'run', 'build'], check=True)
+        
+        # Then run tauri dev
+        print("Starting Tauri development server...")
+        result = subprocess.run(['cargo', 'tauri', 'dev'], check=True)
+        
+    except subprocess.CalledProcessError as e:
+        print(f"GUI development server failed with exit code {e.returncode}")
+        print("\nTroubleshooting:")
+        print("  - Ensure Node.js and npm are installed")
+        print("  - Run 'npm install' in the GUI directory")
+        print("  - Check that Tauri CLI is installed: cargo install tauri-cli")
+        sys.exit(e.returncode)
+    except FileNotFoundError:
+        print("Error: cargo or tauri command not found.")
+        print("Install Tauri CLI with: cargo install tauri-cli")
+        sys.exit(1)
+    except KeyboardInterrupt:
+        print("\nDevelopment server stopped by user")
+        sys.exit(0)
+    finally:
+        os.chdir(original_cwd)
+    
+    return 0
+
+
