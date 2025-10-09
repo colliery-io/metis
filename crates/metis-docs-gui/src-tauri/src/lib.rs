@@ -1,14 +1,10 @@
-use metis_docs_core::{
+use metis_core::{
     Application, Database, 
     application::services::{
-        DatabaseService,
-        workspace::initialization::{WorkspaceInitializationService, WorkspaceInitializationResult}
+        workspace::initialization::WorkspaceInitializationService,
     },
     domain::documents::types::{DocumentType},
-    dal::database::models::Document,
-    MetisError
 };
-use std::collections::HashMap;
 use std::path::PathBuf;
 use tauri::State;
 use serde::{Deserialize, Serialize};
@@ -48,20 +44,33 @@ pub struct AppState {
 }
 
 // Tauri commands
+#[derive(Debug, Serialize, Deserialize)]
+struct InitializationResult {
+    metis_dir: String,
+    database_path: String,
+    vision_path: String,
+}
+
 #[tauri::command]
 async fn initialize_project(
     path: String,
     prefix: Option<String>,
-) -> Result<WorkspaceInitializationResult, String> {
+) -> Result<InitializationResult, String> {
     let project_path = PathBuf::from(&path);
     
-    WorkspaceInitializationService::initialize_workspace_with_prefix(
+    let result = WorkspaceInitializationService::initialize_workspace_with_prefix(
         &project_path,
         "New Project",
         prefix.as_deref()
     )
     .await
-    .map_err(|e| format!("Failed to initialize project: {}", e))
+    .map_err(|e| format!("Failed to initialize project: {}", e))?;
+    
+    Ok(InitializationResult {
+        metis_dir: result.metis_dir.to_string_lossy().to_string(),
+        database_path: result.database_path.to_string_lossy().to_string(),
+        vision_path: result.vision_path.to_string_lossy().to_string(),
+    })
 }
 
 #[tauri::command]
@@ -217,6 +226,7 @@ pub fn run() {
             }
             Ok(())
         })
+        .plugin(tauri_plugin_dialog::init())
         .manage(std::sync::Mutex::new(AppState {
             current_project: None,
         }))

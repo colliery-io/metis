@@ -4,14 +4,14 @@ level: task
 title: "Integrate metis-docs-core into Tauri backend"
 short_code: "METIS-T-0010"
 created_at: 2025-10-08T11:29:08.556622+00:00
-updated_at: 2025-10-08T11:29:08.556622+00:00
+updated_at: 2025-10-08T20:40:06.906163+00:00
 parent: METIS-I-0001
 blocked_by: []
 archived: false
 
 tags:
   - "#task"
-  - "#phase/todo"
+  - "#phase/completed"
 
 
 exit_criteria_met: false
@@ -28,6 +28,10 @@ initiative_id: METIS-I-0001
 ## Objective
 
 Integrate the metis-docs-core library into the Tauri backend to provide document management functionality, including project initialization, document CRUD operations, and database interactions for the GUI application.
+
+## Acceptance Criteria
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 

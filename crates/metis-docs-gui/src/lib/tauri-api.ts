@@ -26,7 +26,7 @@ export interface DocumentContent {
   frontmatter_json: string;
 }
 
-export interface WorkspaceInitializationResult {
+export interface InitializationResult {
   metis_dir: string;
   database_path: string;
   vision_path: string;
@@ -40,7 +40,7 @@ export class MetisAPI {
   static async initializeProject(
     path: string,
     prefix?: string
-  ): Promise<WorkspaceInitializationResult> {
+  ): Promise<InitializationResult> {
     return invoke('initialize_project', { path, prefix });
   }
 

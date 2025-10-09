@@ -1,32 +1,14 @@
-import { useState } from "react";
 import "./App.css";
+import { ProjectProvider } from "./contexts/ProjectContext";
+import { ProjectBrowser } from "./components/ProjectBrowser";
 
 function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
-
   return (
-    <div className="container">
-      <h1>Welcome to Metis GUI!</h1>
-
-      <div className="row">
-        <div>
-          <input
-            id="greet-input"
-            onChange={(e) => setName(e.currentTarget.value)}
-            placeholder="Enter a name..."
-          />
-          <button
-            type="button"
-            onClick={() => setGreetMsg(`Hello ${name}! You've successfully set up Tauri with React and TypeScript.`)}
-          >
-            Greet
-          </button>
-        </div>
+    <ProjectProvider>
+      <div className="min-h-screen bg-gray-50">
+        <ProjectBrowser />
       </div>
-
-      <p>{greetMsg}</p>
-    </div>
+    </ProjectProvider>
   );
 }
 
