@@ -21,116 +21,61 @@ initiative_id: METIS-I-0001
 
 # Add document type navigation (Vision, Initiative, Task, ADR)
 
-*This template includes sections for various types of tasks. Delete sections that don't apply to your specific use case.*
+## Parent Initiative
 
-## Parent Initiative **[CONDITIONAL: Assigned Task]**
+[[METIS-I-0001]] - Multi-Project GUI Application
 
-[[METIS-I-0001]]
+## Objective
 
-## Objective **[REQUIRED]**
+Create dedicated kanban-style boards for each document type (Vision, Initiative, Task, ADR, Backlog) with phase-based columns, similar to the TUI interface. This allows users to navigate between document type boards and see documents organized in workflow columns within each board.
 
-{Clear statement of what this task accomplishes}
 
-## Backlog Item Details **[CONDITIONAL: Backlog Item]**
 
-{Delete this section when task is assigned to an initiative}
+## Acceptance Criteria
 
-### Type
-- [ ] Bug - Production issue that needs fixing
-- [ ] Feature - New functionality or enhancement  
-- [ ] Tech Debt - Code improvement or refactoring
-- [ ] Chore - Maintenance or setup work
+- [ ] Board navigation allows switching between document type boards (Vision, Initiative, Task, ADR, Backlog)
+- [ ] Each board displays documents of that type organized in phase-based columns
+- [ ] Vision board shows columns for draft/review/published phases
+- [ ] Initiative board shows columns for discovery/design/ready/decompose/active/completed phases
+- [ ] Task board shows columns for todo/doing/completed phases
+- [ ] ADR board shows columns for draft/discussion/decided/superseded phases
+- [ ] Backlog board shows columns for different categories (General, Bug, Feature, Tech Debt)
+- [ ] Current board selection is visually indicated (active tab/button)
+- [ ] Empty columns show appropriate guidance messages
+- [ ] Document cards within columns show essential information (title, short code, etc.)
+- [ ] Clicking document cards navigates to detailed view (placeholder for future)
 
-### Priority
-- [ ] P0 - Critical (blocks users/revenue)
-- [ ] P1 - High (important for user experience)
-- [ ] P2 - Medium (nice to have)
-- [ ] P3 - Low (when time permits)
 
-### Impact Assessment **[CONDITIONAL: Bug]**
-- **Affected Users**: {Number/percentage of users affected}
-- **Reproduction Steps**: 
-  1. {Step 1}
-  2. {Step 2}
-  3. {Step 3}
-- **Expected vs Actual**: {What should happen vs what happens}
 
-### Business Justification **[CONDITIONAL: Feature]**
-- **User Value**: {Why users need this}
-- **Business Value**: {Impact on metrics/revenue}
-- **Effort Estimate**: {Rough size - S/M/L/XL}
-
-### Technical Debt Impact **[CONDITIONAL: Tech Debt]**
-- **Current Problems**: {What's difficult/slow/buggy now}
-- **Benefits of Fixing**: {What improves after refactoring}
-- **Risk Assessment**: {Risks of not addressing this}
-
-## Acceptance Criteria **[REQUIRED]**
-
-- [ ] {Specific, testable requirement 1}
-- [ ] {Specific, testable requirement 2}
-- [ ] {Specific, testable requirement 3}
-
-## Test Cases **[CONDITIONAL: Testing Task]**
-
-{Delete unless this is a testing task}
-
-### Test Case 1: {Test Case Name}
-- **Test ID**: TC-001
-- **Preconditions**: {What must be true before testing}
-- **Steps**: 
-  1. {Step 1}
-  2. {Step 2}
-  3. {Step 3}
-- **Expected Results**: {What should happen}
-- **Actual Results**: {To be filled during execution}
-- **Status**: {Pass/Fail/Blocked}
-
-### Test Case 2: {Test Case Name}
-- **Test ID**: TC-002
-- **Preconditions**: {What must be true before testing}
-- **Steps**: 
-  1. {Step 1}
-  2. {Step 2}
-- **Expected Results**: {What should happen}
-- **Actual Results**: {To be filled during execution}
-- **Status**: {Pass/Fail/Blocked}
-
-## Documentation Sections **[CONDITIONAL: Documentation Task]**
-
-{Delete unless this is a documentation task}
-
-### User Guide Content
-- **Feature Description**: {What this feature does and why it's useful}
-- **Prerequisites**: {What users need before using this feature}
-- **Step-by-Step Instructions**:
-  1. {Step 1 with screenshots/examples}
-  2. {Step 2 with screenshots/examples}
-  3. {Step 3 with screenshots/examples}
-
-### Troubleshooting Guide
-- **Common Issue 1**: {Problem description and solution}
-- **Common Issue 2**: {Problem description and solution}
-- **Error Messages**: {List of error messages and what they mean}
-
-### API Documentation **[CONDITIONAL: API Documentation]**
-- **Endpoint**: {API endpoint description}
-- **Parameters**: {Required and optional parameters}
-- **Example Request**: {Code example}
-- **Example Response**: {Expected response format}
-
-## Implementation Notes **[CONDITIONAL: Technical Task]**
-
-{Keep for technical tasks, delete for non-technical. Technical details, approach, or important considerations}
+## Implementation Notes
 
 ### Technical Approach
-{How this will be implemented}
+1. Replace current DocumentBoard with KanbanBoard component that supports multiple board types
+2. Create BoardNavigation component with tabs/buttons for each document type
+3. Build KanbanColumn component for phase-based organization within each board
+4. Add board state management to track current board selection
+5. Filter documents by type and organize into appropriate phase columns
+6. Implement board-specific phase definitions matching TUI patterns
+
+### Components to Create
+- `KanbanBoard` - Main board interface supporting multiple document types
+- `BoardNavigation` - Tab/button navigation between board types
+- `KanbanColumn` - Phase-based columns within each board
+- `BoardEmptyState` - Guidance for empty boards/columns
+- `DocumentKanbanCard` - Document cards optimized for column layout
 
 ### Dependencies
-{Other tasks or systems this depends on}
+- METIS-T-0012 (Document board structure) - COMPLETED
+- Existing Tauri backend commands for document loading
+- Phase definitions matching TUI workflow patterns
+- Document type and phase enumeration from backend
 
 ### Risk Considerations
-{Technical risks and mitigation strategies}
+- Different document types have different phase workflows
+- Column width management with varying numbers of phases
+- Performance impact of rendering multiple large boards
+- State management complexity with multiple board views
+- Responsive design challenges with columnar layouts
 
 ## Status Updates **[REQUIRED]**
 

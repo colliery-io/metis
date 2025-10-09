@@ -147,3 +147,8 @@ export function getPhaseColor(phase: string): string {
       return 'gray';
   }
 }
+
+// Standalone functions for direct import
+export const listDocuments = MetisAPI.listDocuments;
+export const readDocument = MetisAPI.readDocument;
+export const searchDocuments = MetisAPI.searchDocuments;

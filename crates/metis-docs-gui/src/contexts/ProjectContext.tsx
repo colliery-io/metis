@@ -58,6 +58,9 @@ interface ProjectContextType {
   clearProject: () => void;
   getRecentProjects: () => ProjectInfo[];
   saveRecentProject: (project: ProjectInfo) => void;
+  // Convenience properties
+  currentProject: ProjectInfo | null;
+  setCurrentProject: (project: ProjectInfo | null) => void;
 }
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
@@ -119,6 +122,14 @@ export function ProjectProvider({ children }: ProjectProviderProps) {
     localStorage.setItem('metis-recent-projects', JSON.stringify(updated));
   };
 
+  const setCurrentProject = (project: ProjectInfo | null) => {
+    if (project) {
+      dispatch({ type: 'LOAD_PROJECT_SUCCESS', payload: project });
+    } else {
+      dispatch({ type: 'CLEAR_PROJECT' });
+    }
+  };
+
   const value: ProjectContextType = {
     state,
     dispatch,
@@ -126,6 +137,8 @@ export function ProjectProvider({ children }: ProjectProviderProps) {
     clearProject,
     getRecentProjects,
     saveRecentProject,
+    currentProject: state.currentProject,
+    setCurrentProject,
   };
 
   return (

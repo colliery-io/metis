@@ -4,14 +4,14 @@ level: task
 title: "Implement project loading and validation"
 short_code: "METIS-T-0011"
 created_at: 2025-10-08T11:29:08.589463+00:00
-updated_at: 2025-10-08T11:29:08.589463+00:00
+updated_at: 2025-10-09T13:27:27.320771+00:00
 parent: METIS-I-0001
 blocked_by: []
 archived: false
 
 tags:
   - "#task"
-  - "#phase/todo"
+  - "#phase/active"
 
 
 exit_criteria_met: false
@@ -28,6 +28,8 @@ initiative_id: METIS-I-0001
 ## Objective
 
 Create a React-based project selection and loading interface that allows users to browse, validate, and load existing Metis projects, including proper error handling for invalid or corrupted project structures.
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 
