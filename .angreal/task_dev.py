@@ -185,7 +185,7 @@ def run_gui_dev():
     """Launch the Tauri GUI application in development mode."""
     import os
     import signal
-    
+    import shutil
     
     gui_path = os.path.join(angreal.get_root(),'..', 'crates','metis-docs-gui')
     
@@ -193,7 +193,26 @@ def run_gui_dev():
     if not os.path.exists(gui_path):
         print(f"Error: GUI crate not found at {gui_path}")
         print("Run this command from the workspace root directory.")
-        sys.exit(1)
+        return 1
+    
+    # Check if required tools are available before starting anything
+    if not shutil.which('cargo'):
+        print("Error: cargo command not found. Ensure Rust is installed.")
+        return 1
+    
+    if not shutil.which('npm'):
+        print("Error: npm command not found. Ensure Node.js is installed.")
+        return 1
+    
+    # Check if tauri CLI is available
+    try:
+        subprocess.run(['cargo', 'tauri', '--version'], 
+                      check=True, capture_output=True, text=True)
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        print("Error: Tauri CLI not found.")
+        print("Install with: cargo install tauri-cli")
+        print("Or install a specific version: cargo install tauri-cli --version '^2.0.0'")
+        return 1
     
     print("Starting Metis GUI in development mode...")
     print("This will:")
@@ -205,24 +224,42 @@ def run_gui_dev():
     print("Press Ctrl+C to stop the development server")
     print()
     
+    original_cwd = os.getcwd()
+    process = None
+    
     try:
-        # Change to GUI directory and run build sequence
-        original_cwd = os.getcwd()
+        # Change to GUI directory
         os.chdir(gui_path)
-        
-        def signal_handler(sig, frame):
-            print("\nShutting down development server...")
-            sys.exit(0)
-        
-        signal.signal(signal.SIGINT, signal_handler)
         
         # Build frontend first
         print("Building frontend...")
-        subprocess.run(['npm', 'run', 'build'], check=True)
+        result = subprocess.run(['npm', 'run', 'build'], check=True, timeout=120)
         
-        # Then run tauri dev
+        # Then run tauri dev with proper process management
         print("Starting Tauri development server...")
-        result = subprocess.run(['cargo', 'tauri', 'dev'], check=True)
+        
+        def signal_handler(sig, frame):
+            print("\nShutting down development server...")
+            if process:
+                try:
+                    process.terminate()
+                    process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait()
+            sys.exit(0)
+        
+        signal.signal(signal.SIGINT, signal_handler)
+        signal.signal(signal.SIGTERM, signal_handler)
+        
+        # Start tauri dev as a managed process
+        process = subprocess.Popen(['cargo', 'tauri', 'dev'], 
+                                 stdout=sys.stdout, 
+                                 stderr=sys.stderr)
+        
+        # Wait for process to complete
+        return_code = process.wait()
+        return return_code
         
     except subprocess.CalledProcessError as e:
         print(f"GUI development server failed with exit code {e.returncode}")
@@ -230,17 +267,29 @@ def run_gui_dev():
         print("  - Ensure Node.js and npm are installed")
         print("  - Run 'npm install' in the GUI directory")
         print("  - Check that Tauri CLI is installed: cargo install tauri-cli")
-        sys.exit(e.returncode)
-    except FileNotFoundError:
-        print("Error: cargo or tauri command not found.")
-        print("Install Tauri CLI with: cargo install tauri-cli")
-        sys.exit(1)
+        return e.returncode
+    except subprocess.TimeoutExpired:
+        print("Error: Frontend build timed out after 2 minutes")
+        return 1
+    except FileNotFoundError as e:
+        print(f"Error: Command not found: {e}")
+        return 1
     except KeyboardInterrupt:
         print("\nDevelopment server stopped by user")
-        sys.exit(0)
+        return 0
     finally:
+        # Always ensure we're back in the original directory
         os.chdir(original_cwd)
-    
-    return 0
+        
+        # Clean up any remaining process
+        if process and process.poll() is None:
+            try:
+                process.terminate()
+                process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait()
+            except ProcessLookupError:
+                pass  # Process already terminated
 
 
