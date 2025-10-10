@@ -1,5 +1,6 @@
 import React from 'react';
 import type { Document } from './DocumentBoard';
+import { useTheme } from '../contexts/ThemeContext';
 
 export interface DocumentCardProps {
   document: Document;
@@ -7,39 +8,53 @@ export interface DocumentCardProps {
 }
 
 export const DocumentCard: React.FC<DocumentCardProps> = ({ document, onClick }) => {
+  const { theme } = useTheme();
+
   const getTypeColor = (type: string) => {
-    switch (type) {
-      case 'vision':
-        return 'bg-purple-100 text-purple-800 border-purple-200';
-      case 'initiative':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'task':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'adr':
-        return 'bg-orange-100 text-orange-800 border-orange-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
+    const color = theme.colors.documentType[type as keyof typeof theme.colors.documentType] || theme.colors.documentType.backlog;
+    return {
+      backgroundColor: color + '20', // 20% opacity
+      color: color,
+      borderColor: color + '40', // 40% opacity
+    };
   };
 
   const getPhaseColor = (phase?: string) => {
     switch (phase) {
       case 'draft':
       case 'todo':
-        return 'bg-gray-100 text-gray-700';
+        return {
+          backgroundColor: theme.colors.status.draft + '20',
+          color: theme.colors.status.draft,
+        };
       case 'review':
       case 'doing':
       case 'active':
-        return 'bg-yellow-100 text-yellow-800';
+        return {
+          backgroundColor: theme.colors.status.active + '20',
+          color: theme.colors.status.active,
+        };
       case 'published':
       case 'completed':
-        return 'bg-green-100 text-green-800';
+        return {
+          backgroundColor: theme.colors.status.completed + '20',
+          color: theme.colors.status.completed,
+        };
       case 'decided':
-        return 'bg-blue-100 text-blue-800';
+        return {
+          backgroundColor: theme.colors.interactive.primary + '20',
+          color: theme.colors.interactive.primary,
+        };
       case 'superseded':
-        return 'bg-red-100 text-red-800';
+        return {
+          backgroundColor: theme.colors.interactive.danger + '20',
+          color: theme.colors.interactive.danger,
+        };
       default:
-        return 'bg-gray-100 text-gray-700';
+        return {
+          backgroundColor: theme.colors.status.draft + '20',
+          color: theme.colors.status.draft,
+        };
     }
   };
 
@@ -51,31 +66,32 @@ export const DocumentCard: React.FC<DocumentCardProps> = ({ document, onClick })
     }
   };
 
+  const typeStyle = getTypeColor(document.document_type);
+  const phaseStyle = getPhaseColor(document.phase);
+
   return (
     <div
       className={`
-        border rounded-lg p-4 bg-white hover:shadow-md transition-shadow
-        ${onClick ? 'cursor-pointer hover:border-blue-300' : ''}
+        border border-primary rounded-lg p-4 bg-elevated hover:shadow-md transition-shadow
+        ${onClick ? 'cursor-pointer hover:border-focus' : ''}
       `}
       onClick={() => onClick?.(document)}
     >
       {/* Header with type and short code */}
       <div className="flex items-center justify-between mb-2">
         <span
-          className={`
-            px-2 py-1 text-xs font-medium rounded border
-            ${getTypeColor(document.document_type)}
-          `}
+          className="px-2 py-1 text-xs font-medium rounded border"
+          style={typeStyle}
         >
           {document.document_type.toUpperCase()}
         </span>
-        <span className="text-xs font-mono text-gray-500">
+        <span className="text-xs font-mono text-tertiary">
           {document.short_code}
         </span>
       </div>
 
       {/* Title */}
-      <h4 className="font-medium text-gray-900 mb-2 line-clamp-2">
+      <h4 className="font-medium text-primary mb-2 line-clamp-2">
         {document.title}
       </h4>
 
@@ -83,15 +99,13 @@ export const DocumentCard: React.FC<DocumentCardProps> = ({ document, onClick })
       <div className="flex items-center justify-between text-xs">
         {document.phase && (
           <span
-            className={`
-              px-2 py-1 rounded font-medium
-              ${getPhaseColor(document.phase)}
-            `}
+            className="px-2 py-1 rounded font-medium"
+            style={phaseStyle}
           >
             {document.phase}
           </span>
         )}
-        <span className="text-gray-500">
+        <span className="text-tertiary">
           {formatDate(document.updated_at)}
         </span>
       </div>

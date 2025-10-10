@@ -1,0 +1,197 @@
+/* Theme-aware CSS classes using CSS custom properties */
+
+/* Background utilities */
+.bg-primary { background-color: var(--color-background-primary); }
+.bg-secondary { background-color: var(--color-background-secondary); }
+.bg-tertiary { background-color: var(--color-background-tertiary); }
+.bg-elevated { background-color: var(--color-background-elevated); }
+
+/* Text utilities */
+.text-primary { color: var(--color-text-primary); }
+.text-secondary { color: var(--color-text-secondary); }
+.text-tertiary { color: var(--color-text-tertiary); }
+.text-inverse { color: var(--color-text-inverse); }
+
+/* Border utilities */
+.border-primary { border-color: var(--color-border-primary); }
+.border-secondary { border-color: var(--color-border-secondary); }
+.border-focus { border-color: var(--color-border-focus); }
+.border-error { border-color: var(--color-border-error); }
+
+/* Interactive utilities */
+.bg-interactive-primary { background-color: var(--color-interactive-primary); }
+.bg-interactive-secondary { background-color: var(--color-interactive-secondary); }
+.text-interactive-primary { color: var(--color-interactive-primary); }
+
+/* Status utilities */
+.text-status-draft { color: var(--color-status-draft); }
+.text-status-active { color: var(--color-status-active); }
+.text-status-completed { color: var(--color-status-completed); }
+.text-status-archived { color: var(--color-status-archived); }
+
+.bg-status-draft { background-color: var(--color-status-draft); }
+.bg-status-active { background-color: var(--color-status-active); }
+.bg-status-completed { background-color: var(--color-status-completed); }
+.bg-status-archived { background-color: var(--color-status-archived); }
+
+/* Document type utilities */
+.text-doc-vision { color: var(--color-documentType-vision); }
+.text-doc-strategy { color: var(--color-documentType-strategy); }
+.text-doc-initiative { color: var(--color-documentType-initiative); }
+.text-doc-task { color: var(--color-documentType-task); }
+.text-doc-adr { color: var(--color-documentType-adr); }
+.text-doc-backlog { color: var(--color-documentType-backlog); }
+
+.bg-doc-vision { background-color: var(--color-documentType-vision); }
+.bg-doc-strategy { background-color: var(--color-documentType-strategy); }
+.bg-doc-initiative { background-color: var(--color-documentType-initiative); }
+.bg-doc-task { background-color: var(--color-documentType-task); }
+.bg-doc-adr { background-color: var(--color-documentType-adr); }
+.bg-doc-backlog { background-color: var(--color-documentType-backlog); }
+
+/* Hover states */
+.hover\:bg-interactive-primary-hover:hover { background-color: var(--color-interactive-primaryHover); }
+.hover\:bg-interactive-secondary-hover:hover { background-color: var(--color-interactive-secondaryHover); }
+.hover\:bg-interactive-danger-hover:hover { background-color: var(--color-interactive-dangerHover); }
+
+/* Button base styles */
+.btn {
+  @apply px-4 py-2 rounded-lg font-medium transition-all duration-200 cursor-pointer border;
+  @apply focus:outline-none focus:ring-2 focus:ring-offset-2;
+}
+
+/* Button variants */
+.btn-primary {
+  background-color: var(--color-interactive-primary);
+  color: var(--color-text-inverse);
+  border-color: var(--color-interactive-primary);
+}
+
+.btn-primary:hover {
+  background-color: var(--color-interactive-primaryHover);
+  border-color: var(--color-interactive-primaryHover);
+}
+
+.btn-primary:focus {
+  ring-color: var(--color-interactive-primary);
+}
+
+.btn-secondary {
+  background-color: var(--color-background-elevated);
+  color: var(--color-text-primary);
+  border-color: var(--color-border-primary);
+}
+
+.btn-secondary:hover {
+  background-color: var(--color-interactive-secondary);
+  color: var(--color-text-primary);
+}
+
+.btn-secondary:focus {
+  ring-color: var(--color-border-focus);
+}
+
+.btn-ghost {
+  background-color: transparent;
+  color: var(--color-text-secondary);
+  border-color: transparent;
+}
+
+.btn-ghost:hover {
+  background-color: var(--color-background-elevated);
+  color: var(--color-text-primary);
+}
+
+.btn-ghost:focus {
+  ring-color: var(--color-border-focus);
+}
+
+.btn-danger {
+  background-color: var(--color-interactive-danger);
+  color: var(--color-text-inverse);
+  border-color: var(--color-interactive-danger);
+}
+
+.btn-danger:hover {
+  background-color: var(--color-interactive-dangerHover);
+  border-color: var(--color-interactive-dangerHover);
+}
+
+.btn-danger:focus {
+  ring-color: var(--color-interactive-danger);
+}
+
+/* Button sizes */
+.btn-sm {
+  @apply px-3 py-1.5 text-sm;
+}
+
+.btn-lg {
+  @apply px-6 py-3 text-lg;
+}
+
+.btn-xl {
+  @apply px-8 py-4 text-xl;
+}
+
+/* Transitions for theme switching */
+* {
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+/* Custom animations */
+@keyframes bounce-gentle {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.animate-bounce-gentle {
+  animation: bounce-gentle 3s ease-in-out infinite;
+}
+
+/* Glow effects */
+.drop-shadow-glow {
+  filter: drop-shadow(0 0 12px rgba(0, 120, 255, 0.4));
+}
+
+[data-theme="dark"] .drop-shadow-glow {
+  filter: drop-shadow(0 0 12px rgba(100, 200, 255, 0.4));
+}
+
+[data-theme="hyper"] .drop-shadow-glow {
+  filter: drop-shadow(0 0 16px var(--color-interactive-primary));
+}
+
+/* Home icon hover glow */
+.home-icon-glow {
+  transition: filter 0.2s ease;
+}
+
+.home-icon-glow:hover {
+  filter: drop-shadow(0 0 12px rgba(0, 120, 255, 0.8)) brightness(1.1);
+}
+
+[data-theme="dark"] .home-icon-glow:hover {
+  filter: drop-shadow(0 0 12px rgba(100, 200, 255, 0.8)) brightness(1.1);
+}
+
+[data-theme="hyper"] .home-icon-glow:hover {
+  filter: drop-shadow(0 0 16px var(--color-interactive-primary)) brightness(1.1);
+}
+
+/* Theme-specific overrides */
+[data-theme="hyper"] {
+  /* Add any hyper-specific effects like glows, shadows, etc. */
+}
+
+[data-theme="hyper"] .btn-primary {
+  box-shadow: 0 0 10px var(--color-interactive-primary);
+}
+
+[data-theme="hyper"] .border-focus {
+  box-shadow: 0 0 5px var(--color-border-focus);
+}

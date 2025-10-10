@@ -184,7 +184,6 @@ def run_checks():
 def run_gui_dev():
     """Launch the Tauri GUI application in development mode."""
     import os
-    import signal
     import shutil
     
     gui_path = os.path.join(angreal.get_root(),'..', 'crates','metis-docs-gui')
@@ -195,7 +194,7 @@ def run_gui_dev():
         print("Run this command from the workspace root directory.")
         return 1
     
-    # Check if required tools are available before starting anything
+    # Check if required tools are available
     if not shutil.which('cargo'):
         print("Error: cargo command not found. Ensure Rust is installed.")
         return 1
@@ -204,28 +203,11 @@ def run_gui_dev():
         print("Error: npm command not found. Ensure Node.js is installed.")
         return 1
     
-    # Check if tauri CLI is available
-    try:
-        subprocess.run(['cargo', 'tauri', '--version'], 
-                      check=True, capture_output=True, text=True)
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        print("Error: Tauri CLI not found.")
-        print("Install with: cargo install tauri-cli")
-        print("Or install a specific version: cargo install tauri-cli --version '^2.0.0'")
-        return 1
-    
     print("Starting Metis GUI in development mode...")
-    print("This will:")
-    print("  - Start the Vite frontend dev server")
-    print("  - Compile and launch the Tauri backend")
-    print("  - Enable hot reload for frontend changes")
-    print("  - Open the GUI application window")
-    print()
     print("Press Ctrl+C to stop the development server")
     print()
     
     original_cwd = os.getcwd()
-    process = None
     
     try:
         # Change to GUI directory
@@ -233,63 +215,21 @@ def run_gui_dev():
         
         # Build frontend first
         print("Building frontend...")
-        result = subprocess.run(['npm', 'run', 'build'], check=True, timeout=120)
+        subprocess.run(['npm', 'run', 'build'], check=True)
         
-        # Then run tauri dev with proper process management
+        # Then run tauri dev - simple and direct
         print("Starting Tauri development server...")
-        
-        def signal_handler(sig, frame):
-            print("\nShutting down development server...")
-            if process:
-                try:
-                    process.terminate()
-                    process.wait(timeout=5)
-                except subprocess.TimeoutExpired:
-                    process.kill()
-                    process.wait()
-            sys.exit(0)
-        
-        signal.signal(signal.SIGINT, signal_handler)
-        signal.signal(signal.SIGTERM, signal_handler)
-        
-        # Start tauri dev as a managed process
-        process = subprocess.Popen(['cargo', 'tauri', 'dev'], 
-                                 stdout=sys.stdout, 
-                                 stderr=sys.stderr)
-        
-        # Wait for process to complete
-        return_code = process.wait()
-        return return_code
+        result = subprocess.run(['cargo', 'tauri', 'dev'], check=True)
+        return result.returncode
         
     except subprocess.CalledProcessError as e:
         print(f"GUI development server failed with exit code {e.returncode}")
-        print("\nTroubleshooting:")
-        print("  - Ensure Node.js and npm are installed")
-        print("  - Run 'npm install' in the GUI directory")
-        print("  - Check that Tauri CLI is installed: cargo install tauri-cli")
         return e.returncode
-    except subprocess.TimeoutExpired:
-        print("Error: Frontend build timed out after 2 minutes")
-        return 1
-    except FileNotFoundError as e:
-        print(f"Error: Command not found: {e}")
-        return 1
     except KeyboardInterrupt:
         print("\nDevelopment server stopped by user")
         return 0
     finally:
         # Always ensure we're back in the original directory
         os.chdir(original_cwd)
-        
-        # Clean up any remaining process
-        if process and process.poll() is None:
-            try:
-                process.terminate()
-                process.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                process.kill()
-                process.wait()
-            except ProcessLookupError:
-                pass  # Process already terminated
 
 

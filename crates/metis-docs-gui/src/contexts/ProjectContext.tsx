@@ -14,7 +14,8 @@ type ProjectAction =
   | { type: 'LOAD_PROJECT_SUCCESS'; payload: ProjectInfo }
   | { type: 'CLEAR_PROJECT' }
   | { type: 'ADD_RECENT_PROJECT'; payload: ProjectInfo }
-  | { type: 'LOAD_RECENT_PROJECTS'; payload: ProjectInfo[] };
+  | { type: 'LOAD_RECENT_PROJECTS'; payload: ProjectInfo[] }
+  | { type: 'REMOVE_RECENT_PROJECT'; payload: string };
 
 const initialState: ProjectState = {
   currentProject: null,
@@ -46,6 +47,11 @@ function projectReducer(state: ProjectState, action: ProjectAction): ProjectStat
       };
     case 'LOAD_RECENT_PROJECTS':
       return { ...state, recentProjects: action.payload };
+    case 'REMOVE_RECENT_PROJECT':
+      return {
+        ...state,
+        recentProjects: state.recentProjects.filter(p => p.path !== action.payload),
+      };
     default:
       return state;
   }
@@ -58,6 +64,7 @@ interface ProjectContextType {
   clearProject: () => void;
   getRecentProjects: () => ProjectInfo[];
   saveRecentProject: (project: ProjectInfo) => void;
+  removeProject: (path: string) => void;
   // Convenience properties
   currentProject: ProjectInfo | null;
   setCurrentProject: (project: ProjectInfo | null) => void;
@@ -122,6 +129,17 @@ export function ProjectProvider({ children }: ProjectProviderProps) {
     localStorage.setItem('metis-recent-projects', JSON.stringify(updated));
   };
 
+  const removeProject = (path: string) => {
+    dispatch({ type: 'REMOVE_RECENT_PROJECT', payload: path });
+    const updated = state.recentProjects.filter(p => p.path !== path);
+    localStorage.setItem('metis-recent-projects', JSON.stringify(updated));
+    
+    // If we're removing the current project, clear it
+    if (state.currentProject?.path === path) {
+      dispatch({ type: 'CLEAR_PROJECT' });
+    }
+  };
+
   const setCurrentProject = (project: ProjectInfo | null) => {
     if (project) {
       dispatch({ type: 'LOAD_PROJECT_SUCCESS', payload: project });
@@ -137,6 +155,7 @@ export function ProjectProvider({ children }: ProjectProviderProps) {
     clearProject,
     getRecentProjects,
     saveRecentProject,
+    removeProject,
     currentProject: state.currentProject,
     setCurrentProject,
   };
