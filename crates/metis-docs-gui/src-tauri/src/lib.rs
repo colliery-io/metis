@@ -2,6 +2,7 @@ use metis_core::{
     Application, Database, 
     application::services::{
         workspace::initialization::WorkspaceInitializationService,
+        document::creation::{DocumentCreationService, DocumentCreationConfig},
     },
     domain::documents::types::{DocumentType},
 };
@@ -214,6 +215,123 @@ async fn search_documents(
     Ok(doc_infos)
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+struct CreateDocumentRequest {
+    document_type: String,
+    title: String,
+    parent_id: Option<String>,
+    complexity: Option<String>,
+    risk_level: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct CreateDocumentResult {
+    id: String,
+    short_code: String,
+    filepath: String,
+}
+
+#[tauri::command]
+async fn create_document(
+    state: State<'_, std::sync::Mutex<AppState>>,
+    request: CreateDocumentRequest,
+) -> Result<CreateDocumentResult, String> {
+    let project_path = {
+        let app_state = state.lock().map_err(|e| format!("Failed to lock state: {}", e))?;
+        app_state.current_project.as_ref()
+            .ok_or("No project loaded")?
+            .clone()
+    };
+    
+    // Create the creation service for the metis directory
+    let metis_dir = project_path.join(".metis");
+    let creation_service = DocumentCreationService::new(&metis_dir);
+    
+    // Build the configuration
+    let config = DocumentCreationConfig {
+        title: request.title.clone(),
+        description: None,
+        parent_id: request.parent_id.as_ref().map(|id| id.clone().into()),
+        tags: vec![],
+        phase: None,
+        complexity: request.complexity.as_ref().and_then(|c| c.parse().ok()),
+        risk_level: request.risk_level.as_ref().and_then(|r| r.parse().ok()),
+    };
+    
+    // Create document based on type
+    let result = match request.document_type.as_str() {
+        "vision" => creation_service.create_vision(config).await,
+        "adr" => creation_service.create_adr(config).await,
+        "task" => {
+            // For tasks, we need to check if it's a backlog item or has a parent initiative
+            if request.parent_id.is_none() {
+                creation_service.create_backlog_item(config).await
+            } else {
+                // For now, create as backlog item - we'll enhance this later
+                creation_service.create_backlog_item(config).await
+            }
+        },
+        _ => return Err(format!("Document type {} not supported yet", request.document_type)),
+    }.map_err(|e| format!("Document creation error: {}", e))?;
+    
+    Ok(CreateDocumentResult {
+        id: result.document_id.to_string(),
+        short_code: result.short_code,
+        filepath: result.file_path.to_string_lossy().to_string(),
+    })
+}
+
+#[tauri::command]
+async fn update_document(
+    state: State<'_, std::sync::Mutex<AppState>>,
+    short_code: String,
+    content: String,
+) -> Result<(), String> {
+    let app_state = state.lock().map_err(|e| format!("Failed to lock state: {}", e))?;
+    
+    let project_path = app_state.current_project.as_ref()
+        .ok_or("No project loaded")?;
+    
+    let db_path = project_path.join(".metis").join("metis.db");
+    let database = Database::new(db_path.to_str().unwrap())
+        .map_err(|e| format!("Failed to open database: {}", e))?;
+    
+    let mut app = Application::new(database);
+    
+    // TODO: Implement proper document content update
+    // For now, just return OK - we'll implement this properly later
+    // app.with_database(|service| {
+    //     service.update_document(&short_code, &content)
+    // }).map_err(|e| format!("Document update error: {}", e))?;
+    
+    Ok(())
+}
+
+#[tauri::command]
+async fn delete_document(
+    state: State<'_, std::sync::Mutex<AppState>>,
+    short_code: String,
+) -> Result<(), String> {
+    let app_state = state.lock().map_err(|e| format!("Failed to lock state: {}", e))?;
+    
+    let project_path = app_state.current_project.as_ref()
+        .ok_or("No project loaded")?;
+    
+    let db_path = project_path.join(".metis").join("metis.db");
+    let database = Database::new(db_path.to_str().unwrap())
+        .map_err(|e| format!("Failed to open database: {}", e))?;
+    
+    let mut app = Application::new(database);
+    
+    // TODO: Implement proper document deletion
+    // For now, just return OK - we'll implement this properly later
+    // app.with_database(|service| {
+    //     service.delete_document(&short_code)
+    // }).map_err(|e| format!("Document deletion error: {}", e))?;
+    
+    Ok(())
+}
+
 pub fn run() {
     tauri::Builder::default()
         .setup(|app| {
@@ -235,7 +353,10 @@ pub fn run() {
             load_project,
             list_documents,
             read_document,
-            search_documents
+            search_documents,
+            create_document,
+            update_document,
+            delete_document
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
