@@ -316,8 +316,7 @@ async fn update_document(
     }
     
     // Write the updated content to the file
-    tokio::fs::write(&full_document_path, &content)
-        .await
+    std::fs::write(&full_document_path, &content)
         .map_err(|e| format!("Failed to write document: {}", e))?;
     
     // Auto-sync after update to update database
@@ -334,26 +333,11 @@ async fn update_document(
 
 #[tauri::command]
 async fn delete_document(
-    state: State<'_, std::sync::Mutex<AppState>>,
-    short_code: String,
+    _state: State<'_, std::sync::Mutex<AppState>>,
+    _short_code: String,
 ) -> Result<(), String> {
-    let app_state = state.lock().map_err(|e| format!("Failed to lock state: {}", e))?;
-    
-    let project_path = app_state.current_project.as_ref()
-        .ok_or("No project loaded")?;
-    
-    let db_path = project_path.join(".metis").join("metis.db");
-    let database = Database::new(db_path.to_str().unwrap())
-        .map_err(|e| format!("Failed to open database: {}", e))?;
-    
-    let mut app = Application::new(database);
-    
     // TODO: Implement proper document deletion
     // For now, just return OK - we'll implement this properly later
-    // app.with_database(|service| {
-    //     service.delete_document(&short_code)
-    // }).map_err(|e| format!("Document deletion error: {}", e))?;
-    
     Ok(())
 }
 
