@@ -287,22 +287,47 @@ async fn update_document(
     short_code: String,
     content: String,
 ) -> Result<(), String> {
-    let app_state = state.lock().map_err(|e| format!("Failed to lock state: {}", e))?;
+    let project_path = {
+        let app_state = state.lock().map_err(|e| format!("Failed to lock state: {}", e))?;
+        app_state.current_project.as_ref()
+            .ok_or("No project loaded")?
+            .clone()
+    };
     
-    let project_path = app_state.current_project.as_ref()
-        .ok_or("No project loaded")?;
+    let metis_dir = project_path.join(".metis");
+    let db_path = metis_dir.join("metis.db");
     
-    let db_path = project_path.join(".metis").join("metis.db");
+    // Resolve short code to file path
+    let document_path = {
+        let database = Database::new(db_path.to_str().unwrap())
+            .map_err(|e| format!("Failed to open database: {}", e))?;
+        
+        let mut repo = database.repository()
+            .map_err(|e| format!("Failed to get repository: {}", e))?;
+        
+        repo.resolve_short_code_to_filepath(&short_code)
+            .map_err(|e| format!("Failed to resolve short code {}: {}", short_code, e))?
+    };
+    
+    let full_document_path = metis_dir.join(&document_path);
+    
+    if !full_document_path.exists() {
+        return Err(format!("Document not found for short code {}", short_code));
+    }
+    
+    // Write the updated content to the file
+    tokio::fs::write(&full_document_path, &content)
+        .await
+        .map_err(|e| format!("Failed to write document: {}", e))?;
+    
+    // Auto-sync after update to update database
     let database = Database::new(db_path.to_str().unwrap())
-        .map_err(|e| format!("Failed to open database: {}", e))?;
+        .map_err(|e| format!("Failed to open database for sync: {}", e))?;
+    let app = Application::new(database);
     
-    let mut app = Application::new(database);
-    
-    // TODO: Implement proper document content update
-    // For now, just return OK - we'll implement this properly later
-    // app.with_database(|service| {
-    //     service.update_document(&short_code, &content)
-    // }).map_err(|e| format!("Document update error: {}", e))?;
+    app.sync_directory(&metis_dir)
+        .await
+        .map_err(|e| format!("Failed to sync workspace: {}", e))?;
     
     Ok(())
 }

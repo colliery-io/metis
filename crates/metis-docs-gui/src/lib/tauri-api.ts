@@ -148,7 +148,48 @@ export function getPhaseColor(phase: string): string {
   }
 }
 
+export interface CreateDocumentRequest {
+  document_type: string;
+  title: string;
+  parent_id?: string;
+  complexity?: string;
+  risk_level?: string;
+}
+
+export interface CreateDocumentResult {
+  id: string;
+  short_code: string;
+  filepath: string;
+}
+
+// API functions for document CRUD operations
+export class DocumentAPI {
+  /**
+   * Create a new document
+   */
+  static async createDocument(request: CreateDocumentRequest): Promise<CreateDocumentResult> {
+    return invoke('create_document', { request });
+  }
+
+  /**
+   * Update document content
+   */
+  static async updateDocument(shortCode: string, content: string): Promise<void> {
+    return invoke('update_document', { short_code: shortCode, content });
+  }
+
+  /**
+   * Delete a document
+   */
+  static async deleteDocument(shortCode: string): Promise<void> {
+    return invoke('delete_document', { short_code: shortCode });
+  }
+}
+
 // Standalone functions for direct import
 export const listDocuments = MetisAPI.listDocuments;
 export const readDocument = MetisAPI.readDocument;
 export const searchDocuments = MetisAPI.searchDocuments;
+export const createDocument = DocumentAPI.createDocument;
+export const updateDocument = DocumentAPI.updateDocument;
+export const deleteDocument = DocumentAPI.deleteDocument;

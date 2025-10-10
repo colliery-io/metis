@@ -3,6 +3,8 @@ import { useProject } from '../contexts/ProjectContext';
 import { listDocuments, MetisAPI, DocumentInfo } from '../lib/tauri-api';
 import { BoardNavigation, BoardType } from './BoardNavigation';
 import { KanbanColumn } from './KanbanColumn';
+import { CreateDocumentDialog } from './CreateDocumentDialog';
+import { DocumentEditor } from './DocumentEditor';
 import { getBoardConfig, getDocumentsByPhase } from '../lib/board-config';
 
 export interface KanbanBoardProps {
@@ -15,6 +17,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ onBackToProjects }) =>
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentBoard, setCurrentBoard] = useState<BoardType>('vision');
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [editingDocument, setEditingDocument] = useState<DocumentInfo | null>(null);
 
   useEffect(() => {
     if (!currentProject?.path) return;
@@ -52,8 +56,34 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ onBackToProjects }) =>
   };
 
   const handleDocumentClick = (document: DocumentInfo) => {
-    // Placeholder for future document detail view
-    console.log('Document clicked:', document.short_code);
+    setEditingDocument(document);
+  };
+
+  const handleDocumentCreated = () => {
+    // Reload documents after creation
+    if (!currentProject?.path) return;
+    
+    const loadDocuments = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        await MetisAPI.loadProject(currentProject.path);
+        const docs = await listDocuments();
+        setDocuments(docs);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to reload documents');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadDocuments();
+  };
+
+  const handleDocumentUpdated = () => {
+    // Reload documents after update
+    handleDocumentCreated();
   };
 
   if (loading) {
@@ -96,12 +126,20 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ onBackToProjects }) =>
             {currentProject?.path} • {boardConfig.description}
           </p>
         </div>
-        <button
-          onClick={onBackToProjects}
-          className="px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
-        >
-          ← Back to Projects
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowCreateDialog(true)}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            + Create {boardConfig.title.slice(0, -1)}
+          </button>
+          <button
+            onClick={onBackToProjects}
+            className="px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            ← Back to Projects
+          </button>
+        </div>
       </div>
 
       {/* Board Navigation */}
@@ -127,6 +165,22 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ onBackToProjects }) =>
           ))}
         </div>
       </div>
+
+      {/* Create Document Dialog */}
+      <CreateDocumentDialog
+        isOpen={showCreateDialog}
+        onClose={() => setShowCreateDialog(false)}
+        boardType={currentBoard}
+        onDocumentCreated={handleDocumentCreated}
+      />
+
+      {/* Document Editor */}
+      <DocumentEditor
+        isOpen={editingDocument !== null}
+        onClose={() => setEditingDocument(null)}
+        document={editingDocument}
+        onDocumentUpdated={handleDocumentUpdated}
+      />
     </div>
   );
 };

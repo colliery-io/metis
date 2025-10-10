@@ -8,3 +8,65 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+/* Tiptap Editor Styles */
+.tiptap-editor {
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.tiptap-content {
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.tiptap-content .ProseMirror {
+  outline: none;
+}
+
+.tiptap-content .ProseMirror p.is-editor-empty:first-child::before {
+  color: #9ca3af;
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+.tiptap-content .ProseMirror h1 {
+  font-size: 1.875rem;
+  font-weight: 700;
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.tiptap-content .ProseMirror h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-top: 1.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.tiptap-content .ProseMirror h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.tiptap-content .ProseMirror blockquote {
+  border-left: 4px solid #e5e7eb;
+  margin-left: 0;
+  margin-right: 0;
+  padding-left: 1rem;
+  font-style: italic;
+  color: #6b7280;
+}
+
+.tiptap-content .ProseMirror ul, .tiptap-content .ProseMirror ol {
+  padding-left: 1.5rem;
+}
+
+.tiptap-content .ProseMirror li {
+  margin-bottom: 0.25rem;
+}
