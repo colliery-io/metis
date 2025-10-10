@@ -10,9 +10,8 @@ export interface ProjectSidebarProps {
 
 export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
   onProjectSelect,
-  onShowProjectBrowser,
 }) => {
-  const { state, currentProject, getRecentProjects, loadProject } = useProject();
+  const { currentProject, getRecentProjects, loadProject } = useProject();
   const [isExpanded, setIsExpanded] = useState(true);
   const recentProjects = getRecentProjects();
 
@@ -37,14 +36,11 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
   };
 
   const getProjectName = (project: ProjectInfo): string => {
-    const parts = project.path.split('/');
+    // Get the directory name (project name)
+    const parts = project.path.split('/').filter(Boolean);
     return parts[parts.length - 1] || 'Unknown Project';
   };
 
-  const truncatePath = (path: string, maxLength: number = 30): string => {
-    if (path.length <= maxLength) return path;
-    return '...' + path.slice(-(maxLength - 3));
-  };
 
   return (
     <div className={`bg-white border-r border-gray-200 flex flex-col transition-all duration-200 ${
@@ -72,85 +68,30 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
             <div className="p-3">
               <button
                 onClick={handleAddProject}
-                className="w-full px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+                className="w-full px-3 py-2 text-sm text-gray-700 border border-gray-300 rounded hover:bg-gray-50 transition-colors"
               >
-                <span>+</span>
                 Add Project
               </button>
             </div>
 
-            {/* Browse Projects Button */}
-            <div className="px-3 pb-3">
-              <button
-                onClick={onShowProjectBrowser}
-                className="w-full px-3 py-2 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                Browse Projects
-              </button>
-            </div>
 
-            {/* Current Project */}
-            {currentProject && (
-              <div className="px-3 pb-3">
-                <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
-                  Current Project
-                </div>
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                  <div className="font-medium text-blue-900 text-sm">
-                    {getProjectName(currentProject)}
-                  </div>
-                  <div className="text-xs text-blue-600 mt-1" title={currentProject.path}>
-                    {truncatePath(currentProject.path)}
-                  </div>
-                  <div className="mt-2 flex items-center gap-2">
-                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                      currentProject.is_valid 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      {currentProject.is_valid ? 'Valid' : 'Invalid'}
-                    </span>
-                    {currentProject.vision_exists && (
-                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                        Vision
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Recent Projects */}
+            {/* Project List */}
             {recentProjects.length > 0 && (
               <div className="px-3">
-                <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
-                  Recent Projects
-                </div>
                 <div className="space-y-1">
                   {recentProjects
-                    .filter(p => p.path !== currentProject?.path)
                     .slice(0, 8)
                     .map((project, index) => (
                     <button
                       key={`${project.path}-${index}`}
                       onClick={() => handleProjectClick(project)}
-                      className="w-full text-left p-2 rounded-lg hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-200"
+                      className={`w-full text-left px-3 py-2 text-sm rounded hover:bg-gray-100 transition-colors ${
+                        currentProject?.path === project.path 
+                          ? 'bg-blue-50 text-blue-700 border-l-2 border-blue-500' 
+                          : 'text-gray-700'
+                      }`}
                     >
-                      <div className="font-medium text-sm text-gray-900">
-                        {getProjectName(project)}
-                      </div>
-                      <div className="text-xs text-gray-500 mt-1" title={project.path}>
-                        {truncatePath(project.path)}
-                      </div>
-                      <div className="mt-1">
-                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${
-                          project.is_valid 
-                            ? 'bg-green-100 text-green-700' 
-                            : 'bg-red-100 text-red-700'
-                        }`}>
-                          {project.is_valid ? '✓' : '✗'}
-                        </span>
-                      </div>
+                      {getProjectName(project)}
                     </button>
                   ))}
                 </div>

@@ -4,7 +4,7 @@ import { ProjectBrowser } from "./components/ProjectBrowser";
 import { KanbanBoard } from "./components/KanbanBoard";
 import { ProjectSidebar } from "./components/ProjectSidebar";
 import { ProjectInfo } from "./lib/tauri-api";
-import React, { useState } from "react";
+import { useState } from "react";
 
 function AppContent() {
   const { currentProject, setCurrentProject, loadProject } = useProject();
@@ -58,17 +58,11 @@ function AppContent() {
         {currentProject ? (
           <KanbanBoard onBackToProjects={() => setCurrentProject(null)} />
         ) : (
-          <div className="flex-1 flex items-center justify-center bg-gray-50">
+          <div className="flex-1 flex items-center justify-center bg-white">
             <div className="text-center">
-              <div className="text-6xl text-gray-300 mb-4">📋</div>
-              <h2 className="text-2xl font-semibold text-gray-700 mb-2">Welcome to Metis</h2>
-              <p className="text-gray-500 mb-6">Select a project from the sidebar to get started</p>
-              <button
-                onClick={handleShowProjectBrowser}
-                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Browse Projects
-              </button>
+              <div className="w-64 h-32 border-2 border-gray-300 rounded-lg flex items-center justify-center bg-gray-50">
+                <span className="text-2xl font-medium text-gray-600">Metis</span>
+              </div>
             </div>
           </div>
         )}
