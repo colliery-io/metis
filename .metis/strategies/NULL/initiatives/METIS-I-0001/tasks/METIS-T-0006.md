@@ -4,14 +4,14 @@ level: task
 title: "Set up Tauri project structure in metis-docs-gui crate"
 short_code: "METIS-T-0006"
 created_at: 2025-10-08T11:28:46.895969+00:00
-updated_at: 2025-10-08T11:28:46.895969+00:00
+updated_at: 2025-10-10T00:47:11.910994+00:00
 parent: METIS-I-0001
 blocked_by: []
 archived: false
 
 tags:
   - "#task"
-  - "#phase/todo"
+  - "#phase/completed"
 
 
 exit_criteria_met: false
@@ -30,6 +30,10 @@ initiative_id: METIS-I-0001
 ## Objective **[REQUIRED]**
 
 Create a new metis-docs-gui crate in the workspace with complete Tauri project structure, configured for React/TypeScript frontend and Rust backend development.
+
+## Acceptance Criteria
+
+## Acceptance Criteria
 
 ## Acceptance Criteria **[REQUIRED]**
 

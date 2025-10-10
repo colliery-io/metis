@@ -1,10 +1,10 @@
 ---
-id: implement-basic-application-shell
+id: add-document-creation-and-crud
 level: task
-title: "Implement basic application shell with project sidebar"
-short_code: "METIS-T-0008"
-created_at: 2025-10-08T11:28:54.362724+00:00
-updated_at: 2025-10-10T00:47:31.600618+00:00
+title: "Add document creation and CRUD operations to GUI"
+short_code: "METIS-T-0015"
+created_at: 2025-10-09T22:33:06.122957+00:00
+updated_at: 2025-10-10T00:37:55.241359+00:00
 parent: METIS-I-0001
 blocked_by: []
 archived: false
@@ -19,61 +19,32 @@ strategy_id:
 initiative_id: METIS-I-0001
 ---
 
-# Implement basic application shell with project sidebar
+# Add document creation and CRUD operations to GUI
 
-*This template includes sections for various types of tasks. Delete sections that don't apply to your specific use case.*
+## Parent Initiative
 
-## Parent Initiative **[CONDITIONAL: Assigned Task]**
+[[METIS-I-0001]] - Multi-Project GUI Application
 
-[[METIS-I-0001]]
+## Objective
 
-## Objective **[REQUIRED]**
-
-{Clear statement of what this task accomplishes}
-
-## Backlog Item Details **[CONDITIONAL: Backlog Item]**
-
-{Delete this section when task is assigned to an initiative}
-
-### Type
-- [ ] Bug - Production issue that needs fixing
-- [ ] Feature - New functionality or enhancement  
-- [ ] Tech Debt - Code improvement or refactoring
-- [ ] Chore - Maintenance or setup work
-
-### Priority
-- [ ] P0 - Critical (blocks users/revenue)
-- [ ] P1 - High (important for user experience)
-- [ ] P2 - Medium (nice to have)
-- [ ] P3 - Low (when time permits)
-
-### Impact Assessment **[CONDITIONAL: Bug]**
-- **Affected Users**: {Number/percentage of users affected}
-- **Reproduction Steps**: 
-  1. {Step 1}
-  2. {Step 2}
-  3. {Step 3}
-- **Expected vs Actual**: {What should happen vs what happens}
-
-### Business Justification **[CONDITIONAL: Feature]**
-- **User Value**: {Why users need this}
-- **Business Value**: {Impact on metrics/revenue}
-- **Effort Estimate**: {Rough size - S/M/L/XL}
-
-### Technical Debt Impact **[CONDITIONAL: Tech Debt]**
-- **Current Problems**: {What's difficult/slow/buggy now}
-- **Benefits of Fixing**: {What improves after refactoring}
-- **Risk Assessment**: {Risks of not addressing this}
+Add document creation, editing, and deletion capabilities to the kanban board interface. This enables users to create new documents (visions, initiatives, tasks, ADRs) directly from the GUI, edit existing documents, and manage document lifecycle operations without requiring external tools.
 
 ## Acceptance Criteria
 
 ## Acceptance Criteria
 
-## Acceptance Criteria **[REQUIRED]**
+## Acceptance Criteria
 
-- [ ] {Specific, testable requirement 1}
-- [ ] {Specific, testable requirement 2}
-- [ ] {Specific, testable requirement 3}
+- [ ] Add "Create Document" button/menu on each kanban board
+- [ ] Document creation dialog allows selecting document type and entering basic details (title, description)
+- [ ] Document creation handles parent-child relationships (tasks → initiatives, initiatives → strategies, etc.)
+- [ ] New documents appear immediately in the appropriate board and phase column
+- [ ] Document cards have edit/delete action buttons or context menus
+- [ ] Clicking document cards opens a basic document editor (text area for now)
+- [ ] Document editing auto-saves changes back to the metis-docs-core backend
+- [ ] Document deletion shows confirmation dialog and removes from both UI and backend
+- [ ] Error handling displays user-friendly messages for failed operations
+- [ ] Document operations work correctly across all board types (Vision, Initiative, Task, ADR, Backlog)
 
 ## Test Cases **[CONDITIONAL: Testing Task]**
 
