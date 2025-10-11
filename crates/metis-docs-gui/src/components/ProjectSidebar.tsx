@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { useProject } from '../contexts/ProjectContext';
-import { ProjectInfo } from '../lib/tauri-api';
+import { ProjectInfo, MetisAPI } from '../lib/tauri-api';
 import { open } from '@tauri-apps/plugin-dialog';
+import { SidebarProjectCard } from './ProjectCard';
+import { InitProjectDialog } from './InitProjectDialog';
 
 export interface ProjectSidebarProps {
   onProjectSelect: (project: ProjectInfo) => void;
@@ -13,6 +15,9 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
 }) => {
   const { currentProject, getRecentProjects, loadProject, removeProject } = useProject();
   const [isExpanded, setIsExpanded] = useState(true);
+  const [showInitDialog, setShowInitDialog] = useState(false);
+  const [selectedPath, setSelectedPath] = useState<string>('');
+  const [directoryName, setDirectoryName] = useState('');
   const recentProjects = getRecentProjects();
 
   const handleAddProject = async () => {
@@ -20,11 +25,34 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
       const selected = await open({
         directory: true,
         multiple: false,
-        title: 'Select Metis Project Directory',
+        title: 'Select Directory for Metis Project',
       });
       
       if (selected && typeof selected === 'string') {
-        await loadProject(selected);
+        // First, try to load the project to see if it's already a valid Metis project
+        try {
+          const projectInfo = await MetisAPI.loadProject(selected);
+          
+          if (projectInfo.is_valid) {
+            // Already a valid Metis project, load it normally
+            await loadProject(selected);
+          } else {
+            // Not a valid Metis project, offer to initialize it
+            const pathParts = selected.split('/').filter(Boolean);
+            const projectName = pathParts[pathParts.length - 1] || 'unknown';
+            setSelectedPath(selected);
+            setDirectoryName(projectName);
+            setShowInitDialog(true);
+          }
+        } catch (loadError) {
+          console.error('Failed to check/load project:', loadError);
+          // If loading fails, still offer to initialize
+          const pathParts = selected.split('/').filter(Boolean);
+          const projectName = pathParts[pathParts.length - 1] || 'unknown';
+          setSelectedPath(selected);
+          setDirectoryName(projectName);
+          setShowInitDialog(true);
+        }
       }
     } catch (error) {
       console.error('Failed to open directory:', error);
@@ -38,6 +66,28 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
   const handleRemoveProject = (e: React.MouseEvent, projectPath: string) => {
     e.stopPropagation();
     removeProject(projectPath);
+  };
+
+  const handleInitConfirm = async (prefix: string) => {
+    setShowInitDialog(false);
+    
+    try {
+      // Initialize the project with the user-provided prefix
+      const initResult = await MetisAPI.initializeProject(selectedPath, prefix);
+      console.log('Project initialized:', initResult);
+      
+      // Now load the newly initialized project
+      await loadProject(selectedPath);
+    } catch (initError) {
+      console.error('Failed to initialize project:', initError);
+      alert('Failed to initialize Metis project. Please check the directory permissions and try again.');
+    }
+  };
+
+  const handleInitCancel = () => {
+    setShowInitDialog(false);
+    setSelectedPath('');
+    setDirectoryName('');
   };
 
   const getProjectName = (project: ProjectInfo): string => {
@@ -80,32 +130,17 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
             {/* Project List */}
             {recentProjects.length > 0 && (
               <div className="px-3">
-                <div className="space-y-1">
+                <div className="space-y-2">
                   {recentProjects
                     .slice(0, 8)
                     .map((project, index) => (
-                    <div
+                    <SidebarProjectCard
                       key={`${project.path}-${index}`}
-                      className={`group w-full text-left px-3 py-1.5 text-xs rounded hover:bg-elevated transition-colors flex items-center justify-between ${
-                        currentProject?.path === project.path 
-                          ? 'bg-interactive-secondary text-interactive-primary font-medium' 
-                          : 'text-secondary'
-                      }`}
-                    >
-                      <button
-                        onClick={() => handleProjectClick(project)}
-                        className="flex-1 text-left"
-                      >
-                        {getProjectName(project)}
-                      </button>
-                      <button
-                        onClick={(e) => handleRemoveProject(e, project.path)}
-                        className="opacity-0 group-hover:opacity-100 ml-2 p-1 text-tertiary hover:text-interactive-danger transition-all"
-                        title="Remove project"
-                      >
-                        ×
-                      </button>
-                    </div>
+                      project={project}
+                      isActive={currentProject?.path === project.path}
+                      onClick={() => handleProjectClick(project)}
+                      onRemove={(e) => handleRemoveProject(e, project.path)}
+                    />
                   ))}
                 </div>
               </div>
@@ -141,6 +176,14 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
           </div>
         )}
       </div>
+
+      {/* Custom initialization dialog */}
+      <InitProjectDialog
+        isOpen={showInitDialog}
+        directoryName={directoryName}
+        onConfirm={handleInitConfirm}
+        onCancel={handleInitCancel}
+      />
     </div>
   );
 };

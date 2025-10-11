@@ -1,12 +1,15 @@
+import React from 'react';
 import { ProjectInfo } from '../lib/tauri-api';
+import { useTheme } from '../contexts/ThemeContext';
 
-interface ProjectCardProps {
+// Keep the original ProjectCard for the browser
+interface ProjectBrowserCardProps {
   project: ProjectInfo;
   onSelect: (path: string) => void;
   isSelected?: boolean;
 }
 
-export function ProjectCard({ project, onSelect, isSelected = false }: ProjectCardProps) {
+export function ProjectCard({ project, onSelect, isSelected = false }: ProjectBrowserCardProps) {
   const getStatusIcon = () => {
     if (!project.is_valid) return '❌';
     if (!project.vision_exists) return '⚠️';
@@ -71,3 +74,104 @@ export function ProjectCard({ project, onSelect, isSelected = false }: ProjectCa
     </div>
   );
 }
+
+// New sidebar project card component
+export interface SidebarProjectCardProps {
+  project: ProjectInfo;
+  isActive: boolean;
+  onClick: () => void;
+  onRemove: (e: React.MouseEvent) => void;
+}
+
+export const SidebarProjectCard: React.FC<SidebarProjectCardProps> = ({
+  project,
+  isActive,
+  onClick,
+  onRemove,
+}) => {
+  const { theme, themeName } = useTheme();
+  
+  // Debug: log the current theme colors
+  console.log('Theme name:', themeName);
+  console.log('Background elevated:', theme.colors.background.elevated);
+  console.log('Interactive secondary:', theme.colors.interactive.secondary);
+  
+  const getProjectName = (project: ProjectInfo): string => {
+    const parts = project.path.split('/').filter(Boolean);
+    return parts[parts.length - 1] || 'Unknown Project';
+  };
+
+  const getProjectPath = (project: ProjectInfo): string => {
+    const parts = project.path.split('/').filter(Boolean);
+    const pathParts = parts.slice(0, -1);
+    return pathParts.length > 2 ? `.../${pathParts.slice(-2).join('/')}` : pathParts.join('/') || '/';
+  };
+
+  return (
+    <div
+      className="group relative overflow-hidden rounded-lg transition-all duration-200 cursor-pointer p-3"
+      style={{
+        backgroundColor: isActive 
+          ? theme.colors.interactive.secondary
+          : theme.colors.background.elevated,
+        border: `1px solid ${isActive 
+          ? theme.colors.interactive.primary
+          : theme.colors.border.primary}`
+      }}
+      onClick={onClick}
+      onMouseEnter={(e) => {
+        if (!isActive) {
+          e.currentTarget.style.backgroundColor = theme.colors.background.secondary;
+          e.currentTarget.style.borderColor = theme.colors.interactive.primary;
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!isActive) {
+          e.currentTarget.style.backgroundColor = theme.colors.background.elevated;
+          e.currentTarget.style.borderColor = theme.colors.border.primary;
+        }
+      }}
+    >
+      <div className="flex items-center justify-between">
+        <div className="flex-1 min-w-0 pr-3">
+          <h3
+            className={`font-medium truncate transition-colors ${
+              isActive ? 'text-interactive-primary' : 'text-primary group-hover:text-interactive-primary'
+            }`}
+            style={{ fontSize: '14px' }}
+          >
+            {getProjectName(project)}
+          </h3>
+          <p
+            className="text-tertiary truncate mt-1 transition-colors"
+            style={{ fontSize: '11px' }}
+            title={project.path}
+          >
+            {getProjectPath(project)}
+          </p>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          {/* Status indicator */}
+          <div className="flex-shrink-0">
+            <div
+              className={`w-3 h-3 rounded-full transition-colors ${
+                isActive ? 'bg-interactive-primary' : 'bg-text-tertiary group-hover:bg-interactive-primary'
+              }`}
+            />
+          </div>
+          
+          {/* Remove button - always visible */}
+          <button
+            onClick={onRemove}
+            className="w-5 h-5 flex items-center justify-center text-tertiary hover:text-interactive-danger transition-all duration-200"
+            title="Remove project"
+            style={{ fontSize: '14px', backgroundColor: 'transparent', border: 'none' }}
+          >
+            ×
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
