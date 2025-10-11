@@ -184,6 +184,13 @@ export class DocumentAPI {
   static async deleteDocument(shortCode: string): Promise<void> {
     return invoke('delete_document', { short_code: shortCode });
   }
+
+  /**
+   * Transition a document to a new phase
+   */
+  static async transitionPhase(shortCode: string, newPhase?: string): Promise<string> {
+    return invoke('transition_phase', { shortCode: shortCode, newPhase: newPhase });
+  }
 }
 
 // Standalone functions for direct import
@@ -193,3 +200,4 @@ export const searchDocuments = MetisAPI.searchDocuments;
 export const createDocument = DocumentAPI.createDocument;
 export const updateDocument = DocumentAPI.updateDocument;
 export const deleteDocument = DocumentAPI.deleteDocument;
+export const transitionPhase = DocumentAPI.transitionPhase;

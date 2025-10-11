@@ -72,42 +72,70 @@ export const DocumentCard: React.FC<DocumentCardProps> = ({ document, onClick })
   return (
     <div
       className={`
-        border border-primary rounded-lg p-4 bg-elevated hover:shadow-md transition-shadow
-        ${onClick ? 'cursor-pointer hover:border-focus' : ''}
+        rounded-lg p-3 transition-all duration-200
+        ${onClick ? 'cursor-pointer hover:scale-105 hover:shadow-md' : ''}
       `}
+      style={{
+        backgroundColor: theme.colors.background.elevated,
+        border: `1px solid ${theme.colors.border.primary}`,
+      }}
       onClick={() => onClick?.(document)}
+      onMouseEnter={(e) => {
+        if (onClick) {
+          e.currentTarget.style.borderColor = theme.colors.interactive.primary;
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (onClick) {
+          e.currentTarget.style.borderColor = theme.colors.border.primary;
+        }
+      }}
     >
-      {/* Header with type and short code */}
+      {/* Header with short code */}
       <div className="flex items-center justify-between mb-2">
         <span
-          className="px-2 py-1 text-xs font-medium rounded border"
+          className="text-xs font-mono font-medium"
+          style={{ color: theme.colors.text.tertiary }}
+        >
+          {document.short_code}
+        </span>
+        <span
+          className="px-1.5 py-0.5 text-xs font-medium rounded"
           style={typeStyle}
         >
-          {document.document_type.toUpperCase()}
-        </span>
-        <span className="text-xs font-mono text-tertiary">
-          {document.short_code}
+          {document.document_type.charAt(0).toUpperCase()}
         </span>
       </div>
 
       {/* Title */}
-      <h4 className="font-medium text-primary mb-2 line-clamp-2">
+      <h4 
+        className="font-medium mb-2 text-sm leading-tight"
+        style={{ 
+          color: theme.colors.text.primary,
+          display: '-webkit-box',
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: 'vertical',
+          overflow: 'hidden',
+        }}
+      >
         {document.title}
       </h4>
 
-      {/* Phase and date */}
-      <div className="flex items-center justify-between text-xs">
-        {document.phase && (
+      {/* Phase */}
+      {document.phase && (
+        <div className="mb-2">
           <span
-            className="px-2 py-1 rounded font-medium"
+            className="px-2 py-1 rounded text-xs font-medium"
             style={phaseStyle}
           >
             {document.phase}
           </span>
-        )}
-        <span className="text-tertiary">
-          {formatDate(document.updated_at)}
-        </span>
+        </div>
+      )}
+
+      {/* Date */}
+      <div className="text-xs" style={{ color: theme.colors.text.tertiary }}>
+        {formatDate(document.updated_at)}
       </div>
     </div>
   );

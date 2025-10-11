@@ -3,8 +3,9 @@ use metis_core::{
     application::services::{
         workspace::initialization::WorkspaceInitializationService,
         document::creation::{DocumentCreationService, DocumentCreationConfig},
+        workspace::transition::PhaseTransitionService,
     },
-    domain::documents::types::{DocumentType},
+    domain::documents::types::{DocumentType, Phase},
 };
 use std::path::PathBuf;
 use tauri::State;
@@ -66,6 +67,15 @@ async fn initialize_project(
     )
     .await
     .map_err(|e| format!("Failed to initialize project: {}", e))?;
+    
+    // Auto-sync after project initialization to populate database
+    let database = Database::new(result.database_path.to_str().unwrap())
+        .map_err(|e| format!("Failed to open database for sync: {}", e))?;
+    let app = Application::new(database);
+    
+    app.sync_directory(&result.metis_dir)
+        .await
+        .map_err(|e| format!("Failed to sync workspace after initialization: {}", e))?;
     
     Ok(InitializationResult {
         metis_dir: result.metis_dir.to_string_lossy().to_string(),
@@ -274,6 +284,16 @@ async fn create_document(
         _ => return Err(format!("Document type {} not supported yet", request.document_type)),
     }.map_err(|e| format!("Document creation error: {}", e))?;
     
+    // Auto-sync after document creation to populate database
+    let db_path = metis_dir.join("metis.db");
+    let database = Database::new(db_path.to_str().unwrap())
+        .map_err(|e| format!("Failed to open database for sync: {}", e))?;
+    let app = Application::new(database);
+    
+    app.sync_directory(&metis_dir)
+        .await
+        .map_err(|e| format!("Failed to sync workspace after document creation: {}", e))?;
+    
     Ok(CreateDocumentResult {
         id: result.document_id.to_string(),
         short_code: result.short_code,
@@ -341,6 +361,94 @@ async fn delete_document(
     Ok(())
 }
 
+fn parse_phase(phase_str: &str) -> Result<Phase, String> {
+    match phase_str.to_lowercase().as_str() {
+        "draft" => Ok(Phase::Draft),
+        "review" => Ok(Phase::Review),
+        "published" => Ok(Phase::Published),
+        "discussion" => Ok(Phase::Discussion),
+        "decided" => Ok(Phase::Decided),
+        "superseded" => Ok(Phase::Superseded),
+        "backlog" => Ok(Phase::Backlog),
+        "todo" => Ok(Phase::Todo),
+        "active" => Ok(Phase::Active),
+        "blocked" => Ok(Phase::Blocked),
+        "completed" => Ok(Phase::Completed),
+        "shaping" => Ok(Phase::Shaping),
+        "design" => Ok(Phase::Design),
+        "ready" => Ok(Phase::Ready),
+        "decompose" => Ok(Phase::Decompose),
+        "discovery" => Ok(Phase::Discovery),
+        "doing" => Ok(Phase::Active), // Map "doing" to Active
+        _ => Err(format!("Unknown phase: {}", phase_str)),
+    }
+}
+
+#[tauri::command]
+async fn transition_phase(
+    state: State<'_, std::sync::Mutex<AppState>>,
+    short_code: String,
+    new_phase: Option<String>,
+) -> Result<String, String> {
+    let project_path = {
+        let app_state = state.lock().map_err(|e| format!("Failed to lock state: {}", e))?;
+        app_state.current_project.as_ref()
+            .ok_or("No project loaded")?
+            .clone()
+    };
+    
+    let metis_dir = project_path.join(".metis");
+    let transition_service = PhaseTransitionService::new(&metis_dir);
+    
+    // Parse the new phase if provided
+    let target_phase = if let Some(phase_str) = new_phase {
+        parse_phase(&phase_str)?
+    } else {
+        return Err("Phase is required for transition".to_string());
+    };
+    
+    let result = transition_service.transition_document(&short_code, target_phase)
+        .await
+        .map_err(|e| format!("Failed to transition phase: {}", e))?;
+    
+    // Auto-sync after transition to update database
+    let db_path = metis_dir.join("metis.db");
+    let database = Database::new(db_path.to_str().unwrap())
+        .map_err(|e| format!("Failed to open database for sync: {}", e))?;
+    let app = Application::new(database);
+    
+    let sync_results = app.sync_directory(&metis_dir)
+        .await
+        .map_err(|e| format!("Failed to sync workspace: {}", e))?;
+    
+    tracing::info!("Sync completed with {} results", sync_results.len());
+    for sync_result in &sync_results {
+        tracing::info!("Sync result: {:?}", sync_result);
+    }
+    
+    // Verify the document was actually updated in the database
+    let db_path = metis_dir.join("metis.db");
+    let database = Database::new(db_path.to_str().unwrap())
+        .map_err(|e| format!("Failed to open database for verification: {}", e))?;
+    let mut app_verify = Application::new(database);
+    
+    // Check if the document in the database has the correct phase
+    let updated_doc = app_verify.with_database(|service| {
+        service.find_by_short_code(&short_code)
+    }).map_err(|e| format!("Failed to verify document update: {}", e))?;
+    
+    if let Some(doc) = updated_doc {
+        tracing::info!("Verified document phase in database: {}", doc.phase);
+        if doc.phase != result.to_phase.to_string() {
+            tracing::warn!("Database phase {} doesn't match expected phase {}", doc.phase, result.to_phase);
+        }
+    } else {
+        tracing::warn!("Document not found in database after sync");
+    }
+    
+    Ok(result.to_phase.to_string())
+}
+
 pub fn run() {
     tauri::Builder::default()
         .setup(|app| {
@@ -365,7 +473,8 @@ pub fn run() {
             search_documents,
             create_document,
             update_document,
-            delete_document
+            delete_document,
+            transition_phase
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

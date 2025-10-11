@@ -1,6 +1,8 @@
 import React from 'react';
+import { useDroppable } from '@dnd-kit/core';
 import { DocumentInfo } from '../lib/tauri-api';
-import { DocumentCard } from './DocumentCard';
+import { DraggableDocumentCard } from './DraggableDocumentCard';
+import { useTheme } from '../contexts/ThemeContext';
 
 export interface KanbanColumnProps {
   title: string;
@@ -8,6 +10,7 @@ export interface KanbanColumnProps {
   documents: DocumentInfo[];
   onDocumentClick?: (document: DocumentInfo) => void;
   emptyMessage?: string;
+  isDragging?: boolean;
 }
 
 export const KanbanColumn: React.FC<KanbanColumnProps> = ({
@@ -16,47 +19,59 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
   documents,
   onDocumentClick,
   emptyMessage,
+  isDragging = false,
 }) => {
-  const getPhaseColor = (phaseKey: string) => {
-    switch (phaseKey) {
-      case 'draft':
-      case 'todo':
-      case 'discovery':
-      case 'discussion':
-        return 'border-orange-200 bg-orange-50';
-      case 'review':
-      case 'doing':
-      case 'design':
-      case 'decompose':
-        return 'border-blue-200 bg-blue-50';
-      case 'published':
-      case 'completed':
-      case 'decided':
-      case 'ready':
-      case 'active':
-        return 'border-green-200 bg-green-50';
-      case 'superseded':
-        return 'border-red-200 bg-red-50';
-      default:
-        return 'border-gray-200 bg-gray-50';
-    }
+  const { theme } = useTheme();
+  const { isOver, setNodeRef } = useDroppable({
+    id: phase,
+  });
+
+  const getPhaseStyle = () => {
+    return {
+      backgroundColor: isOver ? theme.colors.interactive.secondary : theme.colors.background.secondary,
+      borderColor: isOver ? theme.colors.interactive.primary : theme.colors.border.primary,
+    };
   };
 
+  const phaseStyle = getPhaseStyle();
+
   return (
-    <div className={`
-      flex flex-col h-full min-h-96 rounded-lg border-2 
-      ${getPhaseColor(phase)}
-    `}>
+    <div 
+      ref={setNodeRef}
+      className={`flex flex-col h-full min-h-96 rounded-lg border-2 transition-all duration-200 ${
+        isOver ? 'scale-105' : ''
+      }`}
+      style={{
+        backgroundColor: phaseStyle.backgroundColor,
+        borderColor: phaseStyle.borderColor,
+        opacity: isDragging && !isOver ? 0.7 : 1,
+      }}
+    >
       {/* Column Header */}
-      <div className="p-4 border-b border-gray-200">
-        <h3 className="font-semibold text-gray-900 text-lg">
+      <div 
+        className="p-4 border-b"
+        style={{ borderColor: theme.colors.border.primary }}
+      >
+        <h3 
+          className="font-semibold text-lg"
+          style={{ color: theme.colors.text.primary }}
+        >
           {title}
         </h3>
         <div className="flex items-center justify-between mt-1">
-          <span className="text-sm text-gray-600 capitalize">
+          <span 
+            className="text-sm capitalize"
+            style={{ color: theme.colors.text.secondary }}
+          >
             {phase}
           </span>
-          <span className="text-sm font-medium text-gray-700 bg-white px-2 py-1 rounded">
+          <span 
+            className="text-sm font-medium px-2 py-1 rounded"
+            style={{
+              color: theme.colors.text.primary,
+              backgroundColor: theme.colors.background.elevated,
+            }}
+          >
             {documents.length}
           </span>
         </div>
@@ -65,13 +80,17 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
       {/* Column Content */}
       <div className="flex-1 p-3 space-y-3 overflow-y-auto">
         {documents.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
-            <div className="text-gray-400 mb-2">
+          <div 
+            className="text-center py-8"
+            style={{ color: theme.colors.text.tertiary }}
+          >
+            <div className="mb-2">
               <svg
                 className="mx-auto h-8 w-8"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
+                style={{ color: theme.colors.text.tertiary }}
               >
                 <path
                   strokeLinecap="round"
@@ -87,7 +106,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
           </div>
         ) : (
           documents.map((doc) => (
-            <DocumentCard
+            <DraggableDocumentCard
               key={doc.short_code}
               document={doc}
               onClick={onDocumentClick}

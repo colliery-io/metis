@@ -1,11 +1,23 @@
 import React, { useState, useEffect } from 'react';
+import {
+  DndContext,
+  DragEndEvent,
+  DragOverlay,
+  DragStartEvent,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
 import { useProject } from '../contexts/ProjectContext';
-import { listDocuments, MetisAPI, DocumentInfo } from '../lib/tauri-api';
+import { listDocuments, MetisAPI, DocumentInfo, transitionPhase } from '../lib/tauri-api';
 import { BoardNavigation, BoardType } from './BoardNavigation';
 import { KanbanColumn } from './KanbanColumn';
 import { CreateDocumentDialog } from './CreateDocumentDialog';
 import { DocumentEditor } from './DocumentEditor';
+import { DocumentCard } from './DocumentCard';
 import { getBoardConfig, getDocumentsByPhase } from '../lib/board-config';
+import { useTheme } from '../contexts/ThemeContext';
 
 export interface KanbanBoardProps {
   onBackToProjects: () => void;
@@ -13,12 +25,23 @@ export interface KanbanBoardProps {
 
 export const KanbanBoard: React.FC<KanbanBoardProps> = ({ onBackToProjects }) => {
   const { currentProject } = useProject();
+  const { theme } = useTheme();
   const [documents, setDocuments] = useState<DocumentInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentBoard, setCurrentBoard] = useState<BoardType>('vision');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [editingDocument, setEditingDocument] = useState<DocumentInfo | null>(null);
+  const [activeDocument, setActiveDocument] = useState<DocumentInfo | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
 
   useEffect(() => {
     if (!currentProject?.path) return;
@@ -59,46 +82,96 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ onBackToProjects }) =>
     setEditingDocument(document);
   };
 
-  const handleDocumentCreated = () => {
+  const handleDocumentCreated = async () => {
     // Reload documents after creation
     if (!currentProject?.path) return;
     
-    const loadDocuments = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        await MetisAPI.loadProject(currentProject.path);
-        const docs = await listDocuments();
-        setDocuments(docs);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to reload documents');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadDocuments();
+    try {
+      setLoading(true);
+      setError(null);
+      
+      await MetisAPI.loadProject(currentProject.path);
+      const docs = await listDocuments();
+      
+      // Force a new array reference to ensure React detects the change
+      setDocuments([...docs]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to reload documents');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDocumentUpdated = () => {
+  const handleDocumentUpdated = async () => {
     // Reload documents after update
-    handleDocumentCreated();
+    await handleDocumentCreated();
+  };
+
+  const handleDragStart = (event: DragStartEvent) => {
+    const { active } = event;
+    const document = documents.find(doc => doc.short_code === active.id);
+    setActiveDocument(document || null);
+    setIsDragging(true);
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveDocument(null);
+    setIsDragging(false);
+
+    if (!over || active.id === over.id) {
+      return;
+    }
+
+    const documentShortCode = active.id as string;
+    const newPhase = over.id as string;
+    const document = documents.find(doc => doc.short_code === documentShortCode);
+
+    if (!document || document.phase === newPhase) {
+      return;
+    }
+
+    try {
+      // Attempt phase transition
+      await transitionPhase(documentShortCode, newPhase);
+      
+      // Reload documents to reflect the change
+      await handleDocumentCreated();
+    } catch (error) {
+      console.error('Failed to transition document phase:', error);
+      // TODO: Show error notification to user
+    }
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-64">
-        <div className="text-secondary">Loading documents...</div>
+        <div style={{ color: theme.colors.text.secondary }}>Loading documents...</div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="bg-secondary border border-error rounded-lg p-4 m-6">
-        <div className="text-interactive-danger font-medium">Error loading documents</div>
-        <div className="text-interactive-danger text-sm mt-1">{error}</div>
+      <div 
+        className="rounded-lg p-4 m-6"
+        style={{
+          backgroundColor: theme.colors.background.secondary,
+          border: `1px solid ${theme.colors.border.error}`,
+        }}
+      >
+        <div 
+          className="font-medium"
+          style={{ color: theme.colors.border.error }}
+        >
+          Error loading documents
+        </div>
+        <div 
+          className="text-sm mt-1"
+          style={{ color: theme.colors.border.error }}
+        >
+          {error}
+        </div>
       </div>
     );
   }
@@ -109,7 +182,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ onBackToProjects }) =>
   if (!boardConfig) {
     return (
       <div className="p-6">
-        <div className="text-interactive-danger">Invalid board configuration</div>
+        <div style={{ color: theme.colors.border.error }}>Invalid board configuration</div>
       </div>
     );
   }
@@ -117,25 +190,37 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ onBackToProjects }) =>
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between p-6 bg-elevated border-b border-primary">
+      <div 
+        className="flex items-center justify-between p-6 border-b"
+        style={{
+          backgroundColor: theme.colors.background.elevated,
+          borderColor: theme.colors.border.primary,
+        }}
+      >
         <div>
-          <h1 className="text-2xl font-bold text-primary">
+          <h1 
+            className="text-2xl font-bold"
+            style={{ color: theme.colors.text.primary }}
+          >
             {boardConfig.title}
           </h1>
-          <p className="text-secondary text-sm mt-1">
+          <p 
+            className="text-sm mt-1"
+            style={{ color: theme.colors.text.secondary }}
+          >
             {currentProject?.path} • {boardConfig.description}
           </p>
         </div>
         <div className="flex items-center gap-3">
           <button
             onClick={() => setShowCreateDialog(true)}
-            className="btn-primary px-4 py-2 rounded-lg transition-colors"
+            className="btn btn-primary px-4 py-2 rounded-lg transition-colors"
           >
             + Create {boardConfig.title.slice(0, -1)}
           </button>
           <button
             onClick={onBackToProjects}
-            className="btn-secondary px-4 py-2 rounded-lg transition-colors"
+            className="btn btn-secondary px-4 py-2 rounded-lg transition-colors"
           >
             ← Back to Projects
           </button>
@@ -151,19 +236,49 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ onBackToProjects }) =>
 
       {/* Kanban Columns */}
       <div className="flex-1 p-6 overflow-hidden">
-        <div className="h-full flex gap-4 overflow-x-auto">
-          {boardConfig.phases.map((phase) => (
-            <div key={phase.key} className="flex-shrink-0 w-80">
-              <KanbanColumn
-                title={phase.title}
-                phase={phase.key}
-                documents={documentsByPhase[phase.key] || []}
-                onDocumentClick={handleDocumentClick}
-                emptyMessage={phase.emptyMessage}
-              />
-            </div>
-          ))}
-        </div>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          <div className="h-full flex gap-4 overflow-x-auto">
+            {boardConfig.phases.map((phase) => {
+              const columnCount = boardConfig.phases.length;
+              const minWidth = 180; // Minimum column width
+              const availableWidth = `calc((100vw - 320px - ${columnCount * 16}px) / ${columnCount})`; // Account for sidebar, padding, and gaps
+              const columnWidth = `max(${minWidth}px, ${availableWidth})`;
+              
+              return (
+                <div 
+                  key={phase.key} 
+                  className="flex-shrink-0" 
+                  style={{ width: columnWidth }}
+                >
+                  <KanbanColumn
+                    title={phase.title}
+                    phase={phase.key}
+                    documents={documentsByPhase[phase.key] || []}
+                    onDocumentClick={handleDocumentClick}
+                    emptyMessage={phase.emptyMessage}
+                    isDragging={isDragging}
+                  />
+                </div>
+              );
+            })}
+          </div>
+          
+          <DragOverlay>
+            {activeDocument ? (
+              <div className="transform rotate-3 opacity-80">
+                <DocumentCard
+                  document={activeDocument}
+                  onClick={() => {}}
+                />
+              </div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
       </div>
 
       {/* Create Document Dialog */}
