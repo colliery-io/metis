@@ -3,6 +3,8 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import Typography from '@tiptap/extension-typography';
+import { Markdown } from 'tiptap-markdown';
+import matter from 'gray-matter';
 
 export interface TiptapEditorProps {
   content: string;
@@ -19,26 +21,85 @@ export const TiptapEditor: React.FC<TiptapEditorProps> = ({
   className = '',
   editable = true,
 }) => {
+  const initialContentSet = React.useRef(false);
+  const lastContentProp = React.useRef(content);
+
+  // Process content to separate frontmatter from markdown
+  const processedContent = React.useMemo(() => {
+    try {
+      // Use gray-matter to parse frontmatter
+      const parsed = matter(content);
+      // Return just the markdown content, trimmed of any leading whitespace
+      return parsed.content.trim();
+    } catch (error) {
+      console.error('Error parsing frontmatter:', error);
+      // If gray-matter fails, try manual frontmatter removal
+      const lines = content.split('\n');
+      if (lines[0] === '---') {
+        const endIndex = lines.findIndex((line, index) => index > 0 && line === '---');
+        if (endIndex > 0) {
+          return lines.slice(endIndex + 1).join('\n').trim();
+        }
+      }
+      return content;
+    }
+  }, [content]);
+
   const editor = useEditor({
+    content: '',
     extensions: [
-      StarterKit,
+      StarterKit.configure({
+        heading: { levels: [1, 2, 3, 4, 5, 6] }
+      }),
       Placeholder.configure({
         placeholder,
       }),
       Typography,
+      Markdown.configure({
+        html: true,
+        tightLists: true,
+        bulletListMarker: '-'
+      })
     ],
-    content,
-    editable,
+    onCreate: ({ editor }) => {
+      // Load content when editor is ready
+      if (processedContent) {
+        setTimeout(() => {
+          if (editor && processedContent) {
+            editor.commands.setContent(processedContent);
+            initialContentSet.current = true;
+          }
+        }, 50);
+      }
+    },
     onUpdate: ({ editor }) => {
-      onChange(editor.getHTML());
+      // Get markdown content from the editor
+      const storage = editor.storage as any;
+      const markdownContent = storage.markdown?.getMarkdown() || editor.getHTML();
+      onChange(markdownContent);
     },
   });
 
+  // Only set content when it's a new document (content prop changed)
   React.useEffect(() => {
-    if (editor && content !== editor.getHTML()) {
-      editor.commands.setContent(content);
+    if (content !== lastContentProp.current) {
+      // Content prop changed - this is a new document
+      lastContentProp.current = content;
+      initialContentSet.current = false;
+      
+      if (processedContent && editor) {
+        editor.commands.setContent(processedContent);
+        initialContentSet.current = true;
+      }
     }
-  }, [editor, content]);
+  }, [content, processedContent, editor]);
+
+  // Control editable state dynamically
+  React.useEffect(() => {
+    if (editor) {
+      editor.setEditable(editable);
+    }
+  }, [editor, editable]);
 
   if (!editor) {
     return null;

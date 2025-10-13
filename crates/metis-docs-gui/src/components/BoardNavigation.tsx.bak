@@ -1,12 +1,15 @@
 import React from 'react';
+import { ProjectConfig } from '../lib/tauri-api';
 
-export type BoardType = 'vision' | 'initiative' | 'task' | 'adr' | 'backlog';
+export type BoardType = 'vision' | 'strategy' | 'initiative' | 'task' | 'adr' | 'backlog';
 
 export interface BoardNavigationProps {
   currentBoard: BoardType;
   onBoardChange: (board: BoardType) => void;
+  projectConfig?: ProjectConfig | null;
   documentCounts?: {
     vision: number;
+    strategy: number;
     initiative: number;
     task: number;
     adr: number;
@@ -17,6 +20,7 @@ export interface BoardNavigationProps {
 export const BoardNavigation: React.FC<BoardNavigationProps> = ({
   currentBoard,
   onBoardChange,
+  projectConfig,
   documentCounts,
 }) => {
   const boardConfigs = [
@@ -25,6 +29,12 @@ export const BoardNavigation: React.FC<BoardNavigationProps> = ({
       label: 'Vision',
       description: 'Strategic direction and outcomes',
       count: documentCounts?.vision || 0,
+    },
+    {
+      id: 'strategy' as BoardType,
+      label: 'Strategy',
+      description: 'Coordinated approaches to achieve vision',
+      count: documentCounts?.strategy || 0,
     },
     {
       id: 'initiative' as BoardType,
@@ -52,38 +62,44 @@ export const BoardNavigation: React.FC<BoardNavigationProps> = ({
     },
   ];
 
+  // Filter boards based on project configuration
+  const enabledBoards = boardConfigs.filter(board => {
+    if (!projectConfig) return true; // Show all if config not loaded yet
+    
+    switch (board.id) {
+      case 'vision':
+      case 'task':
+      case 'adr':
+      case 'backlog':
+        return true; // Always enabled
+      case 'strategy':
+        return projectConfig.strategies_enabled;
+      case 'initiative':
+        return projectConfig.initiatives_enabled;
+      default:
+        return false;
+    }
+  });
+
   return (
     <div className="border-b border-primary bg-elevated">
       <div className="px-6 py-4">
-        <nav className="flex space-x-1">
-          {boardConfigs.map((board) => (
-            <button
+        <nav className="flex" style={{ gap: '3rem' }}>
+          {enabledBoards.map((board) => (
+            <div
               key={board.id}
               onClick={() => onBoardChange(board.id)}
               className={`
-                group flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors
+                cursor-pointer flex items-center text-2xl font-semibold transition-colors
                 ${currentBoard === board.id
-                  ? 'bg-interactive-secondary text-interactive-primary border border-interactive-primary'
-                  : 'text-secondary hover:text-primary hover:bg-secondary'
-                }
-              `}
+                  ? 'text-interactive-primary border-t-2 border-b-2 border-interactive-primary'
+                  : 'text-secondary hover:text-primary'
+                }`}
+              style={{ padding: '1rem 1.5rem' }}
               title={board.description}
             >
               <span>{board.label}</span>
-              {board.count > 0 && (
-                <span
-                  className={`
-                    ml-2 px-2 py-0.5 text-xs rounded-full
-                    ${currentBoard === board.id
-                      ? 'bg-interactive-primary text-inverse'
-                      : 'bg-tertiary text-secondary group-hover:bg-secondary'
-                    }
-                  `}
-                >
-                  {board.count}
-                </span>
-              )}
-            </button>
+            </div>
           ))}
         </nav>
       </div>

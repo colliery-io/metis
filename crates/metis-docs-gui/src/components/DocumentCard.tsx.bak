@@ -10,15 +10,6 @@ export interface DocumentCardProps {
 export const DocumentCard: React.FC<DocumentCardProps> = ({ document, onClick }) => {
   const { theme } = useTheme();
 
-  const getTypeColor = (type: string) => {
-    const color = theme.colors.documentType[type as keyof typeof theme.colors.documentType] || theme.colors.documentType.backlog;
-    return {
-      backgroundColor: color + '20', // 20% opacity
-      color: color,
-      borderColor: color + '40', // 40% opacity
-    };
-  };
-
   const getPhaseColor = (phase?: string) => {
     switch (phase) {
       case 'draft':
@@ -66,76 +57,97 @@ export const DocumentCard: React.FC<DocumentCardProps> = ({ document, onClick })
     }
   };
 
-  const typeStyle = getTypeColor(document.document_type);
   const phaseStyle = getPhaseColor(document.phase);
 
   return (
     <div
       className={`
-        rounded-lg p-3 transition-all duration-200
-        ${onClick ? 'cursor-pointer hover:scale-105 hover:shadow-md' : ''}
+        overflow-hidden transition-all duration-200 shadow-lg
+        ${onClick ? 'cursor-pointer hover:shadow-xl' : ''}
       `}
       style={{
         backgroundColor: theme.colors.background.elevated,
-        border: `1px solid ${theme.colors.border.primary}`,
+        border: 'none',
+        width: '95%',
+        margin: '0 auto',
+        minHeight: '120px',
+        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+        borderRadius: '18px',
       }}
       onClick={() => onClick?.(document)}
       onMouseEnter={(e) => {
         if (onClick) {
-          e.currentTarget.style.borderColor = theme.colors.interactive.primary;
+          e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)';
         }
       }}
       onMouseLeave={(e) => {
         if (onClick) {
-          e.currentTarget.style.borderColor = theme.colors.border.primary;
+          e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)';
         }
       }}
     >
-      {/* Header with short code */}
-      <div className="flex items-center justify-between mb-2">
-        <span
-          className="text-xs font-mono font-medium"
-          style={{ color: theme.colors.text.tertiary }}
-        >
+      {/* Colored Header Bar with Short Code */}
+      <div 
+        className="py-3 flex items-center justify-between"
+        style={{
+          backgroundColor: theme.colors.interactive.primary,
+          color: theme.colors.text.inverse,
+          paddingLeft: '24px',
+          paddingRight: '24px',
+        }}
+      >
+        <span className="text-xs font-mono font-bold">
           {document.short_code}
         </span>
-        <span
-          className="px-1.5 py-0.5 text-xs font-medium rounded"
-          style={typeStyle}
-        >
+        <span className="text-xs font-bold">
           {document.document_type.charAt(0).toUpperCase()}
         </span>
       </div>
 
-      {/* Title */}
-      <h4 
-        className="font-medium mb-2 text-sm leading-tight"
-        style={{ 
-          color: theme.colors.text.primary,
-          display: '-webkit-box',
-          WebkitLineClamp: 2,
-          WebkitBoxOrient: 'vertical',
-          overflow: 'hidden',
+      {/* Card Content */}
+      <div 
+        className="py-4"
+        style={{
+          paddingLeft: '24px',
+          paddingRight: '24px',
         }}
       >
-        {document.title}
-      </h4>
+        {/* Title */}
+        <h4 
+          className="font-semibold mb-3 text-sm leading-tight"
+          style={{ 
+            color: theme.colors.text.primary,
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+            minHeight: '2.5rem',
+          }}
+        >
+          {document.title}
+        </h4>
 
-      {/* Phase */}
-      {document.phase && (
-        <div className="mb-2">
-          <span
-            className="px-2 py-1 rounded text-xs font-medium"
-            style={phaseStyle}
-          >
-            {document.phase}
-          </span>
+        {/* Footer with Phase and Date */}
+        <div className="flex items-center justify-between">
+          {/* Phase */}
+          {document.phase && (
+            <span
+              className="px-2 py-1 rounded-full text-xs font-medium"
+              style={{
+                backgroundColor: phaseStyle.backgroundColor,
+                color: phaseStyle.color,
+                fontSize: '10px',
+              }}
+            >
+              {document.phase}
+            </span>
+          )}
+          
+          {/* Date */}
+          <div className="text-xs" style={{ color: theme.colors.text.tertiary }}>
+            {formatDate(document.updated_at)}
+          </div>
         </div>
-      )}
-
-      {/* Date */}
-      <div className="text-xs" style={{ color: theme.colors.text.tertiary }}>
-        {formatDate(document.updated_at)}
       </div>
     </div>
   );

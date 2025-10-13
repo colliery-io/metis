@@ -4,14 +4,13 @@ level: vision
 title: "Metis"
 short_code: "METIS-V-0001"
 created_at: 2025-10-07T20:44:44.799698+00:00
-updated_at: 2025-10-07T20:44:44.799698+00:00
+updated_at: 2025-10-11T01:15:45.511843+00:00
 archived: false
 
 tags:
   - "#vision"
-  - "#phase/draft"
   - "#vision"
-  - "#phase/draft"
+  - "#phase/published"
 
 
 exit_criteria_met: false

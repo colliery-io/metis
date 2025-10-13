@@ -10,11 +10,11 @@ import {
   useSensors,
 } from '@dnd-kit/core';
 import { useProject } from '../contexts/ProjectContext';
-import { listDocuments, MetisAPI, DocumentInfo, transitionPhase } from '../lib/tauri-api';
+import { listDocuments, MetisAPI, DocumentInfo, transitionPhase, getProjectConfig, ProjectConfig } from '../lib/tauri-api';
 import { BoardNavigation, BoardType } from './BoardNavigation';
 import { KanbanColumn } from './KanbanColumn';
 import { CreateDocumentDialog } from './CreateDocumentDialog';
-import { DocumentEditor } from './DocumentEditor';
+import { DocumentViewer } from './DocumentViewer';
 import { DocumentCard } from './DocumentCard';
 import { getBoardConfig, getDocumentsByPhase } from '../lib/board-config';
 import { useTheme } from '../contexts/ThemeContext';
@@ -23,7 +23,7 @@ export interface KanbanBoardProps {
   onBackToProjects: () => void;
 }
 
-export const KanbanBoard: React.FC<KanbanBoardProps> = ({ onBackToProjects }) => {
+export const KanbanBoard: React.FC<KanbanBoardProps> = ({ onBackToProjects: _ }) => {
   const { currentProject } = useProject();
   const { theme } = useTheme();
   const [documents, setDocuments] = useState<DocumentInfo[]>([]);
@@ -31,9 +31,10 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ onBackToProjects }) =>
   const [error, setError] = useState<string | null>(null);
   const [currentBoard, setCurrentBoard] = useState<BoardType>('vision');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [editingDocument, setEditingDocument] = useState<DocumentInfo | null>(null);
+  const [viewingDocument, setViewingDocument] = useState<DocumentInfo | null>(null);
   const [activeDocument, setActiveDocument] = useState<DocumentInfo | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [projectConfig, setProjectConfig] = useState<ProjectConfig | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -54,6 +55,10 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ onBackToProjects }) =>
         // First ensure the project is loaded in the backend
         await MetisAPI.loadProject(currentProject.path);
         
+        // Get project configuration
+        const config = await getProjectConfig();
+        setProjectConfig(config);
+        
         // Then get the documents
         const docs = await listDocuments();
         setDocuments(docs);
@@ -70,6 +75,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ onBackToProjects }) =>
   // Calculate document counts for navigation
   const documentCounts = {
     vision: documents.filter(d => d.document_type === 'vision').length,
+    strategy: documents.filter(d => d.document_type === 'strategy').length,
     initiative: documents.filter(d => d.document_type === 'initiative').length,
     task: documents.filter(d => d.document_type === 'task').length,
     adr: documents.filter(d => d.document_type === 'adr').length,
@@ -79,7 +85,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ onBackToProjects }) =>
   };
 
   const handleDocumentClick = (document: DocumentInfo) => {
-    setEditingDocument(document);
+    setViewingDocument(document);
   };
 
   const handleDocumentCreated = async () => {
@@ -208,22 +214,32 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ onBackToProjects }) =>
             className="text-sm mt-1"
             style={{ color: theme.colors.text.secondary }}
           >
-            {currentProject?.path} • {boardConfig.description}
+{boardConfig.description}
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => setShowCreateDialog(true)}
-            className="btn btn-primary px-4 py-2 rounded-lg transition-colors"
-          >
-            + Create {boardConfig.title.slice(0, -1)}
-          </button>
-          <button
-            onClick={onBackToProjects}
-            className="btn btn-secondary px-4 py-2 rounded-lg transition-colors"
-          >
-            ← Back to Projects
-          </button>
+          {currentBoard !== 'vision' && (
+            <button
+              onClick={() => setShowCreateDialog(true)}
+              className="px-12 py-6 rounded-xl transition-colors font-bold"
+              style={{
+                backgroundColor: theme.colors.interactive.secondary,
+                color: theme.colors.interactive.primary,
+                border: `2px solid ${theme.colors.interactive.primary}`,
+                fontSize: '18px'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = theme.colors.interactive.primary;
+                e.currentTarget.style.color = theme.colors.text.inverse;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = theme.colors.interactive.secondary;
+                e.currentTarget.style.color = theme.colors.interactive.primary;
+              }}
+            >
+              + Create Ticket
+            </button>
+          )}
         </div>
       </div>
 
@@ -231,6 +247,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ onBackToProjects }) =>
       <BoardNavigation
         currentBoard={currentBoard}
         onBoardChange={setCurrentBoard}
+        projectConfig={projectConfig}
         documentCounts={documentCounts}
       />
 
@@ -289,11 +306,11 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ onBackToProjects }) =>
         onDocumentCreated={handleDocumentCreated}
       />
 
-      {/* Document Editor */}
-      <DocumentEditor
-        isOpen={editingDocument !== null}
-        onClose={() => setEditingDocument(null)}
-        document={editingDocument}
+      {/* Document Viewer */}
+      <DocumentViewer
+        isOpen={viewingDocument !== null}
+        onClose={() => setViewingDocument(null)}
+        document={viewingDocument}
         onDocumentUpdated={handleDocumentUpdated}
       />
     </div>

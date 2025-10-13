@@ -1,0 +1,1 @@
+export type BoardType = 'vision' | 'strategy' | 'initiative' | 'task' | 'adr' | 'backlog'

@@ -62,7 +62,7 @@ export class MetisAPI {
    * Read a specific document by its short code
    */
   static async readDocument(shortCode: string): Promise<DocumentContent> {
-    return invoke('read_document', { short_code: shortCode });
+    return invoke('read_document', { shortCode: shortCode });
   }
 
   /**
@@ -70,6 +70,20 @@ export class MetisAPI {
    */
   static async searchDocuments(query: string): Promise<DocumentInfo[]> {
     return invoke('search_documents', { query });
+  }
+
+  /**
+   * Get project configuration
+   */
+  static async getProjectConfig(): Promise<ProjectConfig> {
+    return invoke('get_project_config');
+  }
+
+  /**
+   * Get available parents for a given child document type
+   */
+  static async getAvailableParents(childDocumentType: string): Promise<ParentOption[]> {
+    return invoke('get_available_parents', { childDocumentType });
   }
 }
 
@@ -162,6 +176,19 @@ export interface CreateDocumentResult {
   filepath: string;
 }
 
+export interface ParentOption {
+  short_code: string;
+  title: string;
+  document_type: string;
+  phase: string;
+}
+
+export interface ProjectConfig {
+  strategies_enabled: boolean;
+  initiatives_enabled: boolean;
+  preset_name: string;
+}
+
 // API functions for document CRUD operations
 export class DocumentAPI {
   /**
@@ -175,7 +202,7 @@ export class DocumentAPI {
    * Update document content
    */
   static async updateDocument(shortCode: string, content: string): Promise<void> {
-    return invoke('update_document', { short_code: shortCode, content });
+    return invoke('update_document', { shortCode, content });
   }
 
   /**
@@ -189,7 +216,7 @@ export class DocumentAPI {
    * Transition a document to a new phase
    */
   static async transitionPhase(shortCode: string, newPhase?: string): Promise<string> {
-    return invoke('transition_phase', { shortCode: shortCode, newPhase: newPhase });
+    return invoke('transition_phase', { shortCode, newPhase });
   }
 }
 
@@ -197,6 +224,8 @@ export class DocumentAPI {
 export const listDocuments = MetisAPI.listDocuments;
 export const readDocument = MetisAPI.readDocument;
 export const searchDocuments = MetisAPI.searchDocuments;
+export const getProjectConfig = MetisAPI.getProjectConfig;
+export const getAvailableParents = MetisAPI.getAvailableParents;
 export const createDocument = DocumentAPI.createDocument;
 export const updateDocument = DocumentAPI.updateDocument;
 export const deleteDocument = DocumentAPI.deleteDocument;

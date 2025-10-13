@@ -1,0 +1,175 @@
+use metis_core::{
+    Application, Database,
+    application::services::workspace::transition::PhaseTransitionService,
+    domain::documents::types::Phase,
+};
+use std::path::PathBuf;
+use tauri::State;
+use crate::AppState;
+
+fn parse_phase(phase_str: &str) -> Result<Phase, String> {
+    match phase_str.to_lowercase().as_str() {
+        "draft" => Ok(Phase::Draft),
+        "review" => Ok(Phase::Review),
+        "published" => Ok(Phase::Published),
+        "discussion" => Ok(Phase::Discussion),
+        "decided" => Ok(Phase::Decided),
+        "superseded" => Ok(Phase::Superseded),
+        "backlog" => Ok(Phase::Backlog),
+        "todo" => Ok(Phase::Todo),
+        "active" => Ok(Phase::Active),
+        "blocked" => Ok(Phase::Blocked),
+        "completed" => Ok(Phase::Completed),
+        "shaping" => Ok(Phase::Shaping),
+        "design" => Ok(Phase::Design),
+        "ready" => Ok(Phase::Ready),
+        "decompose" => Ok(Phase::Decompose),
+        "discovery" => Ok(Phase::Discovery),
+        "doing" => Ok(Phase::Active), // Map "doing" to Active
+        _ => Err(format!("Unknown phase: {}", phase_str)),
+    }
+}
+
+fn resolve_short_code_to_document_id(
+    metis_dir: &PathBuf,
+    short_code: &str,
+) -> Result<String, String> {
+    let db_path = metis_dir.join("metis.db");
+    let db = Database::new(db_path.to_str().unwrap()).map_err(|e| {
+        format!("Database error: {}", e)
+    })?;
+
+    let mut repo = db.repository().map_err(|e| {
+        format!("Repository error: {}", e)
+    })?;
+
+    // Use the core DAL method
+    repo.resolve_short_code_to_document_id(short_code)
+        .map_err(|e| {
+            format!("Resolution error: {}", e)
+        })
+}
+
+#[tauri::command]
+pub async fn transition_phase(
+    state: State<'_, std::sync::Mutex<AppState>>,
+    short_code: String,
+    new_phase: Option<String>,
+) -> Result<String, String> {
+    let project_path = {
+        let app_state = state.lock().map_err(|e| format!("Failed to lock state: {}", e))?;
+        app_state.current_project.as_ref()
+            .ok_or("No project loaded")?
+            .clone()
+    };
+    
+    let metis_dir = project_path.join(".metis");
+    
+    // Resolve short code to document ID
+    let document_id = resolve_short_code_to_document_id(&metis_dir, &short_code)?;
+    
+    let transition_service = PhaseTransitionService::new(&metis_dir);
+    
+    // Perform the transition
+    let result = if let Some(phase_str) = new_phase {
+        // Transition to specific phase
+        let target_phase = parse_phase(&phase_str)?;
+        transition_service
+            .transition_document(&document_id, target_phase)
+            .await
+            .map_err(|e| format!("Failed to transition phase: {}", e))?
+    } else {
+        // Auto-transition to next phase
+        transition_service
+            .transition_to_next_phase(&document_id)
+            .await
+            .map_err(|e| format!("Failed to transition phase: {}", e))?
+    };
+    
+    // Auto-sync after transition to update database
+    let db_path = metis_dir.join("metis.db");
+    let database = Database::new(db_path.to_str().unwrap())
+        .map_err(|e| format!("Failed to open database for sync: {}", e))?;
+    let app = Application::new(database);
+    
+    let sync_results = app.sync_directory(&metis_dir)
+        .await
+        .map_err(|e| format!("Failed to sync workspace: {}", e))?;
+    
+    tracing::info!("Sync completed with {} results", sync_results.len());
+    for sync_result in &sync_results {
+        tracing::info!("Sync result: {:?}", sync_result);
+    }
+    
+    // Verify the document was actually updated in the database
+    let db_path = metis_dir.join("metis.db");
+    let database = Database::new(db_path.to_str().unwrap())
+        .map_err(|e| format!("Failed to open database for verification: {}", e))?;
+    let mut app_verify = Application::new(database);
+    
+    // Check if the document in the database has the correct phase
+    let updated_doc = app_verify.with_database(|service| {
+        service.find_by_short_code(&short_code)
+    }).map_err(|e| format!("Failed to verify document update: {}", e))?;
+    
+    if let Some(doc) = updated_doc {
+        tracing::info!("Verified document phase in database: {}", doc.phase);
+        if doc.phase != result.to_phase.to_string() {
+            tracing::warn!("Database phase {} doesn't match expected phase {}", doc.phase, result.to_phase);
+        }
+    } else {
+        tracing::warn!("Document not found in database after sync");
+    }
+    
+    Ok(result.to_phase.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::TempDir;
+    use crate::services::project::initialize_project;
+
+    async fn setup_test_project() -> (TempDir, AppState) {
+        let temp_dir = TempDir::new().unwrap();
+        let project_path = temp_dir.path().to_string_lossy().to_string();
+        
+        // Initialize project
+        initialize_project(project_path.clone(), Some("TEST".to_string())).await.unwrap();
+        
+        // Create app state with loaded project
+        let app_state = AppState {
+            current_project: Some(temp_dir.path().to_path_buf()),
+        };
+        
+        (temp_dir, app_state)
+    }
+
+    #[tokio::test]
+    async fn test_parse_phase_valid() {
+        assert!(parse_phase("draft").is_ok());
+        assert!(parse_phase("review").is_ok());
+        assert!(parse_phase("doing").is_ok()); // Should map to Active
+    }
+
+    #[tokio::test]
+    async fn test_parse_phase_invalid() {
+        let result = parse_phase("invalid_phase");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Unknown phase"));
+    }
+
+    #[tokio::test]
+    async fn test_resolve_short_code_to_document_id() {
+        let temp_dir = TempDir::new().unwrap();
+        let project_path = temp_dir.path().to_string_lossy().to_string();
+        
+        initialize_project(project_path.clone(), Some("TEST".to_string())).await.unwrap();
+        let metis_dir = temp_dir.path().join(".metis");
+
+        // Use the vision document that was created during initialization
+        // Test resolving the short code for the existing vision
+        let document_id = resolve_short_code_to_document_id(&metis_dir, "TEST-V-0001");
+        assert!(document_id.is_ok());
+    }
+}

@@ -1,5 +1,5 @@
 import { DocumentInfo } from './tauri-api';
-import { BoardType } from '../components/BoardNavigation';
+import { BoardType } from '../types/board';
 
 export interface PhaseConfig {
   key: string;

@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "vue-tsc && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
     "test": "vitest",
@@ -14,32 +14,31 @@
     "coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "@dnd-kit/core": "^6.3.1",
-    "@dnd-kit/sortable": "^10.0.0",
-    "@dnd-kit/utilities": "^3.2.2",
     "@tauri-apps/api": "^2.8.0",
     "@tauri-apps/plugin-dialog": "^2.4.0",
     "@tiptap/extension-placeholder": "^3.6.6",
-    "@tiptap/extension-typography": "^3.6.6",
-    "@tiptap/react": "^3.6.6",
     "@tiptap/starter-kit": "^3.6.6",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "@tiptap/vue-3": "^3.6.6",
+    "@vueuse/core": "^13.9.0",
+    "gray-matter": "^4.0.3",
+    "sortablejs": "^1.15.3",
+    "tiptap-markdown-3": "^0.8.12",
+    "vue": "^3.5.12",
+    "vue-draggable-plus": "^0.5.6"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.14",
-    "@testing-library/jest-dom": "^6.9.1",
-    "@testing-library/react": "^16.3.0",
-    "@testing-library/user-event": "^14.6.1",
-    "@types/react": "^18.2.43",
-    "@types/react-dom": "^18.2.17",
-    "@vitejs/plugin-react": "^4.2.1",
+    "@types/sortablejs": "^1.15.8",
+    "@vitejs/plugin-vue": "^5.2.1",
+    "@vue/test-utils": "^2.4.6",
+    "@vue/tsconfig": "^0.7.0",
     "autoprefixer": "^10.4.21",
     "jsdom": "^27.0.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.14",
     "typescript": "^5.2.2",
     "vite": "^5.0.8",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "vue-tsc": "^2.1.10"
   }
 }
