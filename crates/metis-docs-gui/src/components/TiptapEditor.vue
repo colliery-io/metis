@@ -212,13 +212,43 @@ onBeforeUnmount(() => {
   height: 100% !important;
   flex: 1;
   min-height: 0;
+  color: var(--color-text-primary);
 }
 
 .tiptap-content :deep(.ProseMirror p.is-editor-empty:first-child::before) {
-  color: #adb5bd;
+  color: var(--color-text-tertiary);
   content: attr(data-placeholder);
   float: left;
   height: 0;
   pointer-events: none;
+}
+
+.tiptap-content :deep(.ProseMirror h1),
+.tiptap-content :deep(.ProseMirror h2),
+.tiptap-content :deep(.ProseMirror h3),
+.tiptap-content :deep(.ProseMirror h4),
+.tiptap-content :deep(.ProseMirror h5),
+.tiptap-content :deep(.ProseMirror h6) {
+  color: var(--color-text-primary);
+}
+
+.tiptap-content :deep(.ProseMirror p),
+.tiptap-content :deep(.ProseMirror li),
+.tiptap-content :deep(.ProseMirror td),
+.tiptap-content :deep(.ProseMirror th) {
+  color: var(--color-text-primary);
+}
+
+.tiptap-content :deep(.ProseMirror blockquote) {
+  color: var(--color-text-secondary);
+  border-left-color: var(--color-border-primary);
+}
+
+.tiptap-content :deep(.ProseMirror strong) {
+  color: var(--color-text-primary);
+}
+
+.tiptap-content :deep(.ProseMirror em) {
+  color: var(--color-text-primary);
 }
 </style>
