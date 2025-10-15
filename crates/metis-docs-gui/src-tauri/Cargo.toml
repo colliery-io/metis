@@ -1,11 +1,11 @@
 [package]
 name = "metis-docs-gui"
-version = "0.5.0"
+version.workspace = true
 description = "Multi-project GUI for Metis Flight Levels project management"
-authors = ["Dylan Storey <contact@colliery.io>"]
-license = "Apache-2.0"
-repository = "https://github.com/dstorey/metis"
-edition = "2021"
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+edition.workspace = true
 rust-version = "1.77.2"
 
 # Use parent workspace
@@ -28,7 +28,7 @@ tauri-plugin-shell = "2.0"
 tauri-plugin-dialog = "2.0"
 log = "0.4"
 tracing = "0.1"
-metis-docs-core = { path = "../../metis-docs-core", version = "0.5.0" }
+metis-docs-core = { path = "../../metis-docs-core", version = "0.6.0" }
 tokio = { version = "1.0", features = ["rt"] }
 
 [dev-dependencies]
