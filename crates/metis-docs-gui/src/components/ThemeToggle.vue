@@ -1,33 +1,26 @@
 <template>
-  <div class="flex items-center gap-6">
-    <span class="text-secondary" style="font-size: 18px">Theme:</span>
-    <div class="relative">
+  <div class="theme-toggle-container">
+    <span class="theme-label">Theme:</span>
+    <div class="theme-selector">
       <button
         @click="isOpen = !isOpen"
-        class="px-6 py-3 text-secondary hover:text-primary hover:bg-elevated rounded-lg transition-colors min-w-32 bg-transparent border-none"
-        style="font-size: 18px"
+        class="theme-button"
       >
         {{ themeLabels[themeName] }}
       </button>
       
       <div
         v-if="isOpen"
-        class="absolute right-0 top-full mt-2 bg-elevated rounded-lg shadow-lg z-10 min-w-40 overflow-hidden"
+        class="theme-dropdown"
       >
         <button
           v-for="theme in themes"
           :key="theme"
           @click="handleThemeSelect(theme)"
           :class="[
-            'w-full px-6 py-3 text-left transition-colors border-none',
-            theme === themeName 
-              ? 'text-primary bg-interactive-secondary' 
-              : 'text-secondary hover:bg-secondary hover:text-primary'
+            'theme-option',
+            { 'theme-option-active': theme === themeName }
           ]"
-          :style="{
-            fontSize: '16px',
-            backgroundColor: theme === themeName ? 'var(--color-interactive-secondary)' : 'transparent'
-          }"
         >
           {{ themeLabels[theme] }}
         </button>
@@ -56,3 +49,84 @@ const handleThemeSelect = (theme: keyof typeof themeLabels) => {
   isOpen.value = false
 }
 </script>
+
+<style scoped>
+.theme-toggle-container {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.theme-label {
+  color: var(--color-text-secondary);
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.theme-selector {
+  position: relative;
+}
+
+.theme-button {
+  padding: 12px 24px;
+  background-color: transparent;
+  border: 1px solid var(--color-border-primary);
+  border-radius: 8px;
+  color: var(--color-text-secondary);
+  font-size: 18px;
+  font-weight: 500;
+  min-width: 128px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.theme-button:hover {
+  color: var(--color-text-primary);
+  background-color: var(--color-background-elevated);
+  border-color: var(--color-interactive-primary);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.theme-dropdown {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  margin-top: 8px;
+  background-color: var(--color-background-elevated);
+  border: 1px solid var(--color-border-primary);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 10;
+  min-width: 160px;
+  overflow: hidden;
+}
+
+.theme-option {
+  width: 100%;
+  padding: 12px 24px;
+  background-color: transparent;
+  border: none;
+  color: var(--color-text-secondary);
+  font-size: 16px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.theme-option:hover {
+  background-color: var(--color-background-secondary);
+  color: var(--color-text-primary);
+}
+
+.theme-option-active {
+  color: var(--color-text-primary);
+  background-color: var(--color-interactive-secondary);
+}
+
+.theme-option-active:hover {
+  background-color: var(--color-interactive-secondary);
+}
+</style>

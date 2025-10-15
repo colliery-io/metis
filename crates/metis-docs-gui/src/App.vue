@@ -27,8 +27,7 @@
               :src="getMascotImage()"
               alt="Home"
               @click="setCurrentProject(null)"
-              style="width: 64px; height: 64px; cursor: pointer"
-              class="home-icon-glow"
+              class="home-icon-topbar"
               title="Home"
             />
             <ThemeToggle />
@@ -47,10 +46,13 @@
             :onShowProjectBrowser="handleShowProjectBrowser"
           />
           <div class="flex-1 flex flex-col overflow-hidden">
+            <!-- Normal Kanban Board -->
             <KanbanBoard 
               v-if="currentProject"
               :onBackToProjects="() => setCurrentProject(null)"
             />
+            
+            <!-- Home Screen -->
             <div v-else class="flex-1 flex items-center justify-center">
               <div class="text-center">
                 <!-- Mascot -->
@@ -58,8 +60,7 @@
                   <img
                     :src="getMascotImage()"
                     alt="Metis mascot"
-                    class="mx-auto animate-bounce-gentle filter drop-shadow-glow"
-                    style="width: 512px; height: 512px"
+                    class="home-icon-main"
                   />
                 </div>
               </div>
@@ -132,3 +133,72 @@ const getMascotImage = () => {
   }
 }
 </script>
+
+<style scoped>
+/* Theme-specific glow colors for main owl only */
+:global([data-theme="light"]) .home-icon-main {
+  --glow-color: rgba(0, 0, 0, 0.5);
+  --glow-size-base-1: 32px;
+  --glow-size-base-2: 64px;
+  --glow-size-hover-1: 40px;
+  --glow-size-hover-2: 80px;
+}
+
+:global([data-theme="dark"]) .home-icon-main {
+  --glow-color: rgba(255, 255, 255, 0.4);
+  --glow-size-base-1: 24px;
+  --glow-size-base-2: 48px;
+  --glow-size-hover-1: 32px;
+  --glow-size-hover-2: 64px;
+}
+
+:global([data-theme="hyper"]) .home-icon-main {
+  --glow-color: rgba(255, 20, 147, 0.6);
+  --glow-size-base-1: 24px;
+  --glow-size-base-2: 48px;
+  --glow-size-hover-1: 32px;
+  --glow-size-hover-2: 64px;
+}
+
+/* Home Icon - Top Bar (no glow) */
+.home-icon-topbar {
+  width: clamp(56px, 10vw, 80px);
+  height: clamp(56px, 10vw, 80px);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.home-icon-topbar:hover {
+  transform: scale(1.05);
+}
+
+/* Home Icon - Main Screen */
+.home-icon-main {
+  width: clamp(320px, 45vw, 640px);
+  height: clamp(320px, 45vw, 640px);
+  max-width: 90vw;
+  max-height: 70vh;
+  margin: 0 auto;
+  display: block;
+  animation: bounce-gentle 3s ease-in-out infinite;
+  filter: drop-shadow(0 0 var(--glow-size-base-1, 24px) var(--glow-color, rgba(59, 130, 246, 0.5))) 
+          drop-shadow(0 0 var(--glow-size-base-2, 48px) var(--glow-color, rgba(59, 130, 246, 0.2)));
+  transition: all 0.3s ease;
+}
+
+.home-icon-main:hover {
+  transform: scale(1.02);
+  filter: drop-shadow(0 0 var(--glow-size-hover-1, 32px) var(--glow-color, rgba(59, 130, 246, 0.7))) 
+          drop-shadow(0 0 var(--glow-size-hover-2, 64px) var(--glow-color, rgba(59, 130, 246, 0.3)));
+}
+
+/* Gentle bounce animation */
+@keyframes bounce-gentle {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+</style>

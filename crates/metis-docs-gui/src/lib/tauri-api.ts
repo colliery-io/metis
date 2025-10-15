@@ -17,6 +17,7 @@ export interface DocumentInfo {
   archived: boolean;
   created_at: number;
   updated_at: number;
+  tags: string[];
 }
 
 export interface DocumentContent {
@@ -84,6 +85,13 @@ export class MetisAPI {
    */
   static async getAvailableParents(childDocumentType: string): Promise<ParentOption[]> {
     return invoke('get_available_parents', { childDocumentType });
+  }
+
+  /**
+   * Transition a document to a new phase
+   */
+  static async transitionPhase(shortCode: string, newPhase?: string): Promise<string> {
+    return invoke('transition_phase', { shortCode, newPhase });
   }
 }
 
@@ -168,6 +176,7 @@ export interface CreateDocumentRequest {
   parent_id?: string;
   complexity?: string;
   risk_level?: string;
+  tags?: string[];
 }
 
 export interface CreateDocumentResult {
@@ -187,6 +196,18 @@ export interface ProjectConfig {
   strategies_enabled: boolean;
   initiatives_enabled: boolean;
   preset_name: string;
+}
+
+export interface ArchiveResult {
+  total_archived: number;
+  archived_documents: ArchivedDocument[];
+}
+
+export interface ArchivedDocument {
+  document_id: string;
+  document_type: string;
+  original_path: string;
+  archived_path: string;
 }
 
 // API functions for document CRUD operations
@@ -218,6 +239,13 @@ export class DocumentAPI {
   static async transitionPhase(shortCode: string, newPhase?: string): Promise<string> {
     return invoke('transition_phase', { shortCode, newPhase });
   }
+
+  /**
+   * Archive a document
+   */
+  static async archiveDocument(shortCode: string): Promise<ArchiveResult> {
+    return invoke('archive_document', { shortCode });
+  }
 }
 
 // Standalone functions for direct import
@@ -229,4 +257,5 @@ export const getAvailableParents = MetisAPI.getAvailableParents;
 export const createDocument = DocumentAPI.createDocument;
 export const updateDocument = DocumentAPI.updateDocument;
 export const deleteDocument = DocumentAPI.deleteDocument;
-export const transitionPhase = DocumentAPI.transitionPhase;
+export const transitionPhase = MetisAPI.transitionPhase;
+export const archiveDocument = DocumentAPI.archiveDocument;

@@ -45,7 +45,7 @@ impl App {
                     metis_core::application::services::DatabaseService::new(db.into_repository());
                 let archive_service = ArchiveService::new(workspace_dir);
                 match archive_service
-                    .archive_document(&selected_item.id(), &mut db_service)
+                    .archive_document_by_short_code(&selected_item.id(), &mut db_service)
                     .await
                 {
                     Ok(_archive_result) => {

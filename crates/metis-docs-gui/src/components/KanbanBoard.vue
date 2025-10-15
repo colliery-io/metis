@@ -1,453 +1,527 @@
 <template>
-  <div class="h-full flex flex-col">
-    <!-- Header -->
-    <div 
-      class="flex items-center justify-between p-6 border-b"
-      :style="{
-        backgroundColor: theme.colors.background.elevated,
-        borderColor: theme.colors.border.primary,
-      }"
-    >
-      <div>
-        <h1 
-          class="text-2xl font-bold"
-          :style="{ color: theme.colors.text.primary }"
-        >
-          {{ boardConfig?.title || 'Document Board' }}
-        </h1>
-        <p 
-          class="text-sm mt-1"
-          :style="{ color: theme.colors.text.secondary }"
-        >
-          {{ boardConfig?.description || 'Manage your documents' }}
-        </p>
-      </div>
-      <div class="flex items-center gap-3">
+  <div class="kanban-board">
+    <!-- Board Selection Header -->
+    <div class="board-header">
+      <div class="flex items-center justify-between">
+        <h2>{{ currentBoardConfig?.title || 'Kanban Board' }}</h2>
         <button
           v-if="currentBoard !== 'vision'"
           @click="showCreateDialog = true"
-          class="px-12 py-6 rounded-xl transition-colors font-bold"
-          :style="{
-            backgroundColor: theme.colors.interactive.secondary,
-            color: theme.colors.interactive.primary,
-            border: `2px solid ${theme.colors.interactive.primary}`,
-            fontSize: '18px'
-          }"
-          @mouseenter="handleCreateButtonHover"
-          @mouseleave="handleCreateButtonLeave"
+          class="board-tab create-button"
+          style="background-color: #10b981; color: white; border: 1px solid #10b981;"
         >
-          + Create Ticket
+          + Create {{ getDocumentTypeLabel(currentBoard) }}
+        </button>
+      </div>
+      <div class="board-tabs">
+        <button
+          v-for="board in availableBoards"
+          :key="board"
+          :class="['board-tab', { active: currentBoard === board }]"
+          @click="switchBoard(board)"
+        >
+          {{ getBoardTitle(board) }} ({{ getDocumentCount(board) }})
         </button>
       </div>
     </div>
 
-    <!-- Board Navigation -->
-    <div class="flex gap-4 p-4 bg-secondary border-b border-primary">
-      <button 
-        v-for="board in availableBoards" 
-        :key="board"
-        @click="handleBoardChange(board)"
-        :class="board === currentBoard ? 'bg-interactive-primary text-inverse' : 'bg-elevated text-secondary'"
-        class="px-4 py-2 rounded"
-      >
-        {{ board }} ({{ documentCounts[board] || 0 }})
-      </button>
-    </div>
-
-    <!-- Loading State -->
-    <div v-if="loading" class="flex items-center justify-center min-h-64">
-      <div :style="{ color: theme.colors.text.secondary }">Loading documents...</div>
-    </div>
-
-    <!-- Error State -->
-    <div 
-      v-else-if="error"
-      class="rounded-lg p-4 m-6"
-      :style="{
-        backgroundColor: theme.colors.background.secondary,
-        border: `1px solid ${theme.colors.border.error}`,
-      }"
-    >
-      <div 
-        class="font-medium"
-        :style="{ color: theme.colors.border.error }"
-      >
-        Error loading documents
-      </div>
-      <div 
-        class="text-sm mt-1"
-        :style="{ color: theme.colors.border.error }"
-      >
-        {{ error }}
+    <!-- Vision Board - Single Document Editor -->
+    <div v-if="currentBoard === 'vision'" class="vision-container flex flex-col">
+      <VisionDisplay
+        v-if="visionDocument"
+        :vision="visionDocument"
+        @document-updated="handleDocumentUpdated"
+      />
+      <div v-else class="text-center py-8" style="color: var(--color-text-secondary)">
+        No vision document found. Create one first.
       </div>
     </div>
 
-    <!-- Kanban Columns - hide when there are published visions on vision board -->
-    <div v-else-if="!(hasPublishedVisions && currentBoard === 'vision')" class="flex-1 p-6 overflow-hidden">
-      <div class="h-full flex gap-4 overflow-x-auto">
-        <div 
-          v-for="phase in boardConfig?.phases || []"
-          :key="phase.key" 
-          class="flex-shrink-0" 
-          :style="{ width: columnWidth }"
-          :data-phase="phase.key"
-        >
-          <div class="h-full bg-elevated rounded-lg border border-primary">
-            <div class="p-4 border-b border-primary">
-              <h3 class="font-semibold text-primary">{{ phase.title }}</h3>
-            </div>
-            <VueDraggable
-              v-model="filteredDocumentsByPhase[phase.key]"
-              :group="{ name: 'documents', pull: true, put: true }"
-              :animation="200"
-              ghost-class="opacity-50"
-              chosen-class="scale-105"
-              class="p-4 space-y-2 overflow-y-auto min-h-32"
-              style="max-height: calc(100vh - 300px)"
-              :onAdd="(evt) => handleDocumentAdd(evt, phase.key)"
-              :onRemove="(evt) => handleDocumentRemove(evt, phase.key)"
-              :onStart="(evt) => handleDragStart(evt)"
-              :onEnd="(evt) => handleDragEnd(evt)"
-              :onChange="(evt) => handleDocumentChange(evt, phase.key)"
-            >
-              <DocumentCard
-                v-for="doc in filteredDocumentsByPhase[phase.key] || []" 
-                :key="doc.short_code"
-                :document="doc"
-                :data-id="doc.short_code"
-                @click="handleDocumentClick"
-              />
-            </VueDraggable>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Published Vision Content -->
-    <div v-if="hasPublishedVisions && currentBoard === 'vision'" class="flex-1 p-6 overflow-hidden">
-      <div class="h-full overflow-y-auto">
-        <VisionDisplay 
-          v-for="vision in publishedVisions" 
-          :key="vision.short_code"
-          :vision="vision"
-          @document-updated="handleDocumentUpdated"
-        />
-      </div>
+    <!-- Other Boards - Kanban Columns -->
+    <div v-else class="columns-container">
+      <KanbanColumn
+        v-for="phase in currentBoardConfig?.phases || []"
+        :key="phase.key"
+        :title="phase.title"
+        :phase-key="phase.key"
+        :documents="documentsByPhase[phase.key] || []"
+        :board-type="currentBoard"
+        @documents-changed="handleDocumentsChanged"
+        @promote="handlePromoteToTaskBoard"
+        @view="handleViewDocument"
+        @archive="handleArchiveDocument"
+      />
     </div>
 
     <!-- Create Document Dialog -->
     <CreateDocumentDialog
-      v-if="showCreateDialog"
       :isOpen="showCreateDialog"
       :boardType="currentBoard"
       @close="showCreateDialog = false"
       @document-created="handleDocumentCreated"
     />
 
-    <!-- Document Viewer -->
+    <!-- Document Viewer Modal -->
     <DocumentViewer
-      v-if="viewingDocument"
-      :isOpen="!!viewingDocument"
-      :document="viewingDocument"
-      @close="viewingDocument = null"
-      @document-updated="handleDocumentUpdated"
+      :isOpen="showDocumentViewer"
+      :document="selectedDocument"
+      @close="handleCloseDocumentViewer"
+      @document-updated="handleDocumentViewerUpdated"
     />
+
+    <!-- Archive Confirmation Modal -->
+    <div
+      v-if="showArchiveConfirmation"
+      class="modal-overlay"
+      @click="cancelArchive"
+    >
+      <div
+        class="archive-modal"
+        @click.stop
+      >
+        <div class="modal-header">
+          <h3>Archive Document</h3>
+        </div>
+        
+        <div class="modal-content">
+          <p class="archive-warning">
+            Are you sure you want to archive "<strong>{{ documentToArchive?.title }}</strong>"?
+          </p>
+          <p class="archive-details">
+            This will move the document and all its children to the archived folder. 
+            This action cannot be undone.
+          </p>
+        </div>
+        
+        <div class="modal-actions">
+          <button
+            @click="cancelArchive"
+            class="cancel-button"
+          >
+            Cancel
+          </button>
+          <button
+            @click="confirmArchive"
+            class="archive-button"
+          >
+            Archive Document
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
-import { VueDraggable } from 'vue-draggable-plus'
+import { ref, onMounted, computed } from 'vue'
+import type { DocumentInfo } from '../lib/tauri-api'
+import { listDocuments, transitionPhase, archiveDocument } from '../lib/tauri-api'
 import { useProject } from '../composables/useProject'
-import { useTheme } from '../composables/useTheme'
-import { listDocuments, MetisAPI, getProjectConfig, transitionPhase } from '../lib/tauri-api'
 import { getBoardConfig, getDocumentsByPhase } from '../lib/board-config'
-import type { DocumentInfo, ProjectConfig } from '../lib/tauri-api'
 import type { BoardType } from '../types/board'
+import KanbanColumn from './KanbanColumn.vue'
+import VisionDisplay from './VisionDisplay.vue'
 import CreateDocumentDialog from './CreateDocumentDialog.vue'
 import DocumentViewer from './DocumentViewer.vue'
-import DocumentCard from './DocumentCard.vue'
-import VisionDisplay from './VisionDisplay.vue'
-
-const availableBoards: BoardType[] = ['vision', 'initiative', 'task', 'adr', 'backlog']
 
 interface Props {
-  onBackToProjects?: () => void
+  onBackToProjects: () => void
 }
 
 defineProps<Props>()
 
 const { currentProject } = useProject()
-const { theme } = useTheme()
 
-const documents = ref<DocumentInfo[]>([])
-const loading = ref(true)
-const error = ref<string | null>(null)
+// Multi-board support for flight levels
+const availableBoards: BoardType[] = ['vision', 'initiative', 'task', 'adr', 'backlog']
 const currentBoard = ref<BoardType>('vision')
+const allDocuments = ref<DocumentInfo[]>([])
 const showCreateDialog = ref(false)
-const viewingDocument = ref<DocumentInfo | null>(null)
-const projectConfig = ref<ProjectConfig | null>(null)
 
-// Computed properties
-const boardConfig = computed(() => getBoardConfig(currentBoard.value))
+// Document viewer modal state
+const showDocumentViewer = ref(false)
+const selectedDocument = ref<DocumentInfo | null>(null)
+
+// Archive confirmation modal state
+const showArchiveConfirmation = ref(false)
+const documentToArchive = ref<DocumentInfo | null>(null)
+
+// Board configuration
+const currentBoardConfig = computed(() => getBoardConfig(currentBoard.value))
+
+// Documents organized by phase for current board
 const documentsByPhase = ref<Record<string, DocumentInfo[]>>({})
 
-const documentCounts = computed(() => ({
-  vision: documents.value.filter(d => d.document_type === 'vision').length,
-  strategy: documents.value.filter(d => d.document_type === 'strategy').length,
-  initiative: documents.value.filter(d => d.document_type === 'initiative').length,
-  task: documents.value.filter(d => d.document_type === 'task').length,
-  adr: documents.value.filter(d => d.document_type === 'adr').length,
-  backlog: documents.value.filter(d => 
-    d.document_type === 'task' && !d.filepath.includes('initiatives/')
-  ).length,
-}))
-
-const columnWidth = computed(() => {
-  const columnCount = boardConfig.value?.phases.length || 1
-  const minWidth = 180
-  const availableWidth = `calc((100vw - 320px - ${columnCount * 16}px) / ${columnCount})`
-  return `max(${minWidth}px, ${availableWidth})`
+// Get the vision document (should be only one)
+const visionDocument = computed(() => {
+  return allDocuments.value.find(doc => doc.document_type === 'vision')
 })
 
-// Special handling for published visions - show as full content instead of cards
-const publishedVisions = computed(() => {
-  if (currentBoard.value !== 'vision') return []
-  return documentsByPhase.value.published || []
-})
-
-const hasPublishedVisions = computed(() => publishedVisions.value.length > 0)
-
-// For vision board, filter out published documents from kanban display
-const filteredDocumentsByPhase = computed(() => {
-  if (currentBoard.value !== 'vision') return documentsByPhase.value
-  
-  const filtered = { ...documentsByPhase.value }
-  // Show published visions as content, not in kanban
-  filtered.published = []
-  return filtered
-})
-
-// Helper functions
-const formatDate = (timestamp: number) => {
-  try {
-    return new Date(timestamp * 1000).toLocaleDateString()
-  } catch {
-    return 'Invalid date'
-  }
-}
-
-// Methods
-const loadDocuments = async () => {
-  if (!currentProject.value?.path) return
-
-  try {
-    loading.value = true
-    error.value = null
-    
-    // First ensure the project is loaded in the backend
-    await MetisAPI.loadProject(currentProject.value.path)
-    
-    // Get project configuration
-    const config = await getProjectConfig()
-    projectConfig.value = config
-    
-    // Then get the documents
-    const docs = await listDocuments()
-    documents.value = docs
-    updateDocumentsByPhase()
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Failed to load documents'
-  } finally {
-    loading.value = false
-  }
-}
-
-const handleDocumentClick = (document: DocumentInfo) => {
-  viewingDocument.value = document
-}
-
-const handleDocumentCreated = async () => {
-  await loadDocuments()
-}
-
-const handleDocumentUpdated = async () => {
-  await loadDocuments()
-}
-
-const handleBoardChange = (newBoard: BoardType) => {
-  currentBoard.value = newBoard
-  updateDocumentsByPhase()
-}
-
+// Update documents by phase when board changes or documents load
 const updateDocumentsByPhase = () => {
-  const newDocsByPhase = getDocumentsByPhase(documents.value, currentBoard.value)
-  console.log('Updated documents by phase:', newDocsByPhase)
-  documentsByPhase.value = newDocsByPhase
+  console.log('Updating documents by phase for board:', currentBoard.value)
+  console.log('All documents:', allDocuments.value)
+  console.log('Vision documents found:', allDocuments.value.filter(doc => doc.document_type === 'vision'))
+  documentsByPhase.value = getDocumentsByPhase(allDocuments.value, currentBoard.value)
+  console.log('Documents by phase after filtering:', documentsByPhase.value)
 }
 
-let draggedDocument: DocumentInfo | null = null
-
-const handleDragStart = (evt: any) => {
-  console.log('Drag start event:', evt)
-  const element = evt.item
-  const shortCode = element.querySelector('.font-medium')?.textContent
-  console.log('Found short code:', shortCode)
-  if (shortCode) {
-    draggedDocument = documents.value.find(doc => doc.short_code === shortCode) || null
-    console.log('Set draggedDocument:', draggedDocument)
+// Load documents from backend
+const loadDocuments = async () => {
+  if (!currentProject.value) return
+  
+  try {
+    allDocuments.value = await listDocuments()
+    updateDocumentsByPhase()
+    console.log('Loaded documents:', allDocuments.value)
+    console.log('Sample document structure:', allDocuments.value[0])
+    console.log('Current board:', currentBoard.value)
+    console.log('Board config:', currentBoardConfig.value)
+    console.log('Documents by phase:', documentsByPhase.value)
+  } catch (error) {
+    console.error('Failed to load documents:', error)
   }
 }
 
-const handleDragEnd = async (evt: any) => {
-  console.log('Drag end event:', evt)
-  console.log('Event from:', evt.from)
-  console.log('Event to:', evt.to)
-  console.log('Are from and to the same?', evt.from === evt.to)
-  
-  if (draggedDocument) {
-    console.log('DraggedDocument exists, checking for phase change...')
-    
-    // Find the target phase by looking at the data-phase attribute
-    const targetColumn = evt.to.closest('[data-phase]')
-    let targetPhase = targetColumn?.getAttribute('data-phase')
-    
-    console.log('Target column element:', targetColumn)
-    console.log('Target phase from DOM:', targetPhase)
-    
-    // If closest doesn't work, try looking at parent elements
-    if (!targetPhase) {
-      console.log('Trying parent element approach...')
-      let current = evt.to.parentElement
-      while (current && !current.hasAttribute('data-phase')) {
-        current = current.parentElement
-      }
-      targetPhase = current?.getAttribute('data-phase')
-      console.log('Fallback target phase:', targetPhase)
-    }
-    
-    console.log('Dragged document current phase:', draggedDocument.phase)
-    console.log('Target phase:', targetPhase)
-    
-    if (targetPhase && targetPhase !== draggedDocument.phase) {
-      try {
-        console.log(`Calling transitionPhase('${draggedDocument.short_code}', '${targetPhase}')`)
-        await transitionPhase(draggedDocument.short_code, targetPhase)
-        console.log(`Successfully transitioned ${draggedDocument.short_code} to ${targetPhase}`)
-        
-        // Reload documents to reflect the change
-        await loadDocuments()
-      } catch (error) {
-        console.error('Failed to transition document phase:', error)
-        console.error('Document short_code:', draggedDocument.short_code)
-        console.error('Target phase:', targetPhase)
-        console.error('Document info:', draggedDocument)
-        // Reload documents to revert the UI change
-        await loadDocuments()
-      }
-    }
-  }
-  
-  draggedDocument = null
+// Board switching and utilities
+const switchBoard = (board: BoardType) => {
+  currentBoard.value = board
+  updateDocumentsByPhase()
+  console.log(`Switched to ${board} board`)
 }
 
-const handleDocumentAdd = async (evt: any, targetPhase: string) => {
-  console.log('Document added to phase:', targetPhase, evt)
-  
-  if (draggedDocument) {
-    const oldPhase = draggedDocument.phase
-    console.log(`Moving document ${draggedDocument.short_code} from ${oldPhase} to ${targetPhase}`)
-    
-    if (oldPhase === targetPhase) {
-      console.log('No phase change needed - same phase')
-      return
-    }
+const getBoardTitle = (board: BoardType) => {
+  const config = getBoardConfig(board)
+  return config?.title || board
+}
 
-    try {
-      console.log(`Calling transitionPhase('${draggedDocument.short_code}', '${targetPhase}')`)
-      await transitionPhase(draggedDocument.short_code, targetPhase)
-      console.log(`Successfully transitioned ${draggedDocument.short_code} to ${targetPhase}`)
-      
-      // Reload documents to reflect the change
-      await loadDocuments()
-    } catch (error) {
-      console.error('Failed to transition document phase:', error)
-      console.error('Document short_code:', draggedDocument.short_code)
-      console.error('Target phase:', targetPhase)
-      console.error('Document info:', draggedDocument)
-      // Reload documents to revert the UI change
-      await loadDocuments()
-      // TODO: Show error notification to user
-    }
+const getDocumentCount = (board: BoardType) => {
+  const config = getBoardConfig(board)
+  if (!config) return 0
+  
+  return allDocuments.value.filter(config.documentFilter).length
+}
+
+// Handle when documents change in columns
+const handleDocumentsChanged = async (phaseKey: string, newDocs: DocumentInfo[]) => {
+  console.log(`Documents changed in ${phaseKey}:`, newDocs.map(d => d.short_code))
+  
+  // Update the documents for this phase immediately for responsiveness
+  documentsByPhase.value = {
+    ...documentsByPhase.value,
+    [phaseKey]: newDocs
+  }
+  
+  // Reload all documents from backend to ensure consistency after phase transitions
+  setTimeout(async () => {
+    await loadDocuments()
+  }, 100) // Small delay to let backend transition complete
+}
+
+// Handle when vision document is updated
+const handleDocumentUpdated = async () => {
+  console.log('Vision document updated, reloading documents')
+  await loadDocuments()
+}
+
+// Handle when a new document is created
+const handleDocumentCreated = async () => {
+  console.log('Document created, reloading documents')
+  await loadDocuments()
+}
+
+// Handle promoting a backlog item to the task board
+const handlePromoteToTaskBoard = async (document: DocumentInfo) => {
+  console.log('Promoting document to task board:', document.short_code)
+  
+  try {
+    // Transition the phase from 'backlog' to 'todo'
+    // This will move it from backlog board to task board
+    console.log(`Transitioning ${document.short_code} from backlog to todo`)
+    await transitionPhase(document.short_code, 'todo')
+    
+    // Reload documents to reflect the change
+    await loadDocuments()
+    
+    // Switch to task board to show the promoted item
+    switchBoard('task')
+    
+    console.log(`Document ${document.short_code} successfully promoted to task board`)
+  } catch (error) {
+    console.error('Failed to promote document:', error)
+    // TODO: Show user-friendly error message
   }
 }
 
-const handleDocumentRemove = (evt: any, sourcePhase: string) => {
-  console.log('Document removed from phase:', sourcePhase, evt)
+// Handle viewing a document
+const handleViewDocument = (document: DocumentInfo) => {
+  console.log('Opening document viewer for:', document.short_code)
+  selectedDocument.value = document
+  showDocumentViewer.value = true
 }
 
-const handleDocumentChange = (evt: any, phase: string) => {
-  console.log('Document list changed for phase:', phase, evt)
-  // This event should fire when items are moved between lists
+// Handle closing document viewer
+const handleCloseDocumentViewer = () => {
+  showDocumentViewer.value = false
+  selectedDocument.value = null
 }
 
-const handleCreateButtonHover = (e: Event) => {
-  const target = e.currentTarget as HTMLElement
-  target.style.backgroundColor = theme.value.colors.interactive.primary
-  target.style.color = theme.value.colors.text.inverse
+// Handle when document is updated in viewer
+const handleDocumentViewerUpdated = async () => {
+  console.log('Document updated in viewer, reloading documents')
+  await loadDocuments()
 }
 
-const handleCreateButtonLeave = (e: Event) => {
-  const target = e.currentTarget as HTMLElement
-  target.style.backgroundColor = theme.value.colors.interactive.secondary
-  target.style.color = theme.value.colors.interactive.primary
+// Handle archiving a document
+const handleArchiveDocument = (document: DocumentInfo) => {
+  console.log('Opening archive confirmation for document:', document.short_code)
+  documentToArchive.value = document
+  showArchiveConfirmation.value = true
 }
 
-// Watch for project changes
-watch(() => currentProject.value?.path, loadDocuments, { immediate: true })
-
-// Watch for documents or board changes to update phase grouping
-watch([documents, currentBoard], updateDocumentsByPhase, { immediate: true })
-
-// Watch for changes in documentsByPhase to detect moves
-watch(documentsByPhase, async (newPhases) => {
-  if (!draggedDocument) return
+// Confirm and execute archive
+const confirmArchive = async () => {
+  if (!documentToArchive.value) return
   
-  console.log('Documents by phase changed:', newPhases)
+  const document = documentToArchive.value
+  console.log('Confirming archive for document:', document.short_code)
   
-  // Make a copy of draggedDocument to avoid null reference issues
-  const docToTransition = { ...draggedDocument }
+  // Close modal first
+  showArchiveConfirmation.value = false
+  documentToArchive.value = null
   
-  // Find which phase the dragged document is now in
-  for (const [phaseKey, docs] of Object.entries(newPhases)) {
-    const foundDoc = docs.find(doc => doc.short_code === docToTransition.short_code)
-    if (foundDoc && foundDoc.phase !== phaseKey) {
-      console.log(`Document ${docToTransition.short_code} moved from ${foundDoc.phase} to ${phaseKey}`)
-      
-      try {
-        console.log(`Calling transitionPhase('${docToTransition.short_code}', '${phaseKey}')`)
-        
-        await transitionPhase(docToTransition.short_code, phaseKey)
-        console.log(`Successfully transitioned ${docToTransition.short_code} to ${phaseKey}`)
-        
-        // Reload documents to reflect the change
-        await loadDocuments()
-      } catch (error) {
-        console.error('Failed to transition document phase:', error)
-        console.error('Document short_code:', docToTransition.short_code)
-        console.error('Target phase:', phaseKey)
-        console.error('Document info:', docToTransition)
-        // Reload documents to revert the UI change
-        await loadDocuments()
-      }
-      break
-    }
+  try {
+    console.log(`Archiving document ${document.short_code}`)
+    const result = await archiveDocument(document.short_code)
+    
+    console.log(`Archive successful:`, result)
+    console.log(`Total archived: ${result.total_archived} documents`)
+    
+    // Reload documents to reflect the change
+    await loadDocuments()
+    
+    console.log(`Document ${document.short_code} and ${result.total_archived - 1} children successfully archived`)
+  } catch (error) {
+    console.error('Failed to archive document:', error)
+    alert(`Failed to archive document: ${error}`)
   }
-}, { deep: true })
+}
+
+// Cancel archive
+const cancelArchive = () => {
+  console.log('Archive cancelled by user')
+  showArchiveConfirmation.value = false
+  documentToArchive.value = null
+}
+
+// Get document type label for create button
+const getDocumentTypeLabel = (boardType: BoardType) => {
+  switch (boardType) {
+    case 'initiative':
+      return 'Initiative'
+    case 'task':
+      return 'Task'
+    case 'adr':
+      return 'ADR'
+    case 'backlog':
+      return 'Backlog Item'
+    case 'strategy':
+      return 'Strategy'
+    default:
+      return 'Document'
+  }
+}
+
+onMounted(() => {
+  loadDocuments()
+})
 </script>
 
 <style scoped>
-.scale-105 {
-  transform: scale(1.05);
+.kanban-board {
+  padding: 24px;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-background-primary);
+}
+
+.board-header {
+  margin-bottom: 24px;
+}
+
+.board-header h2 {
+  color: var(--color-text-primary);
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0 0 16px 0;
+}
+
+.board-tabs {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+.board-tab {
+  padding: 10px 16px;
+  border: 1px solid var(--color-border-primary);
+  background-color: var(--color-background-secondary);
+  color: var(--color-text-primary);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.board-tab:hover {
+  background-color: var(--color-background-elevated);
+  border-color: var(--color-interactive-primary);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.board-tab.active {
+  background-color: var(--color-interactive-primary);
+  color: var(--color-text-inverse);
+  border-color: var(--color-interactive-primary);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.board-tab.active:hover {
+  transform: none;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.columns-container {
+  display: flex;
+  gap: 20px;
+  height: calc(100vh - 180px);
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+
+.vision-container {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.create-button {
+  background-color: var(--color-status-completed) !important;
+  color: var(--color-text-inverse) !important;
+  border: 1px solid var(--color-status-completed) !important;
+  border-radius: 6px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.create-button:hover {
+  background-color: var(--color-status-active) !important;
+  border-color: var(--color-status-active) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+/* Archive Confirmation Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.archive-modal {
+  background-color: var(--color-background-elevated);
+  border: 1px solid var(--color-border-primary);
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  width: max-content;
+  min-width: 420px;
+  max-width: min(500px, 90vw);
+}
+
+.modal-header {
+  padding: 20px 24px 16px 24px;
+  border-bottom: 1px solid var(--color-border-primary);
+}
+
+.modal-header h3 {
+  color: var(--color-text-primary);
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.modal-content {
+  padding: 20px 24px;
+}
+
+.archive-warning {
+  color: var(--color-text-primary);
+  font-size: 16px;
+  font-weight: 500;
+  margin: 0 0 12px 0;
+}
+
+.archive-details {
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.modal-actions {
+  padding: 16px 24px 20px 24px;
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.cancel-button {
+  padding: 10px 20px;
+  background-color: var(--color-background-secondary);
+  border: 1px solid var(--color-border-primary);
+  border-radius: 6px;
+  color: var(--color-text-primary);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cancel-button:hover {
+  background-color: var(--color-background-elevated);
+  border-color: var(--color-interactive-primary);
+}
+
+.archive-button {
+  padding: 10px 20px;
+  background-color: var(--color-interactive-danger);
+  border: 1px solid var(--color-interactive-danger);
+  border-radius: 6px;
+  color: var(--color-text-inverse);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.archive-button:hover {
+  background-color: var(--color-status-active);
+  border-color: var(--color-status-active);
 }
 </style>

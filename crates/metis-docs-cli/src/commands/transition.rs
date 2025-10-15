@@ -7,8 +7,8 @@ use metis_core::{
 
 #[derive(Args)]
 pub struct TransitionCommand {
-    /// Document ID to transition
-    pub document_id: String,
+    /// Document short code to transition (e.g., PROJ-V-0001)
+    pub short_code: String,
 
     /// Target phase to transition to (optional - if not provided, transitions to next phase)
     pub phase: Option<String>,
@@ -34,11 +34,11 @@ impl TransitionCommand {
         let result = if let Some(phase_str) = &self.phase {
             let target_phase = self.parse_phase(phase_str)?;
             transition_service
-                .transition_document(&self.document_id, target_phase)
+                .transition_document(&self.short_code, target_phase)
                 .await?
         } else {
             transition_service
-                .transition_to_next_phase(&self.document_id)
+                .transition_to_next_phase(&self.short_code)
                 .await?
         };
 
@@ -80,13 +80,13 @@ impl TransitionCommand {
 mod tests {
     use super::*;
     use crate::commands::InitCommand;
-    use metis_core::{Document, Initiative, Strategy, Vision};
+    use metis_core::{Adr, Document, Initiative, Strategy, Task, Vision};
     use tempfile::tempdir;
 
     #[test]
     fn test_parse_phase() {
         let cmd = TransitionCommand {
-            document_id: "test".to_string(),
+            short_code: "test".to_string(),
             phase: Some("active".to_string()),
             document_type: None,
         };
@@ -108,7 +108,7 @@ mod tests {
         }
 
         let cmd = TransitionCommand {
-            document_id: "test-doc".to_string(),
+            short_code: "test-doc".to_string(),
             phase: Some("active".to_string()),
             document_type: None,
         };
@@ -146,7 +146,7 @@ mod tests {
         init_cmd.execute().await.unwrap();
 
         let cmd = TransitionCommand {
-            document_id: "non-existent-doc".to_string(),
+            short_code: "TEST-T-9999".to_string(),
             phase: Some("active".to_string()),
             document_type: None,
         };
@@ -181,15 +181,15 @@ mod tests {
         init_cmd.execute().await.unwrap();
 
         let vision_path = temp_dir.path().join(".metis").join("vision.md");
-        let doc_id = "test-project";
 
         // Verify initial state (Draft)
         let vision = Vision::from_file(&vision_path).await.unwrap();
         assert_eq!(vision.phase().unwrap(), Phase::Draft);
+        let short_code = vision.metadata().short_code.clone();
 
         // 1. Auto-transition: Draft → Review
         let cmd = TransitionCommand {
-            document_id: doc_id.to_string(),
+            short_code: short_code.clone(),
             phase: None, // Auto transition
             document_type: Some("vision".to_string()),
         };
@@ -200,7 +200,7 @@ mod tests {
 
         // 2. Auto-transition: Review → Published
         let cmd = TransitionCommand {
-            document_id: doc_id.to_string(),
+            short_code: short_code.clone(),
             phase: None, // Auto transition
             document_type: Some("vision".to_string()),
         };
@@ -211,7 +211,7 @@ mod tests {
 
         // 3. Test auto-transition (should fail at Published - final phase)
         let cmd = TransitionCommand {
-            document_id: doc_id.to_string(),
+            short_code: short_code.clone(),
             phase: None, // Auto transition
             document_type: Some("vision".to_string()),
         };
@@ -251,8 +251,6 @@ mod tests {
         };
         create_cmd.execute().await.unwrap();
 
-        let doc_id = "test-strategy";
-
         // Find strategy file path
         let strategies_dir = temp_dir.path().join(".metis").join("strategies");
         let strategy_dir = std::fs::read_dir(&strategies_dir)
@@ -266,10 +264,11 @@ mod tests {
         // Verify initial state (Shaping)
         let strategy = Strategy::from_file(&strategy_path).await.unwrap();
         assert_eq!(strategy.phase().unwrap(), Phase::Shaping);
+        let short_code = strategy.metadata().short_code.clone();
 
         // 1. Auto-transition: Shaping → Design
         let cmd = TransitionCommand {
-            document_id: doc_id.to_string(),
+            short_code: short_code.clone(),
             phase: None, // Auto transition
             document_type: Some("strategy".to_string()),
         };
@@ -280,7 +279,7 @@ mod tests {
 
         // 2. Auto-transition: Design → Ready
         let cmd = TransitionCommand {
-            document_id: doc_id.to_string(),
+            short_code: short_code.clone(),
             phase: None, // Auto transition
             document_type: Some("strategy".to_string()),
         };
@@ -291,7 +290,7 @@ mod tests {
 
         // 3. Auto-transition: Ready → Active
         let cmd = TransitionCommand {
-            document_id: doc_id.to_string(),
+            short_code: short_code.clone(),
             phase: None, // Auto transition
             document_type: Some("strategy".to_string()),
         };
@@ -302,7 +301,7 @@ mod tests {
 
         // 4. Auto-transition: Active → Completed
         let cmd = TransitionCommand {
-            document_id: doc_id.to_string(),
+            short_code: short_code.clone(),
             phase: None, // Auto transition
             document_type: Some("strategy".to_string()),
         };
@@ -353,18 +352,17 @@ mod tests {
         };
         create_initiative_cmd.execute().await.unwrap();
 
-        let doc_id = "TEST-I-0001";
-
         // Check what phase the initiative actually starts with
         let initiative_path = temp_dir
             .path()
             .join(".metis/strategies/TEST-S-0001/initiatives/TEST-I-0001/initiative.md");
         let initiative = Initiative::from_file(&initiative_path).await.unwrap();
         println!("Initiative starts with phase: {:?}", initiative.phase());
+        let short_code = initiative.metadata().short_code.clone();
 
         // 1. Auto-transition: Discovery → Shaping
         let cmd = TransitionCommand {
-            document_id: doc_id.to_string(),
+            short_code: short_code.clone(),
             phase: None, // Auto transition
             document_type: Some("initiative".to_string()),
         };
@@ -372,7 +370,7 @@ mod tests {
 
         // 2. Auto-transition: Shaping → Decompose
         let cmd = TransitionCommand {
-            document_id: doc_id.to_string(),
+            short_code: short_code.clone(),
             phase: None, // Auto transition
             document_type: Some("initiative".to_string()),
         };
@@ -380,7 +378,7 @@ mod tests {
 
         // 3. Auto-transition: Decompose → Active
         let cmd = TransitionCommand {
-            document_id: doc_id.to_string(),
+            short_code: short_code.clone(),
             phase: None, // Auto transition
             document_type: Some("initiative".to_string()),
         };
@@ -388,7 +386,7 @@ mod tests {
 
         // 4. Auto-transition: Active → Completed
         let cmd = TransitionCommand {
-            document_id: doc_id.to_string(),
+            short_code: short_code.clone(),
             phase: None, // Auto transition
             document_type: Some("initiative".to_string()),
         };
@@ -445,11 +443,16 @@ mod tests {
         };
         create_task_cmd.execute().await.unwrap();
 
-        let doc_id = "TEST-T-0001";
+        // Load the task to get its short code
+        let task_path = temp_dir
+            .path()
+            .join(".metis/strategies/TEST-S-0001/initiatives/TEST-I-0001/tasks/TEST-T-0001.md");
+        let task = Task::from_file(&task_path).await.unwrap();
+        let short_code = task.metadata().short_code.clone();
 
         // 1. Todo → Active
         let cmd = TransitionCommand {
-            document_id: doc_id.to_string(),
+            short_code: short_code.clone(),
             phase: Some("active".to_string()),
             document_type: Some("task".to_string()),
         };
@@ -457,7 +460,7 @@ mod tests {
 
         // 2. Active → Completed
         let cmd = TransitionCommand {
-            document_id: doc_id.to_string(),
+            short_code: short_code.clone(),
             phase: Some("completed".to_string()),
             document_type: Some("task".to_string()),
         };
@@ -477,7 +480,7 @@ mod tests {
 
         // Todo → Blocked
         let cmd = TransitionCommand {
-            document_id: blocked_doc_id.to_string(),
+            short_code: blocked_doc_id.to_string(),
             phase: Some("blocked".to_string()),
             document_type: Some("task".to_string()),
         };
@@ -485,7 +488,7 @@ mod tests {
 
         // Blocked → Active (this tests the blocked → unblocked workflow)
         let cmd = TransitionCommand {
-            document_id: blocked_doc_id.to_string(),
+            short_code: blocked_doc_id.to_string(),
             phase: Some("active".to_string()),
             document_type: Some("task".to_string()),
         };
@@ -523,11 +526,14 @@ mod tests {
         };
         create_adr_cmd.execute().await.unwrap();
 
-        let doc_id = "TEST-A-0001";
+        // Load the ADR to get its short code
+        let adr_path = temp_dir.path().join(".metis/adrs/TEST-A-0001.md");
+        let adr = Adr::from_file(&adr_path).await.unwrap();
+        let short_code = adr.metadata().short_code.clone();
 
         // 1. Auto-transition: Draft → Discussion
         let cmd = TransitionCommand {
-            document_id: doc_id.to_string(),
+            short_code: short_code.clone(),
             phase: None, // Auto transition
             document_type: Some("adr".to_string()),
         };
@@ -535,20 +541,28 @@ mod tests {
 
         // 2. Auto-transition: Discussion → Decided
         let cmd = TransitionCommand {
-            document_id: doc_id.to_string(),
+            short_code: short_code.clone(),
             phase: None, // Auto transition
             document_type: Some("adr".to_string()),
         };
         cmd.execute().await.unwrap();
 
-        // 3. Test that decided ADRs cannot be transitioned further
+        // 3. Test transition from decided to superseded (should work)
         let cmd = TransitionCommand {
-            document_id: doc_id.to_string(),
+            short_code: short_code.clone(),
             phase: Some("superseded".to_string()),
             document_type: Some("adr".to_string()),
         };
+        cmd.execute().await.unwrap(); // Should succeed as Decided → Superseded is valid
+        
+        // 4. Test that superseded ADRs cannot be transitioned further
+        let cmd = TransitionCommand {
+            short_code: short_code.clone(),
+            phase: None, // Auto transition
+            document_type: Some("adr".to_string()),
+        };
         let result = cmd.execute().await;
-        assert!(result.is_err()); // Should fail as Decided has no valid transitions
+        assert!(result.is_err()); // Should fail as Superseded has no valid transitions
 
         // Always restore original directory
         if let Some(original) = original_dir {
@@ -574,11 +588,14 @@ mod tests {
         };
         init_cmd.execute().await.unwrap();
 
-        let doc_id = "test-project";
+        // Load the vision to get its short code
+        let vision_path = temp_dir.path().join(".metis").join("vision.md");
+        let vision = Vision::from_file(&vision_path).await.unwrap();
+        let short_code = vision.metadata().short_code.clone();
 
         // Test invalid vision transition: Draft → Published (must go through Review)
         let cmd = TransitionCommand {
-            document_id: doc_id.to_string(),
+            short_code: short_code.clone(),
             phase: Some("published".to_string()),
             document_type: Some("vision".to_string()),
         };
@@ -591,7 +608,7 @@ mod tests {
 
         // Test transition to invalid phase
         let cmd = TransitionCommand {
-            document_id: doc_id.to_string(),
+            short_code: short_code.clone(),
             phase: Some("invalid-phase".to_string()),
             document_type: Some("vision".to_string()),
         };
@@ -623,12 +640,15 @@ mod tests {
         };
         init_cmd.execute().await.unwrap();
 
-        let doc_id = "test-project";
         let vision_path = temp_dir.path().join(".metis").join("vision.md");
+        
+        // Load the vision to get its short code
+        let vision = Vision::from_file(&vision_path).await.unwrap();
+        let short_code = vision.metadata().short_code.clone();
 
         // Test auto-transition (no phase specified): Draft → Review
         let cmd = TransitionCommand {
-            document_id: doc_id.to_string(),
+            short_code: short_code.clone(),
             phase: None, // Auto transition
             document_type: Some("vision".to_string()),
         };
@@ -639,7 +659,7 @@ mod tests {
 
         // Test auto-transition: Review → Published
         let cmd = TransitionCommand {
-            document_id: doc_id.to_string(),
+            short_code: short_code.clone(),
             phase: None, // Auto transition
             document_type: Some("vision".to_string()),
         };

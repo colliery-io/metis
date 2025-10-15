@@ -693,75 +693,60 @@ impl DocumentDiscoveryService {
             if let Ok(db) = crate::Database::new(&db_path.to_string_lossy()) {
                 if let Ok(mut repo) = db.repository() {
                     if let Ok(Some(doc)) = repo.find_by_short_code(short_code) {
-                        if let Some(initiative_id) = &doc.initiative_id {
-                            // Find initiative by ID to get its short code
-                            if let Ok(Some(initiative_doc)) = repo.find_by_id(initiative_id) {
-                                if let Some(strategy_id) = &initiative_doc.strategy_id {
-                                    // Find strategy by ID to get its short code
-                                    if let Ok(Some(strategy_doc)) = repo.find_by_id(strategy_id) {
-                                        return Ok(self
-                                            .workspace_dir
-                                            .join("strategies")
-                                            .join(&strategy_doc.short_code)
-                                            .join("initiatives")
-                                            .join(&initiative_doc.short_code)
-                                            .join("tasks")
-                                            .join(format!("{}.md", short_code)));
-                                    }
-                                }
-                            }
-                        }
+                        // Return the filepath directly from database
+                        return Ok(PathBuf::from(doc.filepath));
                     }
                 }
             }
         }
 
-        // Fall back to filesystem search
-        let strategies_dir = self.workspace_dir.join("strategies");
-        if !strategies_dir.exists() {
-            return Err(MetisError::NotFound(format!(
-                "Task '{}' not found - no strategies directory",
-                short_code
-            )));
+        // Fall back to filesystem search - check backlog first
+        let backlog_path = self.workspace_dir.join("backlog").join(format!("{}.md", short_code));
+        if backlog_path.exists() {
+            return Ok(backlog_path);
         }
 
-        for strategy_entry in
-            fs::read_dir(&strategies_dir).map_err(|e| MetisError::FileSystem(e.to_string()))?
-        {
-            let strategy_dir = strategy_entry
-                .map_err(|e| MetisError::FileSystem(e.to_string()))?
-                .path();
-            if !strategy_dir.is_dir() {
-                continue;
-            }
-
-            let initiatives_dir = strategy_dir.join("initiatives");
-            if !initiatives_dir.exists() {
-                continue;
-            }
-
-            for initiative_entry in
-                fs::read_dir(&initiatives_dir).map_err(|e| MetisError::FileSystem(e.to_string()))?
+        // Then check initiative hierarchy
+        let strategies_dir = self.workspace_dir.join("strategies");
+        if strategies_dir.exists() {
+            for strategy_entry in
+                fs::read_dir(&strategies_dir).map_err(|e| MetisError::FileSystem(e.to_string()))?
             {
-                let initiative_dir = initiative_entry
+                let strategy_dir = strategy_entry
                     .map_err(|e| MetisError::FileSystem(e.to_string()))?
                     .path();
-                if !initiative_dir.is_dir() {
+                if !strategy_dir.is_dir() {
                     continue;
                 }
 
-                let task_path = initiative_dir
-                    .join("tasks")
-                    .join(format!("{}.md", short_code));
+                let initiatives_dir = strategy_dir.join("initiatives");
+                if !initiatives_dir.exists() {
+                    continue;
+                }
 
-                if task_path.exists() {
-                    return Ok(task_path);
+                for initiative_entry in
+                    fs::read_dir(&initiatives_dir).map_err(|e| MetisError::FileSystem(e.to_string()))?
+                {
+                    let initiative_dir = initiative_entry
+                        .map_err(|e| MetisError::FileSystem(e.to_string()))?
+                        .path();
+                    if !initiative_dir.is_dir() {
+                        continue;
+                    }
+
+                    let task_path = initiative_dir
+                        .join("tasks")
+                        .join(format!("{}.md", short_code));
+
+                    if task_path.exists() {
+                        return Ok(task_path);
+                    }
                 }
             }
         }
 
         Err(MetisError::NotFound(format!(
-            "Task '{}' not found in any initiative",
+            "Task '{}' not found",
             short_code
         )))
     }

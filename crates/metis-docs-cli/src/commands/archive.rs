@@ -5,8 +5,8 @@ use metis_core::application::services::workspace::ArchiveService;
 
 #[derive(Args)]
 pub struct ArchiveCommand {
-    /// Document ID to archive
-    pub document_id: String,
+    /// Document short code to archive (e.g., PROJ-V-0001)
+    pub short_code: String,
 
     /// Document type (vision, strategy, initiative, task, adr) - auto-detected if not provided
     #[arg(short = 't', long)]
@@ -39,7 +39,7 @@ impl ArchiveCommand {
 
         // 3. Archive the document and its children using database-optimized method
         let archive_result = archive_service
-            .archive_document(&self.document_id, &mut db_service)
+            .archive_document_by_short_code(&self.short_code, &mut db_service)
             .await?;
 
         // 4. Report results
@@ -72,7 +72,7 @@ mod tests {
         }
 
         let cmd = ArchiveCommand {
-            document_id: "test-doc".to_string(),
+            short_code: "TEST-T-0001".to_string(),
             document_type: None,
         };
 
@@ -109,7 +109,7 @@ mod tests {
         init_cmd.execute().await.unwrap();
 
         let cmd = ArchiveCommand {
-            document_id: "non-existent-doc".to_string(),
+            short_code: "TEST-T-9999".to_string(),
             document_type: None,
         };
 
@@ -151,7 +151,7 @@ mod tests {
         assert!(!archived_vision_path.exists());
 
         let cmd = ArchiveCommand {
-            document_id: "test-project".to_string(),
+            short_code: "TEST-V-0001".to_string(),
             document_type: Some("vision".to_string()),
         };
 

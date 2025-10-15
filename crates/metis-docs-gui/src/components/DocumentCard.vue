@@ -1,6 +1,6 @@
 <template>
   <div
-    class="overflow-hidden transition-all duration-200 shadow-lg cursor-move hover:shadow-xl"
+    class="overflow-hidden transition-all duration-200 shadow-lg cursor-move hover:shadow-xl document-drag"
     :style="{
       backgroundColor: theme.colors.background.elevated,
       border: 'none',
@@ -10,6 +10,7 @@
       boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
       borderRadius: '18px',
     }"
+    :data-short-code="document.short_code"
     @click="$emit('click', document)"
     @mouseenter="handleMouseEnter"
     @mouseleave="handleMouseLeave"

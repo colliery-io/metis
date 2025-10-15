@@ -316,7 +316,7 @@ impl Initiative {
                 .strategy_id
                 .as_ref()
                 .map(|id| id.to_string())
-                .unwrap_or_default(),
+                .unwrap_or_else(|| "NULL".to_string()),
         );
         context.insert(
             "initiative_id",
@@ -325,7 +325,7 @@ impl Initiative {
                 .initiative_id
                 .as_ref()
                 .map(|id| id.to_string())
-                .unwrap_or_default(),
+                .unwrap_or_else(|| "NULL".to_string()),
         );
 
         // Render frontmatter

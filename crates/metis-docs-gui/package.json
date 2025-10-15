@@ -20,11 +20,13 @@
     "@tiptap/starter-kit": "^3.6.6",
     "@tiptap/vue-3": "^3.6.6",
     "@vueuse/core": "^13.9.0",
+    "@vueuse/integrations": "^13.9.0",
     "gray-matter": "^4.0.3",
     "sortablejs": "^1.15.3",
     "tiptap-markdown-3": "^0.8.12",
     "vue": "^3.5.12",
-    "vue-draggable-plus": "^0.5.6"
+    "vue-draggable-plus": "^0.5.6",
+    "vue3-smooth-dnd": "^0.0.6"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.14",

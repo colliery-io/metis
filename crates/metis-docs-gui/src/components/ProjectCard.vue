@@ -42,33 +42,22 @@
   <!-- Sidebar Project Card -->
   <div
     v-else
-    class="group relative overflow-hidden rounded-lg transition-all duration-200 cursor-pointer p-3"
-    :style="{
-      backgroundColor: isActive 
-        ? theme.colors.interactive.secondary
-        : theme.colors.background.elevated,
-      border: `1px solid ${isActive 
-        ? theme.colors.interactive.primary
-        : theme.colors.border.primary}`
-    }"
+    :class="[
+      'sidebar-project-card group',
+      isActive ? 'sidebar-project-card-active' : 'sidebar-project-card-inactive'
+    ]"
     @click="handleClick"
-    @mouseenter="handleMouseEnter"
-    @mouseleave="handleMouseLeave"
   >
     <div class="flex items-center justify-between">
-      <div class="flex-1 min-w-0 pr-3">
+      <div class="project-info">
         <h3
-          :class="[
-            'font-medium truncate transition-colors',
-            isActive ? 'text-interactive-primary' : 'text-primary group-hover:text-interactive-primary'
-          ]"
-          style="font-size: 14px"
+          class="project-title"
+          :class="{ 'project-title-active': isActive }"
         >
           {{ getSidebarProjectName() }}
         </h3>
         <p
-          class="text-tertiary truncate mt-1 transition-colors"
-          style="font-size: 11px"
+          class="project-path"
           :title="project.path"
         >
           {{ getSidebarProjectPath() }}
@@ -195,21 +184,6 @@ const handleRemove = (e: Event) => {
 }
 
 
-const handleMouseEnter = (e: Event) => {
-  if (!props.isActive) {
-    const target = e.currentTarget as HTMLElement
-    target.style.backgroundColor = theme.value.colors.background.secondary
-    target.style.borderColor = theme.value.colors.interactive.primary
-  }
-}
-
-const handleMouseLeave = (e: Event) => {
-  if (!props.isActive) {
-    const target = e.currentTarget as HTMLElement
-    target.style.backgroundColor = theme.value.colors.background.elevated
-    target.style.borderColor = theme.value.colors.border.primary
-  }
-}
 </script>
 
 <script lang="ts">
@@ -223,3 +197,65 @@ export const SidebarProjectCard = {
   name: 'SidebarProjectCard'
 }
 </script>
+
+<style scoped>
+/* Sidebar project card styling */
+.sidebar-project-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  padding: 12px;
+  border: 1px solid var(--color-border-primary);
+}
+
+.sidebar-project-card-active {
+  background-color: var(--color-interactive-secondary);
+  border-color: var(--color-interactive-primary);
+}
+
+.sidebar-project-card-inactive {
+  background-color: var(--color-background-elevated);
+}
+
+.sidebar-project-card-inactive:hover {
+  background-color: var(--color-background-secondary);
+  border-color: var(--color-interactive-primary);
+}
+
+.project-info {
+  flex: 1;
+  min-width: 0;
+  padding-right: 12px;
+}
+
+.project-title {
+  font-size: 14px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color 0.2s ease;
+  margin: 0;
+  color: var(--color-text-primary);
+}
+
+.project-title-active {
+  color: var(--color-interactive-primary);
+}
+
+.sidebar-project-card-inactive:hover .project-title {
+  color: var(--color-interactive-primary);
+}
+
+.project-path {
+  color: var(--color-text-tertiary);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin: 2px 0 0 0;
+  transition: color 0.2s ease;
+}
+</style>

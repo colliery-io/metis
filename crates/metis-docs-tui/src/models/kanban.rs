@@ -31,7 +31,7 @@ pub struct KanbanItem {
 
 impl KanbanItem {
     pub fn id(&self) -> String {
-        self.document.as_document().id().to_string()
+        self.document.as_document().metadata().short_code.clone()
     }
 
     pub fn title(&self) -> &str {

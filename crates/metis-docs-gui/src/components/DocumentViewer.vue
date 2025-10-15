@@ -20,8 +20,7 @@
         borderRadius: '24px',
         width: '90vw',
         maxWidth: '800px',
-        height: '90vh',
-        maxHeight: '900px',
+        maxHeight: '90vh',
         display: 'flex',
         flexDirection: 'column',
         boxShadow: `0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px ${theme.colors.interactive.primary}20`
@@ -86,30 +85,25 @@
           </button>
           
           <template v-else>
-            <button
-              @click="handleCancelEdit"
-              class="px-4 py-2 rounded-lg transition-all font-medium"
-              :style="{
-                backgroundColor: theme.colors.background.secondary,
-                color: theme.colors.text.primary,
-                border: `1px solid ${theme.colors.border.primary}`
+            <span 
+              v-if="saveStatus"
+              class="px-3 py-2 text-sm font-medium"
+              :style="{ 
+                color: saveStatus === 'error' ? theme.colors.interactive.danger : theme.colors.text.secondary 
               }"
-              :disabled="saving"
             >
-              Cancel
-            </button>
+              {{ saveStatusText }}
+            </span>
             <button
-              @click="handleSaveAndClose"
+              @click="handleStopEdit"
               class="px-6 py-3 rounded-lg transition-all font-semibold"
               :style="{
                 backgroundColor: theme.colors.interactive.primary,
                 color: theme.colors.text.inverse,
-                border: `2px solid ${theme.colors.interactive.primary}`,
-                opacity: saving ? 0.6 : 1
+                border: `2px solid ${theme.colors.interactive.primary}`
               }"
-              :disabled="saving"
             >
-              {{ saving ? 'Saving...' : 'Save' }}
+              Done
             </button>
           </template>
           
@@ -133,7 +127,7 @@
 
       <!-- Content -->
       <div 
-        class="flex-1 overflow-hidden"
+        class="flex-1 overflow-auto"
         style="min-height: 0;"
       >
         <div 
@@ -152,7 +146,7 @@
           Error: {{ error }}
         </div>
         
-        <div v-else class="h-full">
+        <div v-else class="h-full overflow-auto">
           <TiptapEditor
             :content="content"
             :editable="isEditing"
@@ -165,7 +159,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import TiptapEditor from './TiptapEditor.vue'
 import { useProject } from '../composables/useProject'
 import { useTheme } from '../composables/useTheme'
@@ -189,10 +183,21 @@ const { currentProject } = useProject()
 const { theme } = useTheme()
 const content = ref('')
 const loading = ref(false)
-const saving = ref(false)
 const error = ref<string | null>(null)
 const documentContent = ref<DocumentContent | null>(null)
 const isEditing = ref(props.initialEdit || false)
+const saveStatus = ref<'saving' | 'saved' | 'error' | null>(null)
+const originalFrontmatter = ref('')
+
+// Computed
+const saveStatusText = computed(() => {
+  switch (saveStatus.value) {
+    case 'saving': return 'Saving...'
+    case 'saved': return 'Saved'
+    case 'error': return 'Error saving'
+    default: return ''
+  }
+})
 
 const loadDocument = async () => {
   if (!props.document || !props.isOpen || !currentProject.value?.path) return
@@ -208,7 +213,23 @@ const loadDocument = async () => {
     console.log('Reading document with short_code:', props.document.short_code)
     const docContent = await readDocument(props.document.short_code)
     documentContent.value = docContent
-    content.value = docContent.content || ''
+    
+    // Extract frontmatter and content
+    const fullContent = docContent.content || ''
+    const lines = fullContent.split('\n')
+    if (lines[0] === '---') {
+      const endIndex = lines.findIndex((line, index) => index > 0 && line === '---')
+      if (endIndex > 0) {
+        originalFrontmatter.value = lines.slice(0, endIndex + 1).join('\n') + '\n\n'
+        content.value = lines.slice(endIndex + 1).join('\n').trim()
+      } else {
+        originalFrontmatter.value = ''
+        content.value = fullContent
+      }
+    } else {
+      originalFrontmatter.value = ''
+      content.value = fullContent
+    }
   } catch (err) {
     console.error('DocumentViewer load error:', err)
     error.value = err instanceof Error ? err.message : 'Failed to load document'
@@ -217,44 +238,58 @@ const loadDocument = async () => {
   }
 }
 
-const handleSave = async () => {
-  if (!props.document || !currentProject.value?.path) return
+// Simple debounce utility
+const debounce = (func: (...args: any[]) => void, wait: number) => {
+  let timeout: number
+  return (...args: any[]) => {
+    clearTimeout(timeout)
+    timeout = setTimeout(() => func(...args), wait)
+  }
+}
+
+const saveDocument = async () => {
+  if (!props.document || !currentProject.value?.path || !isEditing.value) return
+
+  console.log('Starting save for document:', props.document.short_code)
 
   try {
-    saving.value = true
+    saveStatus.value = 'saving'
     error.value = null
     
     // Ensure project is loaded in the backend
     await MetisAPI.loadProject(currentProject.value.path)
     
-    await updateDocument(props.document.short_code, content.value)
+    // Reconstruct the full document with original frontmatter + updated content
+    const fullContent = originalFrontmatter.value + content.value
     
-    // Refresh document content
-    const docContent = await readDocument(props.document.short_code)
-    documentContent.value = docContent
+    console.log('Saving document content, length:', fullContent.length)
+    await updateDocument(props.document.short_code, fullContent)
+    console.log('Save complete for document:', props.document.short_code)
+    
+    saveStatus.value = 'saved'
+    setTimeout(() => {
+      saveStatus.value = null
+    }, 2000)
     
     emit('document-updated')
   } catch (err) {
+    console.error('Save failed:', err)
+    saveStatus.value = 'error'
     error.value = err instanceof Error ? err.message : 'Failed to save document'
-  } finally {
-    saving.value = false
+    setTimeout(() => {
+      saveStatus.value = null
+    }, 3000)
   }
 }
+
+// Debounced save function
+const debouncedSave = debounce(saveDocument, 1000)
 
 const handleEditClick = () => {
   isEditing.value = true
 }
 
-const handleCancelEdit = () => {
-  // Reset content to original
-  if (documentContent.value) {
-    content.value = documentContent.value.content || ''
-  }
-  isEditing.value = false
-}
-
-const handleSaveAndClose = async () => {
-  await handleSave()
+const handleStopEdit = () => {
   isEditing.value = false
 }
 
@@ -265,7 +300,13 @@ const handleClose = () => {
 }
 
 const handleContentUpdate = (newContent: string) => {
+  console.log('Content update received, length:', newContent.length)
   content.value = newContent
+  // Auto-save when content changes (only in edit mode)
+  if (isEditing.value) {
+    console.log('Triggering debounced save')
+    debouncedSave()
+  }
 }
 
 const handleEditButtonHover = (e: Event) => {

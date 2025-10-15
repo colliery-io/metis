@@ -269,9 +269,9 @@ impl Adr {
         let tag_strings: Vec<String> = self.tags().iter().map(|tag| tag.to_str()).collect();
         context.insert("tags", &tag_strings);
 
-        // Add lineage fields (empty for ADR documents)
-        context.insert("strategy_id", "");
-        context.insert("initiative_id", "");
+        // Add lineage fields (NULL for ADR documents)
+        context.insert("strategy_id", "NULL");
+        context.insert("initiative_id", "NULL");
 
         // Render frontmatter
         let frontmatter = tera.render("frontmatter", &context).map_err(|e| {

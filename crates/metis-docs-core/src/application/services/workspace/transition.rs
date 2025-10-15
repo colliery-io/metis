@@ -32,22 +32,14 @@ impl PhaseTransitionService {
     /// Transition a document to a specific phase
     pub async fn transition_document(
         &self,
-        document_id: &str,
+        short_code: &str,
         target_phase: Phase,
     ) -> Result<TransitionResult> {
-        // Find the document - try short code first, then document ID
-        let discovery_result = match self
+        // Find the document by short code only
+        let discovery_result = self
             .discovery_service
-            .find_document_by_short_code(document_id)
-            .await
-        {
-            Ok(result) => result,
-            Err(_) => {
-                self.discovery_service
-                    .find_document_by_id(document_id)
-                    .await?
-            }
-        };
+            .find_document_by_short_code(short_code)
+            .await?;
 
         // Load the document and get current phase
         let current_phase = self
@@ -66,7 +58,7 @@ impl PhaseTransitionService {
         .await?;
 
         Ok(TransitionResult {
-            document_id: document_id.to_string(),
+            document_id: short_code.to_string(),
             document_type: discovery_result.document_type,
             from_phase: current_phase,
             to_phase: target_phase,
@@ -75,20 +67,12 @@ impl PhaseTransitionService {
     }
 
     /// Transition a document to the next phase in its natural sequence
-    pub async fn transition_to_next_phase(&self, document_id: &str) -> Result<TransitionResult> {
-        // Find the document - try short code first, then document ID
-        let discovery_result = match self
+    pub async fn transition_to_next_phase(&self, short_code: &str) -> Result<TransitionResult> {
+        // Find the document by short code only
+        let discovery_result = self
             .discovery_service
-            .find_document_by_short_code(document_id)
-            .await
-        {
-            Ok(result) => result,
-            Err(_) => {
-                self.discovery_service
-                    .find_document_by_id(document_id)
-                    .await?
-            }
-        };
+            .find_document_by_short_code(short_code)
+            .await?;
 
         // Load the document and get current phase
         let current_phase = self
@@ -107,7 +91,7 @@ impl PhaseTransitionService {
         .await?;
 
         Ok(TransitionResult {
-            document_id: document_id.to_string(),
+            document_id: short_code.to_string(),
             document_type: discovery_result.document_type,
             from_phase: current_phase,
             to_phase: next_phase,
@@ -298,7 +282,8 @@ impl PhaseTransitionService {
             DocumentType::Adr => match from_phase {
                 Phase::Draft => vec![Phase::Discussion],
                 Phase::Discussion => vec![Phase::Draft, Phase::Decided],
-                Phase::Decided => vec![],
+                Phase::Decided => vec![Phase::Superseded],
+                Phase::Superseded => vec![],
                 _ => vec![],
             },
         }
@@ -375,7 +360,8 @@ impl PhaseTransitionService {
             DocumentType::Adr => match current_phase {
                 Phase::Draft => Ok(Phase::Discussion),
                 Phase::Discussion => Ok(Phase::Decided),
-                Phase::Decided => Err(MetisError::InvalidPhaseTransition {
+                Phase::Decided => Ok(Phase::Superseded),
+                Phase::Superseded => Err(MetisError::InvalidPhaseTransition {
                     from: current_phase.to_string(),
                     to: "none".to_string(),
                     doc_type: "adr".to_string(),
@@ -458,7 +444,7 @@ mod tests {
         // Transition to next phase
         let transition_service = PhaseTransitionService::new(&workspace_dir);
         let transition_result = transition_service
-            .transition_to_next_phase(&creation_result.document_id.to_string())
+            .transition_to_next_phase(&creation_result.short_code)
             .await
             .unwrap();
 
@@ -485,32 +471,32 @@ mod tests {
         let creation_result = creation_service.create_strategy(config).await.unwrap();
 
         let transition_service = PhaseTransitionService::new(&workspace_dir);
-        let document_id = creation_result.document_id.to_string();
+        let short_code = &creation_result.short_code;
 
         // Transition through the strategy phases
         let result1 = transition_service
-            .transition_to_next_phase(&document_id)
+            .transition_to_next_phase(short_code)
             .await
             .unwrap();
         assert_eq!(result1.from_phase, Phase::Shaping);
         assert_eq!(result1.to_phase, Phase::Design);
 
         let result2 = transition_service
-            .transition_to_next_phase(&document_id)
+            .transition_to_next_phase(short_code)
             .await
             .unwrap();
         assert_eq!(result2.from_phase, Phase::Design);
         assert_eq!(result2.to_phase, Phase::Ready);
 
         let result3 = transition_service
-            .transition_to_next_phase(&document_id)
+            .transition_to_next_phase(short_code)
             .await
             .unwrap();
         assert_eq!(result3.from_phase, Phase::Ready);
         assert_eq!(result3.to_phase, Phase::Active);
 
         let result4 = transition_service
-            .transition_to_next_phase(&document_id)
+            .transition_to_next_phase(short_code)
             .await
             .unwrap();
         assert_eq!(result4.from_phase, Phase::Active);
@@ -537,7 +523,7 @@ mod tests {
         // Transition directly to Review phase
         let transition_service = PhaseTransitionService::new(&workspace_dir);
         let transition_result = transition_service
-            .transition_document(&creation_result.document_id.to_string(), Phase::Review)
+            .transition_document(&creation_result.short_code, Phase::Review)
             .await
             .unwrap();
 
@@ -565,7 +551,7 @@ mod tests {
         // Try to transition directly to Published (should fail)
         let transition_service = PhaseTransitionService::new(&workspace_dir);
         let result = transition_service
-            .transition_document(&creation_result.document_id.to_string(), Phase::Published)
+            .transition_document(&creation_result.short_code, Phase::Published)
             .await;
 
         assert!(result.is_err());

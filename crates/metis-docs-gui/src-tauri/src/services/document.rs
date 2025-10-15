@@ -20,6 +20,7 @@ pub struct DocumentInfo {
     pub archived: bool,
     pub created_at: f64,
     pub updated_at: f64,
+    pub tags: Vec<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -37,6 +38,7 @@ pub struct CreateDocumentRequest {
     pub parent_id: Option<String>,
     pub complexity: Option<String>,
     pub risk_level: Option<String>,
+    pub tags: Option<Vec<String>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -108,7 +110,9 @@ pub async fn create_document(
         title: request.title.clone(),
         description: None,
         parent_id: request.parent_id.as_ref().map(|id| id.clone().into()),
-        tags: vec![],
+        tags: request.tags.clone().unwrap_or_default().into_iter()
+            .filter_map(|tag_str| tag_str.parse::<metis_core::domain::documents::types::Tag>().ok())
+            .collect(),
         phase: None,
         complexity: request.complexity.as_ref().and_then(|c| c.parse().ok()),
         risk_level: request.risk_level.as_ref().and_then(|r| r.parse().ok()),
@@ -120,41 +124,42 @@ pub async fn create_document(
         "strategy" => creation_service.create_strategy(config).await,
         "adr" => creation_service.create_adr(config).await,
         "task" => {
-            // Load flight configuration to determine proper task creation approach
-            let db_path = metis_dir.join("metis.db");
-            let database = Database::new(db_path.to_str().unwrap())
-                .map_err(|e| format!("Failed to open database: {}", e))?;
-            let mut config_repo = database.configuration_repository()
-                .map_err(|e| format!("Failed to access configuration repository: {}", e))?;
-            let flight_config = config_repo.get_flight_level_config()
-                .map_err(|e| format!("Failed to load configuration: {}", e))?;
-                
-            if let Some(initiative_id) = request.parent_id.as_ref() {
-                // Task with parent initiative
-                let strategy_id = if flight_config.strategies_enabled {
-                    // Full configuration: find actual strategy short code from initiative location
-                    find_strategy_short_code_for_initiative(&metis_dir, initiative_id)?
-                } else {
-                    // Streamlined/Direct: use NULL as strategy placeholder
-                    "NULL".to_string()
-                };
-
-                creation_service
-                    .create_task_with_config(
-                        config,
-                        &strategy_id,
-                        initiative_id,
-                        &flight_config,
-                    )
-                    .await
-            } else if flight_config.initiatives_enabled {
-                // Initiatives enabled but no parent provided - this should be an error
-                return Err(format!("Task requires a parent initiative ID in {} configuration. Provide an initiative_id or create as a backlog item.", flight_config.preset_name()));
+            // Check if this is a backlog item (no parent provided and request context indicates backlog)
+            // For backlog items, use the dedicated backlog creation method
+            if request.parent_id.is_none() {
+                creation_service.create_backlog_item(config).await
             } else {
-                // Direct configuration: create task without parents (use NULL for both)
-                creation_service
-                    .create_task_with_config(config, "NULL", "NULL", &flight_config)
-                    .await
+                // Regular task creation with parent
+                let db_path = metis_dir.join("metis.db");
+                let database = Database::new(db_path.to_str().unwrap())
+                    .map_err(|e| format!("Failed to open database: {}", e))?;
+                let mut config_repo = database.configuration_repository()
+                    .map_err(|e| format!("Failed to access configuration repository: {}", e))?;
+                let flight_config = config_repo.get_flight_level_config()
+                    .map_err(|e| format!("Failed to load configuration: {}", e))?;
+                    
+                if let Some(initiative_id) = request.parent_id.as_ref() {
+                    // Task with parent initiative
+                    let strategy_id = if flight_config.strategies_enabled {
+                        // Full configuration: find actual strategy short code from initiative location
+                        find_strategy_short_code_for_initiative(&metis_dir, initiative_id)?
+                    } else {
+                        // Streamlined/Direct: use NULL as strategy placeholder
+                        "NULL".to_string()
+                    };
+
+                    creation_service
+                        .create_task_with_config(
+                            config,
+                            &strategy_id,
+                            initiative_id,
+                            &flight_config,
+                        )
+                        .await
+                } else {
+                    // This should not happen since we check parent_id above, but add fallback
+                    return Err("Task creation requires either a parent initiative or should be created as backlog item".to_string());
+                }
             }
         },
         "initiative" => {
@@ -195,6 +200,26 @@ pub async fn create_document(
         .await
         .map_err(|e| format!("Failed to sync workspace after document creation: {}", e))?;
     
+    // Add backlog category tag to file frontmatter if this is a backlog item
+    if request.document_type == "task" && request.parent_id.is_none() {
+        if let Some(tags) = &request.tags {
+            for tag_str in tags {
+                if tag_str == "#bug" || tag_str == "#feature" || tag_str == "#tech-debt" {
+                    let file_path = &result.file_path;
+                    add_tag_to_frontmatter(file_path, tag_str)
+                        .map_err(|e| format!("Failed to add tag to frontmatter: {}", e))?;
+                }
+            }
+        }
+        
+        // Sync again after adding tags to update database
+        let app2 = Application::new(Database::new(db_path.to_str().unwrap())
+            .map_err(|e| format!("Failed to open database for second sync: {}", e))?);
+        app2.sync_directory(&metis_dir)
+            .await
+            .map_err(|e| format!("Failed to sync workspace after adding tags: {}", e))?;
+    }
+    
     Ok(CreateDocumentResult {
         id: result.document_id.to_string(),
         short_code: result.short_code,
@@ -231,9 +256,17 @@ pub async fn list_documents(
         Ok(all_docs)
     }).map_err(|e| format!("Database error: {}", e))?;
     
-    let doc_infos: Vec<DocumentInfo> = documents.into_iter()
-        .filter(|doc| !doc.archived) // Filter out archived documents like TUI does
-        .map(|doc| DocumentInfo {
+    let mut doc_infos: Vec<DocumentInfo> = Vec::new();
+    
+    for doc in documents.into_iter().filter(|doc| !doc.archived) {
+        // Parse tags from file directly like TUI does
+        let tags = if doc.document_type == "task" {
+            extract_tags_from_task_file(&doc.filepath).unwrap_or_default()
+        } else {
+            vec![] // Other document types don't need tag extraction for backlog categorization
+        };
+        
+        doc_infos.push(DocumentInfo {
             id: doc.id,
             title: doc.title,
             document_type: doc.document_type,
@@ -243,8 +276,9 @@ pub async fn list_documents(
             archived: doc.archived,
             created_at: doc.created_at,
             updated_at: doc.updated_at,
-        })
-        .collect();
+            tags,
+        });
+    }
     
     Ok(doc_infos)
 }
@@ -309,6 +343,7 @@ pub async fn search_documents(
             archived: doc.archived,
             created_at: doc.created_at,
             updated_at: doc.updated_at,
+            tags: vec![], // Search results don't need tags for board categorization
         })
         .collect();
     
@@ -471,7 +506,9 @@ mod tests {
             title: request.title.clone(),
             description: None,
             parent_id: request.parent_id.as_ref().map(|id| id.clone().into()),
-            tags: vec![],
+            tags: request.tags.clone().unwrap_or_default().into_iter()
+                .filter_map(|tag_str| tag_str.parse::<metis_core::domain::documents::types::Tag>().ok())
+                .collect(),
             phase: None,
             complexity: request.complexity.as_ref().and_then(|c| c.parse().ok()),
             risk_level: request.risk_level.as_ref().and_then(|r| r.parse().ok()),
@@ -591,5 +628,101 @@ mod tests {
         
         let create_result = task_result.unwrap();
         assert!(create_result.short_code.starts_with("TEST-T-"));
+    }
+}
+
+/// Add a tag to the frontmatter of a document file
+fn add_tag_to_frontmatter(file_path: &std::path::Path, tag: &str) -> Result<(), String> {
+    let content = std::fs::read_to_string(file_path)
+        .map_err(|e| format!("Failed to read file: {}", e))?;
+    
+    let updated_content = if content.contains("tags:") {
+        // Find the tags section and add the tag
+        let lines: Vec<&str> = content.lines().collect();
+        let mut new_lines = Vec::new();
+        let mut in_tags_section = false;
+        let mut tags_section_ended = false;
+        let mut tag_added = false;
+        
+        for line in lines {
+            new_lines.push(line.to_string());
+            
+            if line.trim().starts_with("tags:") {
+                in_tags_section = true;
+                continue;
+            }
+            
+            if in_tags_section && !tags_section_ended {
+                if line.trim().starts_with("- \"") || line.trim().starts_with("- ") {
+                    // Still in tags section
+                    continue;
+                } else if line.trim().is_empty() {
+                    // Empty line, potentially end of tags section
+                    continue;
+                } else {
+                    // Found a non-tag line, end of tags section
+                    if !tag_added {
+                        new_lines.insert(new_lines.len() - 1, format!("  - \"{}\"", tag));
+                        tag_added = true;
+                    }
+                    tags_section_ended = true;
+                }
+            }
+        }
+        
+        // If we didn't add the tag yet (file ended while in tags section)
+        if in_tags_section && !tag_added {
+            new_lines.insert(new_lines.len() - 1, format!("  - \"{}\"", tag));
+        }
+        
+        new_lines.join("\n")
+    } else {
+        // No tags section exists, this shouldn't happen with our template but handle it
+        content
+    };
+    
+    std::fs::write(file_path, updated_content)
+        .map_err(|e| format!("Failed to write file: {}", e))?;
+    
+    Ok(())
+}
+
+/// Extract tags from a task file by parsing it like the TUI does
+fn extract_tags_from_task_file(filepath: &str) -> Result<Vec<String>, String> {
+    use metis_core::{Task, Document};
+    use std::path::Path;
+    
+    // Use the same approach as TUI: load the file directly to get domain object with parsed tags
+    let task_result = tokio::task::block_in_place(|| {
+        tokio::runtime::Handle::current().block_on(async {
+            Task::from_file(Path::new(filepath)).await
+        })
+    });
+    
+    match task_result {
+        Ok(task) => {
+            // Extract tags and convert to strings, focusing on backlog category tags
+            let tags: Vec<String> = task.core().tags.iter()
+                .filter_map(|tag| {
+                    if let metis_core::domain::documents::types::Tag::Label(label) = tag {
+                        // Convert labels to hashtag format for consistency with GUI expectations
+                        match label.as_str() {
+                            "bug" => Some("#bug".to_string()),
+                            "feature" => Some("#feature".to_string()), 
+                            "tech-debt" => Some("#tech-debt".to_string()),
+                            _ if label.starts_with('#') => Some(label.clone()),
+                            _ => None
+                        }
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+            Ok(tags)
+        }
+        Err(_) => {
+            // If file parsing fails, return empty tags
+            Ok(vec![])
+        }
     }
 }

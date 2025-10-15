@@ -197,21 +197,21 @@ impl<'a> SyncService<'a> {
         }
     }
 
-    /// Extract document ID from file without keeping the document object around
-    fn extract_document_id<P: AsRef<Path>>(file_path: P) -> Result<String> {
-        // Read file content to extract frontmatter and get document ID
+    /// Extract document short code from file without keeping the document object around
+    fn extract_document_short_code<P: AsRef<Path>>(file_path: P) -> Result<String> {
+        // Read file content to extract frontmatter and get document short code
         let raw_content = std::fs::read_to_string(file_path.as_ref()).map_err(|e| {
             MetisError::ValidationFailed {
                 message: format!("Failed to read file: {}", e),
             }
         })?;
 
-        // Parse frontmatter to get document ID
+        // Parse frontmatter to get document short code
         use gray_matter::{engine::YAML, Matter};
         let matter = Matter::<YAML>::new();
         let result = matter.parse(&raw_content);
 
-        // Extract ID from frontmatter
+        // Extract short_code from frontmatter
         if let Some(frontmatter) = result.data {
             let fm_map = match frontmatter {
                 gray_matter::Pod::Hash(map) => map,
@@ -222,13 +222,13 @@ impl<'a> SyncService<'a> {
                 }
             };
 
-            if let Some(gray_matter::Pod::String(id_str)) = fm_map.get("id") {
-                return Ok(id_str.clone());
+            if let Some(gray_matter::Pod::String(short_code_str)) = fm_map.get("short_code") {
+                return Ok(short_code_str.clone());
             }
         }
 
         Err(MetisError::ValidationFailed {
-            message: "Document missing ID in frontmatter".to_string(),
+            message: "Document missing short_code in frontmatter".to_string(),
         })
     }
 
@@ -260,11 +260,11 @@ impl<'a> SyncService<'a> {
         match (file_exists, db_doc_by_path) {
             // File exists, not in database at this path - need to check if it's a moved document
             (true, None) => {
-                // Extract the document ID without creating full document object
-                let document_id = Self::extract_document_id(&file_path)?;
+                // Extract the document short code without creating full document object
+                let short_code = Self::extract_document_short_code(&file_path)?;
 
-                // Check if a document with this ID exists at a different path
-                if let Some(existing_doc) = self.db_service.find_by_id(&document_id)? {
+                // Check if a document with this short code exists at a different path
+                if let Some(existing_doc) = self.db_service.find_by_short_code(&short_code)? {
                     // Document moved - update the existing record
                     let old_path = existing_doc.filepath.clone();
                     self.update_moved_document(&existing_doc, &file_path)

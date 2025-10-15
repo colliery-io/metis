@@ -30,25 +30,6 @@ fn parse_phase(phase_str: &str) -> Result<Phase, String> {
     }
 }
 
-fn resolve_short_code_to_document_id(
-    metis_dir: &PathBuf,
-    short_code: &str,
-) -> Result<String, String> {
-    let db_path = metis_dir.join("metis.db");
-    let db = Database::new(db_path.to_str().unwrap()).map_err(|e| {
-        format!("Database error: {}", e)
-    })?;
-
-    let mut repo = db.repository().map_err(|e| {
-        format!("Repository error: {}", e)
-    })?;
-
-    // Use the core DAL method
-    repo.resolve_short_code_to_document_id(short_code)
-        .map_err(|e| {
-            format!("Resolution error: {}", e)
-        })
-}
 
 #[tauri::command]
 pub async fn transition_phase(
@@ -65,23 +46,20 @@ pub async fn transition_phase(
     
     let metis_dir = project_path.join(".metis");
     
-    // Resolve short code to document ID
-    let document_id = resolve_short_code_to_document_id(&metis_dir, &short_code)?;
-    
     let transition_service = PhaseTransitionService::new(&metis_dir);
     
-    // Perform the transition
+    // Perform the transition using short code directly
     let result = if let Some(phase_str) = new_phase {
         // Transition to specific phase
         let target_phase = parse_phase(&phase_str)?;
         transition_service
-            .transition_document(&document_id, target_phase)
+            .transition_document(&short_code, target_phase)
             .await
             .map_err(|e| format!("Failed to transition phase: {}", e))?
     } else {
         // Auto-transition to next phase
         transition_service
-            .transition_to_next_phase(&document_id)
+            .transition_to_next_phase(&short_code)
             .await
             .map_err(|e| format!("Failed to transition phase: {}", e))?
     };
@@ -159,17 +137,4 @@ mod tests {
         assert!(result.unwrap_err().contains("Unknown phase"));
     }
 
-    #[tokio::test]
-    async fn test_resolve_short_code_to_document_id() {
-        let temp_dir = TempDir::new().unwrap();
-        let project_path = temp_dir.path().to_string_lossy().to_string();
-        
-        initialize_project(project_path.clone(), Some("TEST".to_string())).await.unwrap();
-        let metis_dir = temp_dir.path().join(".metis");
-
-        // Use the vision document that was created during initialization
-        // Test resolving the short code for the existing vision
-        let document_id = resolve_short_code_to_document_id(&metis_dir, "TEST-V-0001");
-        assert!(document_id.is_ok());
-    }
 }

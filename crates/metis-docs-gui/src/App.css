@@ -38,8 +38,7 @@ html, body {
 }
 
 .tiptap-content {
-  max-height: 500px;
-  overflow-y: auto;
+  /* Remove global overflow handling - let components control this */
 }
 
 .tiptap-content .ProseMirror {

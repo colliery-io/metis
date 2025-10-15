@@ -197,6 +197,17 @@ impl DocumentRepository {
             .map_err(MetisError::Database)
     }
 
+    /// Get all tags for a specific document by filepath
+    pub fn get_tags_for_document(&mut self, doc_filepath: &str) -> Result<Vec<String>> {
+        use schema::document_tags::dsl::*;
+
+        document_tags
+            .filter(document_filepath.eq(doc_filepath))
+            .select(tag)
+            .load::<String>(&mut self.connection)
+            .map_err(MetisError::Database)
+    }
+
     /// Get all documents in a strategy hierarchy (strategy + its initiatives + their tasks)
     pub fn find_strategy_hierarchy(&mut self, strategy_document_id: &str) -> Result<Vec<Document>> {
         use schema::documents::dsl::*;

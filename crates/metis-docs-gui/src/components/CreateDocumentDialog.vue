@@ -12,36 +12,14 @@
     />
     
     <!-- Dialog -->
-    <div 
-      class="relative shadow-2xl p-8 z-10"
-      :style="{
-        backgroundColor: theme.colors.background.elevated,
-        border: `3px solid ${theme.colors.interactive.primary}`,
-        borderRadius: '24px',
-        width: '500px',
-        maxWidth: '90vw',
-        maxHeight: '90vh',
-        overflowY: 'auto',
-        boxShadow: `0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px ${theme.colors.interactive.primary}20`
-      }"
-    >
-      <div class="flex items-center justify-between mb-6">
-        <h2 
-          class="text-xl font-bold"
-          :style="{ color: theme.colors.text.primary }"
-        >
+    <div class="dialog-container">
+      <div class="dialog-header">
+        <h2 class="dialog-title">
           Create New {{ getDocumentTypeLabel(boardType) }}
         </h2>
         <button
           @click="handleClose"
-          class="font-bold transition-colors p-6 rounded-lg"
-          :style="{ 
-            color: theme.colors.text.secondary,
-            backgroundColor: 'transparent',
-            border: 'none',
-            fontSize: '2rem',
-            lineHeight: '1'
-          }"
+          class="close-button"
           @mouseenter="handleCloseButtonHover"
           @mouseleave="handleCloseButtonLeave"
         >
@@ -49,21 +27,16 @@
         </button>
       </div>
 
-      <form @submit="handleSubmit" class="space-y-6">
-        <div>
-          <label for="title" class="block text-sm font-semibold mb-2" :style="{ color: theme.colors.text.primary }">
+      <form @submit="handleSubmit" class="dialog-form">
+        <div class="form-group">
+          <label for="title" class="form-label">
             Title *
           </label>
           <input
             type="text"
             id="title"
             v-model="title"
-            class="w-full px-4 py-3 rounded-lg focus:outline-none focus:ring-2 text-lg font-medium transition-all"
-            :style="{
-              backgroundColor: theme.colors.background.primary,
-              border: `2px solid ${theme.colors.border.primary}`,
-              color: theme.colors.text.primary
-            }"
+            class="form-input"
             @focus="handleInputFocus"
             @blur="handleInputBlur"
             :placeholder="`Enter ${getDocumentTypeLabel(boardType).toLowerCase()} title...`"
@@ -71,20 +44,15 @@
           />
         </div>
 
-        <div>
-          <label for="description" class="block text-sm font-semibold mb-2" :style="{ color: theme.colors.text.primary }">
+        <div class="form-group">
+          <label for="description" class="form-label">
             Description
           </label>
           <textarea
             id="description"
             v-model="description"
             rows="3"
-            class="w-full px-4 py-3 rounded-lg focus:outline-none focus:ring-2 resize-none font-medium transition-all"
-            :style="{
-              backgroundColor: theme.colors.background.primary,
-              border: `2px solid ${theme.colors.border.primary}`,
-              color: theme.colors.text.primary
-            }"
+            class="form-input form-textarea"
             @focus="handleInputFocus"
             @blur="handleInputBlur"
             placeholder="Brief description of what this accomplishes..."
@@ -93,19 +61,14 @@
         </div>
 
         <!-- Parent Selection -->
-        <div v-if="boardTypeRequiresParent(boardType)">
-          <label for="parent" class="block text-sm font-semibold mb-2" :style="{ color: theme.colors.text.primary }">
+        <div v-if="boardTypeRequiresParent(boardType)" class="form-group">
+          <label for="parent" class="form-label">
             Parent {{ getParentTypeLabel() }} *
           </label>
           <select
             id="parent"
             v-model="parentId"
-            class="w-full px-4 py-3 rounded-lg focus:outline-none focus:ring-2 font-medium transition-all"
-            :style="{
-              backgroundColor: theme.colors.background.primary,
-              border: `2px solid ${theme.colors.border.primary}`,
-              color: theme.colors.text.primary
-            }"
+            class="form-input"
             @focus="handleInputFocus"
             @blur="handleInputBlur"
             :disabled="loading || loadingParents"
@@ -121,26 +84,20 @@
           </select>
           <div 
             v-if="availableParents.length === 0 && !loadingParents" 
-            class="text-sm mt-1" 
-            :style="{ color: theme.colors.text.secondary }"
+            class="form-help-text"
           >
             No available {{ getParentTypeLabel().toLowerCase() }}s found. Create one first.
           </div>
         </div>
 
-        <div v-if="boardType === 'initiative'">
-          <label for="complexity" class="block text-sm font-semibold mb-2" :style="{ color: theme.colors.text.primary }">
+        <div v-if="boardType === 'initiative'" class="form-group">
+          <label for="complexity" class="form-label">
             Complexity
           </label>
           <select
             id="complexity"
             v-model="complexity"
-            class="w-full px-4 py-3 rounded-lg focus:outline-none focus:ring-2 font-medium transition-all"
-            :style="{
-              backgroundColor: theme.colors.background.primary,
-              border: `2px solid ${theme.colors.border.primary}`,
-              color: theme.colors.text.primary
-            }"
+            class="form-input"
             @focus="handleInputFocus"
             @blur="handleInputBlur"
             :disabled="loading"
@@ -153,19 +110,14 @@
           </select>
         </div>
 
-        <div v-if="boardType === 'strategy'">
-          <label for="riskLevel" class="block text-sm font-semibold mb-2" :style="{ color: theme.colors.text.primary }">
+        <div v-if="boardType === 'strategy'" class="form-group">
+          <label for="riskLevel" class="form-label">
             Risk Level
           </label>
           <select
             id="riskLevel"
             v-model="riskLevel"
-            class="w-full px-4 py-3 rounded-lg focus:outline-none focus:ring-2 font-medium transition-all"
-            :style="{
-              backgroundColor: theme.colors.background.primary,
-              border: `2px solid ${theme.colors.border.primary}`,
-              color: theme.colors.text.primary
-            }"
+            class="form-input"
             @focus="handleInputFocus"
             @blur="handleInputBlur"
             :disabled="loading"
@@ -176,19 +128,14 @@
           </select>
         </div>
 
-        <div v-if="boardType === 'backlog'">
-          <label for="ticketType" class="block text-sm font-semibold mb-2" :style="{ color: theme.colors.text.primary }">
+        <div v-if="boardType === 'backlog'" class="form-group">
+          <label for="ticketType" class="form-label">
             Ticket Type
           </label>
           <select
             id="ticketType"
             v-model="ticketType"
-            class="w-full px-4 py-3 rounded-lg focus:outline-none focus:ring-2 font-medium transition-all"
-            :style="{
-              backgroundColor: theme.colors.background.primary,
-              border: `2px solid ${theme.colors.border.primary}`,
-              color: theme.colors.text.primary
-            }"
+            class="form-input"
             @focus="handleInputFocus"
             @blur="handleInputBlur"
             :disabled="loading"
@@ -200,21 +147,15 @@
           </select>
         </div>
 
-        <div v-if="error" class="mb-4 text-sm break-words" :style="{ color: theme.colors.border.error || '#ef4444' }">
+        <div v-if="error" class="error-message">
           {{ error }}
         </div>
 
-        <div class="flex justify-center pt-6">
+        <div class="form-submit">
           <button
             type="submit"
-            class="px-12 py-5 rounded-2xl transition-all font-semibold text-xl"
-            :style="{
-              backgroundColor: loading || !title.trim() || (boardTypeRequiresParent(boardType) && !parentId) ? theme.colors.background.tertiary : theme.colors.interactive.primary,
-              color: loading || !title.trim() || (boardTypeRequiresParent(boardType) && !parentId) ? theme.colors.text.tertiary : theme.colors.text.inverse,
-              border: `2px solid ${loading || !title.trim() || (boardTypeRequiresParent(boardType) && !parentId) ? theme.colors.border.secondary : theme.colors.interactive.primary}`,
-              cursor: loading || !title.trim() || (boardTypeRequiresParent(boardType) && !parentId) ? 'not-allowed' : 'pointer',
-              opacity: loading || !title.trim() || (boardTypeRequiresParent(boardType) && !parentId) ? 0.6 : 1
-            }"
+            class="submit-button"
+            :class="{ 'submit-button--disabled': loading || !title.trim() || (boardTypeRequiresParent(boardType) && !parentId) }"
             @mouseenter="handleSubmitButtonHover"
             @mouseleave="handleSubmitButtonLeave"
             :disabled="loading || !title.trim() || (boardTypeRequiresParent(boardType) && !parentId)"
@@ -273,6 +214,8 @@ const boardTypeRequiresParent = (boardType: BoardType) => {
     // Need initiative parents if initiatives are enabled, otherwise no parent needed (direct config)
     return projectConfig.value.initiatives_enabled ?? false
   }
+  if (boardType === 'backlog') return false  // Backlog items never have parents by definition
+  if (boardType === 'adr') return false      // ADRs don't require parents
   return false
 }
 
@@ -371,7 +314,7 @@ const handleSubmit = async (e: Event) => {
     return
   }
 
-  const needsParent = props.boardType === 'strategy' || props.boardType === 'initiative' || props.boardType === 'task'
+  const needsParent = boardTypeRequiresParent(props.boardType)
   if (needsParent && !parentId.value) {
     error.value = `Parent ${getParentTypeLabel().toLowerCase()} is required`
     return
@@ -384,12 +327,26 @@ const handleSubmit = async (e: Event) => {
     // Map backlog to task since backlog items are tasks without parents
     const documentType = props.boardType === 'backlog' ? 'task' : props.boardType
     
+    // Prepare tags for backlog items based on ticket type
+    const tags: string[] = []
+    if (props.boardType === 'backlog') {
+      const typeTag = ticketType.value === 'bug' ? '#bug' 
+                    : ticketType.value === 'feature' ? '#feature'
+                    : ticketType.value === 'tech-debt' ? '#tech-debt'
+                    : null // general has no tag
+      if (typeTag) {
+        tags.push(typeTag)
+      }
+    }
+
     const request: CreateDocumentRequest = {
       document_type: documentType,
       title: title.value.trim(),
-      ...(needsParent && parentId.value && { parent_id: parentId.value }),
+      // Only include parent_id if this is NOT a backlog item and needsParent is true
+      ...(props.boardType !== 'backlog' && needsParent && parentId.value && { parent_id: parentId.value }),
       ...(props.boardType === 'initiative' && { complexity: complexity.value }),
       ...(props.boardType === 'strategy' && { risk_level: riskLevel.value }),
+      ...(tags.length > 0 && { tags }),
     }
 
     console.log('Creating document with request:', request)
@@ -467,3 +424,198 @@ const handleSubmitButtonLeave = (e: Event) => {
   }
 }
 </script>
+
+<style scoped>
+.dialog-container {
+  background-color: var(--color-background-elevated);
+  border: 2px solid var(--color-interactive-primary);
+  border-radius: 16px;
+  width: max-content;
+  min-width: 480px;
+  max-width: min(600px, 90vw);
+  max-height: 90vh;
+  padding: 24px;
+  position: relative;
+  z-index: 10;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-border-primary);
+  flex-shrink: 0;
+  width: 100%;
+}
+
+.dialog-title {
+  color: var(--color-text-primary);
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.close-button {
+  background: transparent;
+  border: none;
+  color: var(--color-text-secondary);
+  font-size: 24px;
+  font-weight: bold;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+}
+
+.close-button:hover {
+  background-color: var(--color-background-secondary);
+  color: var(--color-text-primary);
+}
+
+.dialog-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-label {
+  color: var(--color-text-primary);
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.form-input {
+  width: 100%;
+  min-width: 0;
+  padding: 12px 16px;
+  background-color: var(--color-background-secondary);
+  border: 2px solid var(--color-border-primary);
+  border-radius: 8px;
+  color: var(--color-text-primary);
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.form-input:focus {
+  border-color: var(--color-interactive-primary);
+  box-shadow: 0 0 0 3px rgba(var(--color-interactive-primary-rgb), 0.1);
+}
+
+.form-input:disabled {
+  background-color: var(--color-background-tertiary);
+  color: var(--color-text-tertiary);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.form-textarea {
+  resize: vertical;
+  min-height: 72px;
+  font-family: inherit;
+}
+
+.form-help-text {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.error-message {
+  color: var(--color-border-error, #ef4444);
+  font-size: 14px;
+  padding: 12px 16px;
+  background-color: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 8px;
+  word-break: break-words;
+}
+
+.form-submit {
+  display: flex;
+  justify-content: center;
+  padding-top: 4px;
+}
+
+.submit-button {
+  background-color: var(--color-interactive-primary);
+  color: var(--color-text-inverse);
+  border: 2px solid var(--color-interactive-primary);
+  border-radius: 12px;
+  padding: 16px 32px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 200px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.submit-button:hover:not(:disabled) {
+  background-color: var(--color-interactive-primaryHover, var(--color-interactive-primary));
+  transform: translateY(-1px);
+  box-shadow: 0 6px 12px -1px rgba(0, 0, 0, 0.15);
+}
+
+.submit-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.submit-button--disabled {
+  background-color: var(--color-background-tertiary);
+  color: var(--color-text-tertiary);
+  border-color: var(--color-border-secondary);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.submit-button--disabled:hover {
+  transform: none;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* Custom scrollbar for form */
+.dialog-form::-webkit-scrollbar {
+  width: 6px;
+}
+
+.dialog-form::-webkit-scrollbar-track {
+  background: var(--color-background-primary);
+  border-radius: 3px;
+}
+
+.dialog-form::-webkit-scrollbar-thumb {
+  background: var(--color-border-primary);
+  border-radius: 3px;
+}
+
+.dialog-form::-webkit-scrollbar-thumb:hover {
+  background: var(--color-interactive-primary);
+}
+</style>

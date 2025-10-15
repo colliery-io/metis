@@ -6,10 +6,10 @@
     ]"
   >
     <!-- Collapse/Expand Button -->
-    <div class="px-3 py-2 flex justify-end">
+    <div class="collapse-button-container">
       <button
         @click="isExpanded = !isExpanded"
-        class="btn btn-ghost btn-sm"
+        class="collapse-button"
         :title="isExpanded ? 'Collapse sidebar' : 'Expand sidebar'"
       >
         {{ isExpanded ? '<' : '>' }}
@@ -20,10 +20,10 @@
     <div class="flex-1 overflow-y-auto">
       <template v-if="isExpanded">
         <!-- Add Project Button -->
-        <div class="px-3 pt-3 pb-2">
+        <div class="add-project-container">
           <button
             @click="handleAddProject"
-            class="btn btn-secondary btn-sm w-full"
+            class="add-project-button"
           >
             Add Project
           </button>
@@ -56,20 +56,20 @@
       </template>
       
       <!-- Collapsed view -->
-      <div v-else class="p-2 space-y-2">
+      <div v-else class="collapsed-content">
         <button
           @click="handleAddProject"
-          class="btn btn-ghost w-full"
+          class="add-project-button-collapsed"
           title="Add Project"
         >
           +
         </button>
         <div 
           v-if="currentProject"
-          class="w-full p-2 bg-interactive-secondary rounded-lg" 
+          class="current-project-indicator" 
           :title="getProjectName(currentProject)"
         >
-          <div class="w-2 h-2 bg-interactive-primary rounded-full mx-auto"></div>
+          <div class="project-dot"></div>
         </div>
       </div>
     </div>
@@ -188,3 +188,103 @@ const getProjectName = (project: ProjectInfo): string => {
   return parts[parts.length - 1] || 'Unknown Project'
 }
 </script>
+
+<style scoped>
+/* Collapse/Expand Button */
+.collapse-button-container {
+  padding: 8px 12px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.collapse-button {
+  padding: 6px 10px;
+  background-color: transparent;
+  border: 1px solid var(--color-border-primary);
+  border-radius: 6px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.collapse-button:hover {
+  background-color: var(--color-background-elevated);
+  color: var(--color-text-primary);
+  border-color: var(--color-interactive-primary);
+}
+
+/* Add Project Button - Expanded */
+.add-project-container {
+  padding: 12px 12px 8px 12px;
+}
+
+.add-project-button {
+  width: 100%;
+  padding: 10px 16px;
+  background-color: var(--color-status-completed);
+  border: 1px solid var(--color-status-completed);
+  border-radius: 6px;
+  color: var(--color-text-inverse);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.add-project-button:hover {
+  background-color: var(--color-status-active);
+  border-color: var(--color-status-active);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+/* Add Project Button - Collapsed */
+.collapsed-content {
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.add-project-button-collapsed {
+  width: 100%;
+  padding: 8px;
+  background-color: transparent;
+  border: 1px solid var(--color-border-primary);
+  border-radius: 6px;
+  color: var(--color-text-secondary);
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.add-project-button-collapsed:hover {
+  background-color: var(--color-background-elevated);
+  color: var(--color-text-primary);
+  border-color: var(--color-interactive-primary);
+}
+
+/* Current Project Indicator - Collapsed */
+.current-project-indicator {
+  width: 100%;
+  padding: 8px;
+  background-color: var(--color-interactive-secondary);
+  border-radius: 8px;
+  border: 1px solid var(--color-interactive-primary);
+}
+
+.project-dot {
+  width: 8px;
+  height: 8px;
+  background-color: var(--color-interactive-primary);
+  border-radius: 50%;
+  margin: 0 auto;
+}
+</style>

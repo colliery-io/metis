@@ -85,10 +85,16 @@ const taskPhases: PhaseConfig[] = [
     emptyMessage: 'No tasks to do',
   },
   {
-    key: 'doing',
-    title: 'Doing',
+    key: 'active',
+    title: 'Active',
     description: 'Currently being worked on',
     emptyMessage: 'No tasks in progress',
+  },
+  {
+    key: 'blocked',
+    title: 'Blocked',
+    description: 'Waiting on dependencies',
+    emptyMessage: 'No blocked tasks',
   },
   {
     key: 'completed',
@@ -173,7 +179,10 @@ export const boardConfigs: BoardConfig[] = [
     title: 'Task Board',
     description: 'Individual work items',
     phases: taskPhases,
-    documentFilter: (doc) => doc.document_type === 'task',
+    documentFilter: (doc) => doc.document_type === 'task' && (
+      // Has a parent (assigned to initiative) OR has been picked up (todo/active/blocked/completed phase)
+      (doc as any).parent || ['todo', 'active', 'blocked', 'completed'].includes(doc.phase)
+    ),
   },
   {
     id: 'adr',
@@ -187,12 +196,10 @@ export const boardConfigs: BoardConfig[] = [
     title: 'Backlog Board',
     description: 'Unassigned work items',
     phases: backlogPhases,
-    documentFilter: (doc) => {
-      // Backlog items might be tasks without parent or have special tags
-      // For now, let's identify them by having no parent initiative
-      // This logic might need refinement based on actual backend data
-      return doc.document_type === 'task' && !doc.filepath.includes('initiatives/');
-    },
+    documentFilter: (doc) => doc.document_type === 'task' && (
+      // No parent AND phase is backlog (or not picked up to todo/active/blocked/completed yet)
+      !(doc as any).parent && (doc.phase === 'backlog' || !['todo', 'active', 'blocked', 'completed'].includes(doc.phase))
+    ),
   },
 ];
 
@@ -216,11 +223,22 @@ export function getDocumentsByPhase(documents: DocumentInfo[], boardType: BoardT
   filteredDocuments.forEach(doc => {
     let phaseKey = doc.phase;
     
-    // Handle backlog special case - categorize by tags
+    // Handle backlog special case - categorize by tags or phase
     if (boardType === 'backlog') {
-      // This is a simplified approach - in real implementation, 
-      // you'd examine document tags or other metadata
-      phaseKey = 'general'; // Default to general for now
+      // Check document tags to determine backlog category
+      const tags = (doc as any).tags || [];
+      console.log(`Document ${doc.short_code} tags:`, tags);
+      if (tags.includes('#bug')) {
+        phaseKey = 'bug';
+      } else if (tags.includes('#feature')) {
+        phaseKey = 'feature';
+      } else if (tags.includes('#tech-debt')) {
+        phaseKey = 'tech-debt';
+      } else {
+        // Default to general for items without type tags
+        phaseKey = 'general';
+      }
+      console.log(`Document ${doc.short_code} assigned to phase: ${phaseKey}`);
     }
 
     // Ensure phase exists in our configuration

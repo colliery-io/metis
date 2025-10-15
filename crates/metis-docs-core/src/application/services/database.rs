@@ -58,6 +58,11 @@ impl DatabaseService {
         self.repository.find_by_tag(tag)
     }
 
+    /// Get all tags for a specific document
+    pub fn get_tags_for_document(&mut self, doc_filepath: &str) -> Result<Vec<String>> {
+        self.repository.get_tags_for_document(doc_filepath)
+    }
+
     /// Get all children of a document
     pub fn find_children(&mut self, parent_id: &str) -> Result<Vec<Document>> {
         self.repository.find_children(parent_id)

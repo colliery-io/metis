@@ -1,0 +1,290 @@
+<template>
+  <div class="h-full flex flex-col">
+    <!-- Header -->
+    <div 
+      class="flex items-center justify-between p-6 border-b"
+      :style="{
+        backgroundColor: theme.colors.background.elevated,
+        borderColor: theme.colors.border.primary,
+      }"
+    >
+      <div>
+        <h1 
+          class="text-2xl font-bold"
+          :style="{ color: theme.colors.text.primary }"
+        >
+          {{ boardConfig?.title || 'Document Board' }}
+        </h1>
+        <p 
+          class="text-sm mt-1"
+          :style="{ color: theme.colors.text.secondary }"
+        >
+          {{ boardConfig?.description || 'Manage your documents' }}
+        </p>
+      </div>
+      <div class="flex items-center gap-3">
+        <button
+          v-if="currentBoard !== 'vision'"
+          @click="showCreateDialog = true"
+          class="px-12 py-6 rounded-xl transition-colors font-bold"
+          :style="{
+            backgroundColor: theme.colors.interactive.secondary,
+            color: theme.colors.interactive.primary,
+            border: `2px solid ${theme.colors.interactive.primary}`,
+            fontSize: '18px'
+          }"
+          @mouseenter="handleCreateButtonHover"
+          @mouseleave="handleCreateButtonLeave"
+        >
+          + Create Ticket
+        </button>
+      </div>
+    </div>
+
+    <!-- Board Navigation -->
+    <div class="flex gap-4 p-4 bg-secondary border-b border-primary">
+      <button 
+        v-for="board in availableBoards" 
+        :key="board"
+        @click="handleBoardChange(board)"
+        :class="board === currentBoard ? 'bg-interactive-primary text-inverse' : 'bg-elevated text-secondary'"
+        class="px-4 py-2 rounded"
+      >
+        {{ board }} ({{ documentCounts[board] || 0 }})
+      </button>
+    </div>
+
+    <!-- Loading State -->
+    <div v-if="loading" class="flex items-center justify-center min-h-64">
+      <div :style="{ color: theme.colors.text.secondary }">Loading documents...</div>
+    </div>
+
+    <!-- Error State -->
+    <div 
+      v-else-if="error"
+      class="rounded-lg p-4 m-6"
+      :style="{
+        backgroundColor: theme.colors.background.secondary,
+        border: `1px solid ${theme.colors.border.error}`,
+      }"
+    >
+      <div 
+        class="font-medium"
+        :style="{ color: theme.colors.border.error }"
+      >
+        Error loading documents
+      </div>
+      <div 
+        class="text-sm mt-1"
+        :style="{ color: theme.colors.border.error }"
+      >
+        {{ error }}
+      </div>
+    </div>
+
+    <!-- Kanban Columns - hide when there are published visions on vision board -->
+    <div v-else-if="!(hasPublishedVisions && currentBoard === 'vision')" class="flex-1 p-6 overflow-hidden">
+      <div class="h-full flex gap-4 overflow-x-auto">
+        <KanbanColumn
+          v-for="phase in boardConfig?.phases || []"
+          :key="phase.key"
+          :phase="phase"
+          :documents="draggableDocsByPhase[phase.key] || []"
+          :column-width="columnWidth"
+          :drag-over-phase="dragOverPhase"
+          @document-click="handleDocumentClick"
+          @document-updated="handleDocumentUpdated"
+        />
+      </div>
+    </div>
+
+    <!-- Published Vision Content -->
+    <div v-if="hasPublishedVisions && currentBoard === 'vision'" class="flex-1 p-6 overflow-hidden">
+      <div class="h-full overflow-y-auto">
+        <VisionDisplay 
+          v-for="vision in publishedVisions" 
+          :key="vision.short_code"
+          :vision="vision"
+          @document-updated="handleDocumentUpdated"
+        />
+      </div>
+    </div>
+
+    <!-- Create Document Dialog -->
+    <CreateDocumentDialog
+      v-if="showCreateDialog"
+      :isOpen="showCreateDialog"
+      :boardType="currentBoard"
+      @close="showCreateDialog = false"
+      @document-created="handleDocumentCreated"
+    />
+
+    <!-- Document Viewer -->
+    <DocumentViewer
+      v-if="viewingDocument"
+      :isOpen="!!viewingDocument"
+      :document="viewingDocument"
+      @close="viewingDocument = null"
+      @document-updated="handleDocumentUpdated"
+    />
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, computed, watch } from 'vue'
+import { useProject } from '../composables/useProject'
+import { useTheme } from '../composables/useTheme'
+import { listDocuments, MetisAPI, getProjectConfig } from '../lib/tauri-api'
+import { getBoardConfig, getDocumentsByPhase } from '../lib/board-config'
+import type { DocumentInfo, ProjectConfig } from '../lib/tauri-api'
+import type { BoardType } from '../types/board'
+import CreateDocumentDialog from './CreateDocumentDialog.vue'
+import DocumentViewer from './DocumentViewer.vue'
+import VisionDisplay from './VisionDisplay.vue'
+import KanbanColumn from './KanbanColumn.vue'
+
+const availableBoards: BoardType[] = ['vision', 'initiative', 'task', 'adr', 'backlog']
+
+interface Props {
+  onBackToProjects?: () => void
+}
+
+defineProps<Props>()
+
+const { currentProject } = useProject()
+const { theme } = useTheme()
+
+const documents = ref<DocumentInfo[]>([])
+const loading = ref(true)
+const error = ref<string | null>(null)
+const currentBoard = ref<BoardType>('vision')
+const showCreateDialog = ref(false)
+const viewingDocument = ref<DocumentInfo | null>(null)
+const projectConfig = ref<ProjectConfig | null>(null)
+
+// Computed properties
+const boardConfig = computed(() => getBoardConfig(currentBoard.value))
+const documentsByPhase = ref<Record<string, DocumentInfo[]>>({})
+const draggableDocsByPhase = ref<Record<string, DocumentInfo[]>>({})
+
+// Vue3 Smooth DnD state (simplified)
+const dragOverPhase = ref<string | null>(null)
+
+
+
+const documentCounts = computed(() => ({
+  vision: documents.value.filter(d => d.document_type === 'vision').length,
+  strategy: documents.value.filter(d => d.document_type === 'strategy').length,
+  initiative: documents.value.filter(d => d.document_type === 'initiative').length,
+  task: documents.value.filter(d => d.document_type === 'task').length,
+  adr: documents.value.filter(d => d.document_type === 'adr').length,
+  backlog: documents.value.filter(d => 
+    d.document_type === 'task' && !d.filepath.includes('initiatives/')
+  ).length,
+}))
+
+const columnWidth = computed(() => {
+  const columnCount = boardConfig.value?.phases.length || 1
+  const minWidth = 180
+  const availableWidth = `calc((100vw - 320px - ${columnCount * 16}px) / ${columnCount})`
+  return `max(${minWidth}px, ${availableWidth})`
+})
+
+// Special handling for published visions - show as full content instead of cards
+const publishedVisions = computed(() => {
+  if (currentBoard.value !== 'vision') return []
+  return documentsByPhase.value.published || []
+})
+
+const hasPublishedVisions = computed(() => publishedVisions.value.length > 0)
+
+
+// Helper functions (removed unused formatDate function)
+
+// Methods
+const loadDocuments = async () => {
+  if (!currentProject.value?.path) return
+
+  try {
+    loading.value = true
+    error.value = null
+    
+    // First ensure the project is loaded in the backend
+    await MetisAPI.loadProject(currentProject.value.path)
+    
+    // Get project configuration
+    const config = await getProjectConfig()
+    projectConfig.value = config
+    
+    // Then get the documents
+    const docs = await listDocuments()
+    documents.value = docs
+    updateDocumentsByPhase()
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : 'Failed to load documents'
+  } finally {
+    loading.value = false
+  }
+}
+
+const handleDocumentClick = (document: DocumentInfo) => {
+  viewingDocument.value = document
+}
+
+const handleDocumentCreated = async () => {
+  await loadDocuments()
+}
+
+const handleDocumentUpdated = async () => {
+  await loadDocuments()
+}
+
+const handleBoardChange = (newBoard: BoardType) => {
+  currentBoard.value = newBoard
+  updateDocumentsByPhase()
+}
+
+const updateDocumentsByPhase = () => {
+  const newDocsByPhase = getDocumentsByPhase(documents.value, currentBoard.value)
+  documentsByPhase.value = newDocsByPhase
+  
+  // Update draggable refs with filtered data for vision board
+  if (currentBoard.value === 'vision') {
+    const filtered = { ...newDocsByPhase }
+    filtered.published = [] // Show published visions as content, not in kanban
+    draggableDocsByPhase.value = filtered
+  } else {
+    draggableDocsByPhase.value = { ...newDocsByPhase }
+  }
+}
+
+// Drag and drop logic is now handled by individual KanbanColumn components
+
+
+
+const handleCreateButtonHover = (e: Event) => {
+  const target = e.currentTarget as HTMLElement
+  target.style.backgroundColor = theme.value.colors.interactive.primary
+  target.style.color = theme.value.colors.text.inverse
+}
+
+const handleCreateButtonLeave = (e: Event) => {
+  const target = e.currentTarget as HTMLElement
+  target.style.backgroundColor = theme.value.colors.interactive.secondary
+  target.style.color = theme.value.colors.interactive.primary
+}
+
+// Watch for project changes
+watch(() => currentProject.value?.path, loadDocuments, { immediate: true })
+
+// Watch for documents or board changes to update phase grouping
+watch([documents, currentBoard], updateDocumentsByPhase, { immediate: true })
+
+// Removed old watcher - now using native HTML drag and drop events
+</script>
+
+<style scoped>
+.scale-105 {
+  transform: scale(1.05);
+}
+</style>

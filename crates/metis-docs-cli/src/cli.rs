@@ -192,7 +192,7 @@ mod tests {
 
         // 8. Transition the vision to review phase
         let transition_vision_cmd = TransitionCommand {
-            document_id: "integration-test-project".to_string(),
+            short_code: "TEST-V-0001".to_string(),
             document_type: Some("vision".to_string()),
             phase: Some("review".to_string()),
         };
@@ -203,7 +203,7 @@ mod tests {
 
         // 9. Transition the strategy through its phases: Shaping → Design → Ready → Active
         let transition_strategy_to_design_cmd = TransitionCommand {
-            document_id: "test-strategy-for-integration".to_string(),
+            short_code: "TEST-S-0001".to_string(),
             document_type: Some("strategy".to_string()),
             phase: Some("design".to_string()),
         };
@@ -213,7 +213,7 @@ mod tests {
             .expect("Failed to transition strategy to design");
 
         let transition_strategy_to_ready_cmd = TransitionCommand {
-            document_id: "test-strategy-for-integration".to_string(),
+            short_code: "TEST-S-0001".to_string(),
             document_type: Some("strategy".to_string()),
             phase: Some("ready".to_string()),
         };
@@ -223,7 +223,7 @@ mod tests {
             .expect("Failed to transition strategy to ready");
 
         let transition_strategy_to_active_cmd = TransitionCommand {
-            document_id: "test-strategy-for-integration".to_string(),
+            short_code: "TEST-S-0001".to_string(),
             document_type: Some("strategy".to_string()),
             phase: Some("active".to_string()),
         };
@@ -234,7 +234,7 @@ mod tests {
 
         // 10. Transition the task through its phases: Todo → Active → Completed
         let transition_task_to_active_cmd = TransitionCommand {
-            document_id: "test-task".to_string(),
+            short_code: "TEST-T-0001".to_string(),
             document_type: Some("task".to_string()),
             phase: Some("active".to_string()),
         };
@@ -244,7 +244,7 @@ mod tests {
             .expect("Failed to transition task to active");
 
         let transition_task_to_completed_cmd = TransitionCommand {
-            document_id: "test-task".to_string(),
+            short_code: "TEST-T-0001".to_string(),
             document_type: Some("task".to_string()),
             phase: Some("completed".to_string()),
         };
@@ -255,7 +255,7 @@ mod tests {
 
         // 11. Archive the completed task
         let archive_task_cmd = ArchiveCommand {
-            document_id: "test-task".to_string(),
+            short_code: "TEST-T-0001".to_string(),
             document_type: Some("task".to_string()),
         };
         archive_task_cmd

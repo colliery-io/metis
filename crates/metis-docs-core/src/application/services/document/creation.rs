@@ -504,17 +504,17 @@ impl DocumentCreationService {
         &self,
         config: DocumentCreationConfig,
     ) -> Result<CreationResult> {
-        // Generate task ID from title
-        let task_id = self.generate_id_from_title(&config.title);
+        // Generate short code for task (used for both ID and file path)
+        let short_code = self.generate_short_code("task")?;
 
         // Create backlog directory structure based on tags
         let backlog_dir = self.determine_backlog_directory(&config.tags);
-        let file_path = backlog_dir.join(format!("{}.md", task_id));
+        let file_path = backlog_dir.join(format!("{}.md", short_code));
 
         // Check if backlog item already exists
         if file_path.exists() {
             return Err(MetisError::ValidationFailed {
-                message: format!("Backlog item with ID '{}' already exists", task_id),
+                message: format!("Backlog item with short code '{}' already exists", short_code),
             });
         }
 
@@ -524,9 +524,6 @@ impl DocumentCreationService {
             Tag::Phase(config.phase.unwrap_or(Phase::Backlog)),
         ];
         tags.extend(config.tags);
-
-        // Generate short code for task
-        let short_code = self.generate_short_code("task")?;
 
         let task = Task::new(
             config.title.clone(),
