@@ -65,9 +65,9 @@ def run_tests():
     when_not_to_use=['For quick syntax checking (use check instead)', 'When only formatting code']
 )
 def build_project():
-    """Build all crates in the workspace using cargo build."""
+    """Build all crates in the workspace using cargo build, excluding GUI which requires system deps."""
     try:
-        result = subprocess.run(['cargo', 'build'], check=True)
+        result = subprocess.run(['cargo', 'build', '--workspace', '--exclude', 'metis-docs-gui'], check=True)
         return result.returncode
     except subprocess.CalledProcessError as e:
         print(f"Build failed with exit code {e.returncode}")
