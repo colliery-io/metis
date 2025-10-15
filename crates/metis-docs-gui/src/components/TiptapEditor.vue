@@ -141,7 +141,7 @@ const processContent = (content: string): string => {
     }
     return content.trim()
   } catch (error) {
-    console.error('Error parsing frontmatter:', error)
+    // Error parsing frontmatter
     return content.trim()
   }
 }
@@ -185,11 +185,9 @@ const editor = useEditor({
   onUpdate: ({ editor }) => {
     // Don't emit updates when we're programmatically setting content
     if (isUpdatingContent.value) {
-      console.log('Skipping update - programmatically setting content')
       return
     }
     
-    console.log('Editor updated, cursor at:', editor.state.selection.from)
     
     // Get markdown content from the editor
     const markdownContent = getMarkdown()
@@ -200,24 +198,17 @@ const editor = useEditor({
 
 // Watch for content changes (new document loaded)
 watch(() => props.content, (newContent, oldContent) => {
-  console.log('Props content changed!')
-  console.log('Old content length:', oldContent?.length || 0)
-  console.log('New content length:', newContent?.length || 0)
-  console.log('Last emitted content length:', lastEmittedContent.value.length)
   
   // Don't update if this content change is from our own editor emission
   if (newContent === lastEmittedContent.value) {
-    console.log('Ignoring content change - this came from our own editor')
     return
   }
   
   if (newContent && editor.value && newContent !== oldContent) {
-    console.log('*** TRIGGERING CONTENT UPDATE - THIS SHOULD BE RARE ***')
     const processedContent = processContent(newContent)
     
     // Save current cursor position before updating content
     savedCursorPosition.value = editor.value.state.selection.from
-    console.log('Saving cursor position before content update:', savedCursorPosition.value)
     
     isUpdatingContent.value = true
     editor.value.commands.setContent(processedContent)
@@ -227,7 +218,6 @@ watch(() => props.content, (newContent, oldContent) => {
       if (editor.value) {
         const maxPos = editor.value.state.doc.content.size
         const safePosition = Math.min(savedCursorPosition.value, maxPos)
-        console.log('Restoring cursor position:', safePosition, 'max:', maxPos)
         editor.value.commands.setTextSelection(safePosition)
       }
       isUpdatingContent.value = false

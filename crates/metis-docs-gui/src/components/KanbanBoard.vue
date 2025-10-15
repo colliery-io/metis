@@ -159,11 +159,7 @@ const visionDocument = computed(() => {
 
 // Update documents by phase when board changes or documents load
 const updateDocumentsByPhase = () => {
-  console.log('Updating documents by phase for board:', currentBoard.value)
-  console.log('All documents:', allDocuments.value)
-  console.log('Vision documents found:', allDocuments.value.filter(doc => doc.document_type === 'vision'))
   documentsByPhase.value = getDocumentsByPhase(allDocuments.value, currentBoard.value)
-  console.log('Documents by phase after filtering:', documentsByPhase.value)
 }
 
 // Load documents from backend
@@ -173,13 +169,8 @@ const loadDocuments = async () => {
   try {
     allDocuments.value = await listDocuments()
     updateDocumentsByPhase()
-    console.log('Loaded documents:', allDocuments.value)
-    console.log('Sample document structure:', allDocuments.value[0])
-    console.log('Current board:', currentBoard.value)
-    console.log('Board config:', currentBoardConfig.value)
-    console.log('Documents by phase:', documentsByPhase.value)
   } catch (error) {
-    console.error('Failed to load documents:', error)
+    // Failed to load documents
   }
 }
 
@@ -187,7 +178,6 @@ const loadDocuments = async () => {
 const switchBoard = (board: BoardType) => {
   currentBoard.value = board
   updateDocumentsByPhase()
-  console.log(`Switched to ${board} board`)
 }
 
 const getBoardTitle = (board: BoardType) => {
@@ -204,7 +194,6 @@ const getDocumentCount = (board: BoardType) => {
 
 // Handle when documents change in columns
 const handleDocumentsChanged = async (phaseKey: string, newDocs: DocumentInfo[]) => {
-  console.log(`Documents changed in ${phaseKey}:`, newDocs.map(d => d.short_code))
   
   // Update the documents for this phase immediately for responsiveness
   documentsByPhase.value = {
@@ -220,24 +209,20 @@ const handleDocumentsChanged = async (phaseKey: string, newDocs: DocumentInfo[])
 
 // Handle when vision document is updated
 const handleDocumentUpdated = async () => {
-  console.log('Vision document updated, reloading documents')
   await loadDocuments()
 }
 
 // Handle when a new document is created
 const handleDocumentCreated = async () => {
-  console.log('Document created, reloading documents')
   await loadDocuments()
 }
 
 // Handle promoting a backlog item to the task board
 const handlePromoteToTaskBoard = async (document: DocumentInfo) => {
-  console.log('Promoting document to task board:', document.short_code)
   
   try {
     // Transition the phase from 'backlog' to 'todo'
     // This will move it from backlog board to task board
-    console.log(`Transitioning ${document.short_code} from backlog to todo`)
     await transitionPhase(document.short_code, 'todo')
     
     // Reload documents to reflect the change
@@ -246,16 +231,14 @@ const handlePromoteToTaskBoard = async (document: DocumentInfo) => {
     // Switch to task board to show the promoted item
     switchBoard('task')
     
-    console.log(`Document ${document.short_code} successfully promoted to task board`)
   } catch (error) {
-    console.error('Failed to promote document:', error)
+    // Failed to promote document
     // TODO: Show user-friendly error message
   }
 }
 
 // Handle viewing a document
 const handleViewDocument = (document: DocumentInfo) => {
-  console.log('Opening document viewer for:', document.short_code)
   selectedDocument.value = document
   showDocumentViewer.value = true
 }
@@ -268,13 +251,11 @@ const handleCloseDocumentViewer = () => {
 
 // Handle when document is updated in viewer
 const handleDocumentViewerUpdated = async () => {
-  console.log('Document updated in viewer, reloading documents')
   await loadDocuments()
 }
 
 // Handle archiving a document
 const handleArchiveDocument = (document: DocumentInfo) => {
-  console.log('Opening archive confirmation for document:', document.short_code)
   documentToArchive.value = document
   showArchiveConfirmation.value = true
 }
@@ -284,32 +265,26 @@ const confirmArchive = async () => {
   if (!documentToArchive.value) return
   
   const document = documentToArchive.value
-  console.log('Confirming archive for document:', document.short_code)
   
   // Close modal first
   showArchiveConfirmation.value = false
   documentToArchive.value = null
   
   try {
-    console.log(`Archiving document ${document.short_code}`)
     const result = await archiveDocument(document.short_code)
     
-    console.log(`Archive successful:`, result)
-    console.log(`Total archived: ${result.total_archived} documents`)
     
     // Reload documents to reflect the change
     await loadDocuments()
     
-    console.log(`Document ${document.short_code} and ${result.total_archived - 1} children successfully archived`)
   } catch (error) {
-    console.error('Failed to archive document:', error)
+    // Failed to archive document
     alert(`Failed to archive document: ${error}`)
   }
 }
 
 // Cancel archive
 const cancelArchive = () => {
-  console.log('Archive cancelled by user')
   showArchiveConfirmation.value = false
   documentToArchive.value = null
 }

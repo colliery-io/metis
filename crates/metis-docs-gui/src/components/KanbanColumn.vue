@@ -68,12 +68,10 @@ const handleArchive = (document: DocumentInfo) => {
 }
 
 // Debug: Log documents received
-console.log(`📋 Column ${props.phaseKey} received ${props.documents.length} documents:`, props.documents)
 
 // Individual payload function for this column
 const getChildPayload = (index: number) => {
   const doc = props.documents[index]
-  console.log(`🎯 Getting payload ${props.phaseKey}[${index}]:`, doc)
   return {
     ...doc,
     phase: props.phaseKey
@@ -82,10 +80,8 @@ const getChildPayload = (index: number) => {
 
 // Individual drop handler for this column
 const handleDrop = async (dropResult: any) => {
-  console.log(`🎯🎯🎯 Drop in ${props.phaseKey}:`, dropResult)
   
   if (!dropResult || (dropResult.removedIndex === null && dropResult.addedIndex === null)) {
-    console.log('No change needed')
     return
   }
   
@@ -98,22 +94,19 @@ const handleDrop = async (dropResult: any) => {
     phase: props.phaseKey
   }))
   
-  console.log(`✅ Applied drag in ${props.phaseKey}:`, updatedDocs.map(d => d.short_code))
   
   // Check if this was a cross-phase move (document added from another column)
   const { payload, removedIndex, addedIndex } = dropResult
   if (payload && removedIndex === null && addedIndex !== null) {
     // This is a cross-phase move - call backend to make it persistent
     try {
-      console.log(`🚀 Backend phase transition: ${payload.short_code} from ${payload.phase} → ${props.phaseKey}`)
       
       const result = await transitionPhase(payload.short_code, props.phaseKey)
-      console.log(`✅ Backend transition successful:`, result)
       
       // Emit the change to parent to reload from backend
       emit('documents-changed', props.phaseKey, updatedDocs)
     } catch (error) {
-      console.error(`❌ Backend transition failed for ${payload.short_code}:`, error)
+      // Backend transition failed
       
       // Still emit the change to parent for UI update, but backend may be inconsistent
       emit('documents-changed', props.phaseKey, updatedDocs)

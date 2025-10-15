@@ -107,7 +107,6 @@ const directoryName = ref('')
 
 const recentProjects = computed(() => {
   const projects = getRecentProjects()
-  console.log('Recent projects:', projects)
   return projects
 })
 
@@ -136,7 +135,7 @@ const handleAddProject = async () => {
           showInitDialog.value = true
         }
       } catch (loadError) {
-        console.error('Failed to check/load project:', loadError)
+        // Failed to check/load project
         // If loading fails, still offer to initialize
         const pathParts = selected.split('/').filter(Boolean)
         const projectName = pathParts[pathParts.length - 1] || 'unknown'
@@ -146,12 +145,11 @@ const handleAddProject = async () => {
       }
     }
   } catch (error) {
-    console.error('Failed to open directory:', error)
+    // Failed to open directory
   }
 }
 
 const handleProjectClick = (project: ProjectInfo) => {
-  console.log('ProjectSidebar handleProjectClick called', project.path)
   props.onProjectSelect(project)
 }
 
@@ -166,12 +164,11 @@ const handleInitConfirm = async (prefix: string) => {
   try {
     // Initialize the project with the user-provided prefix
     const initResult = await MetisAPI.initializeProject(selectedPath.value, prefix)
-    console.log('Project initialized:', initResult)
     
     // Now load the newly initialized project
     await loadProject(selectedPath.value)
   } catch (initError) {
-    console.error('Failed to initialize project:', initError)
+    // Failed to initialize project
     alert('Failed to initialize Metis project. Please check the directory permissions and try again.')
   }
 }

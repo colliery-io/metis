@@ -227,7 +227,6 @@ export function getDocumentsByPhase(documents: DocumentInfo[], boardType: BoardT
     if (boardType === 'backlog') {
       // Check document tags to determine backlog category
       const tags = (doc as any).tags || [];
-      console.log(`Document ${doc.short_code} tags:`, tags);
       if (tags.includes('#bug')) {
         phaseKey = 'bug';
       } else if (tags.includes('#feature')) {
@@ -238,7 +237,6 @@ export function getDocumentsByPhase(documents: DocumentInfo[], boardType: BoardT
         // Default to general for items without type tags
         phaseKey = 'general';
       }
-      console.log(`Document ${doc.short_code} assigned to phase: ${phaseKey}`);
     }
 
     // Ensure phase exists in our configuration

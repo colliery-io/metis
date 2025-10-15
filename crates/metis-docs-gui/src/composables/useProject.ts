@@ -24,7 +24,7 @@ export function useProject() {
         const recentProjects = JSON.parse(stored)
         state.recentProjects = recentProjects
       } catch (error) {
-        console.error('Failed to load recent projects:', error)
+        // Failed to load recent projects
       }
     }
   })

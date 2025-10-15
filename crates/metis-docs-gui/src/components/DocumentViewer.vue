@@ -210,7 +210,6 @@ const loadDocument = async () => {
     // Ensure project is loaded in the backend
     await MetisAPI.loadProject(currentProject.value.path)
     
-    console.log('Reading document with short_code:', props.document.short_code)
     const docContent = await readDocument(props.document.short_code)
     documentContent.value = docContent
     
@@ -231,7 +230,7 @@ const loadDocument = async () => {
       content.value = fullContent
     }
   } catch (err) {
-    console.error('DocumentViewer load error:', err)
+    // Document load error
     error.value = err instanceof Error ? err.message : 'Failed to load document'
   } finally {
     loading.value = false
@@ -250,7 +249,6 @@ const debounce = (func: (...args: any[]) => void, wait: number) => {
 const saveDocument = async () => {
   if (!props.document || !currentProject.value?.path || !isEditing.value) return
 
-  console.log('Starting save for document:', props.document.short_code)
 
   try {
     saveStatus.value = 'saving'
@@ -262,9 +260,7 @@ const saveDocument = async () => {
     // Reconstruct the full document with original frontmatter + updated content
     const fullContent = originalFrontmatter.value + content.value
     
-    console.log('Saving document content, length:', fullContent.length)
     await updateDocument(props.document.short_code, fullContent)
-    console.log('Save complete for document:', props.document.short_code)
     
     saveStatus.value = 'saved'
     setTimeout(() => {
@@ -273,7 +269,7 @@ const saveDocument = async () => {
     
     emit('document-updated')
   } catch (err) {
-    console.error('Save failed:', err)
+    // Save failed
     saveStatus.value = 'error'
     error.value = err instanceof Error ? err.message : 'Failed to save document'
     setTimeout(() => {
@@ -300,11 +296,9 @@ const handleClose = () => {
 }
 
 const handleContentUpdate = (newContent: string) => {
-  console.log('Content update received, length:', newContent.length)
   content.value = newContent
   // Auto-save when content changes (only in edit mode)
   if (isEditing.value) {
-    console.log('Triggering debounced save')
     debouncedSave()
   }
 }

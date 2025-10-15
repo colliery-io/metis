@@ -195,7 +195,7 @@ const loadContent = async () => {
     }
     
   } catch (err) {
-    console.error('Failed to load document content:', err)
+    // Failed to load document content
     error.value = err instanceof Error ? err.message : 'Failed to load document'
   } finally {
     loading.value = false
@@ -209,12 +209,10 @@ const saveDocument = async () => {
     saveStatus.value = 'saving'
     error.value = null
     
-    console.log('Auto-saving document:', props.vision.short_code, 'with content length:', content.value.length)
     
     // Reconstruct the full document with original frontmatter + updated content
     const fullContent = originalFrontmatter.value + content.value
     await updateDocument(props.vision.short_code, fullContent)
-    console.log('Document auto-saved successfully')
     saveStatus.value = 'saved'
     setTimeout(() => {
       saveStatus.value = null
@@ -222,7 +220,7 @@ const saveDocument = async () => {
     
     emit('document-updated')
   } catch (err) {
-    console.error('Failed to auto-save document:', err)
+    // Failed to auto-save document
     saveStatus.value = 'error'
     error.value = err instanceof Error ? err.message : 'Failed to save document'
     setTimeout(() => {
@@ -243,11 +241,9 @@ const handleStopEdit = () => {
 }
 
 const handleContentUpdate = (newContent: string) => {
-  console.log('Vision content update received, length:', newContent.length)
   content.value = newContent
   // Auto-save when content changes (only in edit mode)
   if (isEditing.value) {
-    console.log('Vision triggering debounced save')
     debouncedSave()
   }
 }
@@ -255,16 +251,14 @@ const handleContentUpdate = (newContent: string) => {
 const handlePhaseChange = async () => {
   try {
     saveStatus.value = 'saving'
-    console.log('Transitioning phase:', props.vision.short_code, 'to', currentPhase.value)
     await transitionPhase(props.vision.short_code, currentPhase.value)
-    console.log('Phase transition successful')
     saveStatus.value = 'saved'
     setTimeout(() => {
       saveStatus.value = null
     }, 2000)
     emit('document-updated')
   } catch (err) {
-    console.error('Failed to transition phase:', err)
+    // Failed to transition phase
     // Revert to original phase on error
     currentPhase.value = props.vision.phase
     saveStatus.value = 'error'

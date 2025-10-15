@@ -120,12 +120,6 @@ const emit = defineEmits<{
 const { theme, themeName } = useTheme()
 
 // Debug: log the current theme colors
-console.log('ProjectCard component loaded for:', props.project.path)
-console.log('isSidebar:', props.isSidebar)
-console.log('onClick prop:', props.onClick)
-console.log('Theme name:', themeName.value)
-console.log('Background elevated:', theme.value.colors.background.elevated)
-console.log('Interactive secondary:', theme.value.colors.interactive.secondary)
 
 const getStatusIcon = () => {
   if (!props.project.is_valid) return '❌'
@@ -168,9 +162,7 @@ const handleSelect = () => {
 }
 
 const handleClick = () => {
-  console.log('ProjectCard handleClick called', props.project.path)
   if (props.onClick) {
-    console.log('Calling props.onClick')
     props.onClick()
   }
   emit('click')

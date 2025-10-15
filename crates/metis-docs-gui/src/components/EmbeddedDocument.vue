@@ -44,7 +44,7 @@ const loadContent = async () => {
     content.value = docContent.content
     
   } catch (err) {
-    console.error('Failed to load document content:', err)
+    // Failed to load document content
     error.value = err instanceof Error ? err.message : 'Failed to load document'
   } finally {
     loading.value = false

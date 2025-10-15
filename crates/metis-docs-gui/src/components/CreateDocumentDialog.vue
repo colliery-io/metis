@@ -241,9 +241,8 @@ const getDocumentTypeLabel = (type: BoardType) => {
 const loadProjectConfig = async () => {
   try {
     projectConfig.value = await getProjectConfig()
-    console.log('Project config loaded:', projectConfig.value)
   } catch (err) {
-    console.error('Failed to load project config:', err)
+    // Failed to load project config
     // Default to full configuration if we can't load it
     projectConfig.value = { strategies_enabled: true, initiatives_enabled: true }
   }
@@ -257,12 +256,10 @@ const loadAvailableParents = async (boardType: BoardType) => {
   try {
     // boardType is guaranteed to need parents here
     const childType = boardType
-    console.log('Loading available parents for child type:', childType)
     const parents = await getAvailableParents(childType)
-    console.log('Received parents:', parents)
     availableParents.value = parents
   } catch (err) {
-    console.error('Failed to load available parents:', err)
+    // Failed to load available parents
     error.value = 'Failed to load available parent documents'
   } finally {
     loadingParents.value = false
@@ -284,7 +281,6 @@ const getParentTypeLabel = () => {
 
 // Load available parents when dialog opens and board type changes
 watch([() => props.isOpen, () => props.boardType], async ([isOpen, boardType]) => {
-  console.log('CreateDocumentDialog watcher triggered:', { isOpen, boardType })
   try {
     if (isOpen) {
       // First load the project configuration
@@ -294,15 +290,13 @@ watch([() => props.isOpen, () => props.boardType], async ([isOpen, boardType]) =
       
       // Then check if this board type needs parents based on config
       if (boardTypeRequiresParent(boardType)) {
-        console.log('Conditions met, loading parents for:', boardType)
         await loadAvailableParents(boardType)
       } else {
-        console.log('No parent needed for:', boardType, 'with config:', projectConfig.value)
         availableParents.value = []
       }
     }
   } catch (err) {
-    console.error('Error in CreateDocumentDialog watcher:', err)
+    // Error in CreateDocumentDialog watcher
   }
 }, { immediate: true })
 
@@ -349,16 +343,14 @@ const handleSubmit = async (e: Event) => {
       ...(tags.length > 0 && { tags }),
     }
 
-    console.log('Creating document with request:', request)
     const result = await createDocument(request)
-    console.log('Create document result:', result)
     
     // Reset form and close dialog
     resetForm()
     emit('document-created')
     emit('close')
   } catch (err) {
-    console.error('Create document error:', err)
+    // Create document error
     error.value = err instanceof Error ? err.message : 'Failed to create document'
   } finally {
     loading.value = false

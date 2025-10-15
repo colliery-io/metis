@@ -92,22 +92,14 @@ const { currentProject, setCurrentProject, loadProject } = useProject()
 const { themeName } = useTheme()
 const showProjectBrowser = ref(false)
 
-// Debug watcher
 watch(currentProject, (newProject, oldProject) => {
-  console.log('currentProject changed:', { 
-    old: oldProject?.path, 
-    new: newProject?.path,
-    hasNew: !!newProject 
-  })
+  // Project changed
 }, { immediate: true })
 
 const handleProjectSelect = async (project: ProjectInfo) => {
-  console.log('App handleProjectSelect called', project.path)
   try {
     await loadProject(project.path)
     showProjectBrowser.value = false
-    console.log('Project loaded successfully')
-    console.log('Current project after load:', currentProject.value)
   } catch (error) {
     console.error('Failed to load project:', error)
   }
