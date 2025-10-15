@@ -11,7 +11,7 @@ env:
 jobs:
   publish-crate:
     name: Publish to Crates.io
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     if: ${{ !contains(github.ref_name, '-') }} # Only publish stable releases
     steps:
       - name: Checkout repository
