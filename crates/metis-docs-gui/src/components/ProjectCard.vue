@@ -91,7 +91,6 @@
 
 <script setup lang="ts">
 import { ProjectInfo } from '../lib/tauri-api'
-import { useTheme } from '../composables/useTheme'
 
 interface Props {
   project: ProjectInfo
@@ -116,8 +115,6 @@ const emit = defineEmits<{
   click: []
   remove: [e: Event]
 }>()
-
-const { theme } = useTheme()
 
 // Debug: log the current theme colors
 

@@ -13,7 +13,7 @@ use std::str::FromStr;
 
 #[mcp_tool(
     name = "create_document",
-    description = "Create a new Metis document (vision, strategy, initiative, task, adr). Each document gets a unique short code in format PREFIX-TYPE-NNNN (e.g., PROJ-V-0001). Parent documents should be referenced by their ID (kebab-case string). Document type availability depends on current flight level configuration.",
+    description = "Create a new Metis document (vision, strategy, initiative, task, adr). Each document gets a unique short code in format PREFIX-TYPE-NNNN (e.g., PROJ-V-0001). Parent documents should be referenced by their short code (e.g., PROJ-V-0001). Document type availability depends on current flight level configuration.",
     idempotent_hint = false,
     destructive_hint = false,
     open_world_hint = false,
@@ -27,7 +27,7 @@ pub struct CreateDocumentTool {
     pub document_type: String,
     /// Title of the document
     pub title: String,
-    /// Parent document ID (required for strategy, initiative, task)
+    /// Parent document short code (required for strategy, initiative, task)
     pub parent_id: Option<String>,
     /// Risk level for strategies (low, medium, high)
     pub risk_level: Option<String>,

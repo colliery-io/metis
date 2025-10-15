@@ -163,7 +163,7 @@ const handleInitConfirm = async (prefix: string) => {
   
   try {
     // Initialize the project with the user-provided prefix
-    const initResult = await MetisAPI.initializeProject(selectedPath.value, prefix)
+    await MetisAPI.initializeProject(selectedPath.value, prefix)
     
     // Now load the newly initialized project
     await loadProject(selectedPath.value)
