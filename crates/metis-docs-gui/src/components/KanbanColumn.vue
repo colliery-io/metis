@@ -101,7 +101,7 @@ const handleDrop = async (dropResult: any) => {
     // This is a cross-phase move - call backend to make it persistent
     try {
       
-      const result = await transitionPhase(payload.short_code, props.phaseKey)
+      await transitionPhase(payload.short_code, props.phaseKey)
       
       // Emit the change to parent to reload from backend
       emit('documents-changed', props.phaseKey, updatedDocs)

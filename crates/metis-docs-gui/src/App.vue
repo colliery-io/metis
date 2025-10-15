@@ -92,7 +92,7 @@ const { currentProject, setCurrentProject, loadProject } = useProject()
 const { themeName } = useTheme()
 const showProjectBrowser = ref(false)
 
-watch(currentProject, (newProject, oldProject) => {
+watch(currentProject, () => {
   // Project changed
 }, { immediate: true })
 

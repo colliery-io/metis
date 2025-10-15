@@ -182,7 +182,7 @@ const editor = useEditor({
       }, 50)
     }
   },
-  onUpdate: ({ editor }) => {
+  onUpdate: () => {
     // Don't emit updates when we're programmatically setting content
     if (isUpdatingContent.value) {
       return

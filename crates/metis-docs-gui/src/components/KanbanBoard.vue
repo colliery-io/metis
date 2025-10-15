@@ -271,7 +271,7 @@ const confirmArchive = async () => {
   documentToArchive.value = null
   
   try {
-    const result = await archiveDocument(document.short_code)
+    await archiveDocument(document.short_code)
     
     
     // Reload documents to reflect the change

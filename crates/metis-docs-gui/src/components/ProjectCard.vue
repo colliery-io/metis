@@ -117,7 +117,7 @@ const emit = defineEmits<{
   remove: [e: Event]
 }>()
 
-const { theme, themeName } = useTheme()
+const { theme } = useTheme()
 
 // Debug: log the current theme colors
 

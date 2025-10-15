@@ -343,7 +343,7 @@ const handleSubmit = async (e: Event) => {
       ...(tags.length > 0 && { tags }),
     }
 
-    const result = await createDocument(request)
+    await createDocument(request)
     
     // Reset form and close dialog
     resetForm()
