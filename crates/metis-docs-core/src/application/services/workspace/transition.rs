@@ -403,7 +403,7 @@ mod tests {
     use crate::application::services::document::DocumentCreationService;
     use crate::dal::Database;
     use diesel::Connection;
-    
+
     use std::path::PathBuf;
     use tempfile::tempdir;
 

@@ -155,14 +155,8 @@ async fn test_mcp_archive_cascading_behavior() -> Result<()> {
     assert_eq!(db_tasks.len(), 2, "Should have 2 tasks");
 
     // All should be active (not archived)
-    assert!(
-        !db_strategies[0].archived,
-        "Strategy should be active"
-    );
-    assert!(
-        !db_initiatives[0].archived,
-        "Initiative should be active"
-    );
+    assert!(!db_strategies[0].archived, "Strategy should be active");
+    assert!(!db_initiatives[0].archived, "Initiative should be active");
     assert_eq!(
         db_tasks.iter().filter(|t| t.archived).count(),
         0,
@@ -224,7 +218,11 @@ async fn test_mcp_archive_cascading_behavior() -> Result<()> {
         .unwrap();
     let strategy_dir = helper.metis_dir().to_string()
         + "/"
-        + strategy_doc.filepath.rsplit_once('/').map(|x| x.0).unwrap_or("");
+        + strategy_doc
+            .filepath
+            .rsplit_once('/')
+            .map(|x| x.0)
+            .unwrap_or("");
 
     println!("Before MCP archive - Strategy directory structure:");
     if let Ok(entries) = std::fs::read_dir(&strategy_dir) {

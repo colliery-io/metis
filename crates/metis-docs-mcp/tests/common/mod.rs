@@ -18,10 +18,6 @@ impl McpTestHelper {
         Ok(Self { core_helper })
     }
 
-    /// Get project path as string (for backward compatibility)
-    pub fn project_path(&self) -> String {
-        self.core_helper.project_path_string()
-    }
 
     /// Get metis directory as string (for backward compatibility)
     pub fn metis_dir(&self) -> String {

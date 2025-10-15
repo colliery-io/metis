@@ -514,7 +514,10 @@ impl DocumentCreationService {
         // Check if backlog item already exists
         if file_path.exists() {
             return Err(MetisError::ValidationFailed {
-                message: format!("Backlog item with short code '{}' already exists", short_code),
+                message: format!(
+                    "Backlog item with short code '{}' already exists",
+                    short_code
+                ),
             });
         }
 
@@ -627,12 +630,6 @@ impl DocumentCreationService {
             file_path,
             short_code,
         })
-    }
-
-    /// Generate a slugified ID from a title (same as DocumentId::title_to_slug)
-    fn generate_id_from_title(&self, title: &str) -> String {
-        use crate::domain::documents::types::DocumentId;
-        DocumentId::title_to_slug(title)
     }
 
     /// Get the next ADR number by examining existing ADRs
@@ -806,26 +803,6 @@ mod tests {
         assert_eq!(initiative.title(), "Test Initiative");
     }
 
-    #[tokio::test]
-    async fn test_generate_id_from_title() {
-        let temp_dir = tempdir().unwrap();
-        let workspace_dir = temp_dir.path().join(".metis");
-
-        let service = DocumentCreationService::new(&workspace_dir);
-
-        assert_eq!(
-            service.generate_id_from_title("Test Strategy"),
-            "test-strategy"
-        );
-        assert_eq!(
-            service.generate_id_from_title("My Complex Title!"),
-            "my-complex-title"
-        );
-        assert_eq!(
-            service.generate_id_from_title("Multiple   Spaces"),
-            "multiple-spaces"
-        );
-    }
 
     #[tokio::test]
     async fn test_get_next_adr_number() {

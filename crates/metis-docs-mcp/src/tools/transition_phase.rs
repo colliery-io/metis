@@ -30,7 +30,6 @@ pub struct TransitionPhaseTool {
 }
 
 impl TransitionPhaseTool {
-
     pub async fn call_tool(&self) -> std::result::Result<CallToolResult, CallToolError> {
         let metis_dir = Path::new(&self.project_path);
 

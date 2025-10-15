@@ -554,7 +554,7 @@ mod tests {
             document_type: Some("adr".to_string()),
         };
         cmd.execute().await.unwrap(); // Should succeed as Decided → Superseded is valid
-        
+
         // 4. Test that superseded ADRs cannot be transitioned further
         let cmd = TransitionCommand {
             short_code: short_code.clone(),
@@ -641,7 +641,7 @@ mod tests {
         init_cmd.execute().await.unwrap();
 
         let vision_path = temp_dir.path().join(".metis").join("vision.md");
-        
+
         // Load the vision to get its short code
         let vision = Vision::from_file(&vision_path).await.unwrap();
         let short_code = vision.metadata().short_code.clone();

@@ -298,11 +298,13 @@ async fn test_unicode_title_id_path_consistency() {
     let creation_service = DocumentCreationService::new(&workspace_dir);
 
     // Test various Unicode titles
-    let unicode_titles = ["Café Strategy für München",
+    let unicode_titles = [
+        "Café Strategy für München",
         "日本語 テスト 戦略",
         "Стратегия для России",
         "🚀 Rocket Launch Strategy 🌟",
-        "Strategy with émojis and àccents"];
+        "Strategy with émojis and àccents",
+    ];
 
     for (i, title) in unicode_titles.iter().enumerate() {
         let config = DocumentCreationConfig {

@@ -56,7 +56,7 @@ impl InitializeProjectTool {
                 prefix
             }
         };
-        
+
         let response = serde_json::json!({
             "success": true,
             "message": format!("Initialized Metis workspace at {}", result.metis_dir.display()),

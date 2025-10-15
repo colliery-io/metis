@@ -3,10 +3,9 @@ use std::path::PathBuf;
 mod services;
 
 use services::{
-    initialize_project, load_project, get_project_config,
-    create_document, update_document, list_documents, read_document, search_documents, get_available_parents,
-    archive_document,
-    transition_phase,
+    archive_document, create_document, get_available_parents, get_project_config,
+    initialize_project, list_documents, load_project, read_document, search_documents,
+    transition_phase, update_document,
 };
 
 // Application state

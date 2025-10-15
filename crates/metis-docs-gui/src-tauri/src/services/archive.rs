@@ -1,10 +1,10 @@
-use metis_core::{
-    Application, Database,
-    application::services::{workspace::ArchiveService, DatabaseService},
-};
-use tauri::State;
-use serde::{Deserialize, Serialize};
 use crate::AppState;
+use metis_core::{
+    application::services::{workspace::ArchiveService, DatabaseService},
+    Application, Database,
+};
+use serde::{Deserialize, Serialize};
+use tauri::State;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ArchiveResult {
@@ -26,14 +26,18 @@ pub async fn archive_document(
     short_code: String,
 ) -> Result<ArchiveResult, String> {
     let project_path = {
-        let app_state = state.lock().map_err(|e| format!("Failed to lock state: {}", e))?;
-        app_state.current_project.as_ref()
+        let app_state = state
+            .lock()
+            .map_err(|e| format!("Failed to lock state: {}", e))?;
+        app_state
+            .current_project
+            .as_ref()
             .ok_or("No project loaded")?
             .clone()
     };
-    
+
     let metis_dir = project_path.join(".metis");
-    
+
     // Create the archive service with database optimization
     let db = Database::new(&metis_dir.join("metis.db").to_string_lossy())
         .map_err(|e| format!("Database initialization failed: {}", e))?;
@@ -66,7 +70,7 @@ pub async fn archive_document(
     let database = Database::new(metis_dir.join("metis.db").to_str().unwrap())
         .map_err(|e| format!("Failed to open database for sync: {}", e))?;
     let app = Application::new(database);
-    
+
     app.sync_directory(&metis_dir)
         .await
         .map_err(|e| format!("Failed to sync workspace: {}", e))?;
@@ -91,37 +95,27 @@ pub async fn archive_document(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::TempDir;
     use crate::services::project::initialize_project;
+    use tempfile::TempDir;
 
-    async fn setup_test_project() -> (TempDir, AppState) {
-        let temp_dir = TempDir::new().unwrap();
-        let project_path = temp_dir.path().to_string_lossy().to_string();
-        
-        // Initialize project
-        initialize_project(project_path.clone(), Some("TEST".to_string())).await.unwrap();
-        
-        // Create app state with loaded project
-        let app_state = AppState {
-            current_project: Some(temp_dir.path().to_path_buf()),
-        };
-        
-        (temp_dir, app_state)
-    }
 
     #[tokio::test]
     async fn test_archive_service_creation() {
         let temp_dir = TempDir::new().unwrap();
         let project_path = temp_dir.path().to_string_lossy().to_string();
-        
-        initialize_project(project_path.clone(), Some("TEST".to_string())).await.unwrap();
+
+        initialize_project(project_path.clone(), Some("TEST".to_string()))
+            .await
+            .unwrap();
         let metis_dir = temp_dir.path().join(".metis");
 
         // Test that the archive service can be created
         let archive_service = ArchiveService::new(&metis_dir);
-        
+
         // Test checking archive status of non-existent document
-        let result = archive_service.is_document_archived_by_short_code("TEST-V-9999").await;
+        let result = archive_service
+            .is_document_archived_by_short_code("TEST-V-9999")
+            .await;
         assert!(result.is_ok());
     }
 }

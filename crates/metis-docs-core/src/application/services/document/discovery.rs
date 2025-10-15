@@ -701,7 +701,10 @@ impl DocumentDiscoveryService {
         }
 
         // Fall back to filesystem search - check backlog first
-        let backlog_path = self.workspace_dir.join("backlog").join(format!("{}.md", short_code));
+        let backlog_path = self
+            .workspace_dir
+            .join("backlog")
+            .join(format!("{}.md", short_code));
         if backlog_path.exists() {
             return Ok(backlog_path);
         }
@@ -724,8 +727,8 @@ impl DocumentDiscoveryService {
                     continue;
                 }
 
-                for initiative_entry in
-                    fs::read_dir(&initiatives_dir).map_err(|e| MetisError::FileSystem(e.to_string()))?
+                for initiative_entry in fs::read_dir(&initiatives_dir)
+                    .map_err(|e| MetisError::FileSystem(e.to_string()))?
                 {
                     let initiative_dir = initiative_entry
                         .map_err(|e| MetisError::FileSystem(e.to_string()))?
