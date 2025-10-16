@@ -1,6 +1,7 @@
 pub mod archive;
 pub mod document;
 pub mod project;
+pub mod sync;
 pub mod transition;
 
 // Re-export main service functions
@@ -10,4 +11,5 @@ pub use document::{
     update_document,
 };
 pub use project::{get_project_config, initialize_project, load_project};
+pub use sync::sync_project;
 pub use transition::transition_phase;

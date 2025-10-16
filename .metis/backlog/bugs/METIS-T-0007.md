@@ -4,7 +4,7 @@ level: task
 title: "CLI - sync needs to occur after initialization."
 short_code: "METIS-T-0007"
 created_at: 2025-10-16T12:29:35.221203+00:00
-updated_at: 2025-10-16T19:59:58.476085+00:00
+updated_at: 2025-10-16T20:19:56.312471+00:00
 parent: 
 blocked_by: []
 archived: false
@@ -13,7 +13,7 @@ tags:
   - "#task"
   - "#bug"
   - "#bug"
-  - "#phase/blocked"
+  - "#phase/completed"
 
 
 exit_criteria_met: false
@@ -66,6 +66,10 @@ initiative_id: NULL
 - **Current Problems**: {What's difficult/slow/buggy now}
 - **Benefits of Fixing**: {What improves after refactoring}
 - **Risk Assessment**: {Risks of not addressing this}
+
+## Acceptance Criteria
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 

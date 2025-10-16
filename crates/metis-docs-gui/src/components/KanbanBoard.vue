@@ -4,14 +4,25 @@
     <div class="board-header">
       <div class="flex items-center justify-between">
         <h2>{{ currentBoardConfig?.title || 'Kanban Board' }}</h2>
-        <button
-          v-if="currentBoard !== 'vision'"
-          @click="showCreateDialog = true"
-          class="board-tab create-button"
-          style="background-color: #10b981; color: white; border: 1px solid #10b981;"
-        >
-          + Create {{ getDocumentTypeLabel(currentBoard) }}
-        </button>
+        <div class="flex items-center gap-2">
+          <button
+            @click="handleRefresh"
+            class="board-tab refresh-button"
+            :disabled="isRefreshing"
+            style="background-color: #3b82f6; color: white; border: 1px solid #3b82f6;"
+            title="Refresh project data"
+          >
+            {{ isRefreshing ? '⟳ Syncing...' : '⟳ Refresh' }}
+          </button>
+          <button
+            v-if="currentBoard !== 'vision'"
+            @click="showCreateDialog = true"
+            class="board-tab create-button"
+            style="background-color: #10b981; color: white; border: 1px solid #10b981;"
+          >
+            + Create {{ getDocumentTypeLabel(currentBoard) }}
+          </button>
+        </div>
       </div>
       <div class="board-tabs">
         <button
@@ -115,7 +126,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue'
 import type { DocumentInfo } from '../lib/tauri-api'
-import { listDocuments, transitionPhase, archiveDocument } from '../lib/tauri-api'
+import { listDocuments, transitionPhase, archiveDocument, syncProject } from '../lib/tauri-api'
 import { useProject } from '../composables/useProject'
 import { getBoardConfig, getDocumentsByPhase } from '../lib/board-config'
 import type { BoardType } from '../types/board'
@@ -146,6 +157,9 @@ const selectedDocument = ref<DocumentInfo | null>(null)
 const showArchiveConfirmation = ref(false)
 const documentToArchive = ref<DocumentInfo | null>(null)
 
+// Refresh state
+const isRefreshing = ref(false)
+
 // Board configuration
 const currentBoardConfig = computed(() => getBoardConfig(currentBoard.value))
 
@@ -171,6 +185,36 @@ const loadDocuments = async () => {
     updateDocumentsByPhase()
   } catch (error) {
     // Failed to load documents
+  }
+}
+
+// Handle refresh button - sync project and reload data
+const handleRefresh = async () => {
+  if (!currentProject.value || isRefreshing.value) return
+  
+  try {
+    isRefreshing.value = true
+    
+    // Sync the project with database
+    const syncResult = await syncProject()
+    
+    // Log sync results (could show in a toast notification later)
+    console.log('Sync completed:', {
+      imported: syncResult.imported,
+      updated: syncResult.updated,
+      deleted: syncResult.deleted,
+      up_to_date: syncResult.up_to_date,
+      errors: syncResult.errors
+    })
+    
+    // Reload documents to reflect changes
+    await loadDocuments()
+    
+  } catch (error) {
+    console.error('Failed to refresh project:', error)
+    // TODO: Show user-friendly error message
+  } finally {
+    isRefreshing.value = false
   }
 }
 

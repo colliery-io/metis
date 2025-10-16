@@ -4,18 +4,18 @@ level: task
 title: "GUI Project Switching"
 short_code: "METIS-T-0001"
 created_at: 2025-10-16T00:49:18.154457+00:00
-updated_at: 2025-10-16T00:49:18.154457+00:00
+updated_at: 2025-10-16T20:20:06.885875+00:00
 parent: 
 blocked_by: []
 archived: false
 
 tags:
   - "#task"
-  - "#phase/backlog"
   - "#bug"
+  - "#bug"
+  - "#phase/completed"
 
 
-  - "#bug"
 exit_criteria_met: false
 strategy_id: NULL
 initiative_id: NULL
@@ -66,6 +66,12 @@ initiative_id: NULL
 - **Current Problems**: {What's difficult/slow/buggy now}
 - **Benefits of Fixing**: {What improves after refactoring}
 - **Risk Assessment**: {Risks of not addressing this}
+
+## Acceptance Criteria
+
+## Acceptance Criteria
+
+## Acceptance Criteria
 
 ## Acceptance Criteria **[REQUIRED]**
 

@@ -81,6 +81,13 @@ export class MetisAPI {
   }
 
   /**
+   * Sync project with database
+   */
+  static async syncProject(): Promise<SyncResult> {
+    return invoke('sync_project');
+  }
+
+  /**
    * Get available parents for a given child document type
    */
   static async getAvailableParents(childDocumentType: string): Promise<ParentOption[]> {
@@ -210,6 +217,15 @@ export interface ArchivedDocument {
   archived_path: string;
 }
 
+export interface SyncResult {
+  imported: number;
+  updated: number;
+  deleted: number;
+  up_to_date: number;
+  errors: number;
+  messages: string[];
+}
+
 // API functions for document CRUD operations
 export class DocumentAPI {
   /**
@@ -259,3 +275,4 @@ export const updateDocument = DocumentAPI.updateDocument;
 export const deleteDocument = DocumentAPI.deleteDocument;
 export const transitionPhase = MetisAPI.transitionPhase;
 export const archiveDocument = DocumentAPI.archiveDocument;
+export const syncProject = MetisAPI.syncProject;

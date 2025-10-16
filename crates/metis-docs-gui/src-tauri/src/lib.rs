@@ -5,7 +5,7 @@ mod services;
 use services::{
     archive_document, create_document, get_available_parents, get_project_config,
     initialize_project, list_documents, load_project, read_document, search_documents,
-    transition_phase, update_document,
+    sync_project, transition_phase, update_document,
 };
 
 // Application state
@@ -40,7 +40,8 @@ pub fn run() {
             update_document,
             archive_document,
             transition_phase,
-            get_project_config
+            get_project_config,
+            sync_project
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
