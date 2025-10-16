@@ -126,7 +126,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue'
 import type { DocumentInfo } from '../lib/tauri-api'
-import { listDocuments, transitionPhase, archiveDocument, syncProject } from '../lib/tauri-api'
+import { listDocuments, transitionPhase, archiveDocument, syncProject, getProjectConfig } from '../lib/tauri-api'
 import { useProject } from '../composables/useProject'
 import { getBoardConfig, getDocumentsByPhase } from '../lib/board-config'
 import type { BoardType } from '../types/board'
@@ -144,7 +144,7 @@ defineProps<Props>()
 const { currentProject } = useProject()
 
 // Multi-board support for flight levels
-const availableBoards: BoardType[] = ['vision', 'initiative', 'task', 'adr', 'backlog']
+const availableBoards = ref<BoardType[]>(['vision', 'initiative', 'task', 'adr', 'backlog'])
 const currentBoard = ref<BoardType>('vision')
 const allDocuments = ref<DocumentInfo[]>([])
 const showCreateDialog = ref(false)
@@ -174,6 +174,38 @@ const visionDocument = computed(() => {
 // Update documents by phase when board changes or documents load
 const updateDocumentsByPhase = () => {
   documentsByPhase.value = getDocumentsByPhase(allDocuments.value, currentBoard.value)
+}
+
+// Load project configuration and set available boards
+const loadProjectConfig = async () => {
+  if (!currentProject.value) return
+  
+  try {
+    const config = await getProjectConfig()
+    
+    // Set available boards based on configuration
+    const boards: BoardType[] = ['vision'] // Always have vision
+    
+    if (config.strategies_enabled) {
+      boards.push('strategy')
+    }
+    
+    if (config.initiatives_enabled) {
+      boards.push('initiative')
+    }
+    
+    boards.push('task', 'adr', 'backlog') // Always have these
+    
+    availableBoards.value = boards
+    
+    // If current board is not available, switch to vision
+    if (!boards.includes(currentBoard.value)) {
+      currentBoard.value = 'vision'
+    }
+  } catch (error) {
+    // Failed to load config, use default
+    availableBoards.value = ['vision', 'initiative', 'task', 'adr', 'backlog']
+  }
 }
 
 // Load documents from backend
@@ -351,16 +383,18 @@ const getDocumentTypeLabel = (boardType: BoardType) => {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
+  await loadProjectConfig()
   loadDocuments()
 })
 
 // Watch for project changes and reload documents
-watch(() => currentProject.value, (newProject) => {
+watch(() => currentProject.value, async (newProject) => {
   if (newProject) {
     // Clear selected document when switching projects to ensure content refreshes
     selectedDocument.value = null
     showDocumentViewer.value = false
+    await loadProjectConfig()
     loadDocuments()
   }
 }, { immediate: false })

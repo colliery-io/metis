@@ -44,6 +44,41 @@
           The directory "{{ directoryName }}" will be initialized as a new Metis project.
         </p>
 
+        <!-- Configuration Preset -->
+        <div class="mb-4">
+          <label 
+            class="block mb-2 font-medium"
+            :style="{ 
+              fontSize: '14px', 
+              color: theme.colors.text.primary 
+            }"
+          >
+            Configuration Preset
+          </label>
+          <select
+            v-model="preset"
+            class="w-full px-3 py-2 rounded-lg transition-colors"
+            :style="{
+              backgroundColor: theme.colors.background.primary,
+              border: `1px solid ${theme.colors.border.primary}`,
+              color: theme.colors.text.primary,
+              fontSize: '14px'
+            }"
+          >
+            <option value="streamlined">Streamlined (Vision → Initiative → Task)</option>
+            <option value="full">Full (Vision → Strategy → Initiative → Task)</option>
+            <option value="direct">Direct (Vision → Task)</option>
+          </select>
+          <p 
+            class="mt-1 text-xs"
+            :style="{ 
+              color: theme.colors.text.tertiary 
+            }"
+          >
+            Determines which document types are available in your project
+          </p>
+        </div>
+
         <!-- Project Prefix Input -->
         <div class="mb-4">
           <label 
@@ -139,7 +174,7 @@ interface Props {
 }
 
 interface Emits {
-  (e: 'confirm', prefix: string): void
+  (e: 'confirm', prefix: string, preset: string): void
   (e: 'cancel'): void
   (e: 'update:isOpen', value: boolean): void
 }
@@ -149,6 +184,7 @@ const emit = defineEmits<Emits>()
 
 const { theme } = useTheme()
 const prefix = ref('')
+const preset = ref('streamlined') // Default to streamlined
 const error = ref('')
 
 // Generate default prefix when dialog opens
@@ -182,7 +218,7 @@ const handleSubmit = (e: Event) => {
     error.value = validationError
     return
   }
-  emit('confirm', prefix.value)
+  emit('confirm', prefix.value, preset.value)
 }
 
 const handleCancelHover = (e: Event) => {

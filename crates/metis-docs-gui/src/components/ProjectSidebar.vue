@@ -158,12 +158,12 @@ const handleRemoveProject = (e: Event, projectPath: string) => {
   removeProject(projectPath)
 }
 
-const handleInitConfirm = async (prefix: string) => {
+const handleInitConfirm = async (prefix: string, preset: string) => {
   showInitDialog.value = false
   
   try {
-    // Initialize the project with the user-provided prefix
-    await MetisAPI.initializeProject(selectedPath.value, prefix)
+    // Initialize the project with the user-provided prefix and preset
+    await MetisAPI.initializeProject(selectedPath.value, prefix, preset)
     
     // Now load the newly initialized project
     await loadProject(selectedPath.value)

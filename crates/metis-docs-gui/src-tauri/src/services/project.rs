@@ -1,6 +1,8 @@
 use crate::AppState;
 use metis_core::{
-    application::services::workspace::initialization::WorkspaceInitializationService, Application,
+    application::services::workspace::initialization::WorkspaceInitializationService, 
+    domain::configuration::FlightLevelConfig,
+    Application,
     Database,
 };
 use serde::{Deserialize, Serialize};
@@ -32,9 +34,11 @@ pub struct ProjectConfig {
 pub async fn initialize_project(
     path: String,
     prefix: Option<String>,
+    preset: Option<String>,
 ) -> Result<InitializationResult, String> {
     let project_path = PathBuf::from(&path);
 
+    // Initialize workspace first (like CLI does)
     let result = WorkspaceInitializationService::initialize_workspace_with_prefix(
         &project_path,
         "New Project",
@@ -43,9 +47,20 @@ pub async fn initialize_project(
     .await
     .map_err(|e| format!("Failed to initialize project: {}", e))?;
 
-    // Auto-sync after project initialization to populate database
+    // Set up database and apply flight level configuration
     let database = Database::new(result.database_path.to_str().unwrap())
-        .map_err(|e| format!("Failed to open database for sync: {}", e))?;
+        .map_err(|e| format!("Failed to initialize database: {}", e))?;
+    
+    // Determine and set the flight level configuration based on preset
+    let flight_config = determine_flight_config(preset.as_deref())?;
+    let mut config_repo = database
+        .configuration_repository()
+        .map_err(|e| format!("Failed to create configuration repository: {}", e))?;
+    config_repo
+        .set_flight_level_config(&flight_config)
+        .map_err(|e| format!("Failed to set flight level configuration: {}", e))?;
+
+    // Auto-sync after project initialization to populate database
     let app = Application::new(database);
 
     app.sync_directory(&result.metis_dir)
@@ -118,6 +133,20 @@ pub async fn get_project_config(
     })
 }
 
+/// Determine the flight level configuration based on preset name
+fn determine_flight_config(preset_name: Option<&str>) -> Result<FlightLevelConfig, String> {
+    match preset_name {
+        Some("full") => Ok(FlightLevelConfig::full()),
+        Some("streamlined") => Ok(FlightLevelConfig::streamlined()),
+        Some("direct") => Ok(FlightLevelConfig::direct()),
+        None => Ok(FlightLevelConfig::streamlined()), // Default to streamlined
+        Some(invalid) => Err(format!(
+            "Invalid preset '{}'. Valid presets are: full, streamlined, direct",
+            invalid
+        )),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -128,7 +157,7 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let project_path = temp_dir.path().to_string_lossy().to_string();
 
-        let result = initialize_project(project_path.clone(), Some("TEST".to_string())).await;
+        let result = initialize_project(project_path.clone(), Some("TEST".to_string()), None).await;
 
         assert!(result.is_ok(), "Project initialization should succeed");
         let init_result = result.unwrap();
@@ -149,7 +178,7 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let project_path = temp_dir.path().to_string_lossy().to_string();
 
-        let result = initialize_project(project_path, None).await;
+        let result = initialize_project(project_path, None, None).await;
 
         assert!(
             result.is_ok(),

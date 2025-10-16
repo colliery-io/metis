@@ -40,9 +40,10 @@ export class MetisAPI {
    */
   static async initializeProject(
     path: string,
-    prefix?: string
+    prefix?: string,
+    preset?: string
   ): Promise<InitializationResult> {
-    return invoke('initialize_project', { path, prefix });
+    return invoke('initialize_project', { path, prefix, preset });
   }
 
   /**
