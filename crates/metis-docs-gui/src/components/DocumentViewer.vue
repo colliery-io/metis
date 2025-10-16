@@ -113,11 +113,12 @@
           Error: {{ error }}
         </div>
         
-        <div v-else class="h-full">
+        <div v-else class="flex flex-col h-full min-h-0">
           <TiptapEditor
             :content="content"
             :editable="isEditing"
             @update="handleContentUpdate"
+            class="flex-1 min-h-0"
           />
         </div>
       </div>

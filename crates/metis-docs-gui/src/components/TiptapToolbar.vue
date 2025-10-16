@@ -6,10 +6,11 @@
       alignItems: 'center', 
       gap: 'var(--spacing-xs)', 
       padding: 'var(--spacing-sm) 1rem', 
-      backgroundColor: 'var(--color-surface)', 
+      backgroundColor: '#ffffff', 
       borderBottom: '1px solid var(--color-border)', 
       flexWrap: 'wrap',
-      position: 'relative',
+      position: 'sticky',
+      top: 0,
       zIndex: 10,
       flexShrink: 0
     }"
@@ -65,7 +66,7 @@
       class="btn-toolbar"
       title="Strikethrough"
     >
-      <strike>S</strike>
+      <span style="text-decoration: line-through;">S</span>
     </button>
     
     <div class="btn-toolbar-divider"></div>

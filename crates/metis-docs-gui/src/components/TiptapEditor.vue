@@ -1,9 +1,10 @@
 <template>
   <div class="tiptap-editor-container">
-    <!-- Fixed Toolbar -->
+    <!-- Fixed Toolbar - Outside scroll container -->
     <TiptapToolbar 
       v-if="editable && editor" 
       :editor="editor" 
+      class="tiptap-toolbar-fixed"
     />
 
     <!-- Scrollable Editor Content -->
@@ -171,13 +172,18 @@ onBeforeUnmount(() => {
 .tiptap-editor-container {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  overflow: hidden;
+  flex: 1;
+  min-height: 0;
+}
+
+.tiptap-toolbar-fixed {
+  flex-shrink: 0;
 }
 
 .tiptap-content-wrapper {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   min-height: 0;
   padding: 1rem;
 }
@@ -190,7 +196,7 @@ onBeforeUnmount(() => {
 .tiptap-content :deep(.ProseMirror) {
   outline: none;
   color: var(--color-text-primary);
-  min-height: 300px;
+  min-height: 100%;
 }
 
 .tiptap-content :deep(.ProseMirror p.is-editor-empty:first-child::before) {
