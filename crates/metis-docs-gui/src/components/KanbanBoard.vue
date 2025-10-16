@@ -113,7 +113,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import type { DocumentInfo } from '../lib/tauri-api'
 import { listDocuments, transitionPhase, archiveDocument } from '../lib/tauri-api'
 import { useProject } from '../composables/useProject'
@@ -310,6 +310,13 @@ const getDocumentTypeLabel = (boardType: BoardType) => {
 onMounted(() => {
   loadDocuments()
 })
+
+// Watch for project changes and reload documents
+watch(() => currentProject.value, (newProject) => {
+  if (newProject) {
+    loadDocuments()
+  }
+}, { immediate: false })
 </script>
 
 <style scoped>

@@ -41,8 +41,12 @@ export function useProject() {
         state.currentProject = projectInfo
         state.isLoading = false
         state.error = null
-        addRecentProject(projectInfo)
-        saveRecentProject(projectInfo)
+        // Only add to recent projects if it's not already there (to avoid reordering)
+        const isAlreadyRecent = state.recentProjects.some(p => p.path === projectInfo.path)
+        if (!isAlreadyRecent) {
+          addRecentProject(projectInfo)
+          saveRecentProject(projectInfo)
+        }
       } else {
         state.error = 'Invalid Metis project directory'
         state.isLoading = false
