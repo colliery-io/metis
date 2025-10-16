@@ -4,7 +4,7 @@ use clap::Args;
 use metis_core::{
     application::services::document::creation::{DocumentCreationConfig, DocumentCreationService},
     domain::configuration::FlightLevelConfig,
-    Database, Phase, Tag,
+    Application, Database, Phase, Tag,
 };
 use std::path::Path;
 
@@ -93,6 +93,10 @@ impl InitCommand {
         let project_name = self.name.as_deref().unwrap_or("Project Vision");
         create_default_vision(&metis_dir, project_name).await?;
 
+        // Sync the workspace to ensure all documents are in database
+        let app = Application::new(db);
+        let _sync_results = app.sync_directory(&metis_dir).await?;
+
         println!("✓ Initialized Metis workspace in {}", current_dir.display());
         println!("✓ Created vision.md with project template");
         println!("✓ Set project prefix: {}", project_prefix);
@@ -100,6 +104,7 @@ impl InitCommand {
             "✓ Set flight level configuration: {}",
             flight_config.preset_name()
         );
+        println!("✓ Synced workspace documents to database");
 
         Ok(())
     }
