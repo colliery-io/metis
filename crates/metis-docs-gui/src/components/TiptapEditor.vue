@@ -1,100 +1,18 @@
 <template>
-  <div class="tiptap-editor h-full flex flex-col">
-    <!-- Toolbar - only show when editable -->
-    <div v-if="editable" class="editor-toolbar" style="display: flex; align-items: center; gap: var(--spacing-xs); padding: var(--spacing-sm) var(--spacing-lg); background-color: var(--color-surface); border-bottom: 1px solid var(--color-border); flex-wrap: wrap;">
-      <button
-        @click="editor?.chain().focus().toggleHeading({ level: 1 }).run()"
-        :class="{ 'btn-toolbar--active': editor?.isActive('heading', { level: 1 }) }"
-        class="btn-toolbar"
-      >
-        H1
-      </button>
-      <button
-        @click="editor?.chain().focus().toggleHeading({ level: 2 }).run()"
-        :class="{ 'btn-toolbar--active': editor?.isActive('heading', { level: 2 }) }"
-        class="btn-toolbar"
-      >
-        H2
-      </button>
-      <button
-        @click="editor?.chain().focus().toggleHeading({ level: 3 }).run()"
-        :class="{ 'btn-toolbar--active': editor?.isActive('heading', { level: 3 }) }"
-        class="btn-toolbar"
-      >
-        H3
-      </button>
-      <div class="btn-toolbar-divider"></div>
-      <button
-        @click="editor?.chain().focus().toggleBold().run()"
-        :class="{ 'btn-toolbar--active': editor?.isActive('bold') }"
-        class="btn-toolbar"
-      >
-        <strong>B</strong>
-      </button>
-      <button
-        @click="editor?.chain().focus().toggleItalic().run()"
-        :class="{ 'btn-toolbar--active': editor?.isActive('italic') }"
-        class="btn-toolbar"
-      >
-        <em>I</em>
-      </button>
-      <button
-        @click="editor?.chain().focus().toggleStrike().run()"
-        :class="{ 'btn-toolbar--active': editor?.isActive('strike') }"
-        class="btn-toolbar"
-      >
-        <strike>S</strike>
-      </button>
-      <div class="btn-toolbar-divider"></div>
-      <button
-        @click="editor?.chain().focus().toggleBulletList().run()"
-        :class="{ 'btn-toolbar--active': editor?.isActive('bulletList') }"
-        class="btn-toolbar"
-      >
-        • List
-      </button>
-      <button
-        @click="editor?.chain().focus().toggleOrderedList().run()"
-        :class="{ 'btn-toolbar--active': editor?.isActive('orderedList') }"
-        class="btn-toolbar"
-      >
-        1. List
-      </button>
-      <button
-        @click="editor?.chain().focus().toggleBlockquote().run()"
-        :class="{ 'btn-toolbar--active': editor?.isActive('blockquote') }"
-        class="btn-toolbar"
-      >
-        " Quote
-      </button>
-      <div class="btn-toolbar-divider"></div>
-      <button
-        @click="editor?.chain().focus().setHorizontalRule().run()"
-        class="btn-toolbar"
-      >
-        — Rule
-      </button>
-      <button
-        @click="editor?.chain().focus().undo().run()"
-        :disabled="!editor?.can().undo()"
-        class="btn-toolbar"
-      >
-        ↶ Undo
-      </button>
-      <button
-        @click="editor?.chain().focus().redo().run()"
-        :disabled="!editor?.can().redo()"
-        class="btn-toolbar"
-      >
-        ↷ Redo
-      </button>
-    </div>
-
-    <!-- Editor Content -->
-    <EditorContent 
+  <div class="tiptap-editor-container">
+    <!-- Fixed Toolbar -->
+    <TiptapToolbar 
+      v-if="editable && editor" 
       :editor="editor" 
-      class="tiptap-content p-4 prose prose-sm max-w-none focus:outline-none flex-1"
     />
+
+    <!-- Scrollable Editor Content -->
+    <div class="tiptap-content-wrapper">
+      <EditorContent 
+        :editor="editor" 
+        class="tiptap-content prose prose-sm max-w-none focus:outline-none"
+      />
+    </div>
   </div>
 </template>
 
@@ -104,6 +22,7 @@ import { useEditor, EditorContent } from '@tiptap/vue-3'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import { Markdown } from 'tiptap-markdown-3'
+import TiptapToolbar from './TiptapToolbar.vue'
 // Removed gray-matter to avoid Node.js Buffer dependency in browser
 
 interface Props {
@@ -167,6 +86,13 @@ const editor = useEditor({
       bulletListMarker: '-'
     })
   ],
+  editorProps: {
+    scrollThreshold: 80,
+    scrollMargin: 80,
+    attributes: {
+      class: 'prose prose-sm max-w-none focus:outline-none',
+    },
+  },
   onCreate: ({ editor: e }) => {
     // Load content when editor is ready
     if (props.content) {
@@ -242,20 +168,29 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.tiptap-content {
+.tiptap-editor-container {
   display: flex;
   flex-direction: column;
-  overflow: visible !important;
-  max-height: none !important;
-  height: auto !important;
+  height: 100%;
+  overflow: hidden;
+}
+
+.tiptap-content-wrapper {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  padding: 1rem;
+}
+
+.tiptap-content {
+  width: 100%;
+  height: auto;
 }
 
 .tiptap-content :deep(.ProseMirror) {
   outline: none;
   color: var(--color-text-primary);
-  overflow: visible !important;
-  max-height: none !important;
-  height: auto !important;
+  min-height: 300px;
 }
 
 .tiptap-content :deep(.ProseMirror p.is-editor-empty:first-child::before) {
@@ -295,68 +230,5 @@ onBeforeUnmount(() => {
   color: var(--color-text-primary);
 }
 
-/* Toolbar button styles */
-.btn-toolbar {
-  padding: 8px 12px;
-  border: 1px solid var(--color-border-primary);
-  background-color: var(--color-background-secondary);
-  color: var(--color-text-primary);
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 40px;
-  height: 36px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-}
-
-.btn-toolbar:hover {
-  background-color: var(--color-background-elevated);
-  border-color: var(--color-interactive-primary);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  transform: translateY(-1px);
-}
-
-.btn-toolbar:active {
-  transform: translateY(0);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-}
-
-.btn-toolbar:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  background-color: var(--color-background-tertiary);
-  transform: none;
-  box-shadow: none;
-}
-
-.btn-toolbar:disabled:hover {
-  transform: none;
-  box-shadow: none;
-  border-color: var(--color-border-primary);
-}
-
-.btn-toolbar--active {
-  background-color: var(--color-interactive-primary);
-  color: var(--color-text-inverse);
-  border-color: var(--color-interactive-primary);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
-}
-
-.btn-toolbar--active:hover {
-  background-color: var(--color-interactive-primary);
-  transform: none;
-}
-
-.btn-toolbar-divider {
-  width: 1px;
-  height: 28px;
-  background-color: var(--color-border-primary);
-  margin: 0 8px;
-  opacity: 0.6;
-}
+/* Toolbar styles moved to TiptapToolbar.vue */
 </style>

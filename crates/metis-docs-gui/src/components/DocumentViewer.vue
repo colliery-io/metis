@@ -13,16 +13,11 @@
     
     <!-- Dialog -->
     <div 
-      class="relative shadow-2xl z-10"
+      class="relative shadow-2xl z-10 flex flex-col w-[90vw] max-w-3xl max-h-[90vh] overflow-hidden"
       :style="{
         backgroundColor: theme.colors.background.elevated,
         border: `3px solid ${theme.colors.interactive.primary}`,
         borderRadius: '24px',
-        width: '90vw',
-        maxWidth: '800px',
-        maxHeight: '90vh',
-        display: 'flex',
-        flexDirection: 'column',
         boxShadow: `0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px ${theme.colors.interactive.primary}20`
       }"
     >
@@ -69,43 +64,15 @@
         </div>
         
         <div class="flex items-center space-x-3">
-          <button
-            v-if="!isEditing"
-            @click="handleEditClick"
-            class="px-6 py-3 rounded-lg transition-all font-semibold"
-            :style="{
-              backgroundColor: theme.colors.interactive.primary,
-              color: theme.colors.text.inverse,
-              border: `2px solid ${theme.colors.interactive.primary}`
+          <span 
+            v-if="saveStatus"
+            class="px-3 py-2 text-sm font-medium"
+            :style="{ 
+              color: saveStatus === 'error' ? theme.colors.interactive.danger : theme.colors.text.secondary 
             }"
-            @mouseenter="handleEditButtonHover"
-            @mouseleave="handleEditButtonLeave"
           >
-            Edit
-          </button>
-          
-          <template v-else>
-            <span 
-              v-if="saveStatus"
-              class="px-3 py-2 text-sm font-medium"
-              :style="{ 
-                color: saveStatus === 'error' ? theme.colors.interactive.danger : theme.colors.text.secondary 
-              }"
-            >
-              {{ saveStatusText }}
-            </span>
-            <button
-              @click="handleStopEdit"
-              class="px-6 py-3 rounded-lg transition-all font-semibold"
-              :style="{
-                backgroundColor: theme.colors.interactive.primary,
-                color: theme.colors.text.inverse,
-                border: `2px solid ${theme.colors.interactive.primary}`
-              }"
-            >
-              Done
-            </button>
-          </template>
+            {{ saveStatusText }}
+          </span>
           
           <button
             @click="handleClose"
@@ -127,7 +94,7 @@
 
       <!-- Content -->
       <div 
-        class="flex-1 overflow-auto"
+        class="flex-1 overflow-y-auto"
         style="min-height: 0;"
       >
         <div 
@@ -146,7 +113,7 @@
           Error: {{ error }}
         </div>
         
-        <div v-else class="h-full overflow-auto">
+        <div v-else class="h-full">
           <TiptapEditor
             :content="content"
             :editable="isEditing"
@@ -185,7 +152,7 @@ const content = ref('')
 const loading = ref(false)
 const error = ref<string | null>(null)
 const documentContent = ref<DocumentContent | null>(null)
-const isEditing = ref(props.initialEdit || false)
+const isEditing = ref(true) // Always start in edit mode
 const saveStatus = ref<'saving' | 'saved' | 'error' | null>(null)
 const originalFrontmatter = ref('')
 
@@ -205,7 +172,7 @@ const loadDocument = async () => {
   try {
     loading.value = true
     error.value = null
-    isEditing.value = false // Reset to view mode when opening new document
+    // Keep in edit mode when opening documents
     
     // Ensure project is loaded in the backend
     await MetisAPI.loadProject(currentProject.value.path)
@@ -247,7 +214,7 @@ const debounce = (func: (...args: any[]) => void, wait: number) => {
 }
 
 const saveDocument = async () => {
-  if (!props.document || !currentProject.value?.path || !isEditing.value) return
+  if (!props.document || !currentProject.value?.path) return
 
 
   try {
@@ -281,37 +248,20 @@ const saveDocument = async () => {
 // Debounced save function
 const debouncedSave = debounce(saveDocument, 1000)
 
-const handleEditClick = () => {
-  isEditing.value = true
-}
-
-const handleStopEdit = () => {
-  isEditing.value = false
-}
+// Edit mode functions removed - always in edit mode now
 
 const handleClose = () => {
-  isEditing.value = false
   error.value = null
   emit('close')
 }
 
 const handleContentUpdate = (newContent: string) => {
   content.value = newContent
-  // Auto-save when content changes (only in edit mode)
-  if (isEditing.value) {
-    debouncedSave()
-  }
+  // Auto-save when content changes (always in edit mode)
+  debouncedSave()
 }
 
-const handleEditButtonHover = (e: Event) => {
-  const target = e.currentTarget as HTMLElement
-  target.style.backgroundColor = theme.value.colors.interactive.primaryHover || theme.value.colors.interactive.primary
-}
-
-const handleEditButtonLeave = (e: Event) => {
-  const target = e.currentTarget as HTMLElement
-  target.style.backgroundColor = theme.value.colors.interactive.primary
-}
+// Edit button hover functions removed - no longer needed
 
 const handleCloseButtonHover = (e: Event) => {
   const target = e.currentTarget as HTMLElement

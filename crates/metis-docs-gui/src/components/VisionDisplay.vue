@@ -31,39 +31,15 @@
             </option>
           </select>
 
-          <button
-            v-if="!isEditing"
-            @click="handleEditClick"
-            class="px-4 py-2 rounded-lg font-medium transition-all hover:shadow-md"
-            :style="{
-              backgroundColor: theme.colors.interactive.primary,
-              color: theme.colors.text.inverse,
+          <span 
+            v-if="saveStatus"
+            class="px-3 py-2 text-sm font-medium"
+            :style="{ 
+              color: saveStatus === 'error' ? theme.colors.interactive.danger : theme.colors.text.secondary 
             }"
           >
-            Edit
-          </button>
-          
-          <template v-else>
-            <span 
-              v-if="saveStatus"
-              class="px-3 py-2 text-sm font-medium"
-              :style="{ 
-                color: saveStatus === 'error' ? theme.colors.interactive.danger : theme.colors.text.secondary 
-              }"
-            >
-              {{ saveStatusText }}
-            </span>
-            <button
-              @click="handleStopEdit"
-              class="px-4 py-2 rounded-lg font-medium transition-all hover:shadow-md"
-              :style="{
-                backgroundColor: theme.colors.interactive.primary,
-                color: theme.colors.text.inverse,
-              }"
-            >
-              Done
-            </button>
-          </template>
+            {{ saveStatusText }}
+          </span>
           <span
             class="px-3 py-1 rounded-full text-sm font-medium"
             :style="{
@@ -134,7 +110,7 @@ const { theme } = useTheme()
 const content = ref('')
 const loading = ref(true)
 const error = ref<string | null>(null)
-const isEditing = ref(false)
+const isEditing = ref(true) // Always start in edit mode
 const originalFrontmatter = ref('')
 const currentPhase = ref(props.vision.phase)
 const saveStatus = ref<'saving' | 'saved' | 'error' | null>(null)
@@ -203,7 +179,7 @@ const loadContent = async () => {
 }
 
 const saveDocument = async () => {
-  if (!isEditing.value) return
+  // Always save since we're always in edit mode
 
   try {
     saveStatus.value = 'saving'
@@ -232,20 +208,12 @@ const saveDocument = async () => {
 // Debounced save function
 const debouncedSave = debounce(saveDocument, 1000)
 
-const handleEditClick = () => {
-  isEditing.value = true
-}
-
-const handleStopEdit = () => {
-  isEditing.value = false
-}
+// Edit mode functions removed - always in edit mode now
 
 const handleContentUpdate = (newContent: string) => {
   content.value = newContent
-  // Auto-save when content changes (only in edit mode)
-  if (isEditing.value) {
-    debouncedSave()
-  }
+  // Auto-save when content changes (always in edit mode)
+  debouncedSave()
 }
 
 const handlePhaseChange = async () => {
