@@ -314,6 +314,9 @@ onMounted(() => {
 // Watch for project changes and reload documents
 watch(() => currentProject.value, (newProject) => {
   if (newProject) {
+    // Clear selected document when switching projects to ensure content refreshes
+    selectedDocument.value = null
+    showDocumentViewer.value = false
     loadDocuments()
   }
 }, { immediate: false })

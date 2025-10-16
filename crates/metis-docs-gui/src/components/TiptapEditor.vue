@@ -23,6 +23,10 @@ import { useEditor, EditorContent } from '@tiptap/vue-3'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import { Markdown } from 'tiptap-markdown-3'
+import { Table } from '@tiptap/extension-table'
+import TableRow from '@tiptap/extension-table-row'
+import TableHeader from '@tiptap/extension-table-header'
+import TableCell from '@tiptap/extension-table-cell'
 import TiptapToolbar from './TiptapToolbar.vue'
 // Removed gray-matter to avoid Node.js Buffer dependency in browser
 
@@ -85,7 +89,13 @@ const editor = useEditor({
       html: true,
       tightLists: true,
       bulletListMarker: '-'
-    })
+    }),
+    Table.configure({
+      resizable: true,
+    }),
+    TableRow,
+    TableHeader,
+    TableCell,
   ],
   editorProps: {
     scrollThreshold: 80,
@@ -234,6 +244,58 @@ onBeforeUnmount(() => {
 
 .tiptap-content :deep(.ProseMirror em) {
   color: var(--color-text-primary);
+}
+
+/* Table styles */
+.tiptap-content :deep(.ProseMirror .tableWrapper) {
+  overflow-x: auto;
+  margin: 1rem 0;
+}
+
+.tiptap-content :deep(.ProseMirror table) {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--color-border-primary);
+}
+
+.tiptap-content :deep(.ProseMirror table td),
+.tiptap-content :deep(.ProseMirror table th) {
+  min-width: 1em;
+  border: 1px solid var(--color-border-primary);
+  padding: 8px 12px;
+  vertical-align: top;
+  box-sizing: border-box;
+  position: relative;
+  background: var(--color-background-primary);
+}
+
+.tiptap-content :deep(.ProseMirror table th) {
+  font-weight: bold;
+  text-align: left;
+  background: var(--color-background-secondary);
+  color: var(--color-text-primary);
+}
+
+.tiptap-content :deep(.ProseMirror table .selectedCell) {
+  background: var(--color-interactive-secondary);
+}
+
+.tiptap-content :deep(.ProseMirror table .column-resize-handle) {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: -2px;
+  width: 4px;
+  z-index: 20;
+  background: var(--color-interactive-primary);
+  pointer-events: none;
+}
+
+.tiptap-content :deep(.ProseMirror table p) {
+  margin: 0;
 }
 
 /* Toolbar styles moved to TiptapToolbar.vue */

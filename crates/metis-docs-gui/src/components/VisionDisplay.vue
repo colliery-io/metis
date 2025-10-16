@@ -87,7 +87,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { readDocument, updateDocument, transitionPhase } from '../lib/tauri-api'
 import { useTheme } from '../composables/useTheme'
 import TiptapEditor from './TiptapEditor.vue'
@@ -253,4 +253,10 @@ const getPhaseColor = (phase: string) => {
 onMounted(() => {
   loadContent()
 })
+
+// Watch for vision prop changes (when switching projects)
+watch(() => props.vision.short_code, () => {
+  currentPhase.value = props.vision.phase
+  loadContent()
+}, { immediate: false })
 </script>

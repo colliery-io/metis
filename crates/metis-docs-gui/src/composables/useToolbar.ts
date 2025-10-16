@@ -21,6 +21,23 @@ export function useToolbar(editor: Ref<Editor | null>) {
   const undo = () => editor.value?.chain().focus().undo().run()
   const redo = () => editor.value?.chain().focus().redo().run()
   
+  // Table commands
+  const insertTable = () => editor.value?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
+  const deleteTable = () => editor.value?.chain().focus().deleteTable().run()
+  const addColumnBefore = () => editor.value?.chain().focus().addColumnBefore().run()
+  const addColumnAfter = () => editor.value?.chain().focus().addColumnAfter().run()
+  const deleteColumn = () => editor.value?.chain().focus().deleteColumn().run()
+  const addRowBefore = () => editor.value?.chain().focus().addRowBefore().run()
+  const addRowAfter = () => editor.value?.chain().focus().addRowAfter().run()
+  const deleteRow = () => editor.value?.chain().focus().deleteRow().run()
+  const toggleHeaderColumn = () => editor.value?.chain().focus().toggleHeaderColumn().run()
+  const toggleHeaderRow = () => editor.value?.chain().focus().toggleHeaderRow().run()
+  const toggleHeaderCell = () => editor.value?.chain().focus().toggleHeaderCell().run()
+  const mergeCells = () => editor.value?.chain().focus().mergeCells().run()
+  const splitCell = () => editor.value?.chain().focus().splitCell().run()
+  const mergeOrSplit = () => editor.value?.chain().focus().mergeOrSplit().run()
+  const setCellAttribute = (name: string, value: any) => editor.value?.chain().focus().setCellAttribute(name, value).run()
+  
   // Active state helpers
   const isActive = (name: string, attrs: Record<string, any> = {}): ComputedRef<boolean> => 
     computed(() => editor.value?.isActive(name, attrs) ?? false)
@@ -41,6 +58,23 @@ export function useToolbar(editor: Ref<Editor | null>) {
     setHorizontalRule,
     undo,
     redo,
+    
+    // Table commands
+    insertTable,
+    deleteTable,
+    addColumnBefore,
+    addColumnAfter,
+    deleteColumn,
+    addRowBefore,
+    addRowAfter,
+    deleteRow,
+    toggleHeaderColumn,
+    toggleHeaderRow,
+    toggleHeaderCell,
+    mergeCells,
+    splitCell,
+    mergeOrSplit,
+    setCellAttribute,
     
     // State
     isActive,

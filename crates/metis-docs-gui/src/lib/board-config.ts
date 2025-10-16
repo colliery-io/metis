@@ -79,6 +79,12 @@ const initiativePhases: PhaseConfig[] = [
 
 const taskPhases: PhaseConfig[] = [
   {
+    key: 'blocked',
+    title: 'Blocked',
+    description: 'Waiting on dependencies',
+    emptyMessage: 'No blocked tasks',
+  },
+  {
     key: 'todo',
     title: 'Todo',
     description: 'Ready for execution',
@@ -89,12 +95,6 @@ const taskPhases: PhaseConfig[] = [
     title: 'Active',
     description: 'Currently being worked on',
     emptyMessage: 'No tasks in progress',
-  },
-  {
-    key: 'blocked',
-    title: 'Blocked',
-    description: 'Waiting on dependencies',
-    emptyMessage: 'No blocked tasks',
   },
   {
     key: 'completed',

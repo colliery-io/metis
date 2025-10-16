@@ -99,6 +99,89 @@
     
     <div class="btn-toolbar-divider"></div>
     
+    <!-- Table commands -->
+    <button
+      @click="insertTable"
+      class="btn-toolbar"
+      title="Insert Table"
+    >
+      + Table
+    </button>
+    <button
+      @click="deleteTable"
+      :disabled="!isActive('table').value"
+      class="btn-toolbar"
+      title="Delete Table"
+    >
+      - Table
+    </button>
+    <button
+      @click="addColumnAfter"
+      :disabled="!isActive('table').value"
+      class="btn-toolbar"
+      title="Add Column"
+    >
+      + Col
+    </button>
+    <button
+      @click="deleteColumn"
+      :disabled="!isActive('table').value"
+      class="btn-toolbar"
+      title="Delete Column"
+    >
+      - Col
+    </button>
+    <button
+      @click="addRowAfter"
+      :disabled="!isActive('table').value"
+      class="btn-toolbar"
+      title="Add Row"
+    >
+      + Row
+    </button>
+    <button
+      @click="deleteRow"
+      :disabled="!isActive('table').value"
+      class="btn-toolbar"
+      title="Delete Row"
+    >
+      - Row
+    </button>
+    <button
+      @click="toggleHeaderRow"
+      :disabled="!isActive('table').value"
+      class="btn-toolbar"
+      title="Toggle Header Row"
+    >
+      H Row
+    </button>
+    <button
+      @click="toggleHeaderColumn"
+      :disabled="!isActive('table').value"
+      class="btn-toolbar"
+      title="Toggle Header Column"
+    >
+      H Col
+    </button>
+    <button
+      @click="toggleHeaderCell"
+      :disabled="!isActive('table').value"
+      class="btn-toolbar"
+      title="Toggle Header Cell"
+    >
+      H Cell
+    </button>
+    <button
+      @click="mergeOrSplit"
+      :disabled="!isActive('table').value"
+      class="btn-toolbar"
+      title="Merge or Split Cells"
+    >
+      Merge
+    </button>
+    
+    <div class="btn-toolbar-divider"></div>
+    
     <!-- Other commands -->
     <button
       @click="setHorizontalRule"
@@ -147,6 +230,16 @@ const {
   setHorizontalRule,
   undo,
   redo,
+  insertTable,
+  deleteTable,
+  addColumnAfter,
+  deleteColumn,
+  addRowAfter,
+  deleteRow,
+  toggleHeaderRow,
+  toggleHeaderColumn,
+  toggleHeaderCell,
+  mergeOrSplit,
   isActive,
   canUndo,
   canRedo,
