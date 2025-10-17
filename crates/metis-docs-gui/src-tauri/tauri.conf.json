@@ -1,44 +1,44 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Metis",
-  "version": "0.6.0",
-  "identifier": "io.colliery.metis",
-  "build": {
-    "frontendDist": "../dist",
-    "devUrl": "http://localhost:1420",
-    "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "npm run build"
-  },
   "app": {
-    "windows": [
-      {
-        "title": "Metis",
-        "width": 1200,
-        "height": 800,
-        "minWidth": 800,
-        "minHeight": 600,
-        "resizable": true,
-        "fullscreen": false,
-        "decorations": true,
-        "transparent": false,
-        "shadow": true,
-        "center": true,
-        "dragDropEnabled": true
-      }
-    ],
     "security": {
       "csp": null
-    }
+    },
+    "windows": [
+      {
+        "center": true,
+        "decorations": true,
+        "dragDropEnabled": true,
+        "fullscreen": false,
+        "height": 800,
+        "minHeight": 600,
+        "minWidth": 800,
+        "resizable": true,
+        "shadow": true,
+        "title": "Metis",
+        "transparent": false,
+        "width": 1200
+      }
+    ]
+  },
+  "build": {
+    "beforeBuildCommand": "npm run build",
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "frontendDist": "../dist"
   },
   "bundle": {
     "active": true,
-    "targets": "all",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
-  }
+    ],
+    "targets": "all"
+  },
+  "identifier": "io.colliery.metis",
+  "productName": "Metis",
+  "version": "0.6.1"
 }
