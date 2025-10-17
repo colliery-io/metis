@@ -1,28 +1,53 @@
 # Metis - Flight Levels Project Management for AI Assistants
 
+<div align="center">
+  <img src="crates/metis-docs-gui/src-tauri/icons/icon.png" alt="Metis Owl Logo" width="128" height="128">
+</div>
+
 Metis is a hierarchical project management system built on the Flight Levels methodology, providing a structured approach to organizing work across Strategy, Initiative, and Task levels. It features an MCP (Model Context Protocol) interface for seamless integration with AI assistants like Claude and Cursor.
 
 ## Quick Start (< 5 minutes)
 
 ### 1. Installation
 
+#### Desktop GUI Application (Recommended)
+Download the latest release for your platform:
+- **macOS (Apple Silicon)**: `Metis_x.x.x_aarch64.dmg` 
+- **macOS (Intel)**: `Metis_x.x.x_x64.dmg`
+- **Windows**: `Metis_x.x.x_x64-setup.exe`
+- **Linux**: `Metis_x.x.x_amd64.AppImage`
+
+[Download from GitHub Releases](https://github.com/colliery-io/metis/releases/latest)
+
+The GUI provides a visual kanban interface with project management, document editing, and built-in project initialization.
+
+#### Command Line Tools
 ```bash
-# Install CLI and TUI (includes metis command and metis tui)
+# Install all "cli" interfaces (cli, mcp, tui)
 cargo install metis-docs-cli
 
-# Install MCP server for AI assistants
+# Install just the MCP server for AI assistants
 cargo install metis-docs-mcp
 
-# For GUI applications (Claude Desktop, etc.) that need system PATH access
+# For some GUI agentic applications (Claude Desktop, etc.) that need system PATH access
 sudo cargo install metis-docs-mcp --root /usr/local
 ```
 
-**Note**: GUI applications like Claude Desktop may not have access to your shell's PATH. If you get "ENOENT" errors when using the MCP server with GUI applications, use the second installation command to install to `/usr/local/bin` where GUI apps can find it.
+**Note**: AI assistant GUI applications like Claude Desktop may not have access to your shell's PATH. If you get "ENOENT" errors when using the MCP server with GUI applications, use the second installation command to install to `/usr/local/bin` where GUI apps can find it.
 
 ### 2. Choose Your Interface
 
+#### Desktop GUI (Recommended for Most Users)
+Launch the installed Metis application for a full-featured visual interface:
+- **Project Browser**: Manage multiple projects from a single interface
+- **Kanban Boards**: Visual boards for Vision, Initiative, Task, ADR, and Backlog
+- **Rich Text Editor**: Built-in markdown editor with table support
+- **Project Initialization**: Guided setup with preset selection (Full/Streamlined/Direct)
+- **Real-time Sync**: Automatic synchronization with file system
+
+#### Terminal Interfaces
 ```bash
-# Terminal User Interface (recommended for interactive use)
+# Terminal User Interface (interactive kanban in terminal)
 metis tui
 
 # Command Line Interface (for scripting and automation)
@@ -30,7 +55,7 @@ metis init --name "My Vision"                           # Creates streamlined co
 metis create initiative "Core Initiative" --vision "my-vision"  # No strategies in default
 
 # MCP Server (for AI assistant integration)
-metis-mcp
+metis mcp
 ```
 
 ### 3. Configure Your AI Assistant
@@ -41,7 +66,8 @@ Add to your `claude_desktop_config.json`:
 {
   "mcpServers": {
     "metis": {
-      "command": "metis-mcp"
+      "command": "metis",
+      "args": ["mcp"]
     }
   }
 }
@@ -49,7 +75,7 @@ Add to your `claude_desktop_config.json`:
 
 #### For Claude Code
 ```bash
-claude mcp add --scope user --transport stdio metis -- metis-mcp
+claude mcp add --scope user --transport stdio metis -- metis mcp
 ```
 
 #### For Cursor
@@ -57,7 +83,8 @@ Add to your Cursor MCP configuration:
 ```json
 {
   "metis": {
-    "command": "metis-mcp"
+    "command": "metis",
+    "args": ["mcp"]
   }
 }
 ```
@@ -236,6 +263,40 @@ metis tui  # Terminal user interface
 metis-mcp  # MCP server for AI assistants
 ```
 
+## Desktop GUI Application
+
+The Metis desktop application provides a modern, visual interface for project management with full Flight Levels support:
+
+### Key Features
+- **Multi-Project Management**: Switch between projects with a sidebar browser
+- **Dynamic Board Configuration**: Available boards adapt based on your project's Flight Level preset
+- **Rich Text Editing**: Built-in markdown editor with:
+  - Live preview and editing modes
+  - Table creation and manipulation tools
+  - Syntax highlighting and formatting
+- **Project Initialization Wizard**: Guided setup with preset selection:
+- **Real-time Synchronization**: Refresh button syncs with file system and reloads data
+- **Document Lifecycle Management**: 
+  - Drag-and-drop between phases
+  - Archive completed work
+  - View detailed document information
+
+### Interface Overview
+The GUI organizes work into kanban-style boards:
+- **Vision Board**: Single document editor for project vision
+- **Strategy Board**: Strategy documents through their lifecycle (Full preset only)
+- **Initiative Board**: Initiative management with phase tracking
+- **Task Board**: Task execution with Blocked → Todo → Active → Completed flow
+- **ADR Board**: Architectural Decision Records
+- **Backlog Board**: Unassigned work items organized by type (Bug/Feature/Tech Debt/General)
+- **Refresh Button**: Syncs the filesystem to the database and refreshed the UI. Use when external systems (like the MCP server) are editing things. 
+
+### Getting Started with GUI
+1. **Download and Install**: Get the appropriate installer for your platform from GitHub Releases
+2. **Create or Open Project**: Use the project browser to initialize a new project or open existing ones
+3. **Select Configuration**: Choose Full/Streamlined/Direct preset during initialization
+4. **Start Working**: Create documents, move them through phases, and track progress visually
+
 ## Terminal User Interface (TUI)
 
 Interactive kanban-style interface for visual project management:
@@ -248,31 +309,23 @@ metis tui
 - **Visual Board Layout**: See all documents organized by type (Vision, Strategy, Initiative, Task, ADR)
 - **Phase-based Columns**: Documents organized by their current phase
 - **Keyboard Navigation**: Arrow keys, Tab/Shift+Tab to navigate boards
-- **Quick Actions**: 
-  - `n` - Create new document
-  - `Ctrl+n` - Create child document
-  - `Ctrl+A` - Create ADR document
-  - `Enter` - View/edit document
-  - `t` - Transition phase
-  - `d` - Delete document
-  - `r` - Archive selected document
-  - `y` - Sync database and reload
-  - `v` - View vision document
-  - `1-4` - Jump to specific boards
+- **Quick Actions**: Documented in the footer of the application.  
+
 
 **Workflow Integration**: The TUI automatically syncs with the file system, so changes made externally are reflected immediately.
 
 ## Technical Overview
 
-**Architecture**: Metis consists of four main components:
+**Architecture**: Metis consists of five main components:
 - **metis-docs-core**: Rust library handling document management, workflows, and database
+- **metis-docs-gui**: Desktop application with visual kanban interface built with Tauri and Vue 3
 - **metis-docs-cli**: Command-line interface with full project management capabilities  
 - **metis-docs-tui**: Interactive terminal user interface for visual project management
 - **metis-docs-mcp**: MCP server providing AI assistant integration with 11 tools
 
 **Direct Path Approach**: Documents are stored as markdown files with YAML frontmatter, indexed in SQLite with FTS5 for fast search. No complex abstractions - what you see is what you get.
 
-**Background Sync**: File system changes are automatically synced to the database index, ensuring consistency between markdown files and search capabilities.
+**Background Sync**: File system changes are synced to the database index, ensuring consistency between markdown files and search capabilities.
 
 ## Development Commands
 
@@ -304,28 +357,6 @@ Metis uses direct project paths - no global environment variables required. Each
 }
 ```
 
-## Troubleshooting
-
-### MCP Server Won't Start
-- **"ENOENT" errors in GUI apps**: GUI applications like Claude Desktop don't inherit your shell's PATH. Install with `sudo cargo install metis-docs-mcp --root /usr/local` to place the binary where GUI apps can find it
-- Ensure `metis-mcp` is in your PATH after `cargo install`
-- Check AI assistant MCP configuration matches examples above
-- Restart AI assistant after configuration changes
-
-### Documents Not Appearing
-- Verify you've run `initialize_project` in the target directory
-- Check document has valid YAML frontmatter
-- Ensure using correct project path in tool calls
-
-### AI Assistant Can't Find Tools  
-- Verify MCP server is configured correctly in AI assistant
-- Check command path is correct (`metis-mcp`)
-- Restart AI assistant to reload MCP configuration
-
-### Compilation Errors During Install
-- Ensure you have a recent Rust version: `rustup update`
-- Try: `cargo install metis-docs-mcp --force` to reinstall
-
 ## License & Contributing
 
 Apache 2.0 License. Contributions welcome:
@@ -333,7 +364,9 @@ Apache 2.0 License. Contributions welcome:
 2. Create feature branch  
 3. Add tests for new functionality
 4. Ensure `angreal check` passes
-5. Submit pull request
+5. Ensure `angreal test` passes
+6. For GUI changes, provide a journey for testing the new feature in writing. 
+7. Submit pull request
 
 ---
 
