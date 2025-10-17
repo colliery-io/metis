@@ -21,6 +21,12 @@ Download the latest release for your platform:
 
 The GUI provides a visual kanban interface with project management, document editing, and built-in project initialization.
 
+**macOS Security Note**: After installing, you may need to remove the quarantine attribute to run the app:
+```bash
+sudo xattr -rd com.apple.quarantine "/Applications/Metis.app"
+```
+This is required because the app is not yet notarized through the Apple Developer Program.
+
 #### Command Line Tools
 ```bash
 # Install all "cli" interfaces (cli, mcp, tui)
