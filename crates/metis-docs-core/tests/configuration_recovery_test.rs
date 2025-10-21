@@ -306,3 +306,108 @@ async fn test_migration_from_old_workspace_without_config_toml() {
 
     println!("\n✅ Migration from old workspace successful!");
 }
+
+#[tokio::test]
+async fn test_recovery_from_corrupted_database_file() {
+    println!("\n=== Test: Recovery from Corrupted Database File ===");
+
+    let (_temp_dir, _project_path, metis_dir) = setup_test_workspace().await;
+    let db_path = format!("{}/metis.db", metis_dir);
+    let config_file_path = format!("{}/config.toml", metis_dir);
+
+    // Step 1: Verify initial state
+    println!("Step 1: Verify initial setup");
+    assert!(std::path::Path::new(&db_path).exists(), "DB should exist");
+    assert!(
+        std::path::Path::new(&config_file_path).exists(),
+        "config.toml should exist"
+    );
+
+    // Verify config.toml has correct prefix
+    let config = ConfigFile::load(&config_file_path).unwrap();
+    assert_eq!(config.prefix(), "TEST");
+    println!("✓ Initial workspace created with prefix: TEST");
+
+    // Step 2: Create some documents to establish counters
+    println!("\nStep 2: Create documents to establish counters");
+    let db = Database::new(&db_path).unwrap();
+    let app = Application::new(db);
+    let sync_results = app.sync_directory(&metis_dir).await.unwrap();
+    println!("✓ Synced {} files", sync_results.len());
+
+    // Step 3: Verify counters exist in database
+    println!("\nStep 3: Verify initial counter state");
+    let db = Database::new(&db_path).unwrap();
+    let mut config_repo = db.configuration_repository().unwrap();
+    let vision_counter = config_repo.get_counter("vision").unwrap();
+    assert_eq!(vision_counter, 1, "Vision counter should be 1");
+    println!("✓ Vision counter = {}", vision_counter);
+
+    // Step 4: Corrupt the database file by writing garbage to it
+    println!("\nStep 4: Corrupt database file with garbage data");
+    std::fs::write(&db_path, b"This is not a valid SQLite database file! Just garbage data to corrupt it.").unwrap();
+    assert!(
+        std::path::Path::new(&db_path).exists(),
+        "DB file should still exist (but corrupted)"
+    );
+    println!("✓ Database file corrupted with garbage data");
+
+    // Step 5: Verify database is truly corrupt
+    println!("\nStep 5: Verify database is unreadable");
+    let db_open_result = Database::new(&db_path);
+    assert!(
+        db_open_result.is_err(),
+        "Opening corrupt database should fail"
+    );
+    println!("✓ Confirmed database is corrupt and unreadable");
+
+    // Step 6: Verify needs_recovery detects the corruption
+    println!("\nStep 6: Check if recovery detects corruption");
+    let needs_recovery =
+        ConfigurationRecoveryService::needs_recovery(std::path::Path::new(&metis_dir));
+    assert!(needs_recovery, "Should detect corrupted database");
+    println!("✓ Recovery correctly detected corrupted database");
+
+    // Step 7: Delete corrupt DB and recreate it
+    println!("\nStep 7: Remove corrupt database and recreate");
+    std::fs::remove_file(&db_path).unwrap();
+    let _db = Database::new(&db_path).unwrap(); // Recreates empty DB
+    println!("✓ Corrupt database removed and recreated");
+
+    // Step 8: Perform recovery
+    println!("\nStep 8: Perform full recovery");
+    let report = ConfigurationRecoveryService::recover_configuration(&metis_dir, &db_path).unwrap();
+
+    assert!(
+        report.had_recovery_actions(),
+        "Recovery should have taken actions"
+    );
+    println!("✓ Recovery report:");
+    println!("  - Config file created: {}", report.config_file_created);
+    println!("  - Prefix synced: {}", report.prefix_synced);
+    println!("  - Flight levels synced: {}", report.flight_levels_synced);
+    println!("  - Counters recovered: {}", report.counters_recovered);
+
+    // Step 9: Verify recovery results
+    println!("\nStep 9: Verify recovery completeness");
+
+    // Check database is now readable
+    let db = Database::new(&db_path).unwrap();
+    println!("✓ Database is now readable");
+
+    // Check prefix was restored
+    let mut config_repo = db.configuration_repository().unwrap();
+    let recovered_prefix = config_repo.get_project_prefix().unwrap().unwrap();
+    assert_eq!(recovered_prefix, "TEST", "Prefix should be recovered");
+    println!("✓ Prefix recovered: {}", recovered_prefix);
+
+    // Check counter was recovered
+    let recovered_vision_counter = config_repo.get_counter("vision").unwrap();
+    assert_eq!(
+        recovered_vision_counter, 1,
+        "Vision counter should be recovered to 1"
+    );
+    println!("✓ Vision counter recovered: {}", recovered_vision_counter);
+
+    println!("\n✅ Recovery from corrupted database successful!");
+}
