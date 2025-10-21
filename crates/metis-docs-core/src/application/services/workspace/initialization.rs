@@ -208,6 +208,16 @@ mod tests {
         assert!(vision_content.contains("#vision"));
         assert!(vision_content.contains("#phase/draft"));
         assert!(vision_content.contains("archived: false"));
+
+        // Verify config.toml was created
+        let config_path = metis_dir.join("config.toml");
+        assert!(config_path.exists(), "config.toml should be created during initialization");
+        assert!(config_path.is_file());
+
+        // Verify config.toml content
+        let config_content = fs::read_to_string(&config_path).unwrap();
+        assert!(config_content.contains("[project]"));
+        assert!(config_content.contains("prefix = \"PROJ\""));
     }
 
     #[tokio::test]

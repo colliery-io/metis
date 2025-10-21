@@ -14,6 +14,10 @@ categories.workspace = true
 name = "metis"
 path = "src/main.rs"
 
+[lib]
+name = "metis_docs_cli"
+path = "src/lib.rs"
+
 [dependencies]
 # Workspace dependencies
 tokio = { workspace = true }
@@ -26,9 +30,9 @@ tracing-subscriber = { workspace = true }
 chrono = { workspace = true }
 
 # Local dependencies
-metis-docs-core = { path = "../metis-docs-core", version = "0.8.0" }
-metis-docs-tui = { path = "../metis-docs-tui", version = "0.8.0" }
-metis-docs-mcp = { path = "../metis-docs-mcp", version = "0.8.0" }
+metis-docs-core = { path = "../metis-docs-core", version = "0.8.1" }
+metis-docs-tui = { path = "../metis-docs-tui", version = "0.8.1" }
+metis-docs-mcp = { path = "../metis-docs-mcp", version = "0.8.1" }
 
 # CLI-specific dependencies
 clap = { version = "4.0", features = ["derive", "color"] }

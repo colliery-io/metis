@@ -4,7 +4,7 @@ level: task
 title: "Dark/Hyper Color Schemes."
 short_code: "METIS-T-0008"
 created_at: 2025-10-17T02:22:08.753769+00:00
-updated_at: 2025-10-21T18:05:03.777972+00:00
+updated_at: 2025-10-21T20:02:02.822472+00:00
 parent: 
 blocked_by: []
 archived: false
@@ -13,7 +13,7 @@ tags:
   - "#task"
   - "#bug"
   - "#bug"
-  - "#phase/todo"
+  - "#phase/completed"
 
 
 exit_criteria_met: false

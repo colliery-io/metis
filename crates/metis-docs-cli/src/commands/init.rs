@@ -2,11 +2,10 @@ use crate::workspace;
 use anyhow::Result;
 use clap::Args;
 use metis_core::{
-    application::services::document::creation::{DocumentCreationConfig, DocumentCreationService},
+    application::services::workspace::WorkspaceInitializationService,
     domain::configuration::FlightLevelConfig,
-    Application, Database, Phase, Tag,
+    Database,
 };
-use std::path::Path;
 
 #[derive(Args)]
 pub struct InitCommand {
@@ -38,27 +37,61 @@ impl InitCommand {
 
         // Get current directory for workspace creation
         let current_dir = std::env::current_dir()?;
-        let metis_dir = current_dir.join(".metis");
 
-        // Create .metis directory
-        std::fs::create_dir_all(&metis_dir)?;
+        // Determine project name and prefix
+        let project_name = self.name.as_deref().unwrap_or("Project Vision");
+        let project_prefix = self.determine_project_prefix(project_name);
 
-        // Initialize database
-        let db_path = metis_dir.join("metis.db");
-        let db = Database::new(db_path.to_str().unwrap())
-            .map_err(|e| anyhow::anyhow!("Database initialization failed: {}", e))?;
+        // Use WorkspaceInitializationService to create workspace
+        let result = WorkspaceInitializationService::initialize_workspace_with_prefix(
+            &current_dir,
+            project_name,
+            Some(&project_prefix),
+        )
+        .await
+        .map_err(|e| anyhow::anyhow!("Failed to initialize workspace: {}", e))?;
 
-        // Set up flight level configuration
+        // If custom flight level config was specified, update it
         let flight_config = self.determine_flight_config()?;
+        let db = Database::new(result.database_path.to_str().unwrap())
+            .map_err(|e| anyhow::anyhow!("Failed to open database: {}", e))?;
         let mut config_repo = db
             .configuration_repository()
             .map_err(|e| anyhow::anyhow!("Failed to create configuration repository: {}", e))?;
-        config_repo
-            .set_flight_level_config(&flight_config)
-            .map_err(|e| anyhow::anyhow!("Failed to set flight level configuration: {}", e))?;
 
-        // Set project prefix for document creation
-        let project_prefix = if let Some(prefix) = &self.prefix {
+        // Update flight level config if it differs from default
+        let current_config = config_repo.get_flight_level_config()
+            .map_err(|e| anyhow::anyhow!("Failed to get flight level config: {}", e))?;
+        if flight_config != current_config {
+            config_repo
+                .set_flight_level_config(&flight_config)
+                .map_err(|e| anyhow::anyhow!("Failed to set flight level configuration: {}", e))?;
+
+            // Update config.toml to match
+            let config_file_path = result.metis_dir.join("config.toml");
+            let config_file = metis_core::domain::configuration::ConfigFile::new(
+                project_prefix.clone(),
+                flight_config.clone()
+            ).map_err(|e| anyhow::anyhow!("Failed to create config file: {}", e))?;
+            config_file.save(&config_file_path)
+                .map_err(|e| anyhow::anyhow!("Failed to save config.toml: {}", e))?;
+        }
+
+        println!("✓ Initialized Metis workspace in {}", current_dir.display());
+        println!("✓ Created vision.md with project template");
+        println!("✓ Created config.toml with project settings");
+        println!("✓ Set project prefix: {}", project_prefix);
+        println!(
+            "✓ Set flight level configuration: {}",
+            flight_config.preset_name()
+        );
+
+        Ok(())
+    }
+
+    /// Determine the project prefix from command arguments or project name
+    fn determine_project_prefix(&self, project_name: &str) -> String {
+        if let Some(prefix) = &self.prefix {
             // Use explicitly provided prefix, but limit to 6 characters
             let truncated = prefix.to_uppercase();
             if truncated.len() > 6 {
@@ -71,7 +104,6 @@ impl InitCommand {
             "TEST".to_string()
         } else {
             // Extract first 6 uppercase letters from project name, or use "PROJ" as fallback
-            let project_name = self.name.as_deref().unwrap_or("Project Vision");
             project_name
                 .chars()
                 .filter(|c| c.is_alphabetic())
@@ -80,33 +112,7 @@ impl InitCommand {
                 .get(0..6.min(project_name.len()))
                 .unwrap_or("PROJ")
                 .to_string()
-        };
-        config_repo
-            .set_project_prefix(&project_prefix)
-            .map_err(|e| anyhow::anyhow!("Failed to set project prefix: {}", e))?;
-
-        // Create strategies directory
-        let strategies_dir = metis_dir.join("strategies");
-        std::fs::create_dir_all(&strategies_dir)?;
-
-        // Create vision.md with defaults
-        let project_name = self.name.as_deref().unwrap_or("Project Vision");
-        create_default_vision(&metis_dir, project_name).await?;
-
-        // Sync the workspace to ensure all documents are in database
-        let app = Application::new(db);
-        let _sync_results = app.sync_directory(&metis_dir).await?;
-
-        println!("✓ Initialized Metis workspace in {}", current_dir.display());
-        println!("✓ Created vision.md with project template");
-        println!("✓ Set project prefix: {}", project_prefix);
-        println!(
-            "✓ Set flight level configuration: {}",
-            flight_config.preset_name()
-        );
-        println!("✓ Synced workspace documents to database");
-
-        Ok(())
+        }
     }
 
     /// Determine the flight level configuration based on command arguments
@@ -139,29 +145,6 @@ impl InitCommand {
             Ok(FlightLevelConfig::streamlined())
         }
     }
-}
-
-/// Create a new Vision document with defaults and write to file
-async fn create_default_vision(workspace_dir: &Path, title: &str) -> Result<()> {
-    // Use DocumentCreationService to create the vision
-    let creation_service = DocumentCreationService::new(workspace_dir);
-
-    let config = DocumentCreationConfig {
-        title: title.to_string(),
-        description: None,
-        parent_id: None,
-        tags: vec![Tag::Label("vision".to_string()), Tag::Phase(Phase::Draft)],
-        phase: Some(Phase::Draft),
-        complexity: None,
-        risk_level: None,
-    };
-
-    let _result = creation_service
-        .create_vision(config)
-        .await
-        .map_err(|e| anyhow::anyhow!("Failed to create vision: {}", e))?;
-
-    Ok(())
 }
 
 #[cfg(test)]
@@ -225,6 +208,17 @@ mod tests {
         assert!(vision_content.contains("## Success Criteria"));
         assert!(vision_content.contains("## Principles"));
         assert!(vision_content.contains("## Constraints"));
+
+        // Verify config.toml was created
+        let config_path = metis_dir.join("config.toml");
+        assert!(config_path.exists(), "config.toml should be created");
+        assert!(config_path.is_file());
+
+        // Verify config.toml content
+        let config_content = fs::read_to_string(&config_path).unwrap();
+        assert!(config_content.contains("[project]"));
+        assert!(config_content.contains("prefix = \"TEST\""));
+        assert!(config_content.contains("[flight_levels]"));
 
         // Restore original directory
         if let Some(original) = original_dir {

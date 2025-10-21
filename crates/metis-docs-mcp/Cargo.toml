@@ -15,7 +15,7 @@ name = "metis-mcp"
 path = "src/main.rs"
 
 [dependencies]
-metis-docs-core = { path = "../metis-docs-core", version = "0.8.0" }
+metis-docs-core = { path = "../metis-docs-core", version = "0.8.1" }
 
 # Shared dependencies
 tokio = { workspace = true }
@@ -41,7 +41,7 @@ clap = { version = "4.0", features = ["derive", "env"] }
 chrono = { version = "0.4", features = ["serde"] }
 
 [dev-dependencies]
-metis-docs-core = { path = "../metis-docs-core", version = "0.8.0", features = ["test-utils"] }
+metis-docs-core = { path = "../metis-docs-core", version = "0.8.1", features = ["test-utils"] }
 tempfile = { workspace = true }
 sqlx = { version = "0.8", features = ["sqlite", "runtime-tokio-rustls"] }
 
