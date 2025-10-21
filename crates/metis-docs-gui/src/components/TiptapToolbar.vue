@@ -1,13 +1,13 @@
 <template>
-  <div 
-    class="editor-toolbar" 
-    :style="{ 
-      display: 'flex', 
-      alignItems: 'center', 
-      gap: 'var(--spacing-xs)', 
-      padding: 'var(--spacing-sm) 1rem', 
-      backgroundColor: '#ffffff', 
-      borderBottom: '1px solid var(--color-border)', 
+  <div
+    class="editor-toolbar"
+    :style="{
+      display: 'flex',
+      alignItems: 'center',
+      gap: 'var(--spacing-xs)',
+      padding: 'var(--spacing-sm) 1rem',
+      backgroundColor: 'var(--color-background-primary)',
+      borderBottom: '1px solid var(--color-border)',
       flexWrap: 'wrap',
       position: 'sticky',
       top: 0,

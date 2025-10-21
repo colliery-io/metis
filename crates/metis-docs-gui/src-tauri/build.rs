@@ -35,21 +35,26 @@ fn sync_version_to_tauri_config() {
     
     // Update version in config
     if let Some(version) = config.get_mut("version") {
-        *version = serde_json::Value::String(cargo_version.to_string());
-        
-        // Write back to file
-        let updated_content = match serde_json::to_string_pretty(&config) {
-            Ok(content) => content,
-            Err(e) => {
-                println!("cargo:warning=Failed to serialize tauri.conf.json: {}", e);
-                return;
+        let current_version = version.as_str().unwrap_or("");
+
+        // Only write if version has changed
+        if current_version != cargo_version {
+            *version = serde_json::Value::String(cargo_version.to_string());
+
+            // Write back to file
+            let updated_content = match serde_json::to_string_pretty(&config) {
+                Ok(content) => content,
+                Err(e) => {
+                    println!("cargo:warning=Failed to serialize tauri.conf.json: {}", e);
+                    return;
+                }
+            };
+
+            if let Err(e) = fs::write(tauri_config_path, updated_content) {
+                println!("cargo:warning=Failed to write tauri.conf.json: {}", e);
+            } else {
+                println!("cargo:warning=Synced version {} to tauri.conf.json", cargo_version);
             }
-        };
-        
-        if let Err(e) = fs::write(tauri_config_path, updated_content) {
-            println!("cargo:warning=Failed to write tauri.conf.json: {}", e);
-        } else {
-            println!("cargo:warning=Synced version {} to tauri.conf.json", cargo_version);
         }
     }
 }
