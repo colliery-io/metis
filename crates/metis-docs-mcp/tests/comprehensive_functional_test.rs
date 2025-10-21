@@ -20,11 +20,22 @@ async fn setup_project_with_config(config: FlightLevelConfig) -> (TempDir, Strin
     let result = init_tool.call_tool().await;
     assert!(result.is_ok(), "Project initialization should succeed");
 
-    // Set flight configuration
+    // Set flight configuration in both DB and config.toml (required for new sync behavior)
     let db_path = format!("{}/.metis/metis.db", project_path);
     let db = Database::new(&db_path).unwrap();
     let mut config_repo = db.configuration_repository().unwrap();
+
+    // Get current prefix from DB
+    let prefix = config_repo.get_project_prefix().unwrap().unwrap_or_else(|| "PROJ".to_string());
+
+    // Update DB
     config_repo.set_flight_level_config(&config).unwrap();
+
+    // Update config.toml to match
+    use metis_core::domain::configuration::ConfigFile;
+    let config_file = ConfigFile::new(prefix, config).unwrap();
+    let config_file_path = format!("{}/.metis/config.toml", project_path);
+    config_file.save(&config_file_path).unwrap();
 
     (temp_dir, project_path, metis_path)
 }

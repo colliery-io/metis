@@ -180,6 +180,43 @@ impl ConfigurationRepository {
         Ok(format!("{}-{}-{:04}", prefix, type_letter, number))
     }
 
+    /// Get current counter value for a document type without incrementing
+    pub fn get_counter(&mut self, doc_type: &str) -> Result<u32> {
+        let counter_key = format!("short_code_counter_{}", doc_type.to_lowercase());
+        let current_value = self
+            .get(&counter_key)?
+            .unwrap_or_else(|| "0".to_string())
+            .parse::<u32>()
+            .unwrap_or(0);
+
+        Ok(current_value)
+    }
+
+    /// Set counter value for a document type
+    pub fn set_counter(&mut self, doc_type: &str, value: u32) -> Result<()> {
+        let counter_key = format!("short_code_counter_{}", doc_type.to_lowercase());
+        self.set(&counter_key, &value.to_string())
+    }
+
+    /// Set counter value only if the new value is higher than current value
+    /// This is used during recovery to ensure counters don't go backwards
+    /// Returns true if counter was updated, false if it was already higher
+    pub fn set_counter_if_lower(&mut self, doc_type: &str, min_value: u32) -> Result<bool> {
+        let current = self.get_counter(doc_type)?;
+        if min_value > current {
+            self.set_counter(doc_type, min_value)?;
+            tracing::warn!(
+                "Recovered counter for {}: was {}, now {}",
+                doc_type,
+                current,
+                min_value
+            );
+            Ok(true)
+        } else {
+            Ok(false)
+        }
+    }
+
     /// Clear all configuration (for testing)
     #[cfg(test)]
     pub fn clear_all(&mut self) -> Result<()> {

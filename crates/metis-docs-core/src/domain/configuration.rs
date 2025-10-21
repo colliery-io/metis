@@ -172,6 +172,85 @@ impl fmt::Display for ConfigurationError {
 
 impl std::error::Error for ConfigurationError {}
 
+/// Configuration file structure that persists to .metis/config.toml
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ConfigFile {
+    pub project: ProjectConfig,
+    pub flight_levels: FlightLevelConfig,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ProjectConfig {
+    pub prefix: String,
+}
+
+impl ConfigFile {
+    /// Create a new configuration with defaults
+    pub fn new(prefix: String, flight_levels: FlightLevelConfig) -> Result<Self, ConfigurationError> {
+        // Validate prefix format: 2-8 uppercase letters
+        if !prefix.chars().all(|c| c.is_ascii_uppercase()) || prefix.len() < 2 || prefix.len() > 8 {
+            return Err(ConfigurationError::InvalidValue(
+                "Project prefix must be 2-8 uppercase letters".to_string(),
+            ));
+        }
+
+        Ok(Self {
+            project: ProjectConfig { prefix },
+            flight_levels,
+        })
+    }
+
+    /// Load configuration from a TOML file
+    pub fn load<P: AsRef<std::path::Path>>(path: P) -> Result<Self, ConfigurationError> {
+        let content = std::fs::read_to_string(path.as_ref()).map_err(|e| {
+            ConfigurationError::SerializationError(format!("Failed to read config file: {}", e))
+        })?;
+
+        toml::from_str(&content).map_err(|e| {
+            ConfigurationError::SerializationError(format!("Failed to parse TOML: {}", e))
+        })
+    }
+
+    /// Save configuration to a TOML file
+    pub fn save<P: AsRef<std::path::Path>>(&self, path: P) -> Result<(), ConfigurationError> {
+        let content = toml::to_string_pretty(self).map_err(|e| {
+            ConfigurationError::SerializationError(format!("Failed to serialize config: {}", e))
+        })?;
+
+        std::fs::write(path.as_ref(), content).map_err(|e| {
+            ConfigurationError::SerializationError(format!("Failed to write config file: {}", e))
+        })?;
+
+        Ok(())
+    }
+
+    /// Create default configuration with given prefix
+    pub fn default_with_prefix(prefix: String) -> Result<Self, ConfigurationError> {
+        Self::new(prefix, FlightLevelConfig::streamlined())
+    }
+
+    /// Get the project prefix
+    pub fn prefix(&self) -> &str {
+        &self.project.prefix
+    }
+
+    /// Get the flight level configuration
+    pub fn flight_levels(&self) -> &FlightLevelConfig {
+        &self.flight_levels
+    }
+}
+
+impl Default for ConfigFile {
+    fn default() -> Self {
+        Self {
+            project: ProjectConfig {
+                prefix: "PROJ".to_string(),
+            },
+            flight_levels: FlightLevelConfig::streamlined(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -321,5 +400,87 @@ mod tests {
         let json = serde_json::to_string(&config).unwrap();
         let deserialized: FlightLevelConfig = serde_json::from_str(&json).unwrap();
         assert_eq!(config, deserialized);
+    }
+
+    #[test]
+    fn test_config_file_creation() {
+        let config = ConfigFile::new("TEST".to_string(), FlightLevelConfig::streamlined()).unwrap();
+        assert_eq!(config.prefix(), "TEST");
+        assert_eq!(config.flight_levels(), &FlightLevelConfig::streamlined());
+    }
+
+    #[test]
+    fn test_config_file_validation() {
+        // Valid prefixes
+        assert!(ConfigFile::new("AB".to_string(), FlightLevelConfig::streamlined()).is_ok());
+        assert!(ConfigFile::new("ABCDEFGH".to_string(), FlightLevelConfig::streamlined()).is_ok());
+        assert!(ConfigFile::new("METIS".to_string(), FlightLevelConfig::streamlined()).is_ok());
+
+        // Invalid prefixes
+        assert!(ConfigFile::new("A".to_string(), FlightLevelConfig::streamlined()).is_err()); // Too short
+        assert!(ConfigFile::new("ABCDEFGHI".to_string(), FlightLevelConfig::streamlined()).is_err()); // Too long
+        assert!(ConfigFile::new("ab".to_string(), FlightLevelConfig::streamlined()).is_err()); // Lowercase
+        assert!(ConfigFile::new("A1".to_string(), FlightLevelConfig::streamlined()).is_err()); // Contains number
+        assert!(ConfigFile::new("A-B".to_string(), FlightLevelConfig::streamlined()).is_err()); // Contains hyphen
+    }
+
+    #[test]
+    fn test_config_file_save_and_load() {
+        use tempfile::NamedTempFile;
+
+        let original_config = ConfigFile::new("METIS".to_string(), FlightLevelConfig::full()).unwrap();
+
+        // Create a temporary file
+        let temp_file = NamedTempFile::new().unwrap();
+        let temp_path = temp_file.path().to_path_buf();
+
+        // Save configuration
+        original_config.save(&temp_path).unwrap();
+
+        // Load configuration
+        let loaded_config = ConfigFile::load(&temp_path).unwrap();
+
+        // Verify they match
+        assert_eq!(original_config, loaded_config);
+        assert_eq!(loaded_config.prefix(), "METIS");
+        assert_eq!(loaded_config.flight_levels(), &FlightLevelConfig::full());
+    }
+
+    #[test]
+    fn test_config_file_toml_format() {
+        use tempfile::NamedTempFile;
+
+        let config = ConfigFile::new("METIS".to_string(), FlightLevelConfig::streamlined()).unwrap();
+
+        // Create a temporary file
+        let temp_file = NamedTempFile::new().unwrap();
+        let temp_path = temp_file.path();
+
+        // Save configuration
+        config.save(temp_path).unwrap();
+
+        // Read raw TOML content
+        let content = std::fs::read_to_string(temp_path).unwrap();
+
+        // Verify TOML structure
+        assert!(content.contains("[project]"));
+        assert!(content.contains("prefix = \"METIS\""));
+        assert!(content.contains("[flight_levels]"));
+        assert!(content.contains("strategies_enabled = false"));
+        assert!(content.contains("initiatives_enabled = true"));
+    }
+
+    #[test]
+    fn test_config_file_default() {
+        let config = ConfigFile::default();
+        assert_eq!(config.prefix(), "PROJ");
+        assert_eq!(config.flight_levels(), &FlightLevelConfig::streamlined());
+    }
+
+    #[test]
+    fn test_config_file_default_with_prefix() {
+        let config = ConfigFile::default_with_prefix("CUSTOM".to_string()).unwrap();
+        assert_eq!(config.prefix(), "CUSTOM");
+        assert_eq!(config.flight_levels(), &FlightLevelConfig::streamlined());
     }
 }

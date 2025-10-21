@@ -377,6 +377,154 @@ impl<'a> SyncService<'a> {
 
         Ok(issues)
     }
+
+    /// Recover short code counters from filesystem by scanning all documents
+    ///
+    /// This should only be called when:
+    /// - Database is missing or corrupt
+    /// - Explicit recovery is requested by user
+    ///
+    /// Returns a map of document type to the highest counter found
+    pub fn recover_counters_from_filesystem<P: AsRef<Path>>(
+        &self,
+        dir_path: P,
+    ) -> Result<std::collections::HashMap<String, u32>> {
+        use gray_matter::{engine::YAML, Matter};
+        use std::collections::HashMap;
+
+        let mut counters: HashMap<String, u32> = HashMap::new();
+        let mut skipped_files = 0;
+        let mut invalid_short_codes = 0;
+
+        let dir_path = dir_path.as_ref();
+
+        // Guard: Ensure directory exists
+        if !dir_path.exists() {
+            tracing::warn!("Counter recovery: directory does not exist: {}", dir_path.display());
+            return Ok(counters);
+        }
+
+        // Find all markdown files
+        let files = FilesystemService::find_markdown_files(&dir_path)?;
+        tracing::info!("Counter recovery: scanning {} markdown files", files.len());
+
+        for file_path in files {
+            // Guard: Read file with error handling
+            let content = match std::fs::read_to_string(&file_path) {
+                Ok(c) => c,
+                Err(e) => {
+                    tracing::warn!("Counter recovery: skipping unreadable file {}: {}", file_path, e);
+                    skipped_files += 1;
+                    continue;
+                }
+            };
+
+            // Parse frontmatter
+            let matter = Matter::<YAML>::new();
+            let result = matter.parse(&content);
+
+            if let Some(frontmatter) = result.data {
+                let fm_map = match frontmatter {
+                    gray_matter::Pod::Hash(map) => map,
+                    _ => continue,
+                };
+
+                // Extract short_code
+                if let Some(gray_matter::Pod::String(short_code)) = fm_map.get("short_code") {
+                    // Guard: Validate format
+                    if !Self::is_valid_short_code_format(short_code) {
+                        tracing::warn!(
+                            "Counter recovery: invalid short code '{}' in {}",
+                            short_code,
+                            file_path
+                        );
+                        invalid_short_codes += 1;
+                        continue;
+                    }
+
+                    // Parse: PREFIX-TYPE-NNNN
+                    if let Some((_, type_and_num)) = short_code.split_once('-') {
+                        if let Some((type_letter, num_str)) = type_and_num.split_once('-') {
+                            let doc_type = match type_letter {
+                                "V" => "vision",
+                                "S" => "strategy",
+                                "I" => "initiative",
+                                "T" => "task",
+                                "A" => "adr",
+                                _ => continue,
+                            };
+
+                            // Guard: Parse and validate number
+                            match num_str.parse::<u32>() {
+                                Ok(num) if num <= 1_000_000 => {
+                                    counters
+                                        .entry(doc_type.to_string())
+                                        .and_modify(|max| {
+                                            if num > *max {
+                                                *max = num;
+                                            }
+                                        })
+                                        .or_insert(num);
+                                }
+                                Ok(num) => {
+                                    tracing::warn!(
+                                        "Counter recovery: suspiciously large counter {} in {}, skipping",
+                                        num,
+                                        file_path
+                                    );
+                                }
+                                Err(e) => {
+                                    tracing::warn!(
+                                        "Counter recovery: invalid number '{}' in {}: {}",
+                                        num_str,
+                                        file_path,
+                                        e
+                                    );
+                                    invalid_short_codes += 1;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if skipped_files > 0 || invalid_short_codes > 0 {
+            tracing::warn!(
+                "Counter recovery: {} files skipped, {} invalid short codes",
+                skipped_files,
+                invalid_short_codes
+            );
+        }
+
+        tracing::info!("Recovered counters: {:?}", counters);
+        Ok(counters)
+    }
+
+    /// Validate short code format: PREFIX-TYPE-NNNN
+    fn is_valid_short_code_format(short_code: &str) -> bool {
+        let parts: Vec<&str> = short_code.split('-').collect();
+        if parts.len() != 3 {
+            return false;
+        }
+
+        let prefix = parts[0];
+        let type_letter = parts[1];
+        let number = parts[2];
+
+        // Prefix: 2-8 uppercase letters
+        if prefix.len() < 2 || prefix.len() > 8 || !prefix.chars().all(|c| c.is_ascii_uppercase()) {
+            return false;
+        }
+
+        // Type: single letter from allowed set
+        if !matches!(type_letter, "V" | "S" | "I" | "T" | "A") {
+            return false;
+        }
+
+        // Number: exactly 4 digits
+        number.len() == 4 && number.chars().all(|c| c.is_ascii_digit())
+    }
 }
 
 /// Result of synchronizing a single document

@@ -4,18 +4,18 @@ level: task
 title: "GUI - Project Init Presets"
 short_code: "METIS-T-0002"
 created_at: 2025-10-16T00:50:31.188980+00:00
-updated_at: 2025-10-16T00:50:31.188980+00:00
+updated_at: 2025-10-21T16:42:18.487610+00:00
 parent: 
 blocked_by: []
 archived: false
 
 tags:
   - "#task"
-  - "#phase/backlog"
   - "#feature"
+  - "#feature"
+  - "#phase/completed"
 
 
-  - "#feature"
 exit_criteria_met: false
 strategy_id: NULL
 initiative_id: NULL

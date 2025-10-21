@@ -58,12 +58,25 @@ async fn test_mcp_archive_cascading_behavior() -> Result<()> {
     let mut config_repo = db
         .configuration_repository()
         .map_err(|e| anyhow::anyhow!("Failed to get config repo: {}", e))?;
+
+    // Get current prefix
+    let prefix = config_repo.get_project_prefix()
+        .map_err(|e| anyhow::anyhow!("Failed to get prefix: {}", e))?
+        .unwrap_or_else(|| "PROJ".to_string());
+
+    // Set full flight level config
+    use metis_core::domain::configuration::{ConfigFile, FlightLevelConfig};
+    let full_config = FlightLevelConfig::full();
     config_repo
-        .set(
-            "flight_levels",
-            r#"{"strategies_enabled":true,"initiatives_enabled":true}"#,
-        )
+        .set_flight_level_config(&full_config)
         .map_err(|e| anyhow::anyhow!("Failed to set config: {}", e))?;
+
+    // Update config.toml to match
+    let config_file = ConfigFile::new(prefix, full_config)
+        .map_err(|e| anyhow::anyhow!("Failed to create config file: {}", e))?;
+    let config_file_path = format!("{}/config.toml", helper.metis_dir());
+    config_file.save(&config_file_path)
+        .map_err(|e| anyhow::anyhow!("Failed to save config file: {}", e))?;
 
     println!("=== MCP Archive Cascading Test ===");
 
@@ -407,12 +420,25 @@ async fn test_mcp_archive_error_handling() -> Result<()> {
     let mut config_repo = db
         .configuration_repository()
         .map_err(|e| anyhow::anyhow!("Failed to get config repo: {}", e))?;
+
+    // Get current prefix
+    let prefix = config_repo.get_project_prefix()
+        .map_err(|e| anyhow::anyhow!("Failed to get prefix: {}", e))?
+        .unwrap_or_else(|| "PROJ".to_string());
+
+    // Set full flight level config
+    use metis_core::domain::configuration::{ConfigFile, FlightLevelConfig};
+    let full_config = FlightLevelConfig::full();
     config_repo
-        .set(
-            "flight_levels",
-            r#"{"strategies_enabled":true,"initiatives_enabled":true}"#,
-        )
+        .set_flight_level_config(&full_config)
         .map_err(|e| anyhow::anyhow!("Failed to set config: {}", e))?;
+
+    // Update config.toml to match
+    let config_file = ConfigFile::new(prefix, full_config)
+        .map_err(|e| anyhow::anyhow!("Failed to create config file: {}", e))?;
+    let config_file_path = format!("{}/config.toml", helper.metis_dir());
+    config_file.save(&config_file_path)
+        .map_err(|e| anyhow::anyhow!("Failed to save config file: {}", e))?;
 
     println!("=== MCP Archive Error Handling Test ===");
 

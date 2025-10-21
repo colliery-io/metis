@@ -26,6 +26,7 @@ tracing-subscriber = { workspace = true }
 
 # Core-specific dependencies
 serde_yaml = "0.9"
+toml = "0.8"
 diesel = { version = "2.0", features = ["sqlite", "chrono", "uuid", "serde_json", "returning_clauses_for_sqlite_3_35"] }
 diesel_migrations = "2.0"
 libsqlite3-sys = { version = "0.30", features = ["bundled"] }

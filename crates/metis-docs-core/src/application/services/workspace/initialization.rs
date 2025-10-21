@@ -1,4 +1,5 @@
 use crate::dal::database::configuration_repository::ConfigurationRepository;
+use crate::domain::configuration::ConfigFile;
 use crate::{Database, MetisError, Phase, Result, Tag, Vision};
 use diesel::{sqlite::SqliteConnection, Connection};
 use std::path::{Path, PathBuf};
@@ -56,7 +57,7 @@ impl WorkspaceInitializationService {
                 );
 
                 // Set project prefix if not already set
-                if config_repo.get_project_prefix()?.is_none() {
+                let project_prefix = if config_repo.get_project_prefix()?.is_none() {
                     let default_prefix = {
                         let p = prefix.unwrap_or("PROJ").to_uppercase();
                         if p.len() > 6 {
@@ -66,6 +67,20 @@ impl WorkspaceInitializationService {
                         }
                     };
                     config_repo.set_project_prefix(&default_prefix)?;
+                    default_prefix
+                } else {
+                    config_repo.get_project_prefix()?.unwrap()
+                };
+
+                // Create config.toml file if it doesn't exist
+                let config_file_path = metis_dir.join("config.toml");
+                if !config_file_path.exists() {
+                    let flight_levels = config_repo.get_flight_level_config()?;
+                    let config_file = ConfigFile::new(project_prefix, flight_levels)
+                        .map_err(|e| MetisError::ConfigurationError(e))?;
+                    config_file.save(&config_file_path)
+                        .map_err(|e| MetisError::ConfigurationError(e))?;
+                    tracing::info!("Created configuration file at {}", config_file_path.display());
                 }
             }
             Err(e) => {
