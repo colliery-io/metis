@@ -22,8 +22,24 @@ pub struct DocumentDiscoveryResult {
 impl DocumentDiscoveryService {
     /// Create a new document discovery service for a workspace
     pub fn new<P: AsRef<Path>>(workspace_dir: P) -> Self {
+        let path = workspace_dir.as_ref();
+
+        // Ensure we have an absolute path first
+        let absolute_path = if path.is_absolute() {
+            path.to_path_buf()
+        } else {
+            std::env::current_dir()
+                .map(|cwd| cwd.join(path))
+                .unwrap_or_else(|_| path.to_path_buf())
+        };
+
+        // Then canonicalize to handle symlinks (e.g., /tmp vs /private/tmp)
+        let workspace_dir = absolute_path
+            .canonicalize()
+            .unwrap_or(absolute_path);
+
         Self {
-            workspace_dir: workspace_dir.as_ref().to_path_buf(),
+            workspace_dir,
         }
     }
 
@@ -471,9 +487,11 @@ impl DocumentDiscoveryService {
 
         for doc in hierarchy_docs {
             if let Ok(doc_type) = DocumentType::from_str(&doc.document_type) {
+                // Convert relative path from DB to absolute path
+                let absolute_path = self.workspace_dir.join(&doc.filepath);
                 results.push(DocumentDiscoveryResult {
                     document_type: doc_type,
-                    file_path: PathBuf::from(doc.filepath),
+                    file_path: absolute_path,
                 });
             }
         }
@@ -493,9 +511,11 @@ impl DocumentDiscoveryService {
 
         for doc in hierarchy_docs {
             if let Ok(doc_type) = DocumentType::from_str(&doc.document_type) {
+                // Convert relative path from DB to absolute path
+                let absolute_path = self.workspace_dir.join(&doc.filepath);
                 results.push(DocumentDiscoveryResult {
                     document_type: doc_type,
-                    file_path: PathBuf::from(doc.filepath),
+                    file_path: absolute_path,
                 });
             }
         }
@@ -514,9 +534,11 @@ impl DocumentDiscoveryService {
 
         for doc in docs {
             if let Ok(doc_type) = DocumentType::from_str(&doc.document_type) {
+                // Convert relative path from DB to absolute path
+                let absolute_path = self.workspace_dir.join(&doc.filepath);
                 results.push(DocumentDiscoveryResult {
                     document_type: doc_type,
-                    file_path: PathBuf::from(doc.filepath),
+                    file_path: absolute_path,
                 });
             }
         }
@@ -535,9 +557,11 @@ impl DocumentDiscoveryService {
 
         for doc in docs {
             if let Ok(doc_type) = DocumentType::from_str(&doc.document_type) {
+                // Convert relative path from DB to absolute path
+                let absolute_path = self.workspace_dir.join(&doc.filepath);
                 results.push(DocumentDiscoveryResult {
                     document_type: doc_type,
-                    file_path: PathBuf::from(doc.filepath),
+                    file_path: absolute_path,
                 });
             }
         }
@@ -562,9 +586,12 @@ impl DocumentDiscoveryService {
             }
         })?;
 
+        // Convert relative path from DB to absolute path
+        let absolute_path = self.workspace_dir.join(&doc.filepath);
+
         Ok(DocumentDiscoveryResult {
             document_type: doc_type,
-            file_path: PathBuf::from(doc.filepath),
+            file_path: absolute_path,
         })
     }
 
@@ -693,8 +720,8 @@ impl DocumentDiscoveryService {
             if let Ok(db) = crate::Database::new(&db_path.to_string_lossy()) {
                 if let Ok(mut repo) = db.repository() {
                     if let Ok(Some(doc)) = repo.find_by_short_code(short_code) {
-                        // Return the filepath directly from database
-                        return Ok(PathBuf::from(doc.filepath));
+                        // Convert relative path from DB to absolute path
+                        return Ok(self.workspace_dir.join(&doc.filepath));
                     }
                 }
             }
@@ -792,7 +819,9 @@ This is a test vision document.
         let result = service.find_document_by_id("test-vision").await.unwrap();
 
         assert_eq!(result.document_type, DocumentType::Vision);
-        assert_eq!(result.file_path, workspace_dir.join("vision.md"));
+        // Canonicalize expected path to match the service's canonical workspace_dir
+        let expected_path = workspace_dir.canonicalize().unwrap().join("vision.md");
+        assert_eq!(result.file_path, expected_path);
     }
 
     #[tokio::test]

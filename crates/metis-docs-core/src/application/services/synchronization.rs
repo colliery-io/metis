@@ -22,15 +22,42 @@ impl<'a> SyncService<'a> {
     }
 
     /// Set the workspace directory for lineage extraction
+    /// Note: We store the original path reference without canonicalizing here
+    /// because canonicalization requires owned PathBuf. The caller should ensure
+    /// paths are properly resolved when needed.
     pub fn with_workspace_dir(mut self, workspace_dir: &'a Path) -> Self {
         self.workspace_dir = Some(workspace_dir);
         self
     }
 
+    /// Convert absolute path to relative path (relative to workspace directory)
+    /// Returns the path as-is if workspace_dir is not set or if stripping fails
+    fn to_relative_path<P: AsRef<Path>>(&self, absolute_path: P) -> String {
+        if let Some(workspace_dir) = self.workspace_dir {
+            if let Ok(relative) = absolute_path.as_ref().strip_prefix(workspace_dir) {
+                return relative.to_string_lossy().to_string();
+            }
+        }
+        // Fallback to absolute path if no workspace or stripping fails
+        absolute_path.as_ref().to_string_lossy().to_string()
+    }
+
+    /// Convert relative path to absolute path (prepends workspace directory)
+    /// Returns the path as-is if workspace_dir is not set
+    fn to_absolute_path(&self, relative_path: &str) -> std::path::PathBuf {
+        if let Some(workspace_dir) = self.workspace_dir {
+            workspace_dir.join(relative_path)
+        } else {
+            // Fallback: assume it's already absolute
+            std::path::PathBuf::from(relative_path)
+        }
+    }
+
     /// Direction 1: File → DocumentObject → Database
     /// Load a document from filesystem and store in database
     pub async fn import_from_file<P: AsRef<Path>>(&mut self, file_path: P) -> Result<Document> {
-        let path_str = file_path.as_ref().to_string_lossy().to_string();
+        // Convert absolute path to relative path for database storage
+        let path_str = self.to_relative_path(&file_path);
 
         // Use DocumentFactory to parse file into domain object
         let document_obj = DocumentFactory::from_file(&file_path).await.map_err(|e| {
@@ -57,10 +84,10 @@ impl<'a> SyncService<'a> {
         self.db_service.create_document(new_doc)
     }
 
-    /// Direction 2: Database → DocumentObject → File  
+    /// Direction 2: Database → DocumentObject → File
     /// Export a document from database to filesystem
     pub async fn export_to_file(&mut self, filepath: &str) -> Result<()> {
-        // Get document from database
+        // Get document from database (filepath in DB is relative)
         let db_doc = self.db_service.find_by_filepath(filepath)?.ok_or_else(|| {
             MetisError::DocumentNotFound {
                 id: filepath.to_string(),
@@ -72,8 +99,11 @@ impl<'a> SyncService<'a> {
             message: "Document has no content".to_string(),
         })?;
 
+        // Convert relative path to absolute for filesystem access
+        let absolute_path = self.to_absolute_path(filepath);
+
         // Write to filesystem
-        FilesystemService::write_file(filepath, &content)?;
+        FilesystemService::write_file(absolute_path, &content)?;
 
         Ok(())
     }
@@ -249,13 +279,14 @@ impl<'a> SyncService<'a> {
 
     /// Synchronize a single file between filesystem and database using directional methods
     pub async fn sync_file<P: AsRef<Path>>(&mut self, file_path: P) -> Result<SyncResult> {
-        let path_str = file_path.as_ref().to_string_lossy().to_string();
+        // Convert absolute path to relative for database queries
+        let relative_path_str = self.to_relative_path(&file_path);
 
         // Check if file exists on filesystem
         let file_exists = FilesystemService::file_exists(&file_path);
 
-        // Check if document exists in database at this filepath
-        let db_doc_by_path = self.db_service.find_by_filepath(&path_str)?;
+        // Check if document exists in database at this filepath (DB stores relative paths)
+        let db_doc_by_path = self.db_service.find_by_filepath(&relative_path_str)?;
 
         match (file_exists, db_doc_by_path) {
             // File exists, not in database at this path - need to check if it's a moved document
@@ -271,19 +302,23 @@ impl<'a> SyncService<'a> {
                         .await?;
                     Ok(SyncResult::Moved {
                         from: old_path,
-                        to: path_str,
+                        to: relative_path_str,
                     })
                 } else {
                     // Truly new document - import it
                     self.import_from_file(&file_path).await?;
-                    Ok(SyncResult::Imported { filepath: path_str })
+                    Ok(SyncResult::Imported {
+                        filepath: relative_path_str,
+                    })
                 }
             }
 
             // File doesn't exist, but in database - remove from database
             (false, Some(_)) => {
-                self.db_service.delete_document(&path_str)?;
-                Ok(SyncResult::Deleted { filepath: path_str })
+                self.db_service.delete_document(&relative_path_str)?;
+                Ok(SyncResult::Deleted {
+                    filepath: relative_path_str,
+                })
             }
 
             // Both exist - check if file changed
@@ -292,16 +327,22 @@ impl<'a> SyncService<'a> {
 
                 if db_doc.file_hash != current_hash {
                     // File changed, reimport (file is source of truth)
-                    self.db_service.delete_document(&path_str)?;
+                    self.db_service.delete_document(&relative_path_str)?;
                     self.import_from_file(&file_path).await?;
-                    Ok(SyncResult::Updated { filepath: path_str })
+                    Ok(SyncResult::Updated {
+                        filepath: relative_path_str,
+                    })
                 } else {
-                    Ok(SyncResult::UpToDate { filepath: path_str })
+                    Ok(SyncResult::UpToDate {
+                        filepath: relative_path_str,
+                    })
                 }
             }
 
             // Neither exists
-            (false, None) => Ok(SyncResult::NotFound { filepath: path_str }),
+            (false, None) => Ok(SyncResult::NotFound {
+                filepath: relative_path_str,
+            }),
         }
     }
 
@@ -325,13 +366,17 @@ impl<'a> SyncService<'a> {
 
         // Check for orphaned database entries (files that were deleted)
         let db_pairs = self.db_service.get_all_id_filepath_pairs()?;
-        for (_, filepath) in db_pairs {
-            if !FilesystemService::file_exists(&filepath) {
+        for (_, relative_filepath) in db_pairs {
+            // Convert relative path from DB to absolute for filesystem check
+            let absolute_path = self.to_absolute_path(&relative_filepath);
+            if !FilesystemService::file_exists(&absolute_path) {
                 // File no longer exists, delete from database
-                match self.db_service.delete_document(&filepath) {
-                    Ok(_) => results.push(SyncResult::Deleted { filepath }),
+                match self.db_service.delete_document(&relative_filepath) {
+                    Ok(_) => results.push(SyncResult::Deleted {
+                        filepath: relative_filepath,
+                    }),
                     Err(e) => results.push(SyncResult::Error {
-                        filepath,
+                        filepath: relative_filepath,
                         error: e.to_string(),
                     }),
                 }
@@ -345,32 +390,38 @@ impl<'a> SyncService<'a> {
     pub fn verify_sync<P: AsRef<Path>>(&mut self, dir_path: P) -> Result<Vec<SyncIssue>> {
         let mut issues = Vec::new();
 
-        // Find all markdown files
+        // Find all markdown files (returns absolute paths)
         let files = FilesystemService::find_markdown_files(&dir_path)?;
 
         // Check each file
         for file_path in &files {
-            let path_str = file_path.to_string();
+            // Convert absolute path to relative for DB query
+            let relative_path = self.to_relative_path(file_path);
 
-            if let Some(db_doc) = self.db_service.find_by_filepath(&path_str)? {
+            if let Some(db_doc) = self.db_service.find_by_filepath(&relative_path)? {
                 let current_hash = FilesystemService::compute_file_hash(file_path)?;
                 if db_doc.file_hash != current_hash {
                     issues.push(SyncIssue::OutOfSync {
-                        filepath: path_str,
+                        filepath: relative_path,
                         reason: "File hash mismatch".to_string(),
                     });
                 }
             } else {
-                issues.push(SyncIssue::MissingFromDatabase { filepath: path_str });
+                issues.push(SyncIssue::MissingFromDatabase {
+                    filepath: relative_path,
+                });
             }
         }
 
         // Check for orphaned database entries
         let db_pairs = self.db_service.get_all_id_filepath_pairs()?;
-        for (_, filepath) in db_pairs {
-            if !files.contains(&filepath) && !FilesystemService::file_exists(&filepath) {
+        for (_, relative_filepath) in db_pairs {
+            // Convert relative path from DB to absolute for filesystem check
+            let absolute_path = self.to_absolute_path(&relative_filepath);
+            let absolute_str = absolute_path.to_string_lossy().to_string();
+            if !files.contains(&absolute_str) && !FilesystemService::file_exists(&absolute_path) {
                 issues.push(SyncIssue::MissingFromFilesystem {
-                    filepath: filepath.clone(),
+                    filepath: relative_filepath,
                 });
             }
         }

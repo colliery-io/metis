@@ -274,7 +274,10 @@ pub async fn list_documents(
     for doc in documents.into_iter().filter(|doc| !doc.archived) {
         // Parse tags from file directly like TUI does
         let tags = if doc.document_type == "task" {
-            extract_tags_from_task_file(&doc.filepath).unwrap_or_default()
+            // Convert relative path from DB to absolute path for file loading
+            let metis_dir = project_path.join(".metis");
+            let absolute_path = metis_dir.join(&doc.filepath);
+            extract_tags_from_task_file(&absolute_path.to_string_lossy()).unwrap_or_default()
         } else {
             vec![] // Other document types don't need tag extraction for backlog categorization
         };
@@ -522,7 +525,7 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let project_path = temp_dir.path().to_string_lossy().to_string();
 
-        initialize_project(project_path.clone(), Some("TEST".to_string()))
+        initialize_project(project_path.clone(), Some("TEST".to_string()), None)
             .await
             .unwrap();
         let metis_dir = temp_dir.path().join(".metis");
@@ -550,7 +553,7 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let project_path = temp_dir.path().to_string_lossy().to_string();
 
-        initialize_project(project_path.clone(), Some("TEST".to_string()))
+        initialize_project(project_path.clone(), Some("TEST".to_string()), None)
             .await
             .unwrap();
         let metis_dir = temp_dir.path().join(".metis");

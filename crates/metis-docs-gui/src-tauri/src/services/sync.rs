@@ -1,7 +1,6 @@
 use crate::AppState;
 use metis_core::{Application, Database};
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
 use tauri::State;
 
 #[derive(Debug, Serialize, Deserialize)]
