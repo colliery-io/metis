@@ -68,7 +68,9 @@ async fn test_document_short_code_matches_path() {
         .await
         .unwrap();
     assert_eq!(found.document_type, DocumentType::Strategy);
-    assert_eq!(found.file_path, expected_path.join("strategy.md"));
+    // Canonicalize expected path to match discovery service's canonical workspace_dir
+    let expected_file_path = expected_path.join("strategy.md").canonicalize().unwrap();
+    assert_eq!(found.file_path, expected_file_path);
 }
 
 #[tokio::test]
@@ -404,7 +406,9 @@ async fn test_regression_id_path_mismatch_bug() {
         .find_document_by_id(&strategy_result.document_id.to_string())
         .await
         .unwrap();
-    assert_eq!(found.file_path, strategy_dir.join("strategy.md"));
+    // Canonicalize expected path to match discovery service's canonical workspace_dir
+    let expected_file_path = strategy_dir.join("strategy.md").canonicalize().unwrap();
+    assert_eq!(found.file_path, expected_file_path);
 
     // Sync strategy to database before creating initiative
     let db_path = workspace_dir.join("metis.db");

@@ -65,13 +65,8 @@ impl SearchCommand {
             let id = truncate(&doc.id, 49);
             let doc_type = truncate(&doc.document_type, 11);
 
-            // Extract relative path from .metis directory
-            let relative_path = if let Some(metis_pos) = doc.filepath.find(".metis/") {
-                &doc.filepath[metis_pos + 7..] // Skip ".metis/"
-            } else {
-                &doc.filepath
-            };
-            let path = truncate(relative_path, 119);
+            // Filepath is now stored relative to .metis directory
+            let path = truncate(&doc.filepath, 119);
 
             println!("{:<50} {:<12} {:<120}", id, doc_type, path);
         }

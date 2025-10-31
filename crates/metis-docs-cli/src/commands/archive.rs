@@ -162,7 +162,7 @@ mod tests {
             let _ = std::env::set_current_dir(&original);
         }
 
-        assert!(result.is_ok());
+        assert!(result.is_ok(), "Archive failed: {:?}", result.err());
 
         // Verify file was moved and marked as archived
         assert!(!vision_path.exists());

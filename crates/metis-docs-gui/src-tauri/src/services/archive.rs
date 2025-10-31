@@ -104,7 +104,7 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let project_path = temp_dir.path().to_string_lossy().to_string();
 
-        initialize_project(project_path.clone(), Some("TEST".to_string()))
+        initialize_project(project_path.clone(), Some("TEST".to_string()), None)
             .await
             .unwrap();
         let metis_dir = temp_dir.path().join(".metis");
