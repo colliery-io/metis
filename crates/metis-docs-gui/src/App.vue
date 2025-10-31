@@ -35,7 +35,7 @@
           
           <!-- Main content area - matches main content width -->
           <div class="flex-1 flex items-center justify-center py-4">
-            <h1 class="text-xl font-semibold text-primary">Metis</h1>
+            <h1 class="text-xl font-semibold text-primary">{{ getProjectDisplayName() }}</h1>
           </div>
         </div>
 
@@ -123,6 +123,14 @@ const getMascotImage = () => {
     default:
       return '/assets/metis-light.png'
   }
+}
+
+const getProjectDisplayName = () => {
+  if (!currentProject.value) {
+    return 'Metis'
+  }
+  const parts = currentProject.value.path.split('/').filter(Boolean)
+  return parts[parts.length - 1] || 'Metis'
 }
 </script>
 
