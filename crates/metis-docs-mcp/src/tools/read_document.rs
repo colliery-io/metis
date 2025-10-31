@@ -1,4 +1,4 @@
-use metis_core::dal::Database;
+use metis_core::{dal::Database, Application};
 use rust_mcp_sdk::{
     macros::{mcp_tool, JsonSchema},
     schema::{schema_utils::CallToolError, CallToolResult, TextContent},
@@ -64,6 +64,9 @@ impl ReadDocumentTool {
                 ),
             )));
         }
+
+        // Sync before reading to catch external edits
+        self.sync_workspace(metis_dir).await?;
 
         // Resolve short code to document path
         let document_path = self.resolve_short_code_to_path(metis_dir)?;
@@ -162,6 +165,23 @@ impl ReadDocumentTool {
         }
 
         criteria
+    }
+
+    async fn sync_workspace(&self, metis_dir: &Path) -> Result<(), CallToolError> {
+        let db_path = metis_dir.join("metis.db");
+        let database = Database::new(db_path.to_str().unwrap()).map_err(|e| {
+            CallToolError::new(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!("Failed to open database for sync: {}", e),
+            ))
+        })?;
+        let app = Application::new(database);
+
+        app.sync_directory(metis_dir)
+            .await
+            .map_err(|e| CallToolError::new(e))?;
+
+        Ok(())
     }
 }
 

@@ -1,7 +1,7 @@
 use crate::workspace;
 use anyhow::Result;
 use clap::Args;
-use metis_core::{Database, Result as MetisResult};
+use metis_core::{Application, Database, Result as MetisResult};
 use tabled::{Table, Tabled};
 
 #[derive(Args)]
@@ -112,14 +112,30 @@ impl StatusCommand {
     }
 
     pub async fn execute(&self) -> Result<()> {
-        // 1. Connect to database
+        // 1. Validate workspace and sync before reading
+        let (workspace_exists, metis_dir) = workspace::has_metis_vault();
+        if !workspace_exists {
+            anyhow::bail!("Not in a Metis workspace. Run 'metis init' to create one.");
+        }
+        let metis_dir = metis_dir.unwrap();
+
+        // 2. Sync before reading to catch external edits
+        let db_path = metis_dir.join("metis.db");
+        let database = Database::new(db_path.to_str().unwrap())
+            .map_err(|e| anyhow::anyhow!("Failed to open database for sync: {}", e))?;
+        let app = Application::new(database);
+        app.sync_directory(&metis_dir)
+            .await
+            .map_err(|e| anyhow::anyhow!("Failed to sync workspace: {}", e))?;
+
+        // 3. Connect to database
         let mut repo = Self::connect_to_database().await?;
 
-        // 2. Fetch and sort documents
+        // 4. Fetch and sort documents
         let mut documents = self.fetch_documents(&mut repo).await?;
         self.sort_documents_by_priority(&mut documents);
 
-        // 3. Display results
+        // 5. Display results
         if documents.is_empty() {
             println!("No documents found in workspace.");
             return Ok(());

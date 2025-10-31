@@ -1,7 +1,7 @@
 use crate::workspace;
 use anyhow::Result;
 use clap::Args;
-use metis_core::{Database, Result as MetisResult};
+use metis_core::{Application, Database, Result as MetisResult};
 
 #[derive(Args)]
 pub struct ListCommand {
@@ -31,13 +31,21 @@ impl ListCommand {
         }
         let metis_dir = metis_dir.unwrap();
 
-        // 2. Connect to database
+        // 2. Sync before reading to catch external edits
         let db_path = metis_dir.join("metis.db");
+        let database = Database::new(db_path.to_str().unwrap())
+            .map_err(|e| anyhow::anyhow!("Failed to open database for sync: {}", e))?;
+        let app = Application::new(database);
+        app.sync_directory(&metis_dir)
+            .await
+            .map_err(|e| anyhow::anyhow!("Failed to sync workspace: {}", e))?;
+
+        // 3. Connect to database
         let db = Database::new(db_path.to_str().unwrap())
             .map_err(|e| anyhow::anyhow!("Database connection failed: {}", e))?;
         let mut repo = db.into_repository();
 
-        // 3. Query documents based on filters
+        // 4. Query documents based on filters
         let documents = if self.all {
             // Show all documents
             self.list_all_documents(&mut repo).await?
@@ -60,7 +68,7 @@ impl ListCommand {
             self.list_all_documents(&mut repo).await?
         };
 
-        // 4. Display results
+        // 5. Display results
         if documents.is_empty() {
             println!("No documents found matching the criteria.");
             return Ok(());
