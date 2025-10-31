@@ -3,6 +3,7 @@ use anyhow::Result;
 use clap::Args;
 use metis_core::{
     application::services::workspace::PhaseTransitionService, domain::documents::types::Phase,
+    Application, Database,
 };
 
 #[derive(Args)]
@@ -48,7 +49,14 @@ impl TransitionCommand {
             result.document_type, result.document_id, result.from_phase, result.to_phase
         );
 
-        // 5. TODO: Auto-sync workspace after transition
+        // 5. Auto-sync workspace after transition
+        let db_path = metis_dir.join("metis.db");
+        let database = Database::new(db_path.to_str().unwrap())
+            .map_err(|e| anyhow::anyhow!("Failed to open database for sync: {}", e))?;
+        let app = Application::new(database);
+        app.sync_directory(&metis_dir)
+            .await
+            .map_err(|e| anyhow::anyhow!("Failed to sync workspace: {}", e))?;
 
         Ok(())
     }

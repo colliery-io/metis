@@ -1,6 +1,5 @@
 //! Clean functional tests for MCP tools using short codes
 
-use metis_core::Database;
 use metis_mcp_server::tools::*;
 use serde_json::Value;
 use tempfile::tempdir;
@@ -58,16 +57,18 @@ async fn test_initialize_and_create_documents() {
     let result = init_tool.call_tool().await;
     assert!(result.is_ok(), "Initialize should succeed");
 
-    // 2. Enable all document types
-    let db_path = format!("{}/metis.db", metis_path);
-    let db = Database::new(&db_path).unwrap();
-    let mut config_repo = db.configuration_repository().unwrap();
-    config_repo
-        .set(
-            "flight_levels",
-            r#"{"strategies_enabled":true,"initiatives_enabled":true}"#,
-        )
-        .unwrap();
+    // 2. Enable all document types by updating config.toml file
+    let config_path = format!("{}/config.toml", metis_path);
+    let config_content = r#"
+[project]
+name = "Test Project"
+prefix = "PROJ"
+
+[flight_levels]
+strategies_enabled = true
+initiatives_enabled = true
+"#;
+    std::fs::write(&config_path, config_content).unwrap();
 
     // 3. Get vision short code
     let vision_short_code = get_vision_short_code(&metis_path).await;
@@ -177,15 +178,18 @@ async fn test_archive_with_short_codes() {
     };
     init_tool.call_tool().await.unwrap();
 
-    let db_path = format!("{}/metis.db", metis_path);
-    let db = Database::new(&db_path).unwrap();
-    let mut config_repo = db.configuration_repository().unwrap();
-    config_repo
-        .set(
-            "flight_levels",
-            r#"{"strategies_enabled":true,"initiatives_enabled":true}"#,
-        )
-        .unwrap();
+    // Enable full configuration to allow strategies by updating config.toml
+    let config_path = format!("{}/config.toml", metis_path);
+    let config_content = r#"
+[project]
+name = "Test Project"
+prefix = "PROJ"
+
+[flight_levels]
+strategies_enabled = true
+initiatives_enabled = true
+"#;
+    std::fs::write(&config_path, config_content).unwrap();
 
     let vision_short_code = get_vision_short_code(&metis_path).await;
 

@@ -23,19 +23,27 @@ impl SearchCommand {
         }
         let metis_dir = metis_dir.unwrap();
 
-        // 2. Initialize the database and application
+        // 2. Sync before searching to catch external edits
         let db_path = metis_dir.join("metis.db");
+        let database = Database::new(db_path.to_str().unwrap())
+            .map_err(|e| anyhow::anyhow!("Failed to open database for sync: {}", e))?;
+        let app = Application::new(database);
+        app.sync_directory(&metis_dir)
+            .await
+            .map_err(|e| anyhow::anyhow!("Failed to sync workspace: {}", e))?;
+
+        // 3. Initialize the database and application for search
         let database = Database::new(db_path.to_str().unwrap())
             .map_err(|e| anyhow::anyhow!("Failed to open database: {}", e))?;
         let mut app = Application::new(database);
 
-        // 3. Perform full-text search
+        // 4. Perform full-text search
         let results = self.perform_search(&mut app, &self.query)?;
 
-        // 4. Limit results
+        // 5. Limit results
         let limited_results: Vec<_> = results.into_iter().take(self.limit).collect();
 
-        // 5. Display results
+        // 6. Display results
         self.display_results(&limited_results)?;
 
         Ok(())

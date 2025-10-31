@@ -236,19 +236,33 @@ pub async fn create_document(
 pub async fn list_documents(
     state: State<'_, std::sync::Mutex<AppState>>,
 ) -> Result<Vec<DocumentInfo>, String> {
-    let app_state = state
-        .lock()
-        .map_err(|e| format!("Failed to lock state: {}", e))?;
+    let (metis_dir, db_path) = {
+        let app_state = state
+            .lock()
+            .map_err(|e| format!("Failed to lock state: {}", e))?;
 
-    let project_path = app_state
-        .current_project
-        .as_ref()
-        .ok_or("No project loaded")?;
+        let project_path = app_state
+            .current_project
+            .as_ref()
+            .ok_or("No project loaded")?;
 
-    let db_path = project_path.join(".metis").join("metis.db");
+        let metis_dir = project_path.join(".metis");
+        let db_path = metis_dir.join("metis.db");
+
+        (metis_dir, db_path)
+    };
+
+    // Sync before reading to catch external edits
+    let database = Database::new(db_path.to_str().unwrap())
+        .map_err(|e| format!("Failed to open database for sync: {}", e))?;
+    let app = Application::new(database);
+    app.sync_directory(&metis_dir)
+        .await
+        .map_err(|e| format!("Failed to sync workspace: {}", e))?;
+
+    // Reconnect to database for read operations
     let database = Database::new(db_path.to_str().unwrap())
         .map_err(|e| format!("Failed to open database: {}", e))?;
-
     let mut app = Application::new(database);
 
     let documents = app
@@ -275,7 +289,6 @@ pub async fn list_documents(
         // Parse tags from file directly like TUI does
         let tags = if doc.document_type == "task" {
             // Convert relative path from DB to absolute path for file loading
-            let metis_dir = project_path.join(".metis");
             let absolute_path = metis_dir.join(&doc.filepath);
             extract_tags_from_task_file(&absolute_path.to_string_lossy()).unwrap_or_default()
         } else {
@@ -304,19 +317,33 @@ pub async fn read_document(
     state: State<'_, std::sync::Mutex<AppState>>,
     short_code: String,
 ) -> Result<DocumentContent, String> {
-    let app_state = state
-        .lock()
-        .map_err(|e| format!("Failed to lock state: {}", e))?;
+    let (metis_dir, db_path) = {
+        let app_state = state
+            .lock()
+            .map_err(|e| format!("Failed to lock state: {}", e))?;
 
-    let project_path = app_state
-        .current_project
-        .as_ref()
-        .ok_or("No project loaded")?;
+        let project_path = app_state
+            .current_project
+            .as_ref()
+            .ok_or("No project loaded")?;
 
-    let db_path = project_path.join(".metis").join("metis.db");
+        let metis_dir = project_path.join(".metis");
+        let db_path = metis_dir.join("metis.db");
+
+        (metis_dir, db_path)
+    };
+
+    // Sync before reading to catch external edits
+    let database = Database::new(db_path.to_str().unwrap())
+        .map_err(|e| format!("Failed to open database for sync: {}", e))?;
+    let app = Application::new(database);
+    app.sync_directory(&metis_dir)
+        .await
+        .map_err(|e| format!("Failed to sync workspace: {}", e))?;
+
+    // Reconnect to database for read operations
     let database = Database::new(db_path.to_str().unwrap())
         .map_err(|e| format!("Failed to open database: {}", e))?;
-
     let mut app = Application::new(database);
 
     let document = app
@@ -337,19 +364,33 @@ pub async fn search_documents(
     state: State<'_, std::sync::Mutex<AppState>>,
     query: String,
 ) -> Result<Vec<DocumentInfo>, String> {
-    let app_state = state
-        .lock()
-        .map_err(|e| format!("Failed to lock state: {}", e))?;
+    let (metis_dir, db_path) = {
+        let app_state = state
+            .lock()
+            .map_err(|e| format!("Failed to lock state: {}", e))?;
 
-    let project_path = app_state
-        .current_project
-        .as_ref()
-        .ok_or("No project loaded")?;
+        let project_path = app_state
+            .current_project
+            .as_ref()
+            .ok_or("No project loaded")?;
 
-    let db_path = project_path.join(".metis").join("metis.db");
+        let metis_dir = project_path.join(".metis");
+        let db_path = metis_dir.join("metis.db");
+
+        (metis_dir, db_path)
+    };
+
+    // Sync before searching to catch external edits
+    let database = Database::new(db_path.to_str().unwrap())
+        .map_err(|e| format!("Failed to open database for sync: {}", e))?;
+    let app = Application::new(database);
+    app.sync_directory(&metis_dir)
+        .await
+        .map_err(|e| format!("Failed to sync workspace: {}", e))?;
+
+    // Reconnect to database for search operations
     let database = Database::new(db_path.to_str().unwrap())
         .map_err(|e| format!("Failed to open database: {}", e))?;
-
     let mut app = Application::new(database);
 
     let documents = app
@@ -443,16 +484,31 @@ pub async fn get_available_parents(
     state: State<'_, std::sync::Mutex<AppState>>,
     child_document_type: String,
 ) -> Result<Vec<ParentOption>, String> {
-    let app_state = state
-        .lock()
-        .map_err(|e| format!("Failed to lock state: {}", e))?;
+    let (metis_dir, db_path) = {
+        let app_state = state
+            .lock()
+            .map_err(|e| format!("Failed to lock state: {}", e))?;
 
-    let project_path = app_state
-        .current_project
-        .as_ref()
-        .ok_or("No project loaded")?;
+        let project_path = app_state
+            .current_project
+            .as_ref()
+            .ok_or("No project loaded")?;
 
-    let db_path = project_path.join(".metis").join("metis.db");
+        let metis_dir = project_path.join(".metis");
+        let db_path = metis_dir.join("metis.db");
+
+        (metis_dir, db_path)
+    };
+
+    // Sync before reading to catch external edits
+    let database = Database::new(db_path.to_str().unwrap())
+        .map_err(|e| format!("Failed to open database for sync: {}", e))?;
+    let app = Application::new(database);
+    app.sync_directory(&metis_dir)
+        .await
+        .map_err(|e| format!("Failed to sync workspace: {}", e))?;
+
+    // Reconnect to database for read operations
     let database = Database::new(db_path.to_str().unwrap())
         .map_err(|e| format!("Failed to open database: {}", e))?;
 
