@@ -80,6 +80,17 @@ impl SyncCommand {
                     println!("↻ Moved: {} → {}", from, to);
                     updated += 1;
                 }
+                metis_core::application::services::synchronization::SyncResult::Renumbered {
+                    filepath,
+                    old_short_code,
+                    new_short_code,
+                } => {
+                    println!(
+                        "⚠ Renumbered: {} ({} → {})",
+                        filepath, old_short_code, new_short_code
+                    );
+                    updated += 1;
+                }
             }
         }
 
