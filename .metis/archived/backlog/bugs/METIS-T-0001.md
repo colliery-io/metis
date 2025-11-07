@@ -31,41 +31,26 @@ initiative_id: NULL
 
 ## Objective **[REQUIRED]**
 
-{Clear statement of what this task accomplishes}
+Enable multiple developers to work on different branches creating tasks independently without permanent short code collisions. When branches are merged and multiple documents share the same short code, the sync process will automatically detect and resolve collisions using lazy renumbering.
 
 ## Backlog Item Details **[CONDITIONAL: Backlog Item]**
 
-{Delete this section when task is assigned to an initiative}
-
 ### Type
 - [ ] Bug - Production issue that needs fixing
-- [ ] Feature - New functionality or enhancement  
+- [x] Feature - New functionality or enhancement  
 - [ ] Tech Debt - Code improvement or refactoring
 - [ ] Chore - Maintenance or setup work
 
 ### Priority
 - [ ] P0 - Critical (blocks users/revenue)
-- [ ] P1 - High (important for user experience)
+- [x] P1 - High (important for user experience)
 - [ ] P2 - Medium (nice to have)
 - [ ] P3 - Low (when time permits)
 
-### Impact Assessment **[CONDITIONAL: Bug]**
-- **Affected Users**: {Number/percentage of users affected}
-- **Reproduction Steps**: 
-  1. {Step 1}
-  2. {Step 2}
-  3. {Step 3}
-- **Expected vs Actual**: {What should happen vs what happens}
-
 ### Business Justification **[CONDITIONAL: Feature]**
-- **User Value**: {Why users need this}
-- **Business Value**: {Impact on metrics/revenue}
-- **Effort Estimate**: {Rough size - S/M/L/XL}
-
-### Technical Debt Impact **[CONDITIONAL: Tech Debt]**
-- **Current Problems**: {What's difficult/slow/buggy now}
-- **Benefits of Fixing**: {What improves after refactoring}
-- **Risk Assessment**: {Risks of not addressing this}
+- **User Value**: Enable team collaboration without manual ID coordination. Developers can work independently on separate branches without worrying about ID conflicts.
+- **Business Value**: Reduces friction in multi-developer workflows. Prevents merge conflicts and database errors that currently block team collaboration.
+- **Effort Estimate**: M - Requires database migration, sync logic changes, and reference update logic
 
 ## Acceptance Criteria
 
@@ -77,70 +62,104 @@ initiative_id: NULL
 
 ## Acceptance Criteria **[REQUIRED]**
 
-- [ ] {Specific, testable requirement 1}
-- [ ] {Specific, testable requirement 2}
-- [ ] {Specific, testable requirement 3}
+- [ ] Database UNIQUE constraint removed from short_code, replaced with non-unique index
+- [ ] Sync process detects duplicate short codes across different file paths
+- [ ] Collision resolution uses deterministic ordering (alphabetical filepath) to choose which document keeps original short code
+- [ ] Renumbered documents have updated frontmatter with new short_code
+- [ ] Renumbered documents have updated filenames (e.g., T-0013.md → T-0014.md)
+- [ ] Child documents have parent references updated when parent is renumbered
+- [ ] Cross-references within sibling documents are updated (same directory group)
+- [ ] Counter recovery sets counters to max seen value + 1
+- [ ] Collision resolutions are logged/reported to user
+- [ ] Integration tests verify multi-branch collision scenarios work correctly
 
-## Test Cases **[CONDITIONAL: Testing Task]**
 
-{Delete unless this is a testing task}
-
-### Test Case 1: {Test Case Name}
-- **Test ID**: TC-001
-- **Preconditions**: {What must be true before testing}
-- **Steps**: 
-  1. {Step 1}
-  2. {Step 2}
-  3. {Step 3}
-- **Expected Results**: {What should happen}
-- **Actual Results**: {To be filled during execution}
-- **Status**: {Pass/Fail/Blocked}
-
-### Test Case 2: {Test Case Name}
-- **Test ID**: TC-002
-- **Preconditions**: {What must be true before testing}
-- **Steps**: 
-  1. {Step 1}
-  2. {Step 2}
-- **Expected Results**: {What should happen}
-- **Actual Results**: {To be filled during execution}
-- **Status**: {Pass/Fail/Blocked}
-
-## Documentation Sections **[CONDITIONAL: Documentation Task]**
-
-{Delete unless this is a documentation task}
-
-### User Guide Content
-- **Feature Description**: {What this feature does and why it's useful}
-- **Prerequisites**: {What users need before using this feature}
-- **Step-by-Step Instructions**:
-  1. {Step 1 with screenshots/examples}
-  2. {Step 2 with screenshots/examples}
-  3. {Step 3 with screenshots/examples}
-
-### Troubleshooting Guide
-- **Common Issue 1**: {Problem description and solution}
-- **Common Issue 2**: {Problem description and solution}
-- **Error Messages**: {List of error messages and what they mean}
-
-### API Documentation **[CONDITIONAL: API Documentation]**
-- **Endpoint**: {API endpoint description}
-- **Parameters**: {Required and optional parameters}
-- **Example Request**: {Code example}
-- **Example Response**: {Expected response format}
 
 ## Implementation Notes **[CONDITIONAL: Technical Task]**
 
-{Keep for technical tasks, delete for non-technical. Technical details, approach, or important considerations}
-
 ### Technical Approach
-{How this will be implemented}
+
+**Core Insight**: Filepath is already the primary key in the database. Git prevents file path collisions due to hierarchical nesting. Short code collisions can exist temporarily and be resolved lazily during sync.
+
+**Architecture**:
+1. **Remove UNIQUE constraint** on `short_code`, make it a non-unique index for performance
+2. **Lazy renumbering** during `sync_directory()` - every sync detects and resolves collisions
+3. **Deterministic resolution** - alphabetical filepath sorting determines which document keeps original short code
+4. **Sibling-scoped reference fixing** - update cross-references only within same directory group using regex
+
+**Implementation Flow**:
+```rust
+// During sync_directory():
+1. Scan all documents from filesystem
+2. Group by short_code (HashMap<String, Vec<Document>>)
+3. For each collision group:
+   a. Sort by filepath (alphabetical)
+   b. First keeps original short code
+   c. Rest get renumbered sequentially
+4. Update counters to max seen + 1
+5. For each renumbered document:
+   a. Update frontmatter
+   b. Rename file
+   c. Update children's parent references
+   d. Fix cross-references in siblings using regex
+```
+
+**Sibling Groups** (for reference fixing):
+- Tasks under same initiative: `.metis/strategies/S-X/initiatives/I-Y/tasks/*.md`
+- Initiatives under same strategy: `.metis/strategies/S-X/initiatives/*.md`
+- All strategies: `.metis/strategies/*/strategy.md`
+- All ADRs: `.metis/adrs/*.md`
+
+**Reference Update Regex**:
+```rust
+let pattern = format!(r"\b{}\b", regex::escape(&old_code));
+// Matches whole word only, works in:
+// - Frontmatter: blocked_by: [METIS-T-0013]
+// - Content: "See METIS-T-0013 for details"
+```
 
 ### Dependencies
-{Other tasks or systems this depends on}
+
+- Database migration to remove UNIQUE constraint
+- `SyncService::sync_directory()` in `crates/metis-docs-core/src/application/services/synchronization.rs`
+- `ConfigurationRepository::generate_short_code()` in `crates/metis-docs-core/src/dal/database/configuration_repository.rs`
+- Frontmatter parsing/updating via `gray_matter` crate
+- File renaming operations via `FilesystemService`
+
+### Key Files to Modify
+
+- `crates/metis-docs-core/src/dal/database/migrations/` - New migration to drop UNIQUE constraint
+- `crates/metis-docs-core/src/application/services/synchronization.rs` - Collision detection and resolution
+- `crates/metis-docs-core/src/application/services/document/update.rs` - Helper for renumbering documents
+- `crates/metis-docs-core/tests/` - Integration tests for collision scenarios
 
 ### Risk Considerations
-{Technical risks and mitigation strategies}
+
+**Risk 1: Cross-reference breakage**
+- **Issue**: References in markdown content could break after renumbering
+- **Mitigation**: Sibling-scoped regex replacement updates most references automatically
+- **Residual Risk**: Cross-references outside sibling groups won't auto-update
+- **Acceptance**: User manually fixes edge cases; expected to be rare
+
+**Risk 2: Renumbering surprises users**
+- **Issue**: Silent renumbering might confuse developers
+- **Mitigation**: Log all resolutions clearly; consider adding `_original_short_code` in frontmatter for audit trail
+- **Decision**: Log but don't preserve original (keeps it simple)
+
+**Risk 3: Counter gaps**
+- **Issue**: After resolution, might have T-0001, T-0002, T-0015 (gap)
+- **Mitigation**: Acceptable; short codes aren't meant to be sequential
+- **Acceptance**: Gaps are fine, counters only increment
+
+**Risk 4: Nested collisions**
+- **Issue**: Both parent initiative and child task have colliding short codes
+- **Mitigation**: Resolve parents first in dependency order, then children
+- **Implementation**: Sort by path depth before processing collisions
+
+**Risk 5: Concurrent sync operations**
+- **Issue**: Multiple sync operations at same time could cause issues
+- **Mitigation**: Existing database transactions provide some protection
+- **Acceptance**: System assumes single-process model (current architecture)
 
 ## Status Updates **[REQUIRED]**
 
