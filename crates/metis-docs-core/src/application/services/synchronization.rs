@@ -290,6 +290,10 @@ impl<'a> SyncService<'a> {
     ) -> Result<Vec<SyncResult>> {
         let mut results = Vec::new();
 
+        // Step 0: Update counters from filesystem FIRST
+        // This ensures the counter knows about all existing short codes before we generate new ones
+        self.update_counters_from_filesystem(&dir_path)?;
+
         // Step 1: Scan all markdown files and group by short code
         let files = FilesystemService::find_markdown_files(&dir_path)?;
         let mut short_code_map: HashMap<String, Vec<PathBuf>> = HashMap::new();
@@ -442,7 +446,13 @@ impl<'a> SyncService<'a> {
         // Step 7: Write updated content back to file
         FilesystemService::write_file(file_path, &updated_content)?;
 
-        // Step 8: Rename file if filename contains short code
+        // Step 8: Rename file if filename contains the short code
+        // Extract just the suffix (e.g., "T-0001" from "TEST-T-0001")
+        let old_suffix = old_short_code.rsplit('-').take(2).collect::<Vec<_>>();
+        let old_suffix = format!("{}-{}", old_suffix[1], old_suffix[0]);
+        let new_suffix = new_short_code.rsplit('-').take(2).collect::<Vec<_>>();
+        let new_suffix = format!("{}-{}", new_suffix[1], new_suffix[0]);
+
         let file_name = file_path
             .file_name()
             .and_then(|n| n.to_str())
@@ -450,8 +460,8 @@ impl<'a> SyncService<'a> {
                 message: "Invalid file path".to_string(),
             })?;
 
-        if file_name.contains(old_short_code) {
-            let new_file_name = file_name.replace(old_short_code, &new_short_code);
+        if file_name.contains(&old_suffix) {
+            let new_file_name = file_name.replace(&old_suffix, &new_suffix);
             let new_path = file_path.with_file_name(new_file_name);
             std::fs::rename(file_path, &new_path)?;
 
@@ -604,7 +614,8 @@ impl<'a> SyncService<'a> {
         let collision_results = self.resolve_short_code_collisions(&dir_path).await?;
         results.extend(collision_results);
 
-        // Step 2: Find all markdown files
+        // Step 2: Re-scan all markdown files AFTER renumbering
+        // This picks up renamed files with new short codes
         let files = FilesystemService::find_markdown_files(&dir_path)?;
 
         // Step 3: Sync each file
