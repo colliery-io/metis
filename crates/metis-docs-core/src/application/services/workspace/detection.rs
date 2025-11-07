@@ -82,8 +82,8 @@ impl WorkspaceDetectionService {
     /// Prepare a workspace for use by ensuring database exists and is synced
     /// This should be called by all commands/tools before performing operations
     ///
-    /// Returns an Application instance ready for use
-    pub async fn prepare_workspace(&self, metis_dir: &Path) -> Result<Application> {
+    /// Returns a Database instance that's been synced and is ready for use
+    pub async fn prepare_workspace(&self, metis_dir: &Path) -> Result<Database> {
         // Validate workspace exists
         if self.validate_workspace(metis_dir)?.is_none() {
             anyhow::bail!("Not a valid Metis workspace: {}", metis_dir.display());
@@ -98,15 +98,19 @@ impl WorkspaceDetectionService {
         let app = Application::new(database);
         app.sync_directory(metis_dir).await?;
 
-        Ok(app)
+        // Return a new database connection after sync
+        let database = Database::new(db_path.to_str().unwrap())
+            .map_err(|e| anyhow::anyhow!("Failed to reconnect to database: {}", e))?;
+
+        Ok(database)
     }
 
     /// Find workspace from current directory and prepare it for use
     /// Convenience function that combines find_workspace() and prepare_workspace()
-    pub async fn find_and_prepare_workspace(&self) -> Result<Option<(PathBuf, Application)>> {
+    pub async fn find_and_prepare_workspace(&self) -> Result<Option<(PathBuf, Database)>> {
         if let Some(metis_dir) = self.find_workspace()? {
-            let app = self.prepare_workspace(&metis_dir).await?;
-            Ok(Some((metis_dir, app)))
+            let db = self.prepare_workspace(&metis_dir).await?;
+            Ok(Some((metis_dir, db)))
         } else {
             Ok(None)
         }
