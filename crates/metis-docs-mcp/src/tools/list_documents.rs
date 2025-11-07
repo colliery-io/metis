@@ -29,7 +29,12 @@ impl ListDocumentsTool {
         let db = detection_service
             .prepare_workspace(metis_dir)
             .await
-            .map_err(|e| CallToolError::new(e))?;
+            .map_err(|e| {
+                CallToolError::new(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    e.to_string(),
+                ))
+            })?;
 
         let mut repo = db.into_repository();
 

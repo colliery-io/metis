@@ -59,7 +59,12 @@ impl ReadDocumentTool {
         let _db = detection_service
             .prepare_workspace(metis_dir)
             .await
-            .map_err(|e| CallToolError::new(e))?;
+            .map_err(|e| {
+                CallToolError::new(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    e.to_string(),
+                ))
+            })?;
 
         // Resolve short code to document path
         let document_path = self.resolve_short_code_to_path(metis_dir)?;
