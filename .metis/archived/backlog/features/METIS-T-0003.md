@@ -1,18 +1,18 @@
 ---
-id: gui-card-view-modal-can-edit
+id: gui-sync-board-refresh
 level: task
-title: "GUI Card View Modal, Can Edit"
-short_code: "METIS-T-0005"
-created_at: 2025-10-16T02:10:03.176674+00:00
-updated_at: 2025-10-16T19:56:14.713359+00:00
+title: "GUI Sync/Board Refresh"
+short_code: "METIS-T-0003"
+created_at: 2025-10-16T02:00:45.556876+00:00
+updated_at: 2025-10-16T21:00:23.118530+00:00
 parent: 
 blocked_by: []
-archived: false
+archived: true
 
 tags:
   - "#task"
-  - "#bug"
-  - "#bug"
+  - "#feature"
+  - "#feature"
   - "#phase/completed"
 
 
@@ -21,7 +21,7 @@ strategy_id: NULL
 initiative_id: NULL
 ---
 
-# GUI Card View Modal, Can Edit
+# GUI Sync/Board Refresh
 
 *This template includes sections for various types of tasks. Delete sections that don't apply to your specific use case.*
 
@@ -66,6 +66,8 @@ initiative_id: NULL
 - **Current Problems**: {What's difficult/slow/buggy now}
 - **Benefits of Fixing**: {What improves after refactoring}
 - **Risk Assessment**: {Risks of not addressing this}
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 

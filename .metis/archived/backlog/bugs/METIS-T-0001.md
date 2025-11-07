@@ -7,7 +7,7 @@ created_at: 2025-10-16T00:49:18.154457+00:00
 updated_at: 2025-10-16T20:20:06.885875+00:00
 parent: 
 blocked_by: []
-archived: false
+archived: true
 
 tags:
   - "#task"
@@ -66,6 +66,8 @@ initiative_id: NULL
 - **Current Problems**: {What's difficult/slow/buggy now}
 - **Benefits of Fixing**: {What improves after refactoring}
 - **Risk Assessment**: {Risks of not addressing this}
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 

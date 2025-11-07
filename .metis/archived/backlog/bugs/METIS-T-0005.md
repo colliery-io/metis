@@ -1,18 +1,18 @@
 ---
-id: gui-table-rendering
+id: gui-card-view-modal-can-edit
 level: task
-title: "GUI table rendering"
-short_code: "METIS-T-0004"
-created_at: 2025-10-16T02:08:11.158420+00:00
-updated_at: 2025-10-16T20:50:20.641696+00:00
+title: "GUI Card View Modal, Can Edit"
+short_code: "METIS-T-0005"
+created_at: 2025-10-16T02:10:03.176674+00:00
+updated_at: 2025-10-16T19:56:14.713359+00:00
 parent: 
 blocked_by: []
-archived: false
+archived: true
 
 tags:
   - "#task"
-  - "#feature"
-  - "#feature"
+  - "#bug"
+  - "#bug"
   - "#phase/completed"
 
 
@@ -21,7 +21,7 @@ strategy_id: NULL
 initiative_id: NULL
 ---
 
-# GUI table rendering
+# GUI Card View Modal, Can Edit
 
 *This template includes sections for various types of tasks. Delete sections that don't apply to your specific use case.*
 
@@ -66,8 +66,6 @@ initiative_id: NULL
 - **Current Problems**: {What's difficult/slow/buggy now}
 - **Benefits of Fixing**: {What improves after refactoring}
 - **Risk Assessment**: {Risks of not addressing this}
-
-## Acceptance Criteria
 
 ## Acceptance Criteria
 

@@ -7,7 +7,7 @@ created_at: 2025-10-21T12:42:37.385397+00:00
 updated_at: 2025-10-21T18:04:56.364346+00:00
 parent: 
 blocked_by: []
-archived: false
+archived: true
 
 tags:
   - "#task"
@@ -81,6 +81,8 @@ corrupted and needs to be reviewed after our guesses. This could introduce work 
 - **Current Problems**: {What's difficult/slow/buggy now}
 - **Benefits of Fixing**: {What improves after refactoring}
 - **Risk Assessment**: {Risks of not addressing this}
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 
