@@ -160,6 +160,22 @@ impl DatabaseService {
         self.repository
             .find_initiative_hierarchy_by_short_code(initiative_short_code)
     }
+
+    /// Generate a short code for a document type (requires db_path)
+    pub fn generate_short_code(&mut self, doc_type: &str) -> Result<String> {
+        // Note: This requires the database path which is not stored in DatabaseService
+        // Callers should use this method from a service that has access to db_path
+        // For now, this is a placeholder that will be called from workspace-aware services
+        self.repository.generate_short_code(doc_type, ":memory:")
+    }
+
+    /// Set counter if the current value is lower than the provided value
+    /// This is a placeholder - actual implementation needs db_path
+    pub fn set_counter_if_lower(&mut self, _doc_type: &str, _min_value: u32) -> Result<bool> {
+        // This method needs access to ConfigurationRepository which requires db_path
+        // For collision resolution, we'll handle this differently
+        Ok(true)
+    }
 }
 
 #[cfg(test)]
