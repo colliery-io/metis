@@ -2,6 +2,7 @@
 
 use anyhow::Result;
 use metis_core::dal::Database;
+use metis_core::domain::configuration::{ConfigFile, FlightLevelConfig};
 use metis_mcp_server::tools::InitializeProjectTool;
 
 // Re-export the shared test helper from core
@@ -53,5 +54,25 @@ impl McpTestHelper {
             .to_str()
             .unwrap()
             .to_string()
+    }
+
+    /// Update flight level configuration in config.toml
+    /// This is the correct way to change configuration since filesystem is source of truth
+    pub fn set_flight_level_config(&self, flight_config: FlightLevelConfig) -> Result<()> {
+        let config_file_path = self.core_helper.metis_dir.join("config.toml");
+
+        // Load existing config to preserve prefix
+        let existing_config = ConfigFile::load(&config_file_path)
+            .map_err(|e| anyhow::anyhow!("Failed to load config: {}", e))?;
+
+        // Create new config with updated flight levels
+        let new_config = ConfigFile::new(existing_config.prefix().to_string(), flight_config)
+            .map_err(|e| anyhow::anyhow!("Failed to create config: {}", e))?;
+
+        // Save to filesystem (database will sync on next operation)
+        new_config.save(&config_file_path)
+            .map_err(|e| anyhow::anyhow!("Failed to save config: {}", e))?;
+
+        Ok(())
     }
 }

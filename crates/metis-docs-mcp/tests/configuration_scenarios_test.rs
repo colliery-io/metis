@@ -3,6 +3,7 @@
 
 use crate::common::McpTestHelper;
 use anyhow::Result;
+use metis_core::domain::configuration::FlightLevelConfig;
 use metis_mcp_server::tools::*;
 
 mod common;
@@ -151,17 +152,8 @@ async fn test_direct_configuration_workflows() -> Result<()> {
     let helper = McpTestHelper::new().await?;
     helper.initialize_project().await?;
 
-    // Set direct configuration
-    let db = helper.get_database()?;
-    let mut config_repo = db
-        .configuration_repository()
-        .map_err(|e| anyhow::anyhow!("Failed to get config repo: {}", e))?;
-    config_repo
-        .set(
-            "flight_levels",
-            r#"{"strategies_enabled":false,"initiatives_enabled":false}"#,
-        )
-        .map_err(|e| anyhow::anyhow!("Failed to set config: {}", e))?;
+    // Set direct configuration via config.toml (filesystem is source of truth)
+    helper.set_flight_level_config(FlightLevelConfig::direct())?;
 
     println!("=== Test Direct Configuration ===");
 
@@ -457,17 +449,8 @@ async fn test_configuration_switching_compatibility() -> Result<()> {
 
     println!("=== Test Configuration Switching ===");
 
-    // Start with full configuration and create documents
-    let db = helper.get_database()?;
-    let mut config_repo = db
-        .configuration_repository()
-        .map_err(|e| anyhow::anyhow!("Failed to get config repo: {}", e))?;
-    config_repo
-        .set(
-            "flight_levels",
-            r#"{"strategies_enabled":true,"initiatives_enabled":true}"#,
-        )
-        .map_err(|e| anyhow::anyhow!("Failed to set config: {}", e))?;
+    // Start with full configuration via config.toml (filesystem is source of truth)
+    helper.set_flight_level_config(FlightLevelConfig::full())?;
 
     // Create full hierarchy
     let create_strategy = CreateDocumentTool {
@@ -485,13 +468,8 @@ async fn test_configuration_switching_compatibility() -> Result<()> {
         .await
         .map_err(|e| anyhow::anyhow!("Strategy creation failed: {:?}", e))?;
 
-    // Switch to streamlined configuration
-    config_repo
-        .set(
-            "flight_levels",
-            r#"{"strategies_enabled":false,"initiatives_enabled":true}"#,
-        )
-        .map_err(|e| anyhow::anyhow!("Failed to set config: {}", e))?;
+    // Switch to streamlined configuration via config.toml
+    helper.set_flight_level_config(FlightLevelConfig::streamlined())?;
 
     // Should still be able to create initiatives (now they go under NULL strategy)
     let create_initiative = CreateDocumentTool {

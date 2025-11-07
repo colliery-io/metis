@@ -1,4 +1,4 @@
-use metis_core::{application::Application, dal::Database};
+use metis_core::application::services::workspace::WorkspaceDetectionService;
 use rust_mcp_sdk::{
     macros::{mcp_tool, JsonSchema},
     schema::{schema_utils::CallToolError, CallToolResult, TextContent},
@@ -30,16 +30,22 @@ pub struct EditDocumentTool {
 }
 
 impl EditDocumentTool {
-    /// Resolve short code to file path
-    fn resolve_short_code_to_path(&self, metis_dir: &Path) -> Result<String, CallToolError> {
-        let db_path = metis_dir.join("metis.db");
-        let db = Database::new(db_path.to_str().unwrap()).map_err(|e| {
-            CallToolError::new(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("Database error: {}", e),
-            ))
-        })?;
+    pub async fn call_tool(&self) -> std::result::Result<CallToolResult, CallToolError> {
+        let metis_dir = Path::new(&self.project_path);
 
+        // Prepare workspace (validates, creates/updates database, syncs)
+        let detection_service = WorkspaceDetectionService::new();
+        let db = detection_service
+            .prepare_workspace(metis_dir)
+            .await
+            .map_err(|e| {
+                CallToolError::new(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    e.to_string(),
+                ))
+            })?;
+
+        // Resolve short code to file path
         let mut repo = db.repository().map_err(|e| {
             CallToolError::new(std::io::Error::new(
                 std::io::ErrorKind::Other,
@@ -47,32 +53,15 @@ impl EditDocumentTool {
             ))
         })?;
 
-        // Use the core DAL method
-        repo.resolve_short_code_to_filepath(&self.short_code)
+        let document_path = repo
+            .resolve_short_code_to_filepath(&self.short_code)
             .map_err(|e| {
                 CallToolError::new(std::io::Error::new(
                     std::io::ErrorKind::Other,
                     format!("Resolution error: {}", e),
                 ))
-            })
-    }
+            })?;
 
-    pub async fn call_tool(&self) -> std::result::Result<CallToolResult, CallToolError> {
-        let metis_dir = Path::new(&self.project_path);
-
-        // Validate metis workspace exists
-        if !metis_dir.exists() || !metis_dir.is_dir() {
-            return Err(CallToolError::new(std::io::Error::new(
-                std::io::ErrorKind::NotFound,
-                format!(
-                    "Metis workspace not found at {}. Run initialize_project first.",
-                    metis_dir.display()
-                ),
-            )));
-        }
-
-        // Resolve short code to document path
-        let document_path = self.resolve_short_code_to_path(metis_dir)?;
         let full_document_path = metis_dir.join(&document_path);
 
         if !full_document_path.exists() {
@@ -104,9 +93,6 @@ impl EditDocumentTool {
         fs::write(&full_document_path, &updated_content)
             .await
             .map_err(|e| CallToolError::new(e))?;
-
-        // Auto-sync after update to update database
-        self.sync_workspace(metis_dir).await?;
 
         let response = serde_json::json!({
             "success": true,
@@ -148,22 +134,5 @@ impl EditDocumentTool {
                 Ok((content.to_string(), 0))
             }
         }
-    }
-
-    async fn sync_workspace(&self, metis_dir: &Path) -> Result<(), CallToolError> {
-        let db_path = metis_dir.join("metis.db");
-        let database = Database::new(db_path.to_str().unwrap()).map_err(|e| {
-            CallToolError::new(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("Failed to open database for sync: {}", e),
-            ))
-        })?;
-        let app = Application::new(database);
-
-        app.sync_directory(metis_dir)
-            .await
-            .map_err(|e| CallToolError::new(e))?;
-
-        Ok(())
     }
 }
