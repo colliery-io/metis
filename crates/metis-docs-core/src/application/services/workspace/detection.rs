@@ -1,4 +1,5 @@
 use crate::constants::{DATABASE_FILE_NAME, METIS_DIR_NAME};
+use crate::{Application, Database};
 use anyhow::Result;
 use std::path::{Path, PathBuf};
 
@@ -53,17 +54,10 @@ impl WorkspaceDetectionService {
     }
 
     /// Validate that a directory is a proper Metis workspace
+    /// Only checks for .metis directory existence - database will be auto-created/synced as needed
     pub fn validate_workspace(&self, metis_dir: &Path) -> Result<Option<PathBuf>> {
         if !metis_dir.exists() || !metis_dir.is_dir() {
             return Ok(None);
-        }
-
-        let db_path = metis_dir.join(DATABASE_FILE_NAME);
-        if !db_path.exists() {
-            return Err(anyhow::anyhow!(
-                "Metis workspace found at {:?} but database missing. Run 'metis sync'.",
-                metis_dir
-            ));
         }
 
         Ok(Some(metis_dir.to_path_buf()))
@@ -83,6 +77,43 @@ impl WorkspaceDetectionService {
             }
         }
         Ok(None)
+    }
+
+    /// Prepare a workspace for use by ensuring database exists and is synced
+    /// This should be called by all commands/tools before performing operations
+    ///
+    /// Returns a Database instance that's been synced and is ready for use
+    pub async fn prepare_workspace(&self, metis_dir: &Path) -> Result<Database> {
+        // Validate workspace exists
+        if self.validate_workspace(metis_dir)?.is_none() {
+            anyhow::bail!("Not a valid Metis workspace: {}", metis_dir.display());
+        }
+
+        // Ensure database exists (create if missing)
+        let db_path = metis_dir.join(DATABASE_FILE_NAME);
+        let database = Database::new(db_path.to_str().unwrap())
+            .map_err(|e| anyhow::anyhow!("Failed to initialize database: {}", e))?;
+
+        // Create application and sync to ensure database is up-to-date
+        let app = Application::new(database);
+        app.sync_directory(metis_dir).await?;
+
+        // Return a new database connection after sync
+        let database = Database::new(db_path.to_str().unwrap())
+            .map_err(|e| anyhow::anyhow!("Failed to reconnect to database: {}", e))?;
+
+        Ok(database)
+    }
+
+    /// Find workspace from current directory and prepare it for use
+    /// Convenience function that combines find_workspace() and prepare_workspace()
+    pub async fn find_and_prepare_workspace(&self) -> Result<Option<(PathBuf, Database)>> {
+        if let Some(metis_dir) = self.find_workspace()? {
+            let db = self.prepare_workspace(&metis_dir).await?;
+            Ok(Some((metis_dir, db)))
+        } else {
+            Ok(None)
+        }
     }
 }
 
@@ -109,7 +140,7 @@ mod tests {
     }
 
     #[test]
-    fn test_validate_workspace_missing_database() {
+    fn test_validate_workspace_with_metis_directory() {
         let service = WorkspaceDetectionService::new();
         let temp_dir = TempDir::new().unwrap();
         let metis_dir = temp_dir.path().join(METIS_DIR_NAME);
@@ -117,22 +148,8 @@ mod tests {
         fs::create_dir_all(&metis_dir).unwrap();
 
         let result = service.validate_workspace(&metis_dir);
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("database missing"));
-    }
-
-    #[test]
-    fn test_validate_workspace_valid() {
-        let service = WorkspaceDetectionService::new();
-        let temp_dir = TempDir::new().unwrap();
-        let metis_dir = temp_dir.path().join(METIS_DIR_NAME);
-
-        fs::create_dir_all(&metis_dir).unwrap();
-        fs::File::create(metis_dir.join(DATABASE_FILE_NAME)).unwrap();
-
-        let result = service.validate_workspace(&metis_dir).unwrap();
-        assert!(result.is_some());
-        assert_eq!(result.unwrap(), metis_dir);
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_some());
     }
 
     #[test]
@@ -144,7 +161,6 @@ mod tests {
         let nested_dir = project_root.join("src").join("deep").join("nested");
 
         fs::create_dir_all(&metis_dir).unwrap();
-        fs::File::create(metis_dir.join(DATABASE_FILE_NAME)).unwrap();
         fs::create_dir_all(&nested_dir).unwrap();
 
         let result = service.find_workspace_from(&nested_dir).unwrap();
@@ -161,7 +177,6 @@ mod tests {
         let nested_dir = project_root.join("src").join("deep");
 
         fs::create_dir_all(&metis_dir).unwrap();
-        fs::File::create(metis_dir.join(DATABASE_FILE_NAME)).unwrap();
         fs::create_dir_all(&nested_dir).unwrap();
 
         let result = service.get_workspace_root(&nested_dir).unwrap();

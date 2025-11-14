@@ -5,12 +5,14 @@ use crate::domain::documents::{
 };
 use crate::{MetisError, Result};
 use serde_json;
-use std::path::Path;
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 
 /// Synchronization service - bridges filesystem and database
 pub struct SyncService<'a> {
     db_service: &'a mut DatabaseService,
     workspace_dir: Option<&'a Path>,
+    db_path: Option<std::path::PathBuf>,
 }
 
 impl<'a> SyncService<'a> {
@@ -18,6 +20,7 @@ impl<'a> SyncService<'a> {
         Self {
             db_service,
             workspace_dir: None,
+            db_path: None,
         }
     }
 
@@ -27,6 +30,8 @@ impl<'a> SyncService<'a> {
     /// paths are properly resolved when needed.
     pub fn with_workspace_dir(mut self, workspace_dir: &'a Path) -> Self {
         self.workspace_dir = Some(workspace_dir);
+        // Infer db_path from workspace_dir
+        self.db_path = Some(workspace_dir.join("metis.db"));
         self
     }
 
@@ -277,6 +282,260 @@ impl<'a> SyncService<'a> {
         Ok(())
     }
 
+    /// Detect and resolve short code collisions across all markdown files
+    /// Returns list of renumbering results
+    async fn resolve_short_code_collisions<P: AsRef<Path>>(
+        &mut self,
+        dir_path: P,
+    ) -> Result<Vec<SyncResult>> {
+        let mut results = Vec::new();
+
+        // Step 0: Update counters from filesystem FIRST
+        // This ensures the counter knows about all existing short codes before we generate new ones
+        self.update_counters_from_filesystem(&dir_path)?;
+
+        // Step 1: Scan all markdown files and group by short code
+        let files = FilesystemService::find_markdown_files(&dir_path)?;
+        let mut short_code_map: HashMap<String, Vec<PathBuf>> = HashMap::new();
+
+        for file_path in files {
+            match Self::extract_document_short_code(&file_path) {
+                Ok(short_code) => {
+                    short_code_map
+                        .entry(short_code)
+                        .or_default()
+                        .push(PathBuf::from(&file_path));
+                }
+                Err(e) => {
+                    tracing::warn!("Failed to extract short code from {}: {}", file_path, e);
+                }
+            }
+        }
+
+        // Step 2: Find collisions (short codes with multiple files)
+        let mut collision_groups: Vec<(String, Vec<PathBuf>)> = short_code_map
+            .into_iter()
+            .filter(|(_, paths)| paths.len() > 1)
+            .collect();
+
+        if collision_groups.is_empty() {
+            return Ok(results);
+        }
+
+        // Step 3: Sort collision groups by path depth (resolve parents first)
+        for (_, paths) in &mut collision_groups {
+            paths.sort_by(|a, b| {
+                let depth_a = a.components().count();
+                let depth_b = b.components().count();
+                depth_a.cmp(&depth_b).then_with(|| a.cmp(b))
+            });
+        }
+
+        // Step 4: Resolve each collision group
+        for (old_short_code, mut paths) in collision_groups {
+            tracing::info!(
+                "Detected short code collision for {}: {} files",
+                old_short_code,
+                paths.len()
+            );
+
+            // First path keeps original short code, rest get renumbered
+            let _keeper = paths.remove(0);
+
+            for path in paths {
+                match self.renumber_document(&path, &old_short_code).await {
+                    Ok(new_short_code) => {
+                        let relative_path = self.to_relative_path(&path);
+                        results.push(SyncResult::Renumbered {
+                            filepath: relative_path,
+                            old_short_code: old_short_code.clone(),
+                            new_short_code,
+                        });
+                    }
+                    Err(e) => {
+                        let relative_path = self.to_relative_path(&path);
+                        results.push(SyncResult::Error {
+                            filepath: relative_path,
+                            error: format!("Failed to renumber: {}", e),
+                        });
+                    }
+                }
+            }
+        }
+
+        Ok(results)
+    }
+
+    /// Renumber a single document to resolve short code collision
+    /// Returns the new short code
+    async fn renumber_document<P: AsRef<Path>>(
+        &mut self,
+        file_path: P,
+        old_short_code: &str,
+    ) -> Result<String> {
+        let file_path = file_path.as_ref();
+
+        // Step 1: Read current document content
+        let content = FilesystemService::read_file(file_path)?;
+
+        // Step 2: Parse frontmatter
+        use gray_matter::{engine::YAML, Matter};
+        let matter = Matter::<YAML>::new();
+        let parsed = matter.parse(&content);
+
+        // Step 3: Extract document type from frontmatter to generate new short code
+        let doc_type = if let Some(frontmatter) = &parsed.data {
+            if let gray_matter::Pod::Hash(map) = frontmatter {
+                if let Some(gray_matter::Pod::String(level_str)) = map.get("level") {
+                    level_str.as_str()
+                } else {
+                    return Err(MetisError::ValidationFailed {
+                        message: "Document missing 'level' in frontmatter".to_string(),
+                    });
+                }
+            } else {
+                return Err(MetisError::ValidationFailed {
+                    message: "Frontmatter must be a hash/map".to_string(),
+                });
+            }
+        } else {
+            return Err(MetisError::ValidationFailed {
+                message: "Document missing frontmatter".to_string(),
+            });
+        };
+
+        // Step 4: Generate new short code
+        let db_path_str = self
+            .db_path
+            .as_ref()
+            .ok_or_else(|| MetisError::ValidationFailed {
+                message: "Database path not set".to_string(),
+            })?
+            .to_string_lossy()
+            .to_string();
+
+        use crate::dal::database::configuration_repository::ConfigurationRepository;
+        use diesel::sqlite::SqliteConnection;
+        use diesel::Connection;
+
+        let mut config_repo = ConfigurationRepository::new(
+            SqliteConnection::establish(&db_path_str).map_err(|e| {
+                MetisError::ConfigurationError(
+                    crate::domain::configuration::ConfigurationError::InvalidValue(e.to_string()),
+                )
+            })?,
+        );
+
+        let new_short_code = config_repo.generate_short_code(doc_type)?;
+
+        // Step 5: Update frontmatter with new short code using regex
+        let short_code_pattern = regex::Regex::new(r#"(?m)^short_code:\s*['"]?([^'"]+)['"]?$"#)
+            .map_err(|e| MetisError::ValidationFailed {
+                message: format!("Failed to compile regex: {}", e),
+            })?;
+
+        let updated_content = short_code_pattern.replace(
+            &content,
+            format!("short_code: \"{}\"", new_short_code)
+        ).to_string();
+
+        // Step 6: Update cross-references in sibling documents
+        self.update_sibling_references(file_path, old_short_code, &new_short_code)
+            .await?;
+
+        // Step 7: Write updated content back to file
+        FilesystemService::write_file(file_path, &updated_content)?;
+
+        // Step 8: Rename file if filename contains the short code
+        // Extract just the suffix (e.g., "T-0001" from "TEST-T-0001")
+        let old_suffix = old_short_code.rsplit('-').take(2).collect::<Vec<_>>();
+        let old_suffix = format!("{}-{}", old_suffix[1], old_suffix[0]);
+        let new_suffix = new_short_code.rsplit('-').take(2).collect::<Vec<_>>();
+        let new_suffix = format!("{}-{}", new_suffix[1], new_suffix[0]);
+
+        let file_name = file_path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .ok_or_else(|| MetisError::ValidationFailed {
+                message: "Invalid file path".to_string(),
+            })?;
+
+        if file_name.contains(&old_suffix) {
+            let new_file_name = file_name.replace(&old_suffix, &new_suffix);
+            let new_path = file_path.with_file_name(new_file_name);
+            std::fs::rename(file_path, &new_path)?;
+
+            tracing::info!(
+                "Renumbered {} from {} to {}",
+                file_path.display(),
+                old_short_code,
+                new_short_code
+            );
+        }
+
+        Ok(new_short_code)
+    }
+
+    /// Update cross-references in sibling documents (same directory)
+    async fn update_sibling_references<P: AsRef<Path>>(
+        &mut self,
+        file_path: P,
+        old_short_code: &str,
+        new_short_code: &str,
+    ) -> Result<()> {
+        let file_path = file_path.as_ref();
+
+        // Get parent directory (sibling group)
+        let parent_dir = file_path.parent().ok_or_else(|| MetisError::ValidationFailed {
+            message: "File has no parent directory".to_string(),
+        })?;
+
+        // Find all markdown files in same directory
+        let siblings = FilesystemService::find_markdown_files(parent_dir)?;
+
+        // Create regex pattern to match short code as whole word
+        let pattern_str = format!(r"\b{}\b", regex::escape(old_short_code));
+        let pattern = regex::Regex::new(&pattern_str)
+            .map_err(|e| MetisError::ValidationFailed {
+                message: format!("Failed to compile regex: {}", e),
+            })?;
+
+        // Update each sibling file
+        for sibling_path in siblings {
+            let sibling_path_buf = PathBuf::from(&sibling_path);
+            if sibling_path_buf == file_path {
+                continue; // Skip the document we just renumbered
+            }
+
+            match FilesystemService::read_file(&sibling_path) {
+                Ok(content) => {
+                    if pattern.is_match(&content) {
+                        let updated_content = pattern.replace_all(&content, new_short_code);
+                        if let Err(e) = FilesystemService::write_file(&sibling_path, &updated_content) {
+                            tracing::warn!(
+                                "Failed to update references in {}: {}",
+                                sibling_path,
+                                e
+                            );
+                        } else {
+                            tracing::info!(
+                                "Updated references in {} from {} to {}",
+                                sibling_path,
+                                old_short_code,
+                                new_short_code
+                            );
+                        }
+                    }
+                }
+                Err(e) => {
+                    tracing::warn!("Failed to read sibling file {}: {}", sibling_path, e);
+                }
+            }
+        }
+
+        Ok(())
+    }
+
     /// Synchronize a single file between filesystem and database using directional methods
     pub async fn sync_file<P: AsRef<Path>>(&mut self, file_path: P) -> Result<SyncResult> {
         // Convert absolute path to relative for database queries
@@ -350,10 +609,16 @@ impl<'a> SyncService<'a> {
     pub async fn sync_directory<P: AsRef<Path>>(&mut self, dir_path: P) -> Result<Vec<SyncResult>> {
         let mut results = Vec::new();
 
-        // Find all markdown files
+        // Step 1: Detect and resolve short code collisions BEFORE syncing to database
+        // This ensures we don't try to import duplicate short codes
+        let collision_results = self.resolve_short_code_collisions(&dir_path).await?;
+        results.extend(collision_results);
+
+        // Step 2: Re-scan all markdown files AFTER renumbering
+        // This picks up renamed files with new short codes
         let files = FilesystemService::find_markdown_files(&dir_path)?;
 
-        // Sync each file
+        // Step 3: Sync each file
         for file_path in files {
             match self.sync_file(&file_path).await {
                 Ok(result) => results.push(result),
@@ -364,7 +629,7 @@ impl<'a> SyncService<'a> {
             }
         }
 
-        // Check for orphaned database entries (files that were deleted)
+        // Step 4: Check for orphaned database entries (files that were deleted)
         let db_pairs = self.db_service.get_all_id_filepath_pairs()?;
         for (_, relative_filepath) in db_pairs {
             // Convert relative path from DB to absolute for filesystem check
@@ -382,6 +647,9 @@ impl<'a> SyncService<'a> {
                 }
             }
         }
+
+        // Step 5: Update counters based on max seen values
+        self.update_counters_from_filesystem(&dir_path)?;
 
         Ok(results)
     }
@@ -427,6 +695,40 @@ impl<'a> SyncService<'a> {
         }
 
         Ok(issues)
+    }
+
+    /// Update counters in database based on max values seen in filesystem
+    /// Called after collision resolution to ensure counters are up to date
+    fn update_counters_from_filesystem<P: AsRef<Path>>(&mut self, dir_path: P) -> Result<()> {
+        let counters = self.recover_counters_from_filesystem(dir_path)?;
+
+        let db_path_str = self
+            .db_path
+            .as_ref()
+            .ok_or_else(|| MetisError::ValidationFailed {
+                message: "Database path not set".to_string(),
+            })?
+            .to_string_lossy()
+            .to_string();
+
+        use crate::dal::database::configuration_repository::ConfigurationRepository;
+        use diesel::sqlite::SqliteConnection;
+        use diesel::Connection;
+
+        let mut config_repo = ConfigurationRepository::new(
+            SqliteConnection::establish(&db_path_str).map_err(|e| {
+                MetisError::ConfigurationError(
+                    crate::domain::configuration::ConfigurationError::InvalidValue(e.to_string()),
+                )
+            })?,
+        );
+
+        for (doc_type, max_counter) in counters {
+            // Set counter to max + 1 for next document
+            config_repo.set_counter_if_lower(&doc_type, max_counter + 1)?;
+        }
+
+        Ok(())
     }
 
     /// Recover short code counters from filesystem by scanning all documents
@@ -588,6 +890,11 @@ pub enum SyncResult {
     NotFound { filepath: String },
     Error { filepath: String, error: String },
     Moved { from: String, to: String },
+    Renumbered {
+        filepath: String,
+        old_short_code: String,
+        new_short_code: String
+    },
 }
 
 impl SyncResult {
@@ -599,6 +906,7 @@ impl SyncResult {
             | SyncResult::Deleted { filepath }
             | SyncResult::UpToDate { filepath }
             | SyncResult::NotFound { filepath }
+            | SyncResult::Renumbered { filepath, .. }
             | SyncResult::Error { filepath, .. } => filepath,
             SyncResult::Moved { to, .. } => to,
         }
@@ -612,6 +920,7 @@ impl SyncResult {
                 | SyncResult::Updated { .. }
                 | SyncResult::Deleted { .. }
                 | SyncResult::Moved { .. }
+                | SyncResult::Renumbered { .. }
         )
     }
 

@@ -1,13 +1,13 @@
 ---
-id: gui-sync-board-refresh
+id: gui-table-rendering
 level: task
-title: "GUI Sync/Board Refresh"
-short_code: "METIS-T-0003"
-created_at: 2025-10-16T02:00:45.556876+00:00
-updated_at: 2025-10-16T21:00:23.118530+00:00
+title: "GUI table rendering"
+short_code: "METIS-T-0004"
+created_at: 2025-10-16T02:08:11.158420+00:00
+updated_at: 2025-10-16T20:50:20.641696+00:00
 parent: 
 blocked_by: []
-archived: false
+archived: true
 
 tags:
   - "#task"
@@ -21,7 +21,7 @@ strategy_id: NULL
 initiative_id: NULL
 ---
 
-# GUI Sync/Board Refresh
+# GUI table rendering
 
 *This template includes sections for various types of tasks. Delete sections that don't apply to your specific use case.*
 
@@ -66,6 +66,12 @@ initiative_id: NULL
 - **Current Problems**: {What's difficult/slow/buggy now}
 - **Benefits of Fixing**: {What improves after refactoring}
 - **Risk Assessment**: {Risks of not addressing this}
+
+## Acceptance Criteria
+
+## Acceptance Criteria
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 

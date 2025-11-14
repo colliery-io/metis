@@ -1,7 +1,4 @@
-use metis_core::{
-    application::services::workspace::initialization::WorkspaceInitializationService, Application,
-    Database,
-};
+use metis_core::application::services::workspace::initialization::WorkspaceInitializationService;
 use rust_mcp_sdk::{
     macros::{mcp_tool, JsonSchema},
     schema::{schema_utils::CallToolError, CallToolResult, TextContent},
@@ -44,9 +41,6 @@ impl InitializeProjectTool {
         .await
         .map_err(|e| CallToolError::new(e))?;
 
-        // Sync the workspace to ensure the vision document is in the database
-        self.sync_workspace(&result.metis_dir).await?;
-
         // Get the configured prefix to include in response, limiting to 6 characters
         let configured_prefix = {
             let prefix = self.prefix.as_deref().unwrap_or("PROJ").to_uppercase();
@@ -72,22 +66,5 @@ impl InitializeProjectTool {
         Ok(CallToolResult::text_content(vec![TextContent::from(
             serde_json::to_string_pretty(&response).map_err(CallToolError::new)?,
         )]))
-    }
-
-    async fn sync_workspace(&self, metis_dir: &Path) -> Result<(), CallToolError> {
-        let db_path = metis_dir.join("metis.db");
-        let database = Database::new(db_path.to_str().unwrap()).map_err(|e| {
-            CallToolError::new(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("Failed to open database for sync: {}", e),
-            ))
-        })?;
-        let app = Application::new(database);
-
-        app.sync_directory(metis_dir)
-            .await
-            .map_err(|e| CallToolError::new(e))?;
-
-        Ok(())
     }
 }

@@ -1,4 +1,4 @@
-use metis_core::{Application, Database};
+use metis_core::{Application, application::services::workspace::WorkspaceDetectionService};
 use rust_mcp_sdk::{
     macros::{mcp_tool, JsonSchema},
     schema::{schema_utils::CallToolError, CallToolResult, TextContent},
@@ -44,36 +44,19 @@ impl SearchDocumentsTool {
     pub async fn call_tool(&self) -> std::result::Result<CallToolResult, CallToolError> {
         let metis_dir = Path::new(&self.project_path);
 
-        // Validate metis workspace exists
-        if !metis_dir.exists() || !metis_dir.is_dir() {
-            return Err(CallToolError::new(std::io::Error::new(
-                std::io::ErrorKind::NotFound,
-                format!("Metis workspace not found at {}", metis_dir.display()),
-            )));
-        }
+        // Prepare workspace (validates, creates/updates database, syncs)
+        let detection_service = WorkspaceDetectionService::new();
+        let db = detection_service
+            .prepare_workspace(metis_dir)
+            .await
+            .map_err(|e| {
+                CallToolError::new(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    e.to_string(),
+                ))
+            })?;
 
-        // Connect to database
-        let db_path = metis_dir.join("metis.db");
-        if !db_path.exists() {
-            return Err(CallToolError::new(std::io::Error::new(
-                std::io::ErrorKind::NotFound,
-                format!(
-                    "Database not found at {}. Run initialize_project first.",
-                    db_path.display()
-                ),
-            )));
-        }
-
-        // Sync before searching to catch external edits
-        self.sync_workspace(metis_dir).await?;
-
-        let database = Database::new(db_path.to_str().unwrap()).map_err(|e| {
-            CallToolError::new(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("Failed to open database: {}", e),
-            ))
-        })?;
-        let mut app = Application::new(database);
+        let mut app = Application::new(db);
 
         // Sanitize query for FTS search - escape special characters and handle edge cases
         let sanitized_query = self.sanitize_search_query(&self.query);
@@ -138,22 +121,5 @@ impl SearchDocumentsTool {
         Ok(CallToolResult::text_content(vec![TextContent::from(
             serde_json::to_string_pretty(&response).map_err(CallToolError::new)?,
         )]))
-    }
-
-    async fn sync_workspace(&self, metis_dir: &Path) -> Result<(), CallToolError> {
-        let db_path = metis_dir.join("metis.db");
-        let database = Database::new(db_path.to_str().unwrap()).map_err(|e| {
-            CallToolError::new(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("Failed to open database for sync: {}", e),
-            ))
-        })?;
-        let app = Application::new(database);
-
-        app.sync_directory(metis_dir)
-            .await
-            .map_err(|e| CallToolError::new(e))?;
-
-        Ok(())
     }
 }

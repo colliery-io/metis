@@ -7,7 +7,7 @@ created_at: 2025-10-30T20:12:19.361895+00:00
 updated_at: 2025-10-31T01:56:57.535418+00:00
 parent: 
 blocked_by: []
-archived: false
+archived: true
 
 tags:
   - "#task"
@@ -53,6 +53,8 @@ Convert document path storage from absolute paths to paths relative to the .meti
 - **Expected vs Actual**:
   - **Expected**: Documents should be found using their short codes regardless of the absolute location of the .metis directory
   - **Actual**: Document lookups fail because the database contains absolute paths from Computer A that don't exist on Computer B
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 

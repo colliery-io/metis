@@ -77,6 +77,11 @@ impl InitCommand {
                 .map_err(|e| anyhow::anyhow!("Failed to save config.toml: {}", e))?;
         }
 
+        // Create/update .gitignore in .metis directory to ignore database
+        let gitignore_path = result.metis_dir.join(".gitignore");
+        std::fs::write(&gitignore_path, "metis.db\nmetis-mcp-server.log\n")
+            .map_err(|e| anyhow::anyhow!("Failed to create .gitignore: {}", e))?;
+
         println!("✓ Initialized Metis workspace in {}", current_dir.display());
         println!("✓ Created vision.md with project template");
         println!("✓ Created config.toml with project settings");

@@ -5,6 +5,8 @@ use std::path::PathBuf;
 /// Returns (found, metis_dir_path) where:
 /// - found: true if a valid .metis/ vault was found
 /// - metis_dir_path: absolute path to the .metis/ directory (if found)
+///
+/// Note: Only checks for .metis directory - database will be auto-created/synced as needed
 pub fn has_metis_vault() -> (bool, Option<PathBuf>) {
     let Ok(mut current) = std::env::current_dir() else {
         return (false, None);
@@ -12,10 +14,9 @@ pub fn has_metis_vault() -> (bool, Option<PathBuf>) {
 
     loop {
         let metis_dir = current.join(".metis");
-        let db_path = metis_dir.join("metis.db");
 
-        // Check if this directory has a valid Metis vault
-        if metis_dir.exists() && metis_dir.is_dir() && db_path.exists() && db_path.is_file() {
+        // Check if this directory has a valid Metis vault (just .metis directory)
+        if metis_dir.exists() && metis_dir.is_dir() {
             return (true, Some(metis_dir));
         }
 
@@ -49,10 +50,8 @@ mod tests {
     fn test_has_metis_vault_true_when_valid() {
         let temp_dir = tempdir().unwrap();
         let metis_dir = temp_dir.path().join(".metis");
-        let db_path = metis_dir.join("metis.db");
 
         std::fs::create_dir(&metis_dir).unwrap();
-        std::fs::write(&db_path, "test").unwrap();
         std::env::set_current_dir(temp_dir.path()).unwrap();
 
         let (found, metis_dir_path) = has_metis_vault();

@@ -154,11 +154,10 @@ impl WorkspaceInitializationService {
     }
 
     /// Check if a directory contains a valid Metis workspace
+    /// Only checks for .metis directory - database will be auto-created as needed
     pub fn is_workspace(path: &Path) -> bool {
         let metis_dir = path.join(".metis");
-        let db_path = metis_dir.join("metis.db");
-
-        metis_dir.exists() && metis_dir.is_dir() && db_path.exists() && db_path.is_file()
+        metis_dir.exists() && metis_dir.is_dir()
     }
 }
 
@@ -255,14 +254,9 @@ mod tests {
         // Not a workspace initially
         assert!(!WorkspaceInitializationService::is_workspace(base_path));
 
-        // Create .metis directory but no database
+        // Create .metis directory - this makes it a workspace
         let metis_dir = base_path.join(".metis");
         fs::create_dir_all(&metis_dir).unwrap();
-        assert!(!WorkspaceInitializationService::is_workspace(base_path));
-
-        // Create database file
-        let db_path = metis_dir.join("metis.db");
-        fs::write(&db_path, "test").unwrap();
         assert!(WorkspaceInitializationService::is_workspace(base_path));
     }
 }

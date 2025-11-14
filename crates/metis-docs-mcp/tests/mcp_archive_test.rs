@@ -53,30 +53,9 @@ async fn test_mcp_archive_cascading_behavior() -> Result<()> {
     let helper = McpTestHelper::new().await?;
     helper.initialize_project().await?;
 
-    // Set full configuration to enable all document types for testing
-    let db = helper.get_database()?;
-    let mut config_repo = db
-        .configuration_repository()
-        .map_err(|e| anyhow::anyhow!("Failed to get config repo: {}", e))?;
-
-    // Get current prefix
-    let prefix = config_repo.get_project_prefix()
-        .map_err(|e| anyhow::anyhow!("Failed to get prefix: {}", e))?
-        .unwrap_or_else(|| "PROJ".to_string());
-
-    // Set full flight level config
-    use metis_core::domain::configuration::{ConfigFile, FlightLevelConfig};
-    let full_config = FlightLevelConfig::full();
-    config_repo
-        .set_flight_level_config(&full_config)
-        .map_err(|e| anyhow::anyhow!("Failed to set config: {}", e))?;
-
-    // Update config.toml to match
-    let config_file = ConfigFile::new(prefix, full_config)
-        .map_err(|e| anyhow::anyhow!("Failed to create config file: {}", e))?;
-    let config_file_path = format!("{}/config.toml", helper.metis_dir());
-    config_file.save(&config_file_path)
-        .map_err(|e| anyhow::anyhow!("Failed to save config file: {}", e))?;
+    // Set full configuration via config.toml (filesystem is source of truth)
+    use metis_core::domain::configuration::FlightLevelConfig;
+    helper.set_flight_level_config(FlightLevelConfig::full())?;
 
     println!("=== MCP Archive Cascading Test ===");
 
@@ -143,7 +122,13 @@ async fn test_mcp_archive_cascading_behavior() -> Result<()> {
     assert!(result.is_ok(), "Create second task should succeed");
     let _task2_short_code = extract_short_code(&result.unwrap());
 
-    // Verify we have complete hierarchy in database
+    // Sync filesystem to database before querying (database is cache, needs manual sync after writes)
+    use metis_core::Application;
+    let db = helper.get_database()?;
+    let app = Application::new(db);
+    app.sync_directory(&helper.metis_dir()).await?;
+
+    // Get fresh database connection after sync
     let db = helper.get_database()?;
     let mut repo = db
         .repository()
@@ -192,6 +177,17 @@ async fn test_mcp_archive_cascading_behavior() -> Result<()> {
         "Archive individual task should succeed: {:?}",
         result
     );
+
+    // Sync filesystem to database before querying (archive wrote to filesystem)
+    let db = helper.get_database()?;
+    let app = Application::new(db);
+    app.sync_directory(&helper.metis_dir()).await?;
+
+    // Get fresh repository after sync
+    let db = helper.get_database()?;
+    let mut repo = db
+        .repository()
+        .map_err(|e| anyhow::anyhow!("Repository error: {}", e))?;
 
     // Verify only one task is archived
     let db_tasks_after_single = repo
@@ -270,6 +266,17 @@ async fn test_mcp_archive_cascading_behavior() -> Result<()> {
     // With the bug fix, this should now succeed
     if result.is_ok() {
         println!("✅ Strategy archive succeeded - bug fix working!");
+
+        // Sync filesystem to database before querying (archive wrote to filesystem)
+        let db = helper.get_database()?;
+        let app = Application::new(db);
+        app.sync_directory(&helper.metis_dir()).await?;
+
+        // Get fresh repository after sync
+        let db = helper.get_database()?;
+        let mut repo = db
+            .repository()
+            .map_err(|e| anyhow::anyhow!("Repository error: {}", e))?;
 
         // Verify full cascade happened
         let db_strategies_final = repo

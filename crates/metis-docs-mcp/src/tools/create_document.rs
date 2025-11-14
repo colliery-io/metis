@@ -1,7 +1,10 @@
 use metis_core::{
-    application::services::document::{creation::DocumentCreationConfig, DocumentCreationService},
+    application::services::{
+        document::{creation::DocumentCreationConfig, DocumentCreationService},
+        workspace::WorkspaceDetectionService,
+    },
     domain::documents::types::DocumentType,
-    Application, Database,
+    Database,
 };
 use rust_mcp_sdk::{
     macros::{mcp_tool, JsonSchema},
@@ -43,31 +46,23 @@ impl CreateDocumentTool {
     pub async fn call_tool(&self) -> std::result::Result<CallToolResult, CallToolError> {
         let metis_dir = Path::new(&self.project_path);
 
-        // Validate metis workspace exists
-        if !metis_dir.exists() || !metis_dir.is_dir() {
-            return Err(CallToolError::new(std::io::Error::new(
-                std::io::ErrorKind::NotFound,
-                format!(
-                    "Metis workspace not found at {}. Run initialize_project first.",
-                    metis_dir.display()
-                ),
-            )));
-        }
+        // Prepare workspace (validates, creates/updates database, syncs)
+        let detection_service = WorkspaceDetectionService::new();
+        let database = detection_service
+            .prepare_workspace(metis_dir)
+            .await
+            .map_err(|e| {
+                CallToolError::new(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    e.to_string(),
+                ))
+            })?;
 
         // Parse document type
         let doc_type = DocumentType::from_str(&self.document_type).map_err(|_| {
             CallToolError::new(std::io::Error::new(
                 std::io::ErrorKind::InvalidInput,
                 format!("Invalid document type: {}", self.document_type),
-            ))
-        })?;
-
-        // Load current flight level configuration
-        let db_path = metis_dir.join("metis.db");
-        let database = Database::new(db_path.to_string_lossy().as_ref()).map_err(|e| {
-            CallToolError::new(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("Failed to open database: {}", e),
             ))
         })?;
 
@@ -190,7 +185,7 @@ impl CreateDocumentTool {
                     // Task with parent initiative
                     let strategy_id = if flight_config.strategies_enabled {
                         // Full configuration: use actual strategy short code from initiative location
-                        self.find_strategy_short_code_for_initiative(metis_dir, initiative_id)?
+                        self.find_strategy_short_code_for_initiative(&database, initiative_id)?
                     } else {
                         // Streamlined/Direct: use NULL as strategy placeholder
                         "NULL".to_string()
@@ -225,9 +220,6 @@ impl CreateDocumentTool {
                 .map_err(|e| CallToolError::new(e))?,
         };
 
-        // Auto-sync after creation to update database
-        self.sync_workspace(metis_dir).await?;
-
         let response = serde_json::json!({
             "success": true,
             "document_id": result.document_id.to_string(),
@@ -246,18 +238,10 @@ impl CreateDocumentTool {
 
     fn find_strategy_short_code_for_initiative(
         &self,
-        metis_dir: &Path,
+        database: &Database,
         initiative_id: &str,
     ) -> Result<String, CallToolError> {
-        let db_path = metis_dir.join("metis.db");
-        let db = Database::new(db_path.to_str().unwrap()).map_err(|e| {
-            CallToolError::new(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("Database error: {}", e),
-            ))
-        })?;
-
-        let mut repo = db.repository().map_err(|e| {
+        let mut repo = database.repository().map_err(|e| {
             CallToolError::new(std::io::Error::new(
                 std::io::ErrorKind::Other,
                 format!("Repository error: {}", e),
@@ -305,22 +289,5 @@ impl CreateDocumentTool {
             })?;
 
         Ok(strategy.short_code)
-    }
-
-    async fn sync_workspace(&self, metis_dir: &Path) -> Result<(), CallToolError> {
-        let db_path = metis_dir.join("metis.db");
-        let database = Database::new(db_path.to_str().unwrap()).map_err(|e| {
-            CallToolError::new(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("Failed to open database for sync: {}", e),
-            ))
-        })?;
-        let app = Application::new(database);
-
-        app.sync_directory(metis_dir)
-            .await
-            .map_err(|e| CallToolError::new(e))?;
-
-        Ok(())
     }
 }

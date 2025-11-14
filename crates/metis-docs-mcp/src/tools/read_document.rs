@@ -1,4 +1,4 @@
-use metis_core::{dal::Database, Application};
+use metis_core::{application::services::workspace::WorkspaceDetectionService, dal::Database};
 use rust_mcp_sdk::{
     macros::{mcp_tool, JsonSchema},
     schema::{schema_utils::CallToolError, CallToolResult, TextContent},
@@ -54,19 +54,17 @@ impl ReadDocumentTool {
     pub async fn call_tool(&self) -> std::result::Result<CallToolResult, CallToolError> {
         let metis_dir = Path::new(&self.project_path);
 
-        // Validate metis workspace exists
-        if !metis_dir.exists() || !metis_dir.is_dir() {
-            return Err(CallToolError::new(std::io::Error::new(
-                std::io::ErrorKind::NotFound,
-                format!(
-                    "Metis workspace not found at {}. Run initialize_project first.",
-                    metis_dir.display()
-                ),
-            )));
-        }
-
-        // Sync before reading to catch external edits
-        self.sync_workspace(metis_dir).await?;
+        // Prepare workspace (validates, creates/updates database, syncs)
+        let detection_service = WorkspaceDetectionService::new();
+        let _db = detection_service
+            .prepare_workspace(metis_dir)
+            .await
+            .map_err(|e| {
+                CallToolError::new(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    e.to_string(),
+                ))
+            })?;
 
         // Resolve short code to document path
         let document_path = self.resolve_short_code_to_path(metis_dir)?;
@@ -165,23 +163,6 @@ impl ReadDocumentTool {
         }
 
         criteria
-    }
-
-    async fn sync_workspace(&self, metis_dir: &Path) -> Result<(), CallToolError> {
-        let db_path = metis_dir.join("metis.db");
-        let database = Database::new(db_path.to_str().unwrap()).map_err(|e| {
-            CallToolError::new(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("Failed to open database for sync: {}", e),
-            ))
-        })?;
-        let app = Application::new(database);
-
-        app.sync_directory(metis_dir)
-            .await
-            .map_err(|e| CallToolError::new(e))?;
-
-        Ok(())
     }
 }
 
