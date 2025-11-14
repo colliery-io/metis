@@ -3,7 +3,7 @@ use std::path::PathBuf;
 mod services;
 
 use services::{
-    archive_document, create_document, get_available_parents, get_project_config,
+    archive_document, create_document, get_app_version, get_available_parents, get_project_config,
     initialize_project, list_documents, load_project, read_document, search_documents,
     sync_project, transition_phase, update_document,
 };
@@ -41,7 +41,8 @@ pub fn run() {
             archive_document,
             transition_phase,
             get_project_config,
-            sync_project
+            sync_project,
+            get_app_version
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

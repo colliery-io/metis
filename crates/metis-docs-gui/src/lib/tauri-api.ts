@@ -101,6 +101,13 @@ export class MetisAPI {
   static async transitionPhase(shortCode: string, newPhase?: string): Promise<string> {
     return invoke('transition_phase', { shortCode, newPhase });
   }
+
+  /**
+   * Get the application version
+   */
+  static async getAppVersion(): Promise<string> {
+    return invoke('get_app_version');
+  }
 }
 
 // Document type helpers
@@ -277,3 +284,4 @@ export const deleteDocument = DocumentAPI.deleteDocument;
 export const transitionPhase = MetisAPI.transitionPhase;
 export const archiveDocument = DocumentAPI.archiveDocument;
 export const syncProject = MetisAPI.syncProject;
+export const getAppVersion = MetisAPI.getAppVersion;

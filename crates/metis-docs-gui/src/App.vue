@@ -23,13 +23,16 @@
         <div class="bg-secondary flex items-center">
           <!-- Left section - matches sidebar width -->
           <div class="w-1/5 flex items-center justify-between px-6 py-4">
-            <img
-              :src="getMascotImage()"
-              alt="Home"
-              @click="setCurrentProject(null)"
-              class="home-icon-topbar"
-              title="Home"
-            />
+            <div class="flex flex-col items-center">
+              <img
+                :src="getMascotImage()"
+                alt="Home"
+                @click="setCurrentProject(null)"
+                class="home-icon-topbar cursor-pointer"
+                title="Home"
+              />
+              <span class="text-xs text-secondary mt-1">v{{ appVersion }}</span>
+            </div>
             <ThemeToggle />
           </div>
           
@@ -73,7 +76,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import './App.css'
 import './styles/theme.css'
 import { useProject } from './composables/useProject'
@@ -81,7 +84,7 @@ import { useTheme } from './composables/useTheme'
 import ThemeToggle from './components/ThemeToggle.vue'
 import ProjectSidebar from './components/ProjectSidebar.vue'
 import KanbanBoard from './components/KanbanBoard.vue'
-import { ProjectInfo } from './lib/tauri-api'
+import { ProjectInfo, getAppVersion } from './lib/tauri-api'
 
 // Temporary placeholder components until we convert them
 const ProjectBrowser = {
@@ -91,6 +94,16 @@ const ProjectBrowser = {
 const { currentProject, setCurrentProject, loadProject } = useProject()
 const { themeName } = useTheme()
 const showProjectBrowser = ref(false)
+const appVersion = ref('...')
+
+onMounted(async () => {
+  try {
+    appVersion.value = await getAppVersion()
+  } catch (error) {
+    console.error('Failed to get app version:', error)
+    appVersion.value = '0.0.0'
+  }
+})
 
 watch(currentProject, () => {
   // Project changed
