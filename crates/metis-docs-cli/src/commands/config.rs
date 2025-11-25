@@ -152,14 +152,14 @@ impl ConfigCommand {
             .map_err(|e| anyhow::anyhow!("Failed to get configuration value: {}", e))?;
 
         match value {
-            Some(v) => println!("{}", v),
+            Some(v) => {
+                println!("{}", v);
+                Ok(())
+            }
             None => {
-                eprintln!("Configuration key '{}' not found", key);
-                std::process::exit(1);
+                anyhow::bail!("Configuration key '{}' not found", key);
             }
         }
-
-        Ok(())
     }
 }
 

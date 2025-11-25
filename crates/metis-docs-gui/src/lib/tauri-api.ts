@@ -251,13 +251,6 @@ export class DocumentAPI {
   }
 
   /**
-   * Delete a document
-   */
-  static async deleteDocument(shortCode: string): Promise<void> {
-    return invoke('delete_document', { short_code: shortCode });
-  }
-
-  /**
    * Transition a document to a new phase
    */
   static async transitionPhase(shortCode: string, newPhase?: string): Promise<string> {
@@ -280,7 +273,6 @@ export const getProjectConfig = MetisAPI.getProjectConfig;
 export const getAvailableParents = MetisAPI.getAvailableParents;
 export const createDocument = DocumentAPI.createDocument;
 export const updateDocument = DocumentAPI.updateDocument;
-export const deleteDocument = DocumentAPI.deleteDocument;
 export const transitionPhase = MetisAPI.transitionPhase;
 export const archiveDocument = DocumentAPI.archiveDocument;
 export const syncProject = MetisAPI.syncProject;

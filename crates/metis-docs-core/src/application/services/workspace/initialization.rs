@@ -77,9 +77,9 @@ impl WorkspaceInitializationService {
                 if !config_file_path.exists() {
                     let flight_levels = config_repo.get_flight_level_config()?;
                     let config_file = ConfigFile::new(project_prefix, flight_levels)
-                        .map_err(|e| MetisError::ConfigurationError(e))?;
+                        .map_err(MetisError::ConfigurationError)?;
                     config_file.save(&config_file_path)
-                        .map_err(|e| MetisError::ConfigurationError(e))?;
+                        .map_err(MetisError::ConfigurationError)?;
                     tracing::info!("Created configuration file at {}", config_file_path.display());
                 }
             }

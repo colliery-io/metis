@@ -40,44 +40,44 @@ impl SyncCommand {
                 metis_core::application::services::synchronization::SyncResult::Imported {
                     filepath,
                 } => {
-                    println!("✓ Imported: {}", filepath);
+                    println!("[+] Imported: {}", filepath);
                     imported += 1;
                 }
                 metis_core::application::services::synchronization::SyncResult::Updated {
                     filepath,
                 } => {
-                    println!("✓ Updated: {}", filepath);
+                    println!("[+] Updated: {}", filepath);
                     updated += 1;
                 }
                 metis_core::application::services::synchronization::SyncResult::Deleted {
                     filepath,
                 } => {
-                    println!("✓ Deleted: {}", filepath);
+                    println!("[+] Deleted: {}", filepath);
                     deleted += 1;
                 }
                 metis_core::application::services::synchronization::SyncResult::UpToDate {
                     filepath,
                 } => {
-                    println!("• Up to date: {}", filepath);
+                    println!("[.] Up to date: {}", filepath);
                     up_to_date += 1;
                 }
                 metis_core::application::services::synchronization::SyncResult::NotFound {
                     filepath,
                 } => {
-                    println!("? Not found: {}", filepath);
+                    println!("[?] Not found: {}", filepath);
                 }
                 metis_core::application::services::synchronization::SyncResult::Error {
                     filepath,
                     error,
                 } => {
-                    println!("✗ Error syncing {}: {}", filepath, error);
+                    println!("[-] Error syncing {}: {}", filepath, error);
                     errors += 1;
                 }
                 metis_core::application::services::synchronization::SyncResult::Moved {
                     from,
                     to,
                 } => {
-                    println!("↻ Moved: {} → {}", from, to);
+                    println!("[>] Moved: {} -> {}", from, to);
                     updated += 1;
                 }
                 metis_core::application::services::synchronization::SyncResult::Renumbered {
@@ -86,7 +86,7 @@ impl SyncCommand {
                     new_short_code,
                 } => {
                     println!(
-                        "⚠ Renumbered: {} ({} → {})",
+                        "[!] Renumbered: {} ({} -> {})",
                         filepath, old_short_code, new_short_code
                     );
                     updated += 1;

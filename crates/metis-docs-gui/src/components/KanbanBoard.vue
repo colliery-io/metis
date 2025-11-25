@@ -127,6 +127,7 @@
 import { ref, onMounted, computed, watch } from 'vue'
 import type { DocumentInfo } from '../lib/tauri-api'
 import { listDocuments, transitionPhase, archiveDocument, syncProject, getProjectConfig } from '../lib/tauri-api'
+import { emit } from '@tauri-apps/api/event'
 import { useProject } from '../composables/useProject'
 import { getBoardConfig, getDocumentsByPhase } from '../lib/board-config'
 import type { BoardType } from '../types/board'
@@ -203,7 +204,8 @@ const loadProjectConfig = async () => {
       currentBoard.value = 'vision'
     }
   } catch (error) {
-    // Failed to load config, use default
+    console.error('Failed to load project config:', error)
+    emit('show-toast', { message: 'Failed to load project configuration', type: 'error' })
     availableBoards.value = ['vision', 'initiative', 'task', 'adr', 'backlog']
   }
 }
@@ -216,7 +218,8 @@ const loadDocuments = async () => {
     allDocuments.value = await listDocuments()
     updateDocumentsByPhase()
   } catch (error) {
-    // Failed to load documents
+    console.error('Failed to load documents:', error)
+    emit('show-toast', { message: 'Failed to load documents', type: 'error' })
   }
 }
 
@@ -308,8 +311,8 @@ const handlePromoteToTaskBoard = async (document: DocumentInfo) => {
     switchBoard('task')
     
   } catch (error) {
-    // Failed to promote document
-    // TODO: Show user-friendly error message
+    console.error('Failed to promote document:', error)
+    emit('show-toast', { message: `Failed to promote document: ${error}`, type: 'error' })
   }
 }
 
@@ -355,7 +358,7 @@ const confirmArchive = async () => {
     
   } catch (error) {
     // Failed to archive document
-    alert(`Failed to archive document: ${error}`)
+    emit('show-toast', { message: `Failed to archive document: ${error}`, type: 'error' })
   }
 }
 

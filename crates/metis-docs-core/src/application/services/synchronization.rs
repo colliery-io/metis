@@ -946,7 +946,12 @@ mod tests {
 
     fn setup_services() -> (tempfile::TempDir, DatabaseService) {
         let temp_dir = tempdir().expect("Failed to create temp dir");
-        let db = Database::new(":memory:").expect("Failed to create test database");
+        // Use metis.db to match what sync_service expects in with_workspace_dir
+        let db_path = temp_dir.path().join("metis.db");
+        let db = Database::new(db_path.to_str().unwrap()).expect("Failed to create test database");
+        // Initialize configuration with test prefix
+        let mut config_repo = db.configuration_repository().expect("Failed to create config repo");
+        config_repo.set_project_prefix("TEST").expect("Failed to set prefix");
         let db_service = DatabaseService::new(db.into_repository());
         (temp_dir, db_service)
     }
@@ -1076,7 +1081,7 @@ mod tests {
     #[tokio::test]
     async fn test_sync_directory() {
         let (temp_dir, mut db_service) = setup_services();
-        let mut sync_service = SyncService::new(&mut db_service);
+        let mut sync_service = SyncService::new(&mut db_service).with_workspace_dir(temp_dir.path());
 
         // Create multiple files
         let files = vec![
@@ -1119,13 +1124,14 @@ mod tests {
         assert_eq!(up_to_date, 3);
 
         // Check that we have results for all files
+        // Note: with workspace_dir set, sync returns relative paths
         for (file_path, _) in &files {
-            let full_path = temp_dir
-                .path()
-                .join(file_path)
-                .to_string_lossy()
-                .to_string();
-            assert!(results.iter().any(|r| r.filepath() == full_path));
+            assert!(
+                results.iter().any(|r| r.filepath() == *file_path),
+                "Expected to find result for {}, but results were: {:?}",
+                file_path,
+                results.iter().map(|r| r.filepath()).collect::<Vec<_>>()
+            );
         }
     }
 }

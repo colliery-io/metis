@@ -7,9 +7,12 @@
         class="fixed bottom-4 right-4 z-50 bg-elevated border border-primary rounded-lg shadow-lg p-4 max-w-sm"
       >
         <div class="flex items-start gap-3">
-          <div class="flex-shrink-0 text-green-500">
-            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+          <div :class="['flex-shrink-0', toastType === 'error' ? 'text-red-500' : 'text-green-500']">
+            <svg v-if="toastType === 'success'" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
               <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+            </svg>
+            <svg v-else class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
             </svg>
           </div>
           <div class="flex-1">
@@ -25,24 +28,6 @@
     </Transition>
 
     <div class="h-screen flex flex-col">
-      <!-- Show full-screen project browser when explicitly requested -->
-      <template v-if="showProjectBrowser">
-        <div class="p-4 bg-elevated border-b border-primary flex items-center justify-between">
-          <h1 class="text-xl font-semibold text-primary">Select Project</h1>
-          <button
-            @click="handleBackFromBrowser"
-            class="px-4 py-2 text-secondary hover:text-primary hover:bg-secondary rounded-lg transition-colors"
-          >
-            ← Back
-          </button>
-        </div>
-        <div class="flex-1">
-          <ProjectBrowser />
-        </div>
-      </template>
-
-      <!-- Main app layout with top bar and sidebar -->
-      <template v-else>
         <!-- Top Bar -->
         <div class="bg-secondary flex items-center">
           <!-- Left section - matches sidebar width -->
@@ -70,7 +55,6 @@
         <div class="flex-1 flex overflow-hidden">
           <ProjectSidebar
             :onProjectSelect="handleProjectSelect"
-            :onShowProjectBrowser="handleShowProjectBrowser"
           />
           <div class="flex-1 flex flex-col overflow-hidden">
             <!-- Normal Kanban Board -->
@@ -94,7 +78,6 @@
             </div>
           </div>
         </div>
-      </template>
     </div>
   </div>
 </template>
@@ -111,24 +94,22 @@ import KanbanBoard from './components/KanbanBoard.vue'
 import { ProjectInfo, getAppVersion } from './lib/tauri-api'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 
-// Temporary placeholder components until we convert them
-const ProjectBrowser = {
-  template: '<div class="p-8 text-center text-secondary">ProjectBrowser component - coming soon</div>'
-}
 
 const { currentProject, setCurrentProject, loadProject } = useProject()
 const { themeName } = useTheme()
-const showProjectBrowser = ref(false)
 const appVersion = ref('...')
 
 // Toast notification state
 const toastMessage = ref<string | null>(null)
 const toastVisible = ref(false)
+const toastType = ref<'success' | 'error'>('success')
 let toastTimeout: ReturnType<typeof setTimeout> | null = null
 let unlistenCliInstalled: UnlistenFn | null = null
+let unlistenShowToast: UnlistenFn | null = null
 
-const showToast = (message: string, duration = 5000) => {
+const showToast = (message: string, type: 'success' | 'error' = 'success', duration = 5000) => {
   toastMessage.value = message
+  toastType.value = type
   toastVisible.value = true
   if (toastTimeout) clearTimeout(toastTimeout)
   toastTimeout = setTimeout(() => {
@@ -153,11 +134,19 @@ onMounted(async () => {
   unlistenCliInstalled = await listen<string>('cli-installed', (event) => {
     showToast(event.payload)
   })
+
+  // Listen for generic toast events from components
+  unlistenShowToast = await listen<{ message: string, type?: 'success' | 'error' }>('show-toast', (event) => {
+    showToast(event.payload.message, event.payload.type || 'success')
+  })
 })
 
 onUnmounted(() => {
   if (unlistenCliInstalled) {
     unlistenCliInstalled()
+  }
+  if (unlistenShowToast) {
+    unlistenShowToast()
   }
   if (toastTimeout) {
     clearTimeout(toastTimeout)
@@ -171,18 +160,9 @@ watch(currentProject, () => {
 const handleProjectSelect = async (project: ProjectInfo) => {
   try {
     await loadProject(project.path)
-    showProjectBrowser.value = false
   } catch (error) {
     console.error('Failed to load project:', error)
   }
-}
-
-const handleShowProjectBrowser = () => {
-  showProjectBrowser.value = true
-}
-
-const handleBackFromBrowser = () => {
-  showProjectBrowser.value = false
 }
 
 const getMascotImage = () => {

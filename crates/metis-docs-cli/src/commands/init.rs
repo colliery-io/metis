@@ -82,12 +82,12 @@ impl InitCommand {
         std::fs::write(&gitignore_path, "metis.db\nmetis-mcp-server.log\n")
             .map_err(|e| anyhow::anyhow!("Failed to create .gitignore: {}", e))?;
 
-        println!("✓ Initialized Metis workspace in {}", current_dir.display());
-        println!("✓ Created vision.md with project template");
-        println!("✓ Created config.toml with project settings");
-        println!("✓ Set project prefix: {}", project_prefix);
+        println!("[+] Initialized Metis workspace in {}", current_dir.display());
+        println!("[+] Created vision.md with project template");
+        println!("[+] Created config.toml with project settings");
+        println!("[+] Set project prefix: {}", project_prefix);
         println!(
-            "✓ Set flight level configuration: {}",
+            "[+] Set flight level configuration: {}",
             flight_config.preset_name()
         );
 

@@ -13,10 +13,6 @@ pub struct TransitionCommand {
 
     /// Target phase to transition to (optional - if not provided, transitions to next phase)
     pub phase: Option<String>,
-
-    /// Document type (vision, strategy, initiative, task, adr)
-    #[arg(short = 't', long)]
-    pub document_type: Option<String>,
 }
 
 impl TransitionCommand {
@@ -45,7 +41,7 @@ impl TransitionCommand {
 
         // 4. Report success
         println!(
-            "✓ Transitioned {} '{}' from {} to {}",
+            "[+] Transitioned {} '{}' from {} to {}",
             result.document_type, result.document_id, result.from_phase, result.to_phase
         );
 
@@ -96,7 +92,6 @@ mod tests {
         let cmd = TransitionCommand {
             short_code: "test".to_string(),
             phase: Some("active".to_string()),
-            document_type: None,
         };
 
         assert_eq!(cmd.parse_phase("draft").unwrap(), Phase::Draft);
@@ -118,7 +113,6 @@ mod tests {
         let cmd = TransitionCommand {
             short_code: "test-doc".to_string(),
             phase: Some("active".to_string()),
-            document_type: None,
         };
 
         let result = cmd.execute().await;
@@ -156,7 +150,6 @@ mod tests {
         let cmd = TransitionCommand {
             short_code: "TEST-T-9999".to_string(),
             phase: Some("active".to_string()),
-            document_type: None,
         };
 
         let result = cmd.execute().await;
@@ -199,7 +192,6 @@ mod tests {
         let cmd = TransitionCommand {
             short_code: short_code.clone(),
             phase: None, // Auto transition
-            document_type: Some("vision".to_string()),
         };
         cmd.execute().await.unwrap();
 
@@ -210,7 +202,6 @@ mod tests {
         let cmd = TransitionCommand {
             short_code: short_code.clone(),
             phase: None, // Auto transition
-            document_type: Some("vision".to_string()),
         };
         cmd.execute().await.unwrap();
 
@@ -221,7 +212,6 @@ mod tests {
         let cmd = TransitionCommand {
             short_code: short_code.clone(),
             phase: None, // Auto transition
-            document_type: Some("vision".to_string()),
         };
         let result = cmd.execute().await;
         assert!(result.is_err()); // Should fail as Published is final
@@ -278,7 +268,6 @@ mod tests {
         let cmd = TransitionCommand {
             short_code: short_code.clone(),
             phase: None, // Auto transition
-            document_type: Some("strategy".to_string()),
         };
         cmd.execute().await.unwrap();
 
@@ -289,7 +278,6 @@ mod tests {
         let cmd = TransitionCommand {
             short_code: short_code.clone(),
             phase: None, // Auto transition
-            document_type: Some("strategy".to_string()),
         };
         cmd.execute().await.unwrap();
 
@@ -300,7 +288,6 @@ mod tests {
         let cmd = TransitionCommand {
             short_code: short_code.clone(),
             phase: None, // Auto transition
-            document_type: Some("strategy".to_string()),
         };
         cmd.execute().await.unwrap();
 
@@ -311,7 +298,6 @@ mod tests {
         let cmd = TransitionCommand {
             short_code: short_code.clone(),
             phase: None, // Auto transition
-            document_type: Some("strategy".to_string()),
         };
         cmd.execute().await.unwrap();
 
@@ -372,7 +358,6 @@ mod tests {
         let cmd = TransitionCommand {
             short_code: short_code.clone(),
             phase: None, // Auto transition
-            document_type: Some("initiative".to_string()),
         };
         cmd.execute().await.unwrap();
 
@@ -380,7 +365,6 @@ mod tests {
         let cmd = TransitionCommand {
             short_code: short_code.clone(),
             phase: None, // Auto transition
-            document_type: Some("initiative".to_string()),
         };
         cmd.execute().await.unwrap();
 
@@ -388,7 +372,6 @@ mod tests {
         let cmd = TransitionCommand {
             short_code: short_code.clone(),
             phase: None, // Auto transition
-            document_type: Some("initiative".to_string()),
         };
         cmd.execute().await.unwrap();
 
@@ -396,7 +379,6 @@ mod tests {
         let cmd = TransitionCommand {
             short_code: short_code.clone(),
             phase: None, // Auto transition
-            document_type: Some("initiative".to_string()),
         };
         cmd.execute().await.unwrap();
 
@@ -462,7 +444,6 @@ mod tests {
         let cmd = TransitionCommand {
             short_code: short_code.clone(),
             phase: Some("active".to_string()),
-            document_type: Some("task".to_string()),
         };
         cmd.execute().await.unwrap();
 
@@ -470,7 +451,6 @@ mod tests {
         let cmd = TransitionCommand {
             short_code: short_code.clone(),
             phase: Some("completed".to_string()),
-            document_type: Some("task".to_string()),
         };
         cmd.execute().await.unwrap();
 
@@ -490,7 +470,6 @@ mod tests {
         let cmd = TransitionCommand {
             short_code: blocked_doc_id.to_string(),
             phase: Some("blocked".to_string()),
-            document_type: Some("task".to_string()),
         };
         cmd.execute().await.unwrap();
 
@@ -498,7 +477,6 @@ mod tests {
         let cmd = TransitionCommand {
             short_code: blocked_doc_id.to_string(),
             phase: Some("active".to_string()),
-            document_type: Some("task".to_string()),
         };
         cmd.execute().await.unwrap();
 
@@ -543,7 +521,6 @@ mod tests {
         let cmd = TransitionCommand {
             short_code: short_code.clone(),
             phase: None, // Auto transition
-            document_type: Some("adr".to_string()),
         };
         cmd.execute().await.unwrap();
 
@@ -551,7 +528,6 @@ mod tests {
         let cmd = TransitionCommand {
             short_code: short_code.clone(),
             phase: None, // Auto transition
-            document_type: Some("adr".to_string()),
         };
         cmd.execute().await.unwrap();
 
@@ -559,7 +535,6 @@ mod tests {
         let cmd = TransitionCommand {
             short_code: short_code.clone(),
             phase: Some("superseded".to_string()),
-            document_type: Some("adr".to_string()),
         };
         cmd.execute().await.unwrap(); // Should succeed as Decided → Superseded is valid
 
@@ -567,7 +542,6 @@ mod tests {
         let cmd = TransitionCommand {
             short_code: short_code.clone(),
             phase: None, // Auto transition
-            document_type: Some("adr".to_string()),
         };
         let result = cmd.execute().await;
         assert!(result.is_err()); // Should fail as Superseded has no valid transitions
@@ -605,7 +579,6 @@ mod tests {
         let cmd = TransitionCommand {
             short_code: short_code.clone(),
             phase: Some("published".to_string()),
-            document_type: Some("vision".to_string()),
         };
         let result = cmd.execute().await;
         assert!(result.is_err());
@@ -618,7 +591,6 @@ mod tests {
         let cmd = TransitionCommand {
             short_code: short_code.clone(),
             phase: Some("invalid-phase".to_string()),
-            document_type: Some("vision".to_string()),
         };
         let result = cmd.execute().await;
         assert!(result.is_err());
@@ -658,7 +630,6 @@ mod tests {
         let cmd = TransitionCommand {
             short_code: short_code.clone(),
             phase: None, // Auto transition
-            document_type: Some("vision".to_string()),
         };
         cmd.execute().await.unwrap();
 
@@ -669,7 +640,6 @@ mod tests {
         let cmd = TransitionCommand {
             short_code: short_code.clone(),
             phase: None, // Auto transition
-            document_type: Some("vision".to_string()),
         };
         cmd.execute().await.unwrap();
 

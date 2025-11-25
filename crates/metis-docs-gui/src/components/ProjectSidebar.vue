@@ -89,12 +89,12 @@ import { ref, computed } from 'vue'
 import { useProject } from '../composables/useProject'
 import { ProjectInfo, MetisAPI } from '../lib/tauri-api'
 import { open } from '@tauri-apps/plugin-dialog'
+import { emit } from '@tauri-apps/api/event'
 import ProjectCard from './ProjectCard.vue'
 import InitProjectDialog from './InitProjectDialog.vue'
 
 interface Props {
   onProjectSelect: (project: ProjectInfo) => void
-  onShowProjectBrowser: () => void
 }
 
 const props = defineProps<Props>()
@@ -169,7 +169,7 @@ const handleInitConfirm = async (prefix: string, preset: string) => {
     await loadProject(selectedPath.value)
   } catch (initError) {
     // Failed to initialize project
-    alert('Failed to initialize Metis project. Please check the directory permissions and try again.')
+    emit('show-toast', { message: 'Failed to initialize Metis project. Please check the directory permissions and try again.', type: 'error' })
   }
 }
 

@@ -241,13 +241,13 @@ impl StatusCommand {
         if blocked_count > 0 || todo_count > 0 {
             println!("ACTIONABLE ITEMS:");
             if blocked_count > 0 {
-                println!("  ⚠️  {} blocked documents need unblocking", blocked_count);
+                println!("  [!] {} blocked documents need unblocking", blocked_count);
             }
             if todo_count > 0 {
-                println!("  📋 {} documents ready to start", todo_count);
+                println!("  [*] {} documents ready to start", todo_count);
             }
             if active_count > 0 {
-                println!("  🔄 {} documents in progress", active_count);
+                println!("  [~] {} documents in progress", active_count);
             }
         }
     }
