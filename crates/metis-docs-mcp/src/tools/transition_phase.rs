@@ -5,7 +5,7 @@ use metis_core::{
 };
 use rust_mcp_sdk::{
     macros::{mcp_tool, JsonSchema},
-    schema::{schema_utils::CallToolError, CallToolResult, TextContent},
+    schema::{schema_utils::CallToolError, CallToolResult},
 };
 use serde::{Deserialize, Serialize};
 use std::path::Path;
@@ -85,9 +85,9 @@ impl TransitionPhaseTool {
             ))
             .blank()
             .phase_progress(&phase_strs, current_index)
-            .build();
+            .build_result();
 
-        Ok(CallToolResult::text_content(vec![TextContent::from(output)]))
+        Ok(output)
     }
 
     fn parse_phase(&self, phase_str: &str) -> Result<Phase, CallToolError> {

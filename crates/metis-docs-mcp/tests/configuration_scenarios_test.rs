@@ -9,16 +9,30 @@ use regex::Regex;
 
 mod common;
 
+/// Helper to extract text content from MCP response (handles EmbeddedResource)
+fn extract_text_from_result(result: &rust_mcp_sdk::schema::CallToolResult) -> Option<String> {
+    match result.content.first() {
+        Some(rust_mcp_sdk::schema::ContentBlock::TextContent(text_content)) => {
+            Some(text_content.text.clone())
+        }
+        Some(rust_mcp_sdk::schema::ContentBlock::EmbeddedResource(embedded)) => {
+            match &embedded.resource {
+                rust_mcp_sdk::schema::EmbeddedResourceResource::TextResourceContents(text_resource) => {
+                    Some(text_resource.text.clone())
+                }
+                _ => None,
+            }
+        }
+        _ => None,
+    }
+}
+
 /// Helper to extract short code from MCP response (parses markdown format)
 fn extract_short_code(result: &rust_mcp_sdk::schema::CallToolResult) -> String {
-    if let Some(rust_mcp_sdk::schema::ContentBlock::TextContent(text_content)) =
-        result.content.first()
-    {
-        let text = &text_content.text;
-
+    if let Some(text) = extract_text_from_result(result) {
         // Match pattern like "PROJ-X-0001" (any document type: V, S, I, T, A)
         let re = Regex::new(r"([A-Z]+-[VSITA]-\d{4})").unwrap();
-        if let Some(captures) = re.captures(text) {
+        if let Some(captures) = re.captures(&text) {
             if let Some(m) = captures.get(1) {
                 return m.as_str().to_string();
             }

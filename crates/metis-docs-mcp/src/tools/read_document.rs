@@ -1,8 +1,8 @@
-use crate::formatting::{format_not_found, ToolOutput};
+use crate::formatting::{error_result, ToolOutput};
 use metis_core::{application::services::workspace::WorkspaceDetectionService, dal::Database};
 use rust_mcp_sdk::{
     macros::{mcp_tool, JsonSchema},
-    schema::{schema_utils::CallToolError, CallToolResult, TextContent},
+    schema::{schema_utils::CallToolError, CallToolResult},
 };
 use serde::{Deserialize, Serialize};
 use std::path::Path;
@@ -72,12 +72,14 @@ impl ReadDocumentTool {
         let full_document_path = metis_dir.join(&document_path);
 
         if !full_document_path.exists() {
-            let output = format_not_found(
-                "Document",
-                &self.short_code,
+            return Ok(error_result(
+                &format!("Document not found: {}", self.short_code),
+                &format!(
+                    "No document with identifier \"{}\" exists in this project.",
+                    self.short_code
+                ),
                 Some("Use `list_documents` to see available documents."),
-            );
-            return Ok(CallToolResult::text_content(vec![TextContent::from(output)]));
+            ));
         }
 
         // Read the document content
@@ -122,9 +124,7 @@ impl ReadDocumentTool {
         // Add document content
         output = output.rule().text(&content);
 
-        Ok(CallToolResult::text_content(vec![TextContent::from(
-            output.build(),
-        )]))
+        Ok(output.build_result())
     }
 
     fn extract_metadata(&self, content: &str) -> (String, String, String, String, String) {

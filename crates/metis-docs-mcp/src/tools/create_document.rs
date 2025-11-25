@@ -9,7 +9,7 @@ use metis_core::{
 };
 use rust_mcp_sdk::{
     macros::{mcp_tool, JsonSchema},
-    schema::{schema_utils::CallToolError, CallToolResult, TextContent},
+    schema::{schema_utils::CallToolError, CallToolResult},
 };
 use serde::{Deserialize, Serialize};
 use std::path::Path;
@@ -227,7 +227,7 @@ impl CreateDocumentTool {
             .map(|s| s.as_str())
             .unwrap_or("-");
 
-        let output = ToolOutput::new()
+        let result_output = ToolOutput::new()
             .header("Document Created")
             .text(&format!("{} created successfully", result.short_code))
             .table(
@@ -240,9 +240,9 @@ impl CreateDocumentTool {
                 ],
             )
             .text(&format!("Path: `{}`", result.file_path.to_string_lossy()))
-            .build();
+            .build_result();
 
-        Ok(CallToolResult::text_content(vec![TextContent::from(output)]))
+        Ok(result_output)
     }
 
     fn find_strategy_short_code_for_initiative(

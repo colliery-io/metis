@@ -122,16 +122,25 @@ impl McpServerProcess {
             return Err(anyhow::anyhow!("Create document failed: {:?}", error));
         }
 
-        // Extract short code from response (now markdown format)
+        // Extract short code from response (handles both TextContent and EmbeddedResource)
         if let Some(result) = response.get("result") {
             if let Some(content) = result.get("content") {
                 if let Some(content_array) = content.as_array() {
                     if let Some(first_content) = content_array.first() {
-                        if let Some(text) = first_content.get("text") {
-                            let text_str = text.as_str().unwrap();
+                        // Try TextContent format first
+                        let text_str = if let Some(text) = first_content.get("text") {
+                            text.as_str().map(|s| s.to_string())
+                        } else if let Some(resource) = first_content.get("resource") {
+                            // Try EmbeddedResource format (resource.text)
+                            resource.get("text").and_then(|t| t.as_str()).map(|s| s.to_string())
+                        } else {
+                            None
+                        };
+
+                        if let Some(text) = text_str {
                             // Extract short code pattern like "PROJ-T-0001" from markdown
                             let re = Regex::new(r"([A-Z]+-[VSITA]-\d{4})").unwrap();
-                            if let Some(captures) = re.captures(text_str) {
+                            if let Some(captures) = re.captures(&text) {
                                 if let Some(m) = captures.get(1) {
                                     return Ok(m.as_str().to_string());
                                 }

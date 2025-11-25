@@ -2,7 +2,7 @@ use crate::formatting::ToolOutput;
 use metis_core::application::services::workspace::{ArchiveService, WorkspaceDetectionService};
 use rust_mcp_sdk::{
     macros::{mcp_tool, JsonSchema},
-    schema::{schema_utils::CallToolError, CallToolResult, TextContent},
+    schema::{schema_utils::CallToolError, CallToolResult},
 };
 use serde::{Deserialize, Serialize};
 use std::path::Path;
@@ -102,8 +102,6 @@ impl ArchiveDocumentTool {
         let items_ref: Vec<(bool, &str)> = items.iter().map(|(b, s)| (*b, s.as_str())).collect();
         output = output.indented(items_ref);
 
-        Ok(CallToolResult::text_content(vec![TextContent::from(
-            output.build(),
-        )]))
+        Ok(output.build_result())
     }
 }

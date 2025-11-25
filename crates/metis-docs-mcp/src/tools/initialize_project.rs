@@ -1,7 +1,8 @@
 use metis_core::application::services::workspace::initialization::WorkspaceInitializationService;
+use crate::formatting::ToolOutput;
 use rust_mcp_sdk::{
     macros::{mcp_tool, JsonSchema},
-    schema::{schema_utils::CallToolError, CallToolResult, TextContent},
+    schema::{schema_utils::CallToolError, CallToolResult},
 };
 use serde::{Deserialize, Serialize};
 use std::path::Path;
@@ -51,20 +52,32 @@ impl InitializeProjectTool {
             }
         };
 
-        let response = serde_json::json!({
-            "success": true,
-            "message": format!("Initialized Metis workspace at {}", result.metis_dir.display()),
-            "metis_directory": result.metis_dir.to_string_lossy(),
-            "database_path": result.database_path.to_string_lossy(),
-            "vision_path": result.vision_path.to_string_lossy(),
-            "project_prefix": configured_prefix,
-            "vision_created": true,
-            "database_initialized": true,
-            "auto_synced": true
-        });
+        let output = ToolOutput::new()
+            .header("Project Initialized")
+            .success(&format!(
+                "Initialized Metis workspace at {}",
+                result.metis_dir.display()
+            ))
+            .table(
+                &["Field", "Value"],
+                vec![
+                    vec![
+                        "Metis Directory".to_string(),
+                        result.metis_dir.to_string_lossy().to_string(),
+                    ],
+                    vec![
+                        "Database".to_string(),
+                        result.database_path.to_string_lossy().to_string(),
+                    ],
+                    vec![
+                        "Vision".to_string(),
+                        result.vision_path.to_string_lossy().to_string(),
+                    ],
+                    vec!["Project Prefix".to_string(), configured_prefix],
+                ],
+            )
+            .build_result();
 
-        Ok(CallToolResult::text_content(vec![TextContent::from(
-            serde_json::to_string_pretty(&response).map_err(CallToolError::new)?,
-        )]))
+        Ok(output)
     }
 }

@@ -1,8 +1,8 @@
-use crate::formatting::{format_error, format_not_found, ToolOutput};
+use crate::formatting::{error_result, ToolOutput};
 use metis_core::application::services::workspace::WorkspaceDetectionService;
 use rust_mcp_sdk::{
     macros::{mcp_tool, JsonSchema},
-    schema::{schema_utils::CallToolError, CallToolResult, TextContent},
+    schema::{schema_utils::CallToolError, CallToolResult},
 };
 use serde::{Deserialize, Serialize};
 use std::path::Path;
@@ -66,12 +66,14 @@ impl EditDocumentTool {
         let full_document_path = metis_dir.join(&document_path);
 
         if !full_document_path.exists() {
-            let output = format_not_found(
-                "Document",
-                &self.short_code,
+            return Ok(error_result(
+                &format!("Document not found: {}", self.short_code),
+                &format!(
+                    "No document with identifier \"{}\" exists in this project.",
+                    self.short_code
+                ),
                 Some("Use `list_documents` to see available documents."),
-            );
-            return Ok(CallToolResult::text_content(vec![TextContent::from(output)]));
+            ));
         }
 
         // Read the current document content
@@ -83,12 +85,11 @@ impl EditDocumentTool {
         let (updated_content, replacements_made) = self.perform_edit(&content)?;
 
         if replacements_made == 0 {
-            let output = format_error(
+            return Ok(error_result(
                 &format!("No match found in {}", self.short_code),
                 &format!("Search text not found:\n```\n{}\n```", self.search),
                 Some("Use `read_document` to view current content."),
-            );
-            return Ok(CallToolResult::text_content(vec![TextContent::from(output)]));
+            ));
         }
 
         // Write the updated content back to the file
@@ -110,9 +111,7 @@ impl EditDocumentTool {
 
         output = output.diff(&self.search, &self.replace);
 
-        Ok(CallToolResult::text_content(vec![TextContent::from(
-            output.build(),
-        )]))
+        Ok(output.build_result())
     }
 
     fn perform_edit(&self, content: &str) -> Result<(String, usize), CallToolError> {

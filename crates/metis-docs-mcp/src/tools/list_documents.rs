@@ -2,7 +2,7 @@ use crate::formatting::ToolOutput;
 use metis_core::application::services::workspace::WorkspaceDetectionService;
 use rust_mcp_sdk::{
     macros::{mcp_tool, JsonSchema},
-    schema::{schema_utils::CallToolError, CallToolResult, TextContent},
+    schema::{schema_utils::CallToolError, CallToolResult},
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -94,9 +94,7 @@ impl ListDocumentsTool {
             output = output.text("No documents found.");
         }
 
-        Ok(CallToolResult::text_content(vec![TextContent::from(
-            output.build(),
-        )]))
+        Ok(output.build_result())
     }
 
     fn list_all_documents(

@@ -3,6 +3,7 @@
 //! Provides a builder-style API for constructing consistent, readable markdown output
 //! that renders well in terminal contexts.
 
+use rust_mcp_sdk::schema::{CallToolResult, TextContent};
 use std::fmt::Write;
 
 /// Status icons for visual indicators
@@ -146,12 +147,12 @@ impl ToolOutput {
             .collect();
         writeln!(table, "| {} |", header_cells.join(" | ")).unwrap();
 
-        // Separator row with proper width
+        // Separator row with proper width (matching header/data format)
         let separators: Vec<String> = col_widths
             .iter()
             .map(|w| "-".repeat(*w))
             .collect();
-        writeln!(table, "|{}|", separators.join("|")).unwrap();
+        writeln!(table, "| {} |", separators.join(" | ")).unwrap();
 
         // Data rows with padding
         for row in rows {
@@ -236,6 +237,17 @@ impl ToolOutput {
     pub fn build(self) -> String {
         self.sections.join("\n\n")
     }
+
+    /// Build a CallToolResult with TextContent (no structuredContent for proper Claude Code rendering)
+    pub fn build_result(self) -> CallToolResult {
+        let text = self.build();
+        CallToolResult {
+            content: vec![TextContent::new(text, None, None).into()],
+            is_error: None,
+            meta: None,
+            structured_content: None,
+        }
+    }
 }
 
 /// Helper for formatting error responses consistently
@@ -251,6 +263,27 @@ pub fn format_error(title: &str, message: &str, hint: Option<&str>) -> String {
     }
 
     output.build()
+}
+
+/// Helper for formatting error responses as CallToolResult
+pub fn error_result(title: &str, message: &str, hint: Option<&str>) -> CallToolResult {
+    let mut output = ToolOutput::new()
+        .header("Error")
+        .error(title)
+        .blank()
+        .text(message);
+
+    if let Some(h) = hint {
+        output = output.blank().hint(h);
+    }
+
+    let text = output.build();
+    CallToolResult {
+        content: vec![TextContent::new(text, None, None).into()],
+        is_error: Some(true),
+        meta: None,
+        structured_content: None,
+    }
 }
 
 /// Helper for formatting not-found errors
