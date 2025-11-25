@@ -158,11 +158,11 @@ This task was created by developer B.";
     // Verify they have different short codes
     let has_0001 = task_a_new_content.contains("TEST-T-0001")
         || task_b_new_content.contains("TEST-T-0001");
-    let has_0003 = task_a_new_content.contains("TEST-T-0003")
-        || task_b_new_content.contains("TEST-T-0003");
+    let has_0002 = task_a_new_content.contains("TEST-T-0002")
+        || task_b_new_content.contains("TEST-T-0002");
 
     assert!(has_0001, "One task should have TEST-T-0001");
-    assert!(has_0003, "One task should have TEST-T-0003 (counter includes vision)");
+    assert!(has_0002, "One task should have TEST-T-0002 (renumbered task)");
 
     // Step 6: Verify both documents are in the database with unique short codes
     let repo = db_service.find_by_type(metis_core::domain::documents::types::DocumentType::Task)
@@ -361,12 +361,12 @@ exit_criteria_met: false\n\
     let deep_updated = fs::read_to_string(&deep_files[0])
         .expect("Should be able to read deep task");
 
-    // Should be renumbered to T-0003 (because vision took V-0001, shallow task took T-0001)
+    // Should be renumbered to T-0002 (shallow task kept T-0001, deep task gets next number)
     let deep_filename = deep_files[0].file_name().unwrap().to_string_lossy();
     assert!(
-        deep_filename.contains("T-0003.md") || deep_updated.contains("TEST-T-0003"),
-        "Deep task should be renumbered (file: {}, contains TEST-T-0003: {})",
+        deep_filename.contains("T-0002.md") || deep_updated.contains("TEST-T-0002"),
+        "Deep task should be renumbered (file: {}, contains TEST-T-0002: {})",
         deep_filename,
-        deep_updated.contains("TEST-T-0003")
+        deep_updated.contains("TEST-T-0002")
     );
 }

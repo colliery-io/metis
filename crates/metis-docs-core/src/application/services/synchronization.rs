@@ -724,8 +724,8 @@ impl<'a> SyncService<'a> {
         );
 
         for (doc_type, max_counter) in counters {
-            // Set counter to max + 1 for next document
-            config_repo.set_counter_if_lower(&doc_type, max_counter + 1)?;
+            // Set counter to max seen value (get_next_short_code_number adds 1)
+            config_repo.set_counter_if_lower(&doc_type, max_counter)?;
         }
 
         Ok(())
