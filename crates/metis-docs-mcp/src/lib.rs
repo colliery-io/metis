@@ -4,6 +4,7 @@
 pub mod config;
 pub mod error;
 pub mod error_utils;
+pub mod formatting;
 pub mod server;
 pub mod tools;
 

@@ -1,3 +1,4 @@
+use crate::formatting::ToolOutput;
 use metis_core::application::services::workspace::{ArchiveService, WorkspaceDetectionService};
 use rust_mcp_sdk::{
     macros::{mcp_tool, JsonSchema},
@@ -75,29 +76,34 @@ impl ArchiveDocumentTool {
                 ))
             })?;
 
-        let archived_docs: Vec<serde_json::Value> = archive_result
+        // Build formatted output
+        let total = archive_result.total_archived;
+        let children = if total > 1 {
+            format!(" and {} children", total - 1)
+        } else {
+            String::new()
+        };
+
+        let mut output = ToolOutput::new()
+            .header("Document Archived")
+            .text(&format!("{}{} archived", self.short_code, children))
+            .blank()
+            .text("Archived:");
+
+        // Build indented list
+        let items: Vec<(bool, String)> = archive_result
             .archived_documents
             .iter()
             .map(|doc| {
-                serde_json::json!({
-                    "document_id": doc.document_id,
-                    "document_type": format!("{:?}", doc.document_type),
-                    "original_path": doc.original_path.to_string_lossy(),
-                    "archived_path": doc.archived_path.to_string_lossy()
-                })
+                (true, format!("{} ({})", doc.document_id, format!("{:?}", doc.document_type).to_lowercase()))
             })
             .collect();
 
-        let response = serde_json::json!({
-            "success": true,
-            "short_code": self.short_code,
-            "total_archived": archive_result.total_archived,
-            "archived_documents": archived_docs,
-            "auto_synced": true
-        });
+        let items_ref: Vec<(bool, &str)> = items.iter().map(|(b, s)| (*b, s.as_str())).collect();
+        output = output.indented(items_ref);
 
         Ok(CallToolResult::text_content(vec![TextContent::from(
-            serde_json::to_string_pretty(&response).map_err(CallToolError::new)?,
+            output.build(),
         )]))
     }
 }

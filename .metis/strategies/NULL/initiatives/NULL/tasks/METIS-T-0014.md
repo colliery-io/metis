@@ -2,7 +2,7 @@
 id: multi-developer-short-code
 level: task
 title: "Multi-developer short code collision resolution"
-short_code: "METIS-T-0001"
+short_code: "METIS-T-0014"
 created_at: 2025-11-07T17:28:19.258966+00:00
 updated_at: 2025-11-07T17:28:19.258966+00:00
 parent: 
