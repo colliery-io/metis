@@ -1,5 +1,29 @@
 <template>
   <div class="h-screen bg-secondary overflow-hidden">
+    <!-- Toast notification -->
+    <Transition name="toast">
+      <div
+        v-if="toastVisible && toastMessage"
+        class="fixed bottom-4 right-4 z-50 bg-elevated border border-primary rounded-lg shadow-lg p-4 max-w-sm"
+      >
+        <div class="flex items-start gap-3">
+          <div class="flex-shrink-0 text-green-500">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+            </svg>
+          </div>
+          <div class="flex-1">
+            <p class="text-sm text-primary">{{ toastMessage }}</p>
+          </div>
+          <button @click="hideToast" class="text-secondary hover:text-primary">
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </Transition>
+
     <div class="h-screen flex flex-col">
       <!-- Show full-screen project browser when explicitly requested -->
       <template v-if="showProjectBrowser">
@@ -76,7 +100,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
 import './App.css'
 import './styles/theme.css'
 import { useProject } from './composables/useProject'
@@ -85,6 +109,7 @@ import ThemeToggle from './components/ThemeToggle.vue'
 import ProjectSidebar from './components/ProjectSidebar.vue'
 import KanbanBoard from './components/KanbanBoard.vue'
 import { ProjectInfo, getAppVersion } from './lib/tauri-api'
+import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 
 // Temporary placeholder components until we convert them
 const ProjectBrowser = {
@@ -96,12 +121,46 @@ const { themeName } = useTheme()
 const showProjectBrowser = ref(false)
 const appVersion = ref('...')
 
+// Toast notification state
+const toastMessage = ref<string | null>(null)
+const toastVisible = ref(false)
+let toastTimeout: ReturnType<typeof setTimeout> | null = null
+let unlistenCliInstalled: UnlistenFn | null = null
+
+const showToast = (message: string, duration = 5000) => {
+  toastMessage.value = message
+  toastVisible.value = true
+  if (toastTimeout) clearTimeout(toastTimeout)
+  toastTimeout = setTimeout(() => {
+    toastVisible.value = false
+  }, duration)
+}
+
+const hideToast = () => {
+  toastVisible.value = false
+  if (toastTimeout) clearTimeout(toastTimeout)
+}
+
 onMounted(async () => {
   try {
     appVersion.value = await getAppVersion()
   } catch (error) {
     console.error('Failed to get app version:', error)
     appVersion.value = '0.0.0'
+  }
+
+  // Listen for CLI installation events
+  unlistenCliInstalled = await listen<string>('cli-installed', (event) => {
+    showToast(event.payload)
+  })
+})
+
+onUnmounted(() => {
+  if (unlistenCliInstalled) {
+    unlistenCliInstalled()
+  }
+  if (toastTimeout) {
+    clearTimeout(toastTimeout)
   }
 })
 
@@ -213,5 +272,21 @@ const getProjectDisplayName = () => {
   50% {
     transform: translateY(-10px);
   }
+}
+
+/* Toast transitions */
+.toast-enter-active,
+.toast-leave-active {
+  transition: all 0.3s ease;
+}
+
+.toast-enter-from {
+  opacity: 0;
+  transform: translateX(100%);
+}
+
+.toast-leave-to {
+  opacity: 0;
+  transform: translateY(20px);
 }
 </style>

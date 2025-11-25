@@ -8,7 +8,6 @@ pub mod search;
 pub mod status;
 pub mod sync;
 pub mod transition;
-pub mod tui;
 pub mod validate;
 
 pub use archive::ArchiveCommand;
@@ -21,5 +20,4 @@ pub use search::SearchCommand;
 pub use status::StatusCommand;
 pub use sync::SyncCommand;
 pub use transition::TransitionCommand;
-pub use tui::TuiCommand;
 pub use validate::ValidateCommand;

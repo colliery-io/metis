@@ -4,7 +4,7 @@ use tracing_subscriber::filter::LevelFilter;
 
 use crate::commands::{
     ArchiveCommand, ConfigCommand, CreateCommand, InitCommand, ListCommand, McpCommand,
-    SearchCommand, StatusCommand, SyncCommand, TransitionCommand, TuiCommand, ValidateCommand,
+    SearchCommand, StatusCommand, SyncCommand, TransitionCommand, ValidateCommand,
 };
 
 #[derive(Parser)]
@@ -40,8 +40,6 @@ pub enum Commands {
     Archive(ArchiveCommand),
     /// Validate a document file
     Validate(ValidateCommand),
-    /// Launch the interactive TUI interface
-    Tui(TuiCommand),
     /// Launch the MCP server for external integrations
     Mcp(McpCommand),
     /// Manage flight level configuration
@@ -74,7 +72,6 @@ impl Cli {
             Commands::Status(cmd) => cmd.execute().await,
             Commands::Archive(cmd) => cmd.execute().await,
             Commands::Validate(cmd) => cmd.execute().await,
-            Commands::Tui(cmd) => cmd.execute().await,
             Commands::Mcp(cmd) => cmd.execute().await,
             Commands::Config(cmd) => cmd.execute().await,
         }

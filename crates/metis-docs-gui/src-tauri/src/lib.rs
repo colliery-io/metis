@@ -3,9 +3,10 @@ use std::path::PathBuf;
 mod services;
 
 use services::{
-    archive_document, create_document, get_app_version, get_available_parents, get_project_config,
-    initialize_project, list_documents, load_project, read_document, search_documents,
-    sync_project, transition_phase, update_document,
+    archive_document, auto_install_cli, create_document, get_app_version, get_available_parents,
+    get_cli_install_status, get_project_config, initialize_project, install_cli,
+    install_cli_elevated, list_documents, load_project, read_document, search_documents,
+    sync_project, transition_phase, uninstall_cli, update_document,
 };
 
 // Application state
@@ -23,9 +24,17 @@ pub fn run() {
                         .build(),
                 )?;
             }
+
+            // Auto-install CLI on first launch or when update needed
+            let app_handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                auto_install_cli(app_handle).await;
+            });
+
             Ok(())
         })
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_shell::init())
         .manage(std::sync::Mutex::new(AppState {
             current_project: None,
         }))
@@ -42,7 +51,12 @@ pub fn run() {
             transition_phase,
             get_project_config,
             sync_project,
-            get_app_version
+            get_app_version,
+            // CLI installer commands
+            get_cli_install_status,
+            install_cli,
+            install_cli_elevated,
+            uninstall_cli
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

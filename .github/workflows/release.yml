@@ -15,14 +15,22 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: 'macos-latest' # for Arm based macs (M1 and above).
+          - platform: 'macos-latest'
             args: '--target aarch64-apple-darwin'
-          - platform: 'macos-latest' # for Intel based macs.
+            rust_target: 'aarch64-apple-darwin'
+            cli_binary_name: 'metis-aarch64-apple-darwin'
+          - platform: 'macos-latest'
             args: '--target x86_64-apple-darwin'
-          - platform: 'ubuntu-22.04' # for Tauri v1 you could use ubuntu-20.04.
+            rust_target: 'x86_64-apple-darwin'
+            cli_binary_name: 'metis-x86_64-apple-darwin'
+          - platform: 'ubuntu-22.04'
             args: ''
+            rust_target: 'x86_64-unknown-linux-gnu'
+            cli_binary_name: 'metis-x86_64-unknown-linux-gnu'
           - platform: 'windows-latest'
             args: ''
+            rust_target: 'x86_64-pc-windows-msvc'
+            cli_binary_name: 'metis-x86_64-pc-windows-msvc.exe'
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -37,19 +45,34 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          # Those targets are only used on macos runners so it's in an `if` to slightly speed up the linux/windows builds.
-          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || matrix.rust_target }}
 
       - name: Setup Rust cache
         uses: Swatinem/rust-cache@v2
         with:
-          workspaces: './crates/metis-docs-gui/src-tauri -> target'
+          workspaces: |
+            . -> target
+            ./crates/metis-docs-gui/src-tauri -> target
 
       - name: Install dependencies (ubuntu only)
         if: matrix.platform == 'ubuntu-22.04'
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.0-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Build CLI binary
+        run: cargo build --release --package metis-docs-cli --target ${{ matrix.rust_target }}
+
+      - name: Prepare CLI sidecar
+        shell: bash
+        run: |
+          mkdir -p crates/metis-docs-gui/src-tauri/binaries
+          if [[ "${{ matrix.platform }}" == "windows-latest" ]]; then
+            cp target/${{ matrix.rust_target }}/release/metis.exe crates/metis-docs-gui/src-tauri/binaries/${{ matrix.cli_binary_name }}
+          else
+            cp target/${{ matrix.rust_target }}/release/metis crates/metis-docs-gui/src-tauri/binaries/${{ matrix.cli_binary_name }}
+          fi
+          ls -la crates/metis-docs-gui/src-tauri/binaries/
 
       - name: Install frontend dependencies
         working-directory: ./crates/metis-docs-gui

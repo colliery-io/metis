@@ -1,4 +1,5 @@
 pub mod archive;
+pub mod cli_installer;
 pub mod document;
 pub mod project;
 pub mod sync;
@@ -7,6 +8,9 @@ pub mod version;
 
 // Re-export main service functions
 pub use archive::archive_document;
+pub use cli_installer::{
+    auto_install_cli, get_cli_install_status, install_cli, install_cli_elevated, uninstall_cli,
+};
 pub use document::{
     create_document, get_available_parents, list_documents, read_document, search_documents,
     update_document,

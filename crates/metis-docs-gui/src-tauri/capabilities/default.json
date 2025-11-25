@@ -8,6 +8,17 @@
   "permissions": [
     "core:default",
     "dialog:allow-open",
-    "dialog:default"
+    "dialog:default",
+    "shell:allow-open",
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
+        {
+          "name": "binaries/metis",
+          "sidecar": true,
+          "args": true
+        }
+      ]
+    }
   ]
 }

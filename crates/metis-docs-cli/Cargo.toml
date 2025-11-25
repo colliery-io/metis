@@ -31,7 +31,6 @@ chrono = { workspace = true }
 
 # Local dependencies
 metis-docs-core = { path = "../metis-docs-core", version = "0.9.3" }
-metis-docs-tui = { path = "../metis-docs-tui", version = "0.9.3" }
 metis-docs-mcp = { path = "../metis-docs-mcp", version = "0.9.3" }
 
 # CLI-specific dependencies

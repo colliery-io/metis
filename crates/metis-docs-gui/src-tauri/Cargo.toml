@@ -31,6 +31,11 @@ log = "0.4"
 tracing = "0.1"
 metis-docs-core = { path = "../../metis-docs-core", version = "0.9.3" }
 tokio = { version = "1.0", features = ["rt"] }
+dirs = "5.0"
+chrono = { version = "0.4", features = ["serde"] }
+
+[target.'cfg(windows)'.dependencies]
+winreg = "0.52"
 
 [dev-dependencies]
 tokio = { version = "1.0", features = ["full"] }
