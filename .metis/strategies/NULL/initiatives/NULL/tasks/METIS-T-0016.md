@@ -4,14 +4,14 @@ level: task
 title: "Standardized Tool Output Formatting"
 short_code: "METIS-T-0016"
 created_at: 2025-11-25T02:33:01.340238+00:00
-updated_at: 2025-11-25T02:33:01.340238+00:00
+updated_at: 2025-11-25T02:50:47.135981+00:00
 parent: 
 blocked_by: []
 archived: false
 
 tags:
   - "#task"
-  - "#phase/todo"
+  - "#phase/completed"
 
 
 exit_criteria_met: false
@@ -31,12 +31,16 @@ MCP tool results render as markdown in Claude Code. Raw JSON dumps and unstructu
 
 ## Acceptance Criteria
 
-- [ ] Text results use markdown structure (headers, code blocks, rules) for visual hierarchy
-- [ ] Structured data (dicts, lists) renders in fenced code blocks with language hints
-- [ ] Tabular data uses ASCII tables when row count is reasonable (< ~20 rows)
-- [ ] Status/state indicators use unicode symbols (check, x, warning, filled/empty circles)
-- [ ] Errors and warnings are visually distinct from success output
-- [ ] Formatting is centralized (single module/utility, not scattered per-tool)
+## Acceptance Criteria
+
+## Acceptance Criteria
+
+- [x] Text results use markdown structure (headers, code blocks, rules) for visual hierarchy
+- [x] Structured data (dicts, lists) renders in fenced code blocks with language hints
+- [x] Tabular data uses ASCII tables when row count is reasonable (< ~20 rows)
+- [x] Status/state indicators use unicode symbols (check, x, warning, filled/empty circles)
+- [x] Errors and warnings are visually distinct from success output
+- [x] Formatting is centralized (single module/utility, not scattered per-tool)
 
 ## Out of Scope
 
@@ -255,4 +259,4 @@ Hint: Use `read_document` to view current content.
 
 ## Status Updates
 
-*To be added during implementation*
+Implementation complete - using TextContent without structuredContent for proper Claude Code rendering.
