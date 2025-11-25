@@ -1,7 +1,10 @@
 <template>
   <div
     class="kanban-card"
-    :class="draggingEnabled ? 'kanbancard-drag' : 'nomoredragging'"
+    :class="[
+      draggingEnabled ? 'kanbancard-drag' : 'nomoredragging',
+      highlighted ? 'highlighted' : ''
+    ]"
     @mouseenter="handleMouseEnter"
     @mouseleave="handleMouseLeave"
   >
@@ -93,6 +96,7 @@ interface Props {
   document: DocumentInfo
   draggingEnabled?: boolean
   boardType?: string
+  highlighted?: boolean
 }
 
 interface Emits {
@@ -102,7 +106,8 @@ interface Emits {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  draggingEnabled: true
+  draggingEnabled: true,
+  highlighted: false
 })
 
 defineEmits<Emits>()
@@ -273,5 +278,26 @@ const handleMouseLeave = (e: Event) => {
   color: var(--color-text-tertiary);
   font-size: 11px;
   font-weight: 400;
+}
+
+/* Highlighted state from search */
+.kanban-card.highlighted {
+  animation: highlight-pulse 2s ease-out;
+  box-shadow: 0 0 0 3px var(--color-interactive-primary), 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+@keyframes highlight-pulse {
+  0% {
+    box-shadow: 0 0 0 3px var(--color-interactive-primary), 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    transform: scale(1.02);
+  }
+  50% {
+    box-shadow: 0 0 0 6px var(--color-interactive-primary), 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    transform: scale(1.02);
+  }
+  100% {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    transform: scale(1);
+  }
 }
 </style>

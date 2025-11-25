@@ -57,6 +57,7 @@
         :phase-key="phase.key"
         :documents="documentsByPhase[phase.key] || []"
         :board-type="currentBoard"
+        :highlighted-short-code="props.highlightedDocument?.short_code"
         @documents-changed="handleDocumentsChanged"
         @promote="handlePromoteToTaskBoard"
         @view="handleViewDocument"
@@ -138,9 +139,10 @@ import DocumentViewer from './DocumentViewer.vue'
 
 interface Props {
   onBackToProjects: () => void
+  highlightedDocument?: DocumentInfo | null
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
 
 const { currentProject } = useProject()
 
@@ -401,6 +403,25 @@ watch(() => currentProject.value, async (newProject) => {
     loadDocuments()
   }
 }, { immediate: false })
+
+// Watch for highlighted document (from search) and switch to correct board
+watch(() => props.highlightedDocument, (doc) => {
+  if (doc) {
+    // Map document type to board type
+    const boardMap: Record<string, BoardType> = {
+      'vision': 'vision',
+      'strategy': 'strategy',
+      'initiative': 'initiative',
+      'task': 'task',
+      'adr': 'adr'
+    }
+    const targetBoard = boardMap[doc.document_type]
+    if (targetBoard && availableBoards.value.includes(targetBoard)) {
+      currentBoard.value = targetBoard
+      updateDocumentsByPhase()
+    }
+  }
+})
 </script>
 
 <style scoped>

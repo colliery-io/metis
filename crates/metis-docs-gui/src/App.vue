@@ -46,8 +46,15 @@
           </div>
           
           <!-- Main content area - matches main content width -->
-          <div class="flex-1 flex items-center justify-center py-4">
-            <h1 class="text-xl font-semibold text-primary">{{ getProjectDisplayName() }}</h1>
+          <div class="flex-1 flex items-center px-6 py-4">
+            <!-- Search Bar (left side, only when project is loaded) -->
+            <div class="w-80 ml-4">
+              <SearchBar v-if="currentProject" />
+            </div>
+            <!-- Centered project title -->
+            <h1 class="flex-1 text-xl font-semibold text-primary text-center">{{ getProjectDisplayName() }}</h1>
+            <!-- Spacer to balance the search bar -->
+            <div class="w-80"></div>
           </div>
         </div>
 
@@ -58,9 +65,10 @@
           />
           <div class="flex-1 flex flex-col overflow-hidden">
             <!-- Normal Kanban Board -->
-            <KanbanBoard 
+            <KanbanBoard
               v-if="currentProject"
               :onBackToProjects="() => setCurrentProject(null)"
+              :highlightedDocument="selectedDocument"
             />
             
             <!-- Home Screen -->
@@ -91,7 +99,8 @@ import { useTheme } from './composables/useTheme'
 import ThemeToggle from './components/ThemeToggle.vue'
 import ProjectSidebar from './components/ProjectSidebar.vue'
 import KanbanBoard from './components/KanbanBoard.vue'
-import { ProjectInfo, getAppVersion } from './lib/tauri-api'
+import SearchBar from './components/SearchBar.vue'
+import { ProjectInfo, DocumentInfo, getAppVersion } from './lib/tauri-api'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 
 
@@ -106,6 +115,10 @@ const toastType = ref<'success' | 'error'>('success')
 let toastTimeout: ReturnType<typeof setTimeout> | null = null
 let unlistenCliInstalled: UnlistenFn | null = null
 let unlistenShowToast: UnlistenFn | null = null
+let unlistenSearchSelect: UnlistenFn | null = null
+
+// Selected document from search (for highlighting/navigation)
+const selectedDocument = ref<DocumentInfo | null>(null)
 
 const showToast = (message: string, type: 'success' | 'error' = 'success', duration = 5000) => {
   toastMessage.value = message
@@ -139,6 +152,11 @@ onMounted(async () => {
   unlistenShowToast = await listen<{ message: string, type?: 'success' | 'error' }>('show-toast', (event) => {
     showToast(event.payload.message, event.payload.type || 'success')
   })
+
+  // Listen for search document selection
+  unlistenSearchSelect = await listen<DocumentInfo>('search-select-document', (event) => {
+    handleSearchSelect(event.payload)
+  })
 })
 
 onUnmounted(() => {
@@ -147,6 +165,9 @@ onUnmounted(() => {
   }
   if (unlistenShowToast) {
     unlistenShowToast()
+  }
+  if (unlistenSearchSelect) {
+    unlistenSearchSelect()
   }
   if (toastTimeout) {
     clearTimeout(toastTimeout)
@@ -163,6 +184,14 @@ const handleProjectSelect = async (project: ProjectInfo) => {
   } catch (error) {
     console.error('Failed to load project:', error)
   }
+}
+
+const handleSearchSelect = (doc: DocumentInfo) => {
+  selectedDocument.value = doc
+  // Clear selection after a delay (used for highlighting animation)
+  setTimeout(() => {
+    selectedDocument.value = null
+  }, 2000)
 }
 
 const getMascotImage = () => {
