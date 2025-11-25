@@ -118,32 +118,47 @@ impl ToolOutput {
         self
     }
 
-    /// Add a simple key-value table
+    /// Add a simple key-value table with proper column padding
     pub fn table(mut self, headers: &[&str], rows: Vec<Vec<String>>) -> Self {
-        if headers.is_empty() || rows.is_empty() {
+        if headers.is_empty() {
             return self;
+        }
+
+        // Calculate column widths (max of header and all row values)
+        let num_cols = headers.len();
+        let mut col_widths: Vec<usize> = headers.iter().map(|h| h.len()).collect();
+
+        for row in &rows {
+            for (i, cell) in row.iter().enumerate() {
+                if i < num_cols && cell.len() > col_widths[i] {
+                    col_widths[i] = cell.len();
+                }
+            }
         }
 
         let mut table = String::new();
 
-        // Header row
-        writeln!(table, "| {} |", headers.join(" | ")).unwrap();
+        // Header row with padding
+        let header_cells: Vec<String> = headers
+            .iter()
+            .enumerate()
+            .map(|(i, h)| format!("{:width$}", h, width = col_widths[i]))
+            .collect();
+        writeln!(table, "| {} |", header_cells.join(" | ")).unwrap();
 
-        // Separator row
-        let separators: Vec<&str> = headers.iter().map(|_| "---").collect();
+        // Separator row with proper width
+        let separators: Vec<String> = col_widths
+            .iter()
+            .map(|w| "-".repeat(*w))
+            .collect();
         writeln!(table, "|{}|", separators.join("|")).unwrap();
 
-        // Data rows
+        // Data rows with padding
         for row in rows {
-            let cells: Vec<String> = row
-                .iter()
-                .enumerate()
-                .map(|(i, cell)| {
-                    if i < headers.len() {
-                        cell.clone()
-                    } else {
-                        cell.clone()
-                    }
+            let cells: Vec<String> = (0..num_cols)
+                .map(|i| {
+                    let cell = row.get(i).map(|s| s.as_str()).unwrap_or("");
+                    format!("{:width$}", cell, width = col_widths[i])
                 })
                 .collect();
             writeln!(table, "| {} |", cells.join(" | ")).unwrap();
@@ -279,8 +294,12 @@ mod tests {
             )
             .build();
 
-        assert!(output.contains("| Code | Title |"));
+        // Check header contains padded columns
+        assert!(output.contains("| Code"));
+        assert!(output.contains("| Title"));
         assert!(output.contains("METIS-T-0001"));
+        // Check separator has proper dashes (at least 4 for "Code")
+        assert!(output.contains("----"));
     }
 
     #[test]
