@@ -36,6 +36,7 @@
     "vue3-smooth-dnd": "^0.0.6"
   },
   "devDependencies": {
+    "@playwright/test": "^1.57.0",
     "@tailwindcss/postcss": "^4.1.14",
     "@types/sortablejs": "^1.15.8",
     "@vitejs/plugin-vue": "^5.2.1",
