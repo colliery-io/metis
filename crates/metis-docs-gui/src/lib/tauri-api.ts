@@ -1,4 +1,13 @@
-import { invoke } from '@tauri-apps/api/core';
+import { invoke as tauriInvoke } from '@tauri-apps/api/core';
+import { mockInvoke, isTauriEnvironment } from './tauri-mock';
+
+// Use real Tauri invoke or mock based on environment
+const invoke = <T>(cmd: string, args?: Record<string, unknown>): Promise<T> => {
+  if (isTauriEnvironment()) {
+    return tauriInvoke<T>(cmd, args);
+  }
+  return mockInvoke<T>(cmd, args);
+};
 
 // Types matching the Rust structs
 export interface ProjectInfo {
