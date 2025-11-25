@@ -1,9 +1,11 @@
+use crate::formatting::ToolOutput;
 use metis_core::application::services::workspace::WorkspaceDetectionService;
 use rust_mcp_sdk::{
     macros::{mcp_tool, JsonSchema},
-    schema::{schema_utils::CallToolError, CallToolResult, TextContent},
+    schema::{schema_utils::CallToolError, CallToolResult},
 };
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::path::Path;
 
 #[mcp_tool(
@@ -40,39 +42,59 @@ impl ListDocumentsTool {
 
         // List all documents
         let documents = self.list_all_documents(&mut repo)?;
+        let total_count = documents.len();
 
-        // Use all documents (no filtering)
-        let limited_documents = documents;
+        // Group documents by type
+        let mut by_type: HashMap<String, Vec<_>> = HashMap::new();
+        for doc in documents {
+            by_type
+                .entry(doc.document_type.clone())
+                .or_default()
+                .push(doc);
+        }
 
-        // Convert to response format
-        let document_list: Vec<serde_json::Value> = limited_documents
-            .iter()
-            .map(|doc| {
-                let updated = chrono::DateTime::from_timestamp(doc.updated_at as i64, 0)
-                    .map(|dt| dt.format("%Y-%m-%d %H:%M").to_string())
-                    .unwrap_or_else(|| "Unknown".to_string());
+        // Build formatted output
+        let mut output = ToolOutput::new().header(&format!("Documents ({} total)", total_count));
 
-                serde_json::json!({
-                    "id": doc.id,
-                    "title": doc.title,
-                    "document_type": doc.document_type,
-                    "phase": doc.phase,
-                    "filepath": doc.filepath,
-                    "updated_at": updated,
-                    "archived": doc.archived,
-                    "short_code": doc.short_code
-                })
-            })
-            .collect();
+        // Order: vision, strategy, initiative, task, adr
+        let type_order = ["vision", "strategy", "initiative", "task", "adr"];
+        let type_labels = [
+            ("vision", "Vision"),
+            ("strategy", "Strategies"),
+            ("initiative", "Initiatives"),
+            ("task", "Tasks"),
+            ("adr", "ADRs"),
+        ]
+        .into_iter()
+        .collect::<HashMap<_, _>>();
 
-        let response = serde_json::json!({
-            "documents": document_list,
-            "total_count": limited_documents.len()
-        });
+        for doc_type in type_order {
+            if let Some(docs) = by_type.get(doc_type) {
+                if !docs.is_empty() {
+                    let label = type_labels.get(doc_type).unwrap_or(&doc_type);
+                    output = output.subheader(label);
 
-        Ok(CallToolResult::text_content(vec![TextContent::from(
-            serde_json::to_string_pretty(&response).map_err(CallToolError::new)?,
-        )]))
+                    let rows: Vec<Vec<String>> = docs
+                        .iter()
+                        .map(|doc| {
+                            vec![
+                                doc.short_code.clone(),
+                                doc.title.clone(),
+                                doc.phase.clone(),
+                            ]
+                        })
+                        .collect();
+
+                    output = output.table(&["Code", "Title", "Phase"], rows);
+                }
+            }
+        }
+
+        if total_count == 0 {
+            output = output.text("No documents found.");
+        }
+
+        Ok(output.build_result())
     }
 
     fn list_all_documents(

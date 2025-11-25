@@ -46,6 +46,7 @@ chrono = { version = "0.4", features = ["serde"] }
 metis-docs-core = { path = "../metis-docs-core", version = "0.9.1", features = ["test-utils"] }
 tempfile = { workspace = true }
 sqlx = { version = "0.8", features = ["sqlite", "runtime-tokio-rustls"] }
+regex = "1"
 
 [lib]
 name = "metis_mcp_server"

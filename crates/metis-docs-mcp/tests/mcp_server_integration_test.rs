@@ -2,6 +2,7 @@
 //! This tests the real MCP protocol communication including the archive_document fix
 
 use anyhow::Result;
+use regex::Regex;
 use serde_json::{json, Value};
 use std::io::{BufRead, BufReader, Write};
 use std::process::{Command, Stdio};
@@ -121,17 +122,27 @@ impl McpServerProcess {
             return Err(anyhow::anyhow!("Create document failed: {:?}", error));
         }
 
-        // Extract document ID from response
+        // Extract short code from response (handles both TextContent and EmbeddedResource)
         if let Some(result) = response.get("result") {
             if let Some(content) = result.get("content") {
                 if let Some(content_array) = content.as_array() {
                     if let Some(first_content) = content_array.first() {
-                        if let Some(text) = first_content.get("text") {
-                            let text_str = text.as_str().unwrap();
-                            // Parse the JSON response to get document_id
-                            if let Ok(parsed) = serde_json::from_str::<Value>(text_str) {
-                                if let Some(doc_id) = parsed.get("document_id") {
-                                    return Ok(doc_id.as_str().unwrap().to_string());
+                        // Try TextContent format first
+                        let text_str = if let Some(text) = first_content.get("text") {
+                            text.as_str().map(|s| s.to_string())
+                        } else if let Some(resource) = first_content.get("resource") {
+                            // Try EmbeddedResource format (resource.text)
+                            resource.get("text").and_then(|t| t.as_str()).map(|s| s.to_string())
+                        } else {
+                            None
+                        };
+
+                        if let Some(text) = text_str {
+                            // Extract short code pattern like "PROJ-T-0001" from markdown
+                            let re = Regex::new(r"([A-Z]+-[VSITA]-\d{4})").unwrap();
+                            if let Some(captures) = re.captures(&text) {
+                                if let Some(m) = captures.get(1) {
+                                    return Ok(m.as_str().to_string());
                                 }
                             }
                         }
@@ -149,7 +160,7 @@ impl McpServerProcess {
     async fn test_archive_document(
         &self,
         child: &mut std::process::Child,
-        document_id: &str,
+        short_code: &str,
     ) -> Result<()> {
         let request = json!({
             "jsonrpc": "2.0",
@@ -159,7 +170,7 @@ impl McpServerProcess {
                 "name": "archive_document",
                 "arguments": {
                     "project_path": self.metis_dir,
-                    "document_id": document_id
+                    "short_code": short_code
                 }
             }
         });

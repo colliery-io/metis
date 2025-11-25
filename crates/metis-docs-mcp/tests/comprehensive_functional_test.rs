@@ -40,24 +40,39 @@ async fn setup_project_with_config(config: FlightLevelConfig) -> (TempDir, Strin
     (temp_dir, project_path, metis_path)
 }
 
-/// Helper to get vision short code from list results
+/// Helper to extract text content from MCP response (handles EmbeddedResource)
+fn extract_text_from_result(result: &rust_mcp_sdk::schema::CallToolResult) -> Option<String> {
+    match result.content.first() {
+        Some(rust_mcp_sdk::schema::ContentBlock::TextContent(text_content)) => {
+            Some(text_content.text.clone())
+        }
+        Some(rust_mcp_sdk::schema::ContentBlock::EmbeddedResource(embedded)) => {
+            match &embedded.resource {
+                rust_mcp_sdk::schema::EmbeddedResourceResource::TextResourceContents(text_resource) => {
+                    Some(text_resource.text.clone())
+                }
+                _ => None,
+            }
+        }
+        _ => None,
+    }
+}
+
+/// Helper to get vision short code from list results (parses markdown table format)
 async fn get_vision_short_code(metis_path: &str) -> String {
     let list_tool = ListDocumentsTool {
         project_path: metis_path.to_string(),
     };
     let result = list_tool.call_tool().await.unwrap();
 
-    if let Some(rust_mcp_sdk::schema::ContentBlock::TextContent(text_content)) =
-        result.content.first()
-    {
-        if let Ok(json) = serde_json::from_str::<serde_json::Value>(&text_content.text) {
-            if let Some(documents) = json["documents"].as_array() {
-                for doc in documents {
-                    if doc["document_type"] == "vision" {
-                        if let Some(short_code) = doc["short_code"].as_str() {
-                            return short_code.to_string();
-                        }
-                    }
+    if let Some(text) = extract_text_from_result(&result) {
+        // Find the Vision section and extract short code from table
+        if text.contains("### Vision") {
+            // Match pattern like "| PROJ-V-0001 |" in the table
+            let re = regex::Regex::new(r"\|\s*([A-Z]+-V-\d{4})\s*\|").unwrap();
+            if let Some(captures) = re.captures(&text) {
+                if let Some(m) = captures.get(1) {
+                    return m.as_str().to_string();
                 }
             }
         }
@@ -65,14 +80,14 @@ async fn get_vision_short_code(metis_path: &str) -> String {
     panic!("Could not find vision document")
 }
 
-/// Helper to extract short code from MCP response JSON
+/// Helper to extract short code from MCP response (parses markdown format)
 fn extract_short_code(result: &rust_mcp_sdk::schema::CallToolResult) -> String {
-    if let Some(rust_mcp_sdk::schema::ContentBlock::TextContent(text_content)) =
-        result.content.first()
-    {
-        if let Ok(json) = serde_json::from_str::<serde_json::Value>(&text_content.text) {
-            if let Some(short_code) = json["short_code"].as_str() {
-                return short_code.to_string();
+    if let Some(text) = extract_text_from_result(result) {
+        // Match pattern like "PROJ-X-0001" (any document type)
+        let re = regex::Regex::new(r"([A-Z]+-[VSITA]-\d{4})").unwrap();
+        if let Some(captures) = re.captures(&text) {
+            if let Some(m) = captures.get(1) {
+                return m.as_str().to_string();
             }
         }
     }

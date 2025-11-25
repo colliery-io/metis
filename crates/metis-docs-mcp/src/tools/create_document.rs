@@ -1,3 +1,4 @@
+use crate::formatting::ToolOutput;
 use metis_core::{
     application::services::{
         document::{creation::DocumentCreationConfig, DocumentCreationService},
@@ -8,7 +9,7 @@ use metis_core::{
 };
 use rust_mcp_sdk::{
     macros::{mcp_tool, JsonSchema},
-    schema::{schema_utils::CallToolError, CallToolResult, TextContent},
+    schema::{schema_utils::CallToolError, CallToolResult},
 };
 use serde::{Deserialize, Serialize};
 use std::path::Path;
@@ -220,20 +221,28 @@ impl CreateDocumentTool {
                 .map_err(|e| CallToolError::new(e))?,
         };
 
-        let response = serde_json::json!({
-            "success": true,
-            "document_id": result.document_id.to_string(),
-            "short_code": result.short_code,
-            "document_type": self.document_type,
-            "title": self.title,
-            "file_path": result.file_path.to_string_lossy(),
-            "parent_id": self.parent_id,
-            "auto_synced": true
-        });
+        let parent_display = self
+            .parent_id
+            .as_ref()
+            .map(|s| s.as_str())
+            .unwrap_or("-");
 
-        Ok(CallToolResult::text_content(vec![TextContent::from(
-            serde_json::to_string_pretty(&response).map_err(CallToolError::new)?,
-        )]))
+        let result_output = ToolOutput::new()
+            .header("Document Created")
+            .text(&format!("{} created successfully", result.short_code))
+            .table(
+                &["Field", "Value"],
+                vec![
+                    vec!["Title".to_string(), self.title.clone()],
+                    vec!["Type".to_string(), self.document_type.clone()],
+                    vec!["Short Code".to_string(), result.short_code.clone()],
+                    vec!["Parent".to_string(), parent_display.to_string()],
+                ],
+            )
+            .text(&format!("Path: `{}`", result.file_path.to_string_lossy()))
+            .build_result();
+
+        Ok(result_output)
     }
 
     fn find_strategy_short_code_for_initiative(

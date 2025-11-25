@@ -1,7 +1,8 @@
+use crate::formatting::{error_result, ToolOutput};
 use metis_core::{application::services::workspace::WorkspaceDetectionService, dal::Database};
 use rust_mcp_sdk::{
     macros::{mcp_tool, JsonSchema},
-    schema::{schema_utils::CallToolError, CallToolResult, TextContent},
+    schema::{schema_utils::CallToolError, CallToolResult},
 };
 use serde::{Deserialize, Serialize};
 use std::path::Path;
@@ -71,10 +72,14 @@ impl ReadDocumentTool {
         let full_document_path = metis_dir.join(&document_path);
 
         if !full_document_path.exists() {
-            return Err(CallToolError::new(std::io::Error::new(
-                std::io::ErrorKind::NotFound,
-                format!("Document not found for short code {}", self.short_code),
-            )));
+            return Ok(error_result(
+                &format!("Document not found: {}", self.short_code),
+                &format!(
+                    "No document with identifier \"{}\" exists in this project.",
+                    self.short_code
+                ),
+                Some("Use `list_documents` to see available documents."),
+            ));
         }
 
         // Read the document content
@@ -82,40 +87,108 @@ impl ReadDocumentTool {
             .await
             .map_err(|e| CallToolError::new(e))?;
 
-        // Extract sections for convenience
-        let sections = self.extract_sections(&content);
+        // Extract metadata from frontmatter
+        let (doc_type, phase, created, archived, title) = self.extract_metadata(&content);
 
         // Extract exit criteria completion info
         let exit_criteria = self.extract_exit_criteria(&content);
         let completed_criteria = exit_criteria.iter().filter(|c| c.completed).count();
         let total_criteria = exit_criteria.len();
 
-        let response = serde_json::json!({
-            "short_code": self.short_code,
-            "document_path": document_path,
-            "content": content,
-            "sections": sections,
-            "exit_criteria_summary": {
-                "total": total_criteria,
-                "completed": completed_criteria,
-                "completion_percentage": if total_criteria > 0 {
-                    (completed_criteria as f64 / total_criteria as f64 * 100.0).round()
-                } else {
-                    0.0
-                }
-            },
-            "document_stats": {
-                "lines": content.lines().count(),
-                "characters": content.len(),
-                "words": content.split_whitespace().count()
-            }
-        });
+        // Build formatted output
+        let mut output = ToolOutput::new()
+            .header(&format!("{}: {}", self.short_code, title))
+            .table(
+                &["Field", "Value"],
+                vec![
+                    vec!["Type".to_string(), doc_type],
+                    vec!["Phase".to_string(), phase],
+                    vec!["Created".to_string(), created],
+                    vec!["Archived".to_string(), archived],
+                ],
+            );
 
-        Ok(CallToolResult::text_content(vec![TextContent::from(
-            serde_json::to_string_pretty(&response).map_err(CallToolError::new)?,
-        )]))
+        // Add exit criteria if present
+        if total_criteria > 0 {
+            output = output.subheader(&format!(
+                "Exit Criteria ({}/{})",
+                completed_criteria, total_criteria
+            ));
+            let criteria_list: Vec<(&str, bool)> = exit_criteria
+                .iter()
+                .map(|c| (c.text.as_str(), c.completed))
+                .collect();
+            output = output.status_list(criteria_list);
+        }
+
+        // Add document content
+        output = output.rule().text(&content);
+
+        Ok(output.build_result())
     }
 
+    fn extract_metadata(&self, content: &str) -> (String, String, String, String, String) {
+        let mut doc_type = "unknown".to_string();
+        let mut phase = "unknown".to_string();
+        let mut created = "unknown".to_string();
+        let mut archived = "No".to_string();
+        let mut title = "Untitled".to_string();
+
+        let mut in_frontmatter = false;
+
+        for line in content.lines() {
+            let trimmed = line.trim();
+            if trimmed == "---" {
+                if in_frontmatter {
+                    break; // End of frontmatter
+                }
+                in_frontmatter = true;
+                continue;
+            }
+
+            if in_frontmatter {
+                if let Some((key, value)) = trimmed.split_once(':') {
+                    let key = key.trim();
+                    let value = value.trim().trim_matches('"');
+                    match key {
+                        "level" => doc_type = value.to_string(),
+                        "title" => title = value.to_string(),
+                        "created_at" => {
+                            // Parse and format date
+                            if let Some(date_part) = value.split('T').next() {
+                                created = date_part.to_string();
+                            } else {
+                                created = value.to_string();
+                            }
+                        }
+                        "archived" => {
+                            archived = if value == "true" {
+                                "Yes".to_string()
+                            } else {
+                                "No".to_string()
+                            };
+                        }
+                        _ => {}
+                    }
+                }
+                // Extract phase from tags
+                if trimmed.contains("#phase/") {
+                    if let Some(start) = trimmed.find("#phase/") {
+                        let phase_start = start + 7;
+                        let phase_end = trimmed[phase_start..]
+                            .find(|c: char| !c.is_alphanumeric() && c != '_')
+                            .map(|i| phase_start + i)
+                            .unwrap_or(trimmed.len());
+                        phase = trimmed[phase_start..phase_end].trim_matches('"').to_string();
+                    }
+                }
+            }
+        }
+
+        (doc_type, phase, created, archived, title)
+    }
+
+    #[allow(dead_code)]
     fn extract_sections(&self, content: &str) -> Vec<String> {
         let mut sections = Vec::new();
 

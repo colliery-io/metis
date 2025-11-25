@@ -1,7 +1,8 @@
+use crate::formatting::ToolOutput;
 use metis_core::{Application, application::services::workspace::WorkspaceDetectionService};
 use rust_mcp_sdk::{
     macros::{mcp_tool, JsonSchema},
-    schema::{schema_utils::CallToolError, CallToolResult, TextContent},
+    schema::{schema_utils::CallToolError, CallToolResult},
 };
 use serde::{Deserialize, Serialize};
 use std::path::Path;
@@ -88,38 +89,28 @@ impl SearchDocumentsTool {
             filtered_results
         };
 
-        // Convert to response format
-        let document_list: Vec<serde_json::Value> = limited_results
-            .iter()
-            .map(|doc| {
-                let updated = chrono::DateTime::from_timestamp(doc.updated_at as i64, 0)
-                    .map(|dt| dt.format("%Y-%m-%d %H:%M").to_string())
-                    .unwrap_or_else(|| "Unknown".to_string());
+        // Build formatted output
+        let result_count = limited_results.len();
 
-                serde_json::json!({
-                    "id": doc.id,
-                    "title": doc.title,
-                    "document_type": doc.document_type,
-                    "phase": doc.phase,
-                    "filepath": doc.filepath,
-                    "updated_at": updated,
-                    "archived": doc.archived
+        let mut output = ToolOutput::new()
+            .header(&format!("Search Results for \"{}\"", self.query))
+            .text(&format!("Found {} match{}", result_count, if result_count == 1 { "" } else { "es" }));
+
+        if result_count > 0 {
+            let rows: Vec<Vec<String>> = limited_results
+                .iter()
+                .map(|doc| {
+                    vec![
+                        doc.short_code.clone(),
+                        doc.title.clone(),
+                        doc.document_type.clone(),
+                    ]
                 })
-            })
-            .collect();
+                .collect();
 
-        let response = serde_json::json!({
-            "documents": document_list,
-            "total_count": limited_results.len(),
-            "search_query": self.query,
-            "filters": {
-                "document_type": self.document_type,
-                "limit": self.limit
-            }
-        });
+            output = output.table(&["Code", "Title", "Type"], rows);
+        }
 
-        Ok(CallToolResult::text_content(vec![TextContent::from(
-            serde_json::to_string_pretty(&response).map_err(CallToolError::new)?,
-        )]))
+        Ok(output.build_result())
     }
 }

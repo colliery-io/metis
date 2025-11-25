@@ -1,7 +1,8 @@
+use crate::formatting::{error_result, ToolOutput};
 use metis_core::application::services::workspace::WorkspaceDetectionService;
 use rust_mcp_sdk::{
     macros::{mcp_tool, JsonSchema},
-    schema::{schema_utils::CallToolError, CallToolResult, TextContent},
+    schema::{schema_utils::CallToolError, CallToolResult},
 };
 use serde::{Deserialize, Serialize};
 use std::path::Path;
@@ -65,10 +66,14 @@ impl EditDocumentTool {
         let full_document_path = metis_dir.join(&document_path);
 
         if !full_document_path.exists() {
-            return Err(CallToolError::new(std::io::Error::new(
-                std::io::ErrorKind::NotFound,
-                format!("Document not found for short code {}", self.short_code),
-            )));
+            return Ok(error_result(
+                &format!("Document not found: {}", self.short_code),
+                &format!(
+                    "No document with identifier \"{}\" exists in this project.",
+                    self.short_code
+                ),
+                Some("Use `list_documents` to see available documents."),
+            ));
         }
 
         // Read the current document content
@@ -80,13 +85,11 @@ impl EditDocumentTool {
         let (updated_content, replacements_made) = self.perform_edit(&content)?;
 
         if replacements_made == 0 {
-            return Err(CallToolError::new(std::io::Error::new(
-                std::io::ErrorKind::NotFound,
-                format!(
-                    "Search text '{}' not found in document. Use read_document to see the current content.",
-                    self.search
-                ),
-            )));
+            return Ok(error_result(
+                &format!("No match found in {}", self.short_code),
+                &format!("Search text not found:\n```\n{}\n```", self.search),
+                Some("Use `read_document` to view current content."),
+            ));
         }
 
         // Write the updated content back to the file
@@ -94,24 +97,21 @@ impl EditDocumentTool {
             .await
             .map_err(|e| CallToolError::new(e))?;
 
-        let response = serde_json::json!({
-            "success": true,
-            "short_code": self.short_code,
-            "document_path": document_path,
-            "replacements_made": replacements_made,
-            "search_text": self.search,
-            "replace_text": self.replace,
-            "replace_all": self.replace_all.unwrap_or(false),
-            "message": format!(
-                "Successfully made {} replacement(s) in document {}",
-                replacements_made, self.short_code
-            ),
-            "auto_synced": true
-        });
+        // Build formatted output with diff
+        let replace_all = self.replace_all.unwrap_or(false);
+        let mut output = ToolOutput::new()
+            .header("Document Updated")
+            .text(&format!("{} modified", self.short_code));
 
-        Ok(CallToolResult::text_content(vec![TextContent::from(
-            serde_json::to_string_pretty(&response).map_err(CallToolError::new)?,
-        )]))
+        if replace_all && replacements_made > 1 {
+            output = output.subheader(&format!("Changes ({} replacements)", replacements_made));
+        } else {
+            output = output.subheader("Change");
+        }
+
+        output = output.diff(&self.search, &self.replace);
+
+        Ok(output.build_result())
     }
 
     fn perform_edit(&self, content: &str) -> Result<(String, usize), CallToolError> {

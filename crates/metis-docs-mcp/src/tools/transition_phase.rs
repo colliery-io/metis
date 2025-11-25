@@ -1,10 +1,11 @@
+use crate::formatting::ToolOutput;
 use metis_core::{
     application::services::workspace::{PhaseTransitionService, WorkspaceDetectionService},
     domain::documents::types::Phase,
 };
 use rust_mcp_sdk::{
     macros::{mcp_tool, JsonSchema},
-    schema::{schema_utils::CallToolError, CallToolResult, TextContent},
+    schema::{schema_utils::CallToolError, CallToolResult},
 };
 use serde::{Deserialize, Serialize};
 use std::path::Path;
@@ -64,21 +65,29 @@ impl TransitionPhaseTool {
                 .map_err(|e| CallToolError::new(e))?
         };
 
-        let response = serde_json::json!({
-            "success": true,
-            "short_code": self.short_code,
-            "document_id": result.document_id,
-            "document_type": result.document_type,
-            "from_phase": result.from_phase.to_string(),
-            "to_phase": result.to_phase.to_string(),
-            "file_path": result.file_path.to_string_lossy(),
-            "forced": self.force.unwrap_or(false),
-            "auto_synced": true
-        });
+        // Get phase progression for visual display
+        let doc_type_str = result.document_type.to_string();
+        let phases = self.get_phase_sequence(&doc_type_str);
+        let current_index = phases
+            .iter()
+            .position(|p| *p == result.to_phase.to_string())
+            .unwrap_or(0);
 
-        Ok(CallToolResult::text_content(vec![TextContent::from(
-            serde_json::to_string_pretty(&response).map_err(CallToolError::new)?,
-        )]))
+        let phase_strs: Vec<&str> = phases.iter().map(|s| s.as_str()).collect();
+
+        let output = ToolOutput::new()
+            .header("Phase Transition")
+            .text(&format!(
+                "{}: {} -> {}",
+                self.short_code,
+                result.from_phase,
+                result.to_phase
+            ))
+            .blank()
+            .phase_progress(&phase_strs, current_index)
+            .build_result();
+
+        Ok(output)
     }
 
     fn parse_phase(&self, phase_str: &str) -> Result<Phase, CallToolError> {
@@ -103,6 +112,32 @@ impl TransitionPhaseTool {
                 std::io::ErrorKind::InvalidInput,
                 format!("Unknown phase: {}", phase_str),
             ))),
+        }
+    }
+
+    fn get_phase_sequence(&self, document_type: &str) -> Vec<String> {
+        match document_type {
+            "vision" => vec!["draft", "review", "published"]
+                .into_iter()
+                .map(String::from)
+                .collect(),
+            "strategy" => vec!["shaping", "design", "ready", "active", "completed"]
+                .into_iter()
+                .map(String::from)
+                .collect(),
+            "initiative" => vec!["discovery", "design", "ready", "decompose", "active", "completed"]
+                .into_iter()
+                .map(String::from)
+                .collect(),
+            "task" => vec!["todo", "doing", "done"]
+                .into_iter()
+                .map(String::from)
+                .collect(),
+            "adr" => vec!["draft", "discussion", "decided", "superseded"]
+                .into_iter()
+                .map(String::from)
+                .collect(),
+            _ => vec!["unknown".to_string()],
         }
     }
 }
