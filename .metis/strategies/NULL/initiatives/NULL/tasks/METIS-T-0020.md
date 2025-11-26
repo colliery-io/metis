@@ -4,14 +4,14 @@ level: task
 title: "1.0 Release Readiness - Code Quality Fixes"
 short_code: "METIS-T-0020"
 created_at: 2025-11-25T11:57:59.361676+00:00
-updated_at: 2025-11-25T11:57:59.361676+00:00
+updated_at: 2025-11-25T12:23:41.482571+00:00
 parent: 
 blocked_by: []
 archived: false
 
 tags:
   - "#task"
-  - "#phase/todo"
+  - "#phase/completed"
 
 
 exit_criteria_met: false
@@ -52,6 +52,10 @@ Fix all critical and high-priority code quality issues across all four crates (c
 - Excellent MCP documentation in instructions.md
 - CLI covers all operations (create, list, search, transition, archive, sync, validate)
 - GUI has multi-board Kanban with drag-drop, theming, and CLI auto-install
+
+## Acceptance Criteria
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 

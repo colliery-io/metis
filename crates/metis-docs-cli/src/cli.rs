@@ -190,7 +190,6 @@ mod tests {
         // 8. Transition the vision to review phase
         let transition_vision_cmd = TransitionCommand {
             short_code: "TEST-V-0001".to_string(),
-            document_type: Some("vision".to_string()),
             phase: Some("review".to_string()),
         };
         transition_vision_cmd
@@ -201,7 +200,6 @@ mod tests {
         // 9. Transition the strategy through its phases: Shaping → Design → Ready → Active
         let transition_strategy_to_design_cmd = TransitionCommand {
             short_code: "TEST-S-0001".to_string(),
-            document_type: Some("strategy".to_string()),
             phase: Some("design".to_string()),
         };
         transition_strategy_to_design_cmd
@@ -211,7 +209,6 @@ mod tests {
 
         let transition_strategy_to_ready_cmd = TransitionCommand {
             short_code: "TEST-S-0001".to_string(),
-            document_type: Some("strategy".to_string()),
             phase: Some("ready".to_string()),
         };
         transition_strategy_to_ready_cmd
@@ -221,7 +218,6 @@ mod tests {
 
         let transition_strategy_to_active_cmd = TransitionCommand {
             short_code: "TEST-S-0001".to_string(),
-            document_type: Some("strategy".to_string()),
             phase: Some("active".to_string()),
         };
         transition_strategy_to_active_cmd
@@ -232,7 +228,6 @@ mod tests {
         // 10. Transition the task through its phases: Todo → Active → Completed
         let transition_task_to_active_cmd = TransitionCommand {
             short_code: "TEST-T-0001".to_string(),
-            document_type: Some("task".to_string()),
             phase: Some("active".to_string()),
         };
         transition_task_to_active_cmd
@@ -242,7 +237,6 @@ mod tests {
 
         let transition_task_to_completed_cmd = TransitionCommand {
             short_code: "TEST-T-0001".to_string(),
-            document_type: Some("task".to_string()),
             phase: Some("completed".to_string()),
         };
         transition_task_to_completed_cmd

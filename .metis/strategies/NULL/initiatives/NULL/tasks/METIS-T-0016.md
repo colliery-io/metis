@@ -14,7 +14,7 @@ tags:
   - "#phase/completed"
 
 
-exit_criteria_met: false
+exit_criteria_met: true
 strategy_id: NULL
 initiative_id: NULL
 ---
