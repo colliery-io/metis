@@ -41,57 +41,48 @@ impl ListDocumentsTool {
         let mut repo = db.into_repository();
 
         // List all documents
-        let documents = self.list_all_documents(&mut repo)?;
+        let mut documents = self.list_all_documents(&mut repo)?;
         let total_count = documents.len();
-
-        // Group documents by type
-        let mut by_type: HashMap<String, Vec<_>> = HashMap::new();
-        for doc in documents {
-            by_type
-                .entry(doc.document_type.clone())
-                .or_default()
-                .push(doc);
-        }
 
         // Build formatted output
         let mut output = ToolOutput::new().header(&format!("Documents ({} total)", total_count));
 
-        // Order: vision, strategy, initiative, task, adr
-        let type_order = ["vision", "strategy", "initiative", "task", "adr"];
-        let type_labels = [
-            ("vision", "Vision"),
-            ("strategy", "Strategies"),
-            ("initiative", "Initiatives"),
-            ("task", "Tasks"),
-            ("adr", "ADRs"),
-        ]
-        .into_iter()
-        .collect::<HashMap<_, _>>();
-
-        for doc_type in type_order {
-            if let Some(docs) = by_type.get(doc_type) {
-                if !docs.is_empty() {
-                    let label = type_labels.get(doc_type).unwrap_or(&doc_type);
-                    output = output.subheader(label);
-
-                    let rows: Vec<Vec<String>> = docs
-                        .iter()
-                        .map(|doc| {
-                            vec![
-                                doc.short_code.clone(),
-                                doc.title.clone(),
-                                doc.phase.clone(),
-                            ]
-                        })
-                        .collect();
-
-                    output = output.table(&["Code", "Title", "Phase"], rows);
-                }
-            }
-        }
-
         if total_count == 0 {
             output = output.text("No documents found.");
+        } else {
+            // Sort by type order, then by short_code
+            let type_order_map: HashMap<&str, usize> = [
+                ("vision", 0),
+                ("strategy", 1),
+                ("initiative", 2),
+                ("task", 3),
+                ("adr", 4),
+            ]
+            .into_iter()
+            .collect();
+
+            documents.sort_by(|a, b| {
+                let a_order = type_order_map.get(a.document_type.as_str()).unwrap_or(&999);
+                let b_order = type_order_map.get(b.document_type.as_str()).unwrap_or(&999);
+                a_order
+                    .cmp(b_order)
+                    .then_with(|| a.short_code.cmp(&b.short_code))
+            });
+
+            // Build single table with all documents
+            let rows: Vec<Vec<String>> = documents
+                .iter()
+                .map(|doc| {
+                    vec![
+                        doc.document_type.clone(),
+                        doc.short_code.clone(),
+                        doc.title.clone(),
+                        doc.phase.clone(),
+                    ]
+                })
+                .collect();
+
+            output = output.table(&["Type", "Code", "Title", "Phase"], rows);
         }
 
         Ok(output.build_result())

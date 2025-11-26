@@ -66,14 +66,11 @@ async fn get_vision_short_code(metis_path: &str) -> String {
     let result = list_tool.call_tool().await.unwrap();
 
     if let Some(text) = extract_text_from_result(&result) {
-        // Find the Vision section and extract short code from table
-        if text.contains("### Vision") {
-            // Match pattern like "| PROJ-V-0001 |" in the table
-            let re = regex::Regex::new(r"\|\s*([A-Z]+-V-\d{4})\s*\|").unwrap();
-            if let Some(captures) = re.captures(&text) {
-                if let Some(m) = captures.get(1) {
-                    return m.as_str().to_string();
-                }
+        // Match pattern for vision row in unified table: "| vision | PROJ-V-0001 | ..."
+        let re = regex::Regex::new(r"\|\s*vision\s*\|\s*([A-Z]+-V-\d{4})\s*\|").unwrap();
+        if let Some(captures) = re.captures(&text) {
+            if let Some(m) = captures.get(1) {
+                return m.as_str().to_string();
             }
         }
     }
@@ -197,7 +194,7 @@ async fn test_full_configuration_workflow() {
     };
     let result = transition_task.call_tool().await;
     assert!(result.is_ok(), "Task phase transition should succeed");
-    println!("✅ Task moved to doing phase");
+    println!("✅ Task moved to active phase");
 
     // Step 9: Create ADR
     let create_adr = CreateDocumentTool {
@@ -333,7 +330,7 @@ async fn test_streamlined_configuration_workflow() {
     };
     let result = transition_task.call_tool().await;
     assert!(result.is_ok(), "Task phase transition should succeed");
-    println!("✅ Task moved to doing phase");
+    println!("✅ Task moved to active phase");
 
     // Step 7: Create ADR
     let create_adr = CreateDocumentTool {
@@ -420,7 +417,7 @@ async fn test_direct_configuration_workflow() {
     };
     let result = transition_task1.call_tool().await;
     assert!(result.is_ok(), "Task 1 phase transition should succeed");
-    println!("✅ Task 1 moved to doing phase");
+    println!("✅ Task 1 moved to active phase");
 
     // Step 5: Create another task linked to vision
     let create_task2 = CreateDocumentTool {
@@ -447,7 +444,7 @@ async fn test_direct_configuration_workflow() {
     };
     let result = transition_task2.call_tool().await;
     assert!(result.is_ok(), "Task 2 phase transition should succeed");
-    println!("✅ Task 2 moved to doing phase");
+    println!("✅ Task 2 moved to active phase");
 
     // Step 7: Create ADR
     let create_adr = CreateDocumentTool {

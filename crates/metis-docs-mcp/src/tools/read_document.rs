@@ -88,41 +88,12 @@ impl ReadDocumentTool {
             .map_err(|e| CallToolError::new(e))?;
 
         // Extract metadata from frontmatter
-        let (doc_type, phase, created, archived, title) = self.extract_metadata(&content);
+        let (doc_type, phase, _created, _archived, title) = self.extract_metadata(&content);
 
-        // Extract exit criteria completion info
-        let exit_criteria = self.extract_exit_criteria(&content);
-        let completed_criteria = exit_criteria.iter().filter(|c| c.completed).count();
-        let total_criteria = exit_criteria.len();
-
-        // Build formatted output
-        let mut output = ToolOutput::new()
-            .header(&format!("{}: {}", self.short_code, title))
-            .table(
-                &["Field", "Value"],
-                vec![
-                    vec!["Type".to_string(), doc_type],
-                    vec!["Phase".to_string(), phase],
-                    vec!["Created".to_string(), created],
-                    vec!["Archived".to_string(), archived],
-                ],
-            );
-
-        // Add exit criteria if present
-        if total_criteria > 0 {
-            output = output.subheader(&format!(
-                "Exit Criteria ({}/{})",
-                completed_criteria, total_criteria
-            ));
-            let criteria_list: Vec<(&str, bool)> = exit_criteria
-                .iter()
-                .map(|c| (c.text.as_str(), c.completed))
-                .collect();
-            output = output.status_list(criteria_list);
-        }
-
-        // Add document content
-        output = output.rule().text(&content);
+        // Build simplified output with inline metadata
+        let output = ToolOutput::new()
+            .header(&format!("{}: {} ({}, {})", self.short_code, title, doc_type, phase))
+            .text(&content);
 
         Ok(output.build_result())
     }

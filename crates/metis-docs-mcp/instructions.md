@@ -172,6 +172,8 @@ Use short codes when referencing documents in content, discussions, or other doc
 
 ### Work Management Tools
 - **`transition_phase`**: Moving work forward through lifecycle phases
+  - **Best Practice**: Omit the `phase` parameter to auto-transition to the next valid phase - this is the right choice for most use cases as it respects the linear workflow progression
+  - Only specify an explicit `phase` when marking tasks as "blocked" or "active" (the only non-linear states in the system)
 - **`read_document`**: Read document content and structure before making edits
 - **`edit_document`**: Make targeted changes using search-and-replace (always read documents first)
 

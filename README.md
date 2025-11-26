@@ -10,40 +10,44 @@ Metis is a hierarchical project management system built on the Flight Levels met
 
 ### 1. Installation
 
-#### Desktop GUI Application (Recommended)
-Download the latest release for your platform:
-- **macOS (Apple Silicon)**: `Metis_x.x.x_aarch64.dmg` 
+#### Desktop GUI Application with Integrated CLI (Recommended)
+Download and install the Metis desktop application for your platform:
+
+- **macOS (Apple Silicon)**: `Metis_x.x.x_aarch64.dmg`
 - **macOS (Intel)**: `Metis_x.x.x_x64.dmg`
 - **Windows**: `Metis_x.x.x_x64-setup.exe`
 - **Linux**: `Metis_x.x.x_amd64.AppImage`
 
 [Download from GitHub Releases](https://github.com/colliery-io/metis/releases/latest)
 
-The GUI provides a visual kanban interface with project management, document editing, and built-in project initialization.
+**What's Included:**
+- Visual kanban interface with project management and document editing
+- **Automatic CLI installation**: On first launch, Metis will prompt to install the `metis` CLI command system-wide
+- MCP server for AI assistant integration (accessible via the installed CLI)
+- Built-in project initialization wizard
 
-**macOS Security Note**: After installing, you may need to remove the quarantine attribute to run the app:
-```bash
-sudo xattr -rd com.apple.quarantine "/Applications/Metis.app"
-```
-This is required because the app is not yet notarized through the Apple Developer Program.
+**macOS Security Notes**:
+- After installing, you may need to remove the quarantine attribute:
+  ```bash
+  sudo xattr -rd com.apple.quarantine "/Applications/Metis.app"
+  ```
+- On first launch, you'll be prompted to allow CLI installation to `/usr/local/bin`
+- This one-time setup enables both terminal and AI assistant usage
 
-#### Command Line Tools
+#### Manual CLI Installation (Advanced Users)
+If you prefer to build from source or need standalone CLI tools:
+
 ```bash
-# Install all "cli" interfaces (cli, mcp, tui)
+# Install all CLI interfaces (includes cli, mcp server)
 cargo install metis-docs-cli
 
 # Install just the MCP server for AI assistants
 cargo install metis-docs-mcp
-
-# For some GUI agentic applications (Claude Desktop, etc.) that need system PATH access
-sudo cargo install metis-docs-mcp --root /usr/local
 ```
-
-**Note**: AI assistant GUI applications like Claude Desktop may not have access to your shell's PATH. If you get "ENOENT" errors when using the MCP server with GUI applications, use the second installation command to install to `/usr/local/bin` where GUI apps can find it.
 
 ### 2. Choose Your Interface
 
-#### Desktop GUI (Recommended for Most Users)
+#### Desktop GUI (Primary Interface)
 Launch the installed Metis application for a full-featured visual interface:
 - **Project Browser**: Manage multiple projects from a single interface
 - **Kanban Boards**: Visual boards for Vision, Initiative, Task, ADR, and Backlog
@@ -51,18 +55,19 @@ Launch the installed Metis application for a full-featured visual interface:
 - **Project Initialization**: Guided setup with preset selection (Full/Streamlined/Direct)
 - **Real-time Sync**: Automatic synchronization with file system
 
-#### Terminal Interfaces
+#### Command Line Interface
 ```bash
-# Terminal User Interface (interactive kanban in terminal)
-metis tui
-
-# Command Line Interface (for scripting and automation)
+# Direct CLI commands (for scripting and automation)
 metis init --name "My Vision"                           # Creates streamlined config
 metis create initiative "Core Initiative" --vision "my-vision"  # No strategies in default
+metis list --type task                                   # List all tasks
 
 # MCP Server (for AI assistant integration)
 metis mcp
 ```
+
+#### Terminal User Interface (Deprecated)
+> **Note**: The TUI (`metis tui`) is deprecated and will be removed in a future release. Please use the Desktop GUI application instead for visual project management.
 
 ### 3. Configure Your AI Assistant
 
@@ -152,8 +157,9 @@ metis config show  # View current configuration
 Each document type has defined workflows:
 - **Vision**: draft → review → published
 - **Strategy**: shaping → design → ready → active → completed
-- **Initiative**: discovery → design → ready → decompose → active → completed  
-- **Task**: todo → doing → completed
+- **Initiative**: discovery → design → ready → decompose → active → completed
+- **Task**: todo → active → completed
+- **ADR**: draft → discussion → decided → superseded
 
 > **Pro Tip**: Start with the streamlined configuration (default). You can always upgrade to full flight levels as your project complexity grows, or simplify to direct for straightforward work.  
 
@@ -165,7 +171,7 @@ Metis follows a structured decomposition process:
 2. **Create Strategies** - Develop strategies that reference the Vision as parent, moving through shaping → design → ready → active
 3. **Build Initiatives** - When strategies are active, create concrete initiatives that reference Strategy as parent
 4. **Break into Tasks** - When initiatives reach decompose phase, create actionable tasks that reference Initiative as parent
-5. **Execute Tasks** - Work through tasks: todo → doing → completed
+5. **Execute Tasks** - Work through tasks: todo → active → completed
 6. **Complete upward** - As tasks complete, initiatives progress; as initiatives complete, strategies are delivered
 
 This creates a clear line of sight from high-level vision down to day-to-day work, with each level informing the next.
@@ -271,18 +277,19 @@ metis-mcp  # MCP server for AI assistants
 
 ## Desktop GUI Application
 
-The Metis desktop application provides a modern, visual interface for project management with full Flight Levels support:
+The Metis desktop application is the primary interface for project management with full Flight Levels support:
 
 ### Key Features
 - **Multi-Project Management**: Switch between projects with a sidebar browser
+- **Integrated CLI Installation**: Automatic installation of `metis` CLI command on first launch for AI assistant integration
 - **Dynamic Board Configuration**: Available boards adapt based on your project's Flight Level preset
 - **Rich Text Editing**: Built-in markdown editor with:
   - Live preview and editing modes
   - Table creation and manipulation tools
   - Syntax highlighting and formatting
-- **Project Initialization Wizard**: Guided setup with preset selection:
+- **Project Initialization Wizard**: Guided setup with preset selection
 - **Real-time Synchronization**: Refresh button syncs with file system and reloads data
-- **Document Lifecycle Management**: 
+- **Document Lifecycle Management**:
   - Drag-and-drop between phases
   - Archive completed work
   - View detailed document information
@@ -295,39 +302,37 @@ The GUI organizes work into kanban-style boards:
 - **Task Board**: Task execution with Blocked → Todo → Active → Completed flow
 - **ADR Board**: Architectural Decision Records
 - **Backlog Board**: Unassigned work items organized by type (Bug/Feature/Tech Debt/General)
-- **Refresh Button**: Syncs the filesystem to the database and refreshed the UI. Use when external systems (like the MCP server) are editing things. 
+- **Refresh Button**: Syncs the filesystem to the database and refreshes the UI. Use when external systems (like the MCP server) are editing things.
 
 ### Getting Started with GUI
 1. **Download and Install**: Get the appropriate installer for your platform from GitHub Releases
-2. **Create or Open Project**: Use the project browser to initialize a new project or open existing ones
-3. **Select Configuration**: Choose Full/Streamlined/Direct preset during initialization
-4. **Start Working**: Create documents, move them through phases, and track progress visually
+2. **Allow CLI Installation**: On first launch, approve the system prompt to install CLI tools (enables AI assistant integration)
+3. **Create or Open Project**: Use the project browser to initialize a new project or open existing ones
+4. **Select Configuration**: Choose Full/Streamlined/Direct preset during initialization
+5. **Start Working**: Create documents, move them through phases, and track progress visually
 
-## Terminal User Interface (TUI)
+## Terminal User Interface (TUI) - Deprecated
 
-Interactive kanban-style interface for visual project management:
+> **Deprecation Notice**: The Terminal User Interface has been deprecated in favor of the Desktop GUI application. The TUI will be removed in a future release.
+
+If you still need to use the TUI:
 
 ```bash
 metis tui
 ```
 
-**Key Features:**
-- **Visual Board Layout**: See all documents organized by type (Vision, Strategy, Initiative, Task, ADR)
-- **Phase-based Columns**: Documents organized by their current phase
-- **Keyboard Navigation**: Arrow keys, Tab/Shift+Tab to navigate boards
-- **Quick Actions**: Documented in the footer of the application.  
-
-
-**Workflow Integration**: The TUI automatically syncs with the file system, so changes made externally are reflected immediately.
+**Migration**: All TUI functionality is available in the Desktop GUI with a more user-friendly interface and better performance. Please migrate to the GUI application.
 
 ## Technical Overview
 
 **Architecture**: Metis consists of five main components:
 - **metis-docs-core**: Rust library handling document management, workflows, and database
-- **metis-docs-gui**: Desktop application with visual kanban interface built with Tauri and Vue 3
-- **metis-docs-cli**: Command-line interface with full project management capabilities  
-- **metis-docs-tui**: Interactive terminal user interface for visual project management
-- **metis-docs-mcp**: MCP server providing AI assistant integration with 11 tools
+- **metis-docs-gui**: Primary desktop application with visual kanban interface built with Tauri and Vue 3, includes automatic CLI installation
+- **metis-docs-cli**: Command-line interface with full project management capabilities, bundled with GUI installer
+- **metis-docs-mcp**: MCP server providing AI assistant integration with tools for document management
+- **metis-docs-tui**: Interactive terminal user interface (deprecated, will be removed in future release)
+
+**Installation Flow**: The GUI installer bundles the CLI binary and automatically installs it to the system PATH on first launch, providing seamless integration between visual and AI-assisted workflows.
 
 **Direct Path Approach**: Documents are stored as markdown files with YAML frontmatter, indexed in SQLite with FTS5 for fast search. No complex abstractions - what you see is what you get.
 

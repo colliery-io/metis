@@ -97,21 +97,20 @@ impl EditDocumentTool {
             .await
             .map_err(|e| CallToolError::new(e))?;
 
-        // Build formatted output with diff
+        // Build concise output with diff
         let replace_all = self.replace_all.unwrap_or(false);
-        let mut output = ToolOutput::new()
-            .header("Document Updated")
-            .text(&format!("{} modified", self.short_code));
-
-        if replace_all && replacements_made > 1 {
-            output = output.subheader(&format!("Changes ({} replacements)", replacements_made));
+        let count_msg = if replace_all && replacements_made > 1 {
+            format!(" ({} replacements)", replacements_made)
         } else {
-            output = output.subheader("Change");
-        }
+            String::new()
+        };
 
-        output = output.diff(&self.search, &self.replace);
+        let output = ToolOutput::new()
+            .text(&format!("✓ {} updated{}", self.short_code, count_msg))
+            .diff(&self.search, &self.replace)
+            .build_result();
 
-        Ok(output.build_result())
+        Ok(output)
     }
 
     fn perform_edit(&self, content: &str) -> Result<(String, usize), CallToolError> {

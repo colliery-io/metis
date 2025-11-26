@@ -47,14 +47,11 @@ async fn get_vision_short_code(metis_path: &str) -> String {
     let result = list_tool.call_tool().await.unwrap();
 
     if let Some(text) = extract_text_from_result(&result) {
-        // Find the Vision section and extract short code from table
-        if text.contains("### Vision") {
-            // Match pattern like "| PROJ-V-0001 |" in the table
-            let re = Regex::new(r"\|\s*([A-Z]+-V-\d{4})\s*\|").unwrap();
-            if let Some(captures) = re.captures(&text) {
-                if let Some(m) = captures.get(1) {
-                    return m.as_str().to_string();
-                }
+        // Match pattern for vision row in unified table: "| vision | PROJ-V-0001 | ..."
+        let re = Regex::new(r"\|\s*vision\s*\|\s*([A-Z]+-V-\d{4})\s*\|").unwrap();
+        if let Some(captures) = re.captures(&text) {
+            if let Some(m) = captures.get(1) {
+                return m.as_str().to_string();
             }
         }
     }

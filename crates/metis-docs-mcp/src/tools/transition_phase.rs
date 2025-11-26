@@ -129,7 +129,7 @@ impl TransitionPhaseTool {
                 .into_iter()
                 .map(String::from)
                 .collect(),
-            "task" => vec!["todo", "doing", "done"]
+            "task" => vec!["todo", "active", "completed"]
                 .into_iter()
                 .map(String::from)
                 .collect(),

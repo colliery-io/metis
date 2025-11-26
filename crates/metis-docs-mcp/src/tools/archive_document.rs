@@ -76,32 +76,18 @@ impl ArchiveDocumentTool {
                 ))
             })?;
 
-        // Build formatted output
+        // Build simple output
         let total = archive_result.total_archived;
-        let children = if total > 1 {
-            format!(" and {} children", total - 1)
-        } else {
+        let count_msg = if total == 1 {
             String::new()
+        } else {
+            format!(" ({} documents)", total)
         };
 
-        let mut output = ToolOutput::new()
-            .header("Document Archived")
-            .text(&format!("{}{} archived", self.short_code, children))
-            .blank()
-            .text("Archived:");
+        let output = ToolOutput::new()
+            .text(&format!("✓ {} archived{}", self.short_code, count_msg))
+            .build_result();
 
-        // Build indented list
-        let items: Vec<(bool, String)> = archive_result
-            .archived_documents
-            .iter()
-            .map(|doc| {
-                (true, format!("{} ({})", doc.document_id, format!("{:?}", doc.document_type).to_lowercase()))
-            })
-            .collect();
-
-        let items_ref: Vec<(bool, &str)> = items.iter().map(|(b, s)| (*b, s.as_str())).collect();
-        output = output.indented(items_ref);
-
-        Ok(output.build_result())
+        Ok(output)
     }
 }
