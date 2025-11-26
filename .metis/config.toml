@@ -3,4 +3,4 @@ prefix = "METIS"
 
 [flight_levels]
 strategies_enabled = false
-initiatives_enabled = false
+initiatives_enabled = true
