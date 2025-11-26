@@ -32,8 +32,8 @@
             @click="handleThemeChange(theme)"
             class="w-full text-left px-6 py-4 text-lg font-medium transition-colors flex items-center justify-between"
             style="background-color: transparent; color: var(--color-text-primary);"
-            @mouseenter="$event.currentTarget.style.backgroundColor = 'var(--color-interactive-secondary)'"
-            @mouseleave="$event.currentTarget.style.backgroundColor = 'transparent'"
+            @mouseenter="($event.currentTarget as HTMLElement).style.backgroundColor = 'var(--color-interactive-secondary)'"
+            @mouseleave="($event.currentTarget as HTMLElement).style.backgroundColor = 'transparent'"
           >
             <span>{{ themeLabels[theme] }}</span>
             <span v-if="themeName === theme" class="text-xl">✓</span>
@@ -49,8 +49,8 @@
             :disabled="isInstalling"
             class="w-full text-left px-6 py-4 text-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3"
             style="background-color: transparent; color: var(--color-text-primary);"
-            @mouseenter="!isInstalling && ($event.currentTarget.style.backgroundColor = 'var(--color-interactive-secondary)')"
-            @mouseleave="$event.currentTarget.style.backgroundColor = 'transparent'"
+            @mouseenter="!isInstalling && (($event.currentTarget as HTMLElement).style.backgroundColor = 'var(--color-interactive-secondary)')"
+            @mouseleave="($event.currentTarget as HTMLElement).style.backgroundColor = 'transparent'"
           >
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--color-text-primary);">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
