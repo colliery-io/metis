@@ -9,7 +9,7 @@
             @click="handleRefresh"
             class="board-tab refresh-button"
             :disabled="isRefreshing"
-            style="background-color: #3b82f6; color: white; border: 1px solid #3b82f6;"
+            style="background-color: var(--color-interactive-primary); color: var(--color-text-inverse); border: 2px solid var(--color-interactive-primary);"
             title="Refresh project data"
           >
             {{ isRefreshing ? '⟳ Syncing...' : '⟳ Refresh' }}
@@ -18,7 +18,7 @@
             v-if="currentBoard !== 'vision'"
             @click="showCreateDialog = true"
             class="board-tab create-button"
-            style="background-color: #10b981; color: white; border: 1px solid #10b981;"
+            style="background-color: var(--color-interactive-primary); color: var(--color-text-inverse); border: 2px solid var(--color-interactive-primary);"
           >
             + Create {{ getDocumentTypeLabel(currentBoard) }}
           </button>
