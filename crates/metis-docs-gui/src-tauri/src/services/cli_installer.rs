@@ -58,12 +58,7 @@ fn get_cli_binary_path() -> Option<PathBuf> {
 }
 
 /// Get the symlink location for PATH integration
-#[cfg(target_os = "macos")]
-fn get_symlink_path() -> Option<PathBuf> {
-    Some(PathBuf::from("/usr/local/bin/metis"))
-}
-
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "macos", target_os = "linux"))]
 fn get_symlink_path() -> Option<PathBuf> {
     dirs::home_dir().map(|h| h.join(".local").join("bin").join("metis"))
 }
@@ -246,8 +241,9 @@ pub async fn install_cli_internal(app: &AppHandle) -> Result<CliInstallResult, S
                     return Ok(CliInstallResult {
                         success: true,
                         message: format!(
-                            "CLI v{} installed. Run 'metis' from your terminal.",
-                            app_version
+                            "CLI v{} installed to {}. Ensure ~/.local/bin is in your PATH.",
+                            app_version,
+                            symlink_path.display()
                         ),
                         needs_elevation: false,
                     });
@@ -258,8 +254,8 @@ pub async fn install_cli_internal(app: &AppHandle) -> Result<CliInstallResult, S
                     return Ok(CliInstallResult {
                         success: false,
                         message: format!(
-                            "CLI copied to {:?}. Need admin access to add to PATH.",
-                            target_path
+                            "CLI copied to {}. Need permissions to create symlink.",
+                            target_path.display()
                         ),
                         needs_elevation: true,
                     });
@@ -270,8 +266,8 @@ pub async fn install_cli_internal(app: &AppHandle) -> Result<CliInstallResult, S
                     return Ok(CliInstallResult {
                         success: true,
                         message: format!(
-                            "CLI installed at {:?}. Add to PATH manually or run with full path.",
-                            target_path
+                            "CLI installed to {}. Add ~/.local/bin to PATH or run with full path.",
+                            target_path.display()
                         ),
                         needs_elevation: false,
                     });
@@ -316,7 +312,11 @@ pub async fn install_cli_internal(app: &AppHandle) -> Result<CliInstallResult, S
     write_version_info(app_version, &target_path)?;
     Ok(CliInstallResult {
         success: true,
-        message: format!("CLI v{} installed at {:?}", app_version, target_path),
+        message: format!(
+            "CLI v{} installed to {}. Add to PATH to use 'metis' command.",
+            app_version,
+            target_path.display()
+        ),
         needs_elevation: false,
     })
 }
@@ -342,93 +342,39 @@ pub async fn install_cli_elevated(app: AppHandle) -> Result<CliInstallResult, St
     }
 
     #[cfg(target_os = "macos")]
-    {
-        let symlink_path = "/usr/local/bin/metis";
-
-        // Use osascript to prompt for admin privileges
-        let script = format!(
-            "do shell script \"mkdir -p /usr/local/bin && ln -sf '{}' '{}'\" with administrator privileges",
-            target_path.display(),
-            symlink_path
-        );
-
-        let output = Command::new("osascript")
-            .args(["-e", &script])
-            .output()
-            .map_err(|e| format!("Failed to run osascript: {}", e))?;
-
-        if output.status.success() {
-            write_version_info(app_version, &target_path)?;
-
-            // Emit event for toast notification
-            app.emit("cli-installed", format!("CLI v{} installed", app_version))
-                .ok();
-
-            return Ok(CliInstallResult {
-                success: true,
-                message: format!(
-                    "CLI v{} installed. Run 'metis' from your terminal.",
-                    app_version
-                ),
-                needs_elevation: false,
-            });
-        } else {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            if stderr.contains("User canceled") || stderr.contains("cancelled") {
-                return Ok(CliInstallResult {
-                    success: false,
-                    message: "Installation cancelled by user".to_string(),
-                    needs_elevation: true,
-                });
-            }
-            return Err(format!("Failed to create symlink: {}", stderr));
-        }
-    }
+    let result = {
+        // On macOS, symlink goes to ~/.local/bin which doesn't need elevation
+        // Just use the regular install process
+        // Note: Users should ensure ~/.local/bin is in their PATH
+        install_cli_internal(&app).await
+    };
 
     #[cfg(target_os = "linux")]
-    {
-        let symlink_path = get_symlink_path().ok_or("Failed to determine symlink path")?;
-
-        // Use pkexec for graphical sudo
-        let output = Command::new("pkexec")
-            .args([
-                "ln",
-                "-sf",
-                &target_path.to_string_lossy(),
-                &symlink_path.to_string_lossy(),
-            ])
-            .output()
-            .map_err(|e| format!("Failed to run pkexec: {}", e))?;
-
-        if output.status.success() {
-            write_version_info(app_version, &target_path)?;
-
-            app.emit("cli-installed", format!("CLI v{} installed", app_version))
-                .ok();
-
-            return Ok(CliInstallResult {
-                success: true,
-                message: format!(
-                    "CLI v{} installed. Run 'metis' from your terminal.",
-                    app_version
-                ),
-                needs_elevation: false,
-            });
-        } else {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(format!("Failed to create symlink: {}", stderr));
-        }
-    }
+    let result = {
+        // On Linux, symlink goes to ~/.local/bin which doesn't need elevation
+        // Just use the regular install process
+        // Note: Users should ensure ~/.local/bin is in their PATH
+        install_cli_internal(&app).await
+    };
 
     #[cfg(windows)]
-    {
+    let result = {
         // Windows doesn't need elevation for user PATH
         Ok(CliInstallResult {
             success: true,
             message: "CLI installed (elevation not needed on Windows)".to_string(),
             needs_elevation: false,
         })
+    };
+
+    // Emit event for successful installation
+    if let Ok(ref install_result) = result {
+        if install_result.success {
+            app.emit("cli-installed", &install_result.message).ok();
+        }
     }
+
+    result
 }
 
 /// Uninstall CLI - remove binary and symlink

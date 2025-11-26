@@ -42,7 +42,7 @@
               />
               <span class="text-xs text-secondary mt-1">v{{ appVersion }}</span>
             </div>
-            <ThemeToggle />
+            <SettingsMenu />
           </div>
           
           <!-- Main content area - matches main content width -->
@@ -96,7 +96,7 @@ import './App.css'
 import './styles/theme.css'
 import { useProject } from './composables/useProject'
 import { useTheme } from './composables/useTheme'
-import ThemeToggle from './components/ThemeToggle.vue'
+import SettingsMenu from './components/SettingsMenu.vue'
 import ProjectSidebar from './components/ProjectSidebar.vue'
 import KanbanBoard from './components/KanbanBoard.vue'
 import SearchBar from './components/SearchBar.vue'

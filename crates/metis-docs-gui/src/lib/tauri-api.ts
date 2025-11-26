@@ -1,13 +1,4 @@
-import { invoke as tauriInvoke } from '@tauri-apps/api/core';
-import { mockInvoke, isTauriEnvironment } from './tauri-mock';
-
-// Use real Tauri invoke or mock based on environment
-const invoke = <T>(cmd: string, args?: Record<string, unknown>): Promise<T> => {
-  if (isTauriEnvironment()) {
-    return tauriInvoke<T>(cmd, args);
-  }
-  return mockInvoke<T>(cmd, args);
-};
+import { invoke } from '@tauri-apps/api/core';
 
 // Types matching the Rust structs
 export interface ProjectInfo {
@@ -116,6 +107,20 @@ export class MetisAPI {
    */
   static async getAppVersion(): Promise<string> {
     return invoke('get_app_version');
+  }
+
+  /**
+   * Install the CLI command (can be called to re-install)
+   */
+  static async installCli(): Promise<void> {
+    return invoke('install_cli');
+  }
+
+  /**
+   * Install the CLI command with elevated permissions (prompts for admin)
+   */
+  static async installCliElevated(): Promise<void> {
+    return invoke('install_cli_elevated');
   }
 }
 
@@ -286,3 +291,5 @@ export const transitionPhase = MetisAPI.transitionPhase;
 export const archiveDocument = DocumentAPI.archiveDocument;
 export const syncProject = MetisAPI.syncProject;
 export const getAppVersion = MetisAPI.getAppVersion;
+export const installCli = MetisAPI.installCli;
+export const installCliElevated = MetisAPI.installCliElevated;
