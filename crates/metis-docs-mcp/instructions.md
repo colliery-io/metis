@@ -115,6 +115,50 @@ Use short codes when referencing documents in content, discussions, or other doc
 **When to Create**: During initiative decompose phase or when new work is identified
 **Tools**: `create_document` (with `parent_id`), `edit_document`, `transition_phase`
 
+### Backlog Items (Standalone Work)
+**Purpose**: Capture work that isn't yet tied to a specific initiative - bugs, feature ideas, tech debt
+**Time Horizon**: Variable - may sit in backlog until prioritized
+**Key Question**: "What work needs to be tracked but isn't part of current initiatives?"
+
+**What is a Backlog Item?**
+A backlog item is a task that exists independently of the initiative hierarchy. Use backlog items for:
+- **Bugs**: Production issues that need fixing
+- **Features**: New functionality ideas to evaluate later
+- **Tech Debt**: Code improvements, refactoring, or cleanup work
+
+**Lifecycle Process**:
+- **Backlog**: Item is captured and categorized
+  - No parent required - standalone work item
+  - Categorized by type (bug, feature, tech-debt)
+  - Stays in backlog until prioritized
+- **Todo**: Item is prioritized for work
+  - Can be promoted to an initiative task if scope grows
+  - Or worked on directly as standalone item
+- **Active/Completed**: Same as regular tasks
+
+**Creating Backlog Items**:
+Use `create_document` with `document_type: "task"` and `backlog_category`:
+```json
+{
+  "document_type": "task",
+  "title": "Fix login timeout issue",
+  "backlog_category": "bug"
+}
+```
+
+**Valid Categories**:
+- `bug` - Production issues, defects, errors
+- `feature` - New functionality or enhancements
+- `tech-debt` - Refactoring, code cleanup, infrastructure improvements
+
+**When to Create**:
+- Bug reports that need tracking
+- Feature ideas that arise during development
+- Technical debt identified during code review
+- Work items that don't fit current initiative scope
+
+**Tools**: `create_document` (with `backlog_category`), `edit_document`, `transition_phase`
+
 ### Cross-Level: ADR (Architectural Decision Records)
 **Purpose**: Capture significant technical/architectural decisions at any level
 **Time Horizon**: Permanent record

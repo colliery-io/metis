@@ -84,6 +84,7 @@ async fn test_mcp_archive_cascading_behavior() -> Result<()> {
         complexity: None,
         stakeholders: Some(vec!["cto".to_string(), "dev_team".to_string()]),
         decision_maker: None,
+        backlog_category: None,
     };
 
     let result = create_strategy.call_tool().await;
@@ -99,6 +100,7 @@ async fn test_mcp_archive_cascading_behavior() -> Result<()> {
         complexity: Some("xl".to_string()),
         stakeholders: Some(vec!["backend_team".to_string()]),
         decision_maker: None,
+        backlog_category: None,
     };
 
     let result = create_initiative.call_tool().await;
@@ -114,6 +116,7 @@ async fn test_mcp_archive_cascading_behavior() -> Result<()> {
         complexity: None,
         stakeholders: Some(vec!["dba".to_string()]),
         decision_maker: None,
+        backlog_category: None,
     };
 
     let result = create_task_1.call_tool().await;
@@ -129,6 +132,7 @@ async fn test_mcp_archive_cascading_behavior() -> Result<()> {
         complexity: None,
         stakeholders: Some(vec!["architect".to_string()]),
         decision_maker: None,
+        backlog_category: None,
     };
 
     let result = create_task_2.call_tool().await;
@@ -485,6 +489,7 @@ async fn test_mcp_archive_error_handling() -> Result<()> {
         complexity: None,
         stakeholders: None,
         decision_maker: None,
+        backlog_category: None,
     };
 
     let result = create_strategy.call_tool().await;

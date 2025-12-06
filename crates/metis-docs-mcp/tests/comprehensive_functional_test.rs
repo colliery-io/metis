@@ -126,6 +126,7 @@ async fn test_full_configuration_workflow() {
         complexity: None,
         stakeholders: Some(vec!["product_team".to_string()]),
         decision_maker: None,
+        backlog_category: None,
     };
     let result = create_strategy.call_tool().await;
     assert!(result.is_ok(), "Create strategy should succeed");
@@ -153,6 +154,7 @@ async fn test_full_configuration_workflow() {
         complexity: Some("l".to_string()),
         stakeholders: Some(vec!["ux_team".to_string()]),
         decision_maker: None,
+        backlog_category: None,
     };
     let result = create_initiative.call_tool().await;
     assert!(result.is_ok(), "Create initiative should succeed");
@@ -180,6 +182,7 @@ async fn test_full_configuration_workflow() {
         complexity: None,
         stakeholders: None,
         decision_maker: None,
+        backlog_category: None,
     };
     let result = create_task.call_tool().await;
     assert!(result.is_ok(), "Create task should succeed");
@@ -207,6 +210,7 @@ async fn test_full_configuration_workflow() {
         complexity: None,
         stakeholders: None,
         decision_maker: Some("tech_lead".to_string()),
+        backlog_category: None,
     };
     let result = create_adr.call_tool().await;
     assert!(result.is_ok(), "Create ADR should succeed");
@@ -234,6 +238,7 @@ async fn test_full_configuration_workflow() {
         complexity: None,
         stakeholders: None,
         decision_maker: None,
+        backlog_category: None,
     };
     let result = create_backlog.call_tool().await;
     // Note: backlog might not be supported in all configurations
@@ -290,6 +295,7 @@ async fn test_streamlined_configuration_workflow() {
         complexity: Some("m".to_string()),
         stakeholders: Some(vec!["mobile_team".to_string()]),
         decision_maker: None,
+        backlog_category: None,
     };
     let result = create_initiative.call_tool().await;
     assert!(result.is_ok(), "Create initiative should succeed");
@@ -317,6 +323,7 @@ async fn test_streamlined_configuration_workflow() {
         complexity: None,
         stakeholders: None,
         decision_maker: None,
+        backlog_category: None,
     };
     let result = create_task.call_tool().await;
     assert!(result.is_ok(), "Create task should succeed");
@@ -344,6 +351,7 @@ async fn test_streamlined_configuration_workflow() {
         complexity: None,
         stakeholders: None,
         decision_maker: Some("mobile_lead".to_string()),
+        backlog_category: None,
     };
     let result = create_adr.call_tool().await;
     assert!(result.is_ok(), "Create ADR should succeed");
@@ -405,6 +413,7 @@ async fn test_direct_configuration_workflow() {
         complexity: None,
         stakeholders: None,
         decision_maker: None,
+        backlog_category: None,
     };
     let result = create_task1.call_tool().await;
     assert!(result.is_ok(), "Create task should succeed");
@@ -432,6 +441,7 @@ async fn test_direct_configuration_workflow() {
         complexity: None,
         stakeholders: None,
         decision_maker: None,
+        backlog_category: None,
     };
     let result = create_task2.call_tool().await;
     assert!(result.is_ok(), "Create second task should succeed");
@@ -459,6 +469,7 @@ async fn test_direct_configuration_workflow() {
         complexity: None,
         stakeholders: None,
         decision_maker: Some("developer".to_string()),
+        backlog_category: None,
     };
     let result = create_adr.call_tool().await;
     assert!(result.is_ok(), "Create ADR should succeed");

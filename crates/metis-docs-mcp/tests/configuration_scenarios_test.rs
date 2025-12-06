@@ -77,6 +77,7 @@ async fn test_streamlined_configuration_workflows() -> Result<()> {
         complexity: None,
         stakeholders: None,
         decision_maker: None,
+        backlog_category: None,
     };
 
     let strategy_result = create_strategy.call_tool().await;
@@ -108,6 +109,7 @@ async fn test_streamlined_configuration_workflows() -> Result<()> {
         complexity: Some("m".to_string()),
         stakeholders: None,
         decision_maker: None,
+        backlog_category: None,
     };
 
     let initiative_result = create_initiative.call_tool().await;
@@ -128,6 +130,7 @@ async fn test_streamlined_configuration_workflows() -> Result<()> {
         complexity: None,
         stakeholders: None,
         decision_maker: None,
+        backlog_category: None,
     };
 
     let task_result = create_task.call_tool().await;
@@ -147,6 +150,7 @@ async fn test_streamlined_configuration_workflows() -> Result<()> {
         complexity: None,
         stakeholders: None,
         decision_maker: None,
+        backlog_category: None,
     };
 
     let orphan_result = create_orphan_task.call_tool().await;
@@ -186,6 +190,7 @@ async fn test_direct_configuration_workflows() -> Result<()> {
         complexity: None,
         stakeholders: None,
         decision_maker: None,
+        backlog_category: None,
     };
 
     let strategy_result = create_strategy.call_tool().await;
@@ -204,6 +209,7 @@ async fn test_direct_configuration_workflows() -> Result<()> {
         complexity: Some("m".to_string()),
         stakeholders: None,
         decision_maker: None,
+        backlog_category: None,
     };
 
     let initiative_result = create_initiative.call_tool().await;
@@ -222,6 +228,7 @@ async fn test_direct_configuration_workflows() -> Result<()> {
         complexity: None,
         stakeholders: None,
         decision_maker: None,
+        backlog_category: None,
     };
 
     let task_result = create_task.call_tool().await;
@@ -241,6 +248,7 @@ async fn test_direct_configuration_workflows() -> Result<()> {
         complexity: None,
         stakeholders: None,
         decision_maker: Some("architect".to_string()),
+        backlog_category: None,
     };
 
     let adr_result = create_adr.call_tool().await;
@@ -298,6 +306,7 @@ async fn test_full_configuration_workflows() -> Result<()> {
         complexity: None,
         stakeholders: None,
         decision_maker: None,
+        backlog_category: None,
     };
 
     let strategy_result = create_strategy.call_tool().await;
@@ -318,6 +327,7 @@ async fn test_full_configuration_workflows() -> Result<()> {
         complexity: Some("m".to_string()),
         stakeholders: None,
         decision_maker: None,
+        backlog_category: None,
     };
 
     let no_parent_result = create_initiative_no_parent.call_tool().await;
@@ -343,6 +353,7 @@ async fn test_full_configuration_workflows() -> Result<()> {
         complexity: Some("m".to_string()),
         stakeholders: None,
         decision_maker: None,
+        backlog_category: None,
     };
 
     let initiative_result = create_initiative.call_tool().await;
@@ -363,6 +374,7 @@ async fn test_full_configuration_workflows() -> Result<()> {
         complexity: None,
         stakeholders: None,
         decision_maker: None,
+        backlog_category: None,
     };
 
     let no_parent_task_result = create_task_no_parent.call_tool().await;
@@ -381,6 +393,7 @@ async fn test_full_configuration_workflows() -> Result<()> {
         complexity: None,
         stakeholders: None,
         decision_maker: None,
+        backlog_category: None,
     };
 
     let task_result = create_task.call_tool().await;
@@ -412,6 +425,7 @@ async fn test_configuration_error_messages() -> Result<()> {
         complexity: None,
         stakeholders: None,
         decision_maker: None,
+        backlog_category: None,
     };
 
     let result = create_strategy.call_tool().await;
@@ -481,6 +495,7 @@ async fn test_configuration_switching_compatibility() -> Result<()> {
         complexity: None,
         stakeholders: None,
         decision_maker: None,
+        backlog_category: None,
     };
     create_strategy
         .call_tool()
@@ -500,6 +515,7 @@ async fn test_configuration_switching_compatibility() -> Result<()> {
         complexity: Some("s".to_string()),
         stakeholders: None,
         decision_maker: None,
+        backlog_category: None,
     };
 
     let result = create_initiative.call_tool().await;
@@ -519,6 +535,7 @@ async fn test_configuration_switching_compatibility() -> Result<()> {
         complexity: None,
         stakeholders: None,
         decision_maker: None,
+        backlog_category: None,
     };
 
     let strategy_result = create_new_strategy.call_tool().await;
