@@ -1,183 +1,129 @@
-# Metis Flight Levels Work Management System
+# Metis - Flight Levels Work Management
 
-## Overview
-Metis implements Flight Levels methodology for managing work at different altitudes - from strategic vision down to individual tasks. Each level operates at a different time horizon and abstraction level, with work flowing downward through phases and feedback flowing upward.
+Metis organizes work hierarchically using Flight Levels methodology: Vision (strategic) -> Initiative (projects) -> Task (work items). Work flows down through phases; feedback flows up.
 
-## Document Identification System
-All Metis documents are assigned unique **short codes** in the format `PREFIX-TYPE-NNNN`:
-- **PREFIX**: Project identifier (e.g., `PROJ`, `TEST`)
-- **TYPE**: Document type (`V`=Vision, `S`=Strategy, `I`=Initiative, `T`=Task, `A`=ADR)  
-- **NNNN**: Sequential number (e.g., `0001`, `0002`)
+## Document Types & Phases
 
-**Examples**: `PROJ-V-0001` (Project Vision #1), `TEST-I-0042` (Test Initiative #42)
+| Type | Purpose | Phases | Parent Required |
+|------|---------|--------|-----------------|
+| **Vision** | Strategic direction (6mo-2yr) | draft -> review -> published | No |
+| **Initiative** | Concrete projects (1-6mo) | discovery -> design -> ready -> decompose -> active -> completed | Vision (published) |
+| **Task** | Individual work (1-14 days) | todo -> doing -> completed | Initiative (decompose/active) |
+| **Backlog** | Standalone bugs/features/debt | backlog -> todo -> doing -> completed | No (use `backlog_category`) |
+| **ADR** | Architecture decisions | draft -> discussion -> decided -> superseded | No |
 
-Short codes provide:
-- **Quick Reference**: Easy to mention in discussions and documentation
-- **Unique Identity**: No confusion between documents with similar titles
-- **Sequential Tracking**: See document creation order within each type
-- **Cross-Reference**: Link related work items clearly
+**Note**: Configuration may disable some document types. The current project shows enabled types in tool responses.
 
-Use short codes when referencing documents in content, discussions, or other documents.
+## Short Codes
 
-## The Work Management System
+All documents get unique IDs: `PREFIX-TYPE-NNNN` (e.g., `PROJ-V-0001`, `ACME-T-0042`)
+- **V**=Vision, **I**=Initiative, **T**=Task, **A**=ADR
+- Use short codes to reference documents in all operations
 
-### Flight Level 3: Vision (Strategic Direction)
-**Purpose**: Define WHY the work exists and WHERE you're heading
-**Time Horizon**: 6 months to 2+ years
-**Key Question**: "What outcomes do we want to achieve?"
+## Tools Reference
 
-**Lifecycle Process**:
-- **Draft**: Capture initial vision, stakeholders, and success criteria
-  - Use `create_document` with `document_type: "vision"`
-  - Focus on outcomes, not solutions
-  - Define what success looks like
-- **Review**: Refine vision with stakeholder feedback
-  - Use `edit_document` to incorporate feedback
-  - Validate alignment with organizational goals
-- **Published**: Vision is stable and drives strategic planning
-  - Use `transition_phase` to move to published
-  - Vision becomes foundation for strategy creation
+### initialize_project
+Create a new Metis workspace.
+```
+project_path: string (required) - Path where .metis/ will be created
+prefix: string (optional) - Short code prefix, max 6 chars (default: "PROJ")
+```
 
-**When to Create**: At project start or when strategic direction changes
-**Tools**: `create_document`, `edit_document`, `transition_phase`
+### list_documents
+List all documents in the project.
+```
+project_path: string (required) - Path to .metis folder
+include_archived: bool (optional) - Include archived docs (default: false)
+```
 
-### Flight Level 2: Strategy (How to Achieve Vision)
-**Purpose**: Define HOW to achieve the vision through coordinated approaches
-**Time Horizon**: 3-12 months
-**Key Question**: "What coordinated approaches will deliver the vision?"
+### search_documents
+Full-text search across documents.
+```
+project_path: string (required) - Path to .metis folder
+query: string (required) - Search text
+document_type: string (optional) - Filter: vision, initiative, task, adr
+limit: number (optional) - Max results
+include_archived: bool (optional) - Include archived docs (default: false)
+```
 
-**Lifecycle Process**:
-- **Shaping**: Explore different approaches and define strategy scope
-  - Requires published Vision as parent
-  - Set `risk_level` (low/medium/high) to guide resource allocation
-  - Identify key assumptions and dependencies
-- **Design**: Detail the strategic approach and success criteria
-  - Define clear outcomes and measures
-  - Identify required initiatives
-  - Use `edit_document` to build strategy details
-- **Ready**: Strategy is validated and ready for initiative creation
-  - All dependencies identified and addressed
-  - Resource requirements understood
-- **Active**: Initiatives are being executed under this strategy
-  - Monitor progress through initiative completion
-  - Adjust strategy based on learning
-- **Completed**: All initiatives complete and strategy outcomes achieved
-  - Use `archive_document` when strategy is fully delivered
+### read_document
+Get full document content and metadata.
+```
+project_path: string (required) - Path to .metis folder
+short_code: string (required) - Document ID (e.g., PROJ-I-0001)
+```
 
-**When to Create**: When you have a published vision and need coordinated approaches
-**Tools**: `create_document` (with `parent_id` and `risk_level`), `transition_phase`
+### create_document
+Create a new document.
+```
+project_path: string (required) - Path to .metis folder
+document_type: string (required) - vision, initiative, task, adr
+title: string (required) - Document title
+parent_id: string (optional) - Parent short code (required for initiative/task)
+complexity: string (optional) - For initiatives: xs, s, m, l, xl
+decision_maker: string (optional) - For ADRs
+backlog_category: string (optional) - For backlog items: bug, feature, tech-debt
+```
 
-### Flight Level 1: Initiative (Concrete Projects)
-**Purpose**: Deliver specific capabilities or outcomes that advance strategy
-**Time Horizon**: 1-6 months
-**Key Question**: "What concrete projects will deliver strategic outcomes?"
+### edit_document
+Search-and-replace edit on document content.
+```
+project_path: string (required) - Path to .metis folder
+short_code: string (required) - Document ID
+search: string (required) - Text to find
+replace: string (required) - Replacement text
+replace_all: bool (optional) - Replace all occurrences (default: false)
+```
 
-**Lifecycle Process**:
-- **Discovery**: Understand problem space and define solution approach
-  - Requires active Strategy as parent
-  - Set `complexity` (xs/s/m/l/xl) to guide team allocation
-  - Research constraints and opportunities
-- **Design**: Define detailed solution and implementation plan
-  - Create concrete deliverables and acceptance criteria
-  - Identify task breakdown structure
-- **Ready**: Solution validated and ready for task decomposition
-  - All assumptions tested
-  - Dependencies resolved or managed
-- **Decompose**: Break initiative into executable tasks
-  - Use `create_document` to create individual tasks
-  - Each task should be completable in 1-2 weeks
-- **Active**: Tasks are being executed
-  - Monitor task completion and adjust as needed
-  - Handle blockers and dependencies
-- **Completed**: All tasks complete and initiative outcomes delivered
-  - Validate outcomes against strategy requirements
+### transition_phase
+Move document to next phase or specific phase.
+```
+project_path: string (required) - Path to .metis folder
+short_code: string (required) - Document ID
+phase: string (optional) - Target phase (omit for auto-advance)
+force: bool (optional) - Skip exit criteria validation
+```
+**Best practice**: Omit `phase` to auto-advance. Only specify phase for non-linear transitions like marking tasks "blocked".
 
-**When to Create**: When strategy is active and you need specific project delivery
-**Tools**: `create_document` (with `parent_id` and `complexity`), `transition_phase`
+### archive_document
+Archive a document and all its children.
+```
+project_path: string (required) - Path to .metis folder
+short_code: string (required) - Document ID
+```
 
-### Flight Level 0: Task (Individual Work Items)
-**Purpose**: Execute specific work that contributes to initiative delivery
-**Time Horizon**: 1-14 days
-**Key Question**: "What specific work needs to be done?"
+## Common Workflows
 
-**Lifecycle Process**:
-- **Todo**: Task is defined and ready for execution
-  - Requires initiative in decompose or active phase as parent
-  - Clear acceptance criteria and deliverables
-  - Assigned to specific team member
-- **Doing**: Task is actively being worked on
-  - Progress tracked and blockers identified
-  - Use `edit_document` to update blocked_by section if dependencies block progress
-- **Completed**: Task deliverables are finished and validated
-  - Outcomes contribute to initiative progress
-  - Use `archive_document` when no longer relevant
+### Starting a Project
+1. `initialize_project` - Create workspace
+2. `create_document` type=vision - Define strategic direction
+3. `transition_phase` - Move vision through draft -> review -> published
+4. `create_document` type=initiative parent_id=PROJ-V-0001 - Create initiatives under vision
 
-**When to Create**: During initiative decompose phase or when new work is identified
-**Tools**: `create_document` (with `parent_id`), `edit_document`, `transition_phase`
+### Managing Work
+1. `list_documents` - See all active work
+2. `read_document` - Check document details and exit criteria
+3. `transition_phase` - Advance work through phases
+4. `edit_document` - Update content, add notes, mark blockers
 
-### Cross-Level: ADR (Architectural Decision Records)
-**Purpose**: Capture significant technical/architectural decisions at any level
-**Time Horizon**: Permanent record
-**Key Question**: "What decisions need to be documented and why?"
+### Creating Backlog Items
+For standalone bugs, features, or tech debt not tied to initiatives:
+```
+create_document:
+  document_type: "task"
+  title: "Fix login timeout"
+  backlog_category: "bug"  # or "feature" or "tech-debt"
+```
 
-**Lifecycle Process**:
-- **Draft**: Initial decision proposal with context and options
-  - No parent required - can relate to any level
-  - Set `decision_maker` for accountability
-- **Discussion**: Stakeholder review and debate
-  - Gather input and refine decision rationale
-- **Decided**: Final decision made and communicated
-  - Decision is binding and guides implementation
-- **Superseded**: Decision replaced by newer ADR
-  - Maintain historical record
+### Decomposing Initiatives
+1. Transition initiative to "decompose" phase
+2. Create tasks with parent_id pointing to the initiative
+3. Transition initiative to "active" when ready to execute
 
-**When to Create**: When significant decisions impact multiple initiatives or have long-term consequences
-**Tools**: `create_document` (with `decision_maker`), `transition_phase`
+## Key Principles
 
-## Process Flow Patterns
-
-### Starting New Work
-1. **Always begin with Vision**: Use `create_document` with `document_type: "vision"`
-2. **Assess vision completion**: Read vision document to check if exit criteria are met before transitioning
-3. **Create 2-4 strategies**: Each addressing different aspects of the vision
-4. **Activate strategies sequentially**: Based on priority and dependencies
-
-### Managing Active Work
-1. **Use `list_documents` regularly**: Monitor work across all levels
-2. **Check for blockers**: Use `search_documents` to find blocked items
-3. **Read documents to assess completion**: Check exit criteria and progress directly
-4. **Update parent documents**: When child work completes, update parent status
-
-### Handling Dependencies and Blockers
-1. **Identify blockers early**: Update blocked_by sections in document content
-2. **Escalate blocked work**: Move decisions up flight levels when needed
-3. **Create ADRs for decisions**: Document significant choices that unblock work
-4. **Adjust timelines**: Update parent documents when dependencies cause delays
-
-### Work Completion and Archival
-1. **Assess completion**: Read documents to evaluate if exit criteria are met
-2. **Update parent status**: Reflect child completion in parent documents
-3. **Archive when appropriate**: Use `archive_document` for completed work trees
-4. **Capture learnings**: Update processes based on what was learned
-
-## Tool Usage Guidelines
-
-### Query and Discovery Tools
-- **`list_documents`**: Regular work monitoring, finding what needs attention
-- **`search_documents`**: Finding specific work, identifying patterns or blockers
-
-### Work Creation Tools  
-- **`initialize_project`**: Starting new project workspace
-- **`create_document`**: Creating work at any level (always specify parent except for Vision/ADR)
-
-### Work Management Tools
-- **`transition_phase`**: Moving work forward through lifecycle phases
-  - **Best Practice**: Omit the `phase` parameter to auto-transition to the next valid phase - this is the right choice for most use cases as it respects the linear workflow progression
-  - Only specify an explicit `phase` when marking tasks as "blocked" or "active" (the only non-linear states in the system)
-- **`read_document`**: Read document content and structure before making edits
-- **`edit_document`**: Make targeted changes using search-and-replace (always read documents first)
-
-### Maintenance Tools
-- **`archive_document`**: Removing completed work trees from active management
-
-Remember: Flight Levels is about managing work at the right altitude. Keep vision strategic, strategies coordinated, initiatives concrete, and tasks actionable. Let feedback flow upward to adjust higher-level work based on ground truth.
+- **Read before edit**: Always `read_document` before `edit_document`
+- **Auto-transition**: Omit phase parameter to follow natural workflow
+- **Hierarchy matters**: Tasks need initiatives, initiatives need visions
+- **Short codes everywhere**: Reference documents by ID, not title
+- **Archive completed work**: Use `archive_document` to clean up finished trees

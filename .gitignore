@@ -19,6 +19,10 @@ Thumbs.db
 # Test artifacts
 /test-vault/
 /tmp/
+/test-results/
+
+# Tauri sidecar binaries (platform-specific builds)
+crates/metis-docs-gui/src-tauri/binaries/
 
 # Database files (in development)
 *.db

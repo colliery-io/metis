@@ -17,7 +17,7 @@ use std::str::FromStr;
 
 #[mcp_tool(
     name = "create_document",
-    description = "Create a new Metis document (vision, strategy, initiative, task, adr). Each document gets a unique short code in format PREFIX-TYPE-NNNN (e.g., PROJ-V-0001). Parent documents should be referenced by their short code (e.g., PROJ-V-0001). Document type availability depends on current flight level configuration.",
+    description = "Create a new Metis document (vision, strategy, initiative, task, adr). Each document gets a unique short code in format PREFIX-TYPE-NNNN (e.g., PROJ-V-0001). Parent documents should be referenced by their short code (e.g., PROJ-V-0001). Document type availability depends on current flight level configuration. For standalone work items not tied to initiatives, use document_type='task' with backlog_category to create a backlog item.",
     idempotent_hint = false,
     destructive_hint = false,
     open_world_hint = false,
@@ -31,7 +31,7 @@ pub struct CreateDocumentTool {
     pub document_type: String,
     /// Title of the document
     pub title: String,
-    /// Parent document short code (required for strategy, initiative, task)
+    /// Parent document short code (required for strategy, initiative, task). Omit for backlog items.
     pub parent_id: Option<String>,
     /// Risk level for strategies (low, medium, high)
     pub risk_level: Option<String>,
@@ -41,6 +41,8 @@ pub struct CreateDocumentTool {
     pub stakeholders: Option<Vec<String>>,
     /// Decision maker for ADRs
     pub decision_maker: Option<String>,
+    /// Backlog category for standalone tasks not tied to initiatives (bug, feature, tech-debt). When specified, creates a backlog item instead of a regular task.
+    pub backlog_category: Option<String>,
 }
 
 impl CreateDocumentTool {
@@ -181,8 +183,36 @@ impl CreateDocumentTool {
                     .map_err(|e| CallToolError::new(e))?
             }
             DocumentType::Task => {
-                // Determine task creation approach based on configuration and provided parent
-                if let Some(initiative_id) = resolved_parent_id.as_ref() {
+                // Check if this should be a backlog item
+                if let Some(category) = &self.backlog_category {
+                    // Creating a backlog item - add category tag
+                    let category_tag = match category.to_lowercase().as_str() {
+                        "bug" => metis_core::domain::documents::types::Tag::Label("bug".to_string()),
+                        "feature" => metis_core::domain::documents::types::Tag::Label("feature".to_string()),
+                        "tech-debt" | "techdebt" | "tech_debt" => metis_core::domain::documents::types::Tag::Label("tech-debt".to_string()),
+                        _ => {
+                            return Err(CallToolError::new(std::io::Error::new(
+                                std::io::ErrorKind::InvalidInput,
+                                format!("Invalid backlog category '{}'. Valid options: bug, feature, tech-debt", category),
+                            )));
+                        }
+                    };
+
+                    let backlog_config = DocumentCreationConfig {
+                        title: self.title.clone(),
+                        description: None,
+                        parent_id: None,
+                        tags: vec![category_tag],
+                        phase: None,
+                        complexity: None,
+                        risk_level: None,
+                    };
+
+                    creation_service
+                        .create_backlog_item(backlog_config)
+                        .await
+                        .map_err(|e| CallToolError::new(e))?
+                } else if let Some(initiative_id) = resolved_parent_id.as_ref() {
                     // Task with parent initiative
                     let strategy_id = if flight_config.strategies_enabled {
                         // Full configuration: use actual strategy short code from initiative location
@@ -202,10 +232,10 @@ impl CreateDocumentTool {
                         .await
                         .map_err(|e| CallToolError::new(e))?
                 } else if flight_config.initiatives_enabled {
-                    // Initiatives enabled but no parent provided - this should be an error
+                    // Initiatives enabled but no parent provided - suggest backlog
                     return Err(CallToolError::new(std::io::Error::new(
                         std::io::ErrorKind::InvalidInput,
-                        format!("Task requires a parent initiative ID in {} configuration. Provide an initiative_id or create as a backlog item.", flight_config.preset_name()),
+                        format!("Task requires a parent initiative ID in {} configuration. Either provide parent_id with an initiative short code, or use backlog_category (bug, feature, tech-debt) to create a standalone backlog item.", flight_config.preset_name()),
                     )));
                 } else {
                     // Direct configuration: create task without parents (use NULL for both)

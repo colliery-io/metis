@@ -25,13 +25,17 @@ pub struct SearchDocumentsTool {
     pub document_type: Option<String>,
     /// Maximum number of results to return
     pub limit: Option<u32>,
+    /// Include archived documents in results (defaults to false)
+    #[serde(default)]
+    pub include_archived: Option<bool>,
 }
 
 impl SearchDocumentsTool {
     /// Sanitize search query to prevent FTS syntax errors
     fn sanitize_search_query(&self, query: &str) -> String {
         // If query is very short or contains problematic FTS characters, quote it
-        let problematic_chars = ['#', '*', ':', '(', ')', '[', ']', '{', '}', '^', '~', '?'];
+        // Note: '-' is the NOT operator in FTS5, so queries like "PROJ-I-0001" must be quoted
+        let problematic_chars = ['#', '*', ':', '(', ')', '[', ']', '{', '}', '^', '~', '?', '-'];
 
         if query.len() <= 2 || query.chars().any(|c| problematic_chars.contains(&c)) {
             // Wrap in double quotes and escape any internal quotes
@@ -61,10 +65,17 @@ impl SearchDocumentsTool {
 
         // Sanitize query for FTS search - escape special characters and handle edge cases
         let sanitized_query = self.sanitize_search_query(&self.query);
+        let include_archived = self.include_archived.unwrap_or(false);
 
-        // Perform full-text search
+        // Perform full-text search (respecting include_archived flag, defaults to false)
         let results = app
-            .with_database(|db_service| db_service.search_documents(&sanitized_query))
+            .with_database(|db_service| {
+                if include_archived {
+                    db_service.search_documents(&sanitized_query)
+                } else {
+                    db_service.search_documents_unarchived(&sanitized_query)
+                }
+            })
             .map_err(|e| {
                 CallToolError::new(std::io::Error::new(
                     std::io::ErrorKind::Other,

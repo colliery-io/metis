@@ -124,12 +124,39 @@ impl DocumentRepository {
         .map_err(MetisError::Database)
     }
 
+    /// Search non-archived documents using FTS
+    pub fn search_documents_unarchived(&mut self, query: &str) -> Result<Vec<Document>> {
+        // For SQLite FTS, we need to use sql_query for the MATCH operator
+        diesel::sql_query(
+            "
+            SELECT d.* FROM documents d
+            INNER JOIN document_search ds ON d.filepath = ds.document_filepath
+            WHERE document_search MATCH ? AND d.archived = 0
+        ",
+        )
+        .bind::<diesel::sql_types::Text, _>(query)
+        .load::<Document>(&mut self.connection)
+        .map_err(MetisError::Database)
+    }
+
     /// Get all documents of a specific type
     pub fn find_by_type(&mut self, doc_type: &str) -> Result<Vec<Document>> {
         use schema::documents::dsl::*;
 
         documents
             .filter(document_type.eq(doc_type))
+            .order(updated_at.desc())
+            .load(&mut self.connection)
+            .map_err(MetisError::Database)
+    }
+
+    /// Get all non-archived documents of a specific type
+    pub fn find_by_type_unarchived(&mut self, doc_type: &str) -> Result<Vec<Document>> {
+        use schema::documents::dsl::*;
+
+        documents
+            .filter(document_type.eq(doc_type))
+            .filter(archived.eq(false))
             .order(updated_at.desc())
             .load(&mut self.connection)
             .map_err(MetisError::Database)

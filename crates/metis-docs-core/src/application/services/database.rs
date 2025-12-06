@@ -47,6 +47,11 @@ impl DatabaseService {
         self.repository.search_documents(query)
     }
 
+    /// Search non-archived documents using full-text search
+    pub fn search_documents_unarchived(&mut self, query: &str) -> Result<Vec<Document>> {
+        self.repository.search_documents_unarchived(query)
+    }
+
     /// Get all documents of a specific type
     pub fn find_by_type(&mut self, doc_type: DocumentType) -> Result<Vec<Document>> {
         let type_str = doc_type.to_string();
