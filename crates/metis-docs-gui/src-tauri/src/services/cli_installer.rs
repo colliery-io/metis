@@ -218,13 +218,24 @@ pub async fn install_cli_internal(app: &AppHandle) -> Result<CliInstallResult, S
             .map_err(|e| format!("Failed to set executable permissions: {}", e))?;
     }
 
-    // Remove quarantine attribute on macOS
+    // Fix macOS security attributes and re-sign
     #[cfg(target_os = "macos")]
     {
+        let path_str = target_path.to_string_lossy();
+        // Remove quarantine and provenance attributes
         Command::new("xattr")
-            .args(["-rd", "com.apple.quarantine", &target_path.to_string_lossy()])
+            .args(["-rd", "com.apple.quarantine", &path_str])
             .output()
-            .ok(); // Best effort - ignore errors
+            .ok();
+        Command::new("xattr")
+            .args(["-d", "com.apple.provenance", &path_str])
+            .output()
+            .ok();
+        // Re-sign with adhoc signature to fix any signature issues
+        Command::new("codesign")
+            .args(["--force", "--sign", "-", &path_str])
+            .output()
+            .ok();
     }
 
     // Try to create symlink for PATH integration

@@ -153,9 +153,18 @@ install_macos() {
     info "Cleaning up..."
     hdiutil detach "$mount_point" -quiet 2>/dev/null || true
 
-    # Remove quarantine
-    info "Removing quarantine attribute..."
+    # Remove quarantine from app
+    info "Removing quarantine attributes..."
     xattr -rd com.apple.quarantine /Applications/Metis.app 2>/dev/null || true
+
+    # Also fix CLI if previously installed by GUI
+    local cli_path="$HOME/Library/Application Support/io.colliery.metis/bin/metis"
+    if [ -f "$cli_path" ]; then
+        xattr -rd com.apple.quarantine "$cli_path" 2>/dev/null || true
+        xattr -d com.apple.provenance "$cli_path" 2>/dev/null || true
+        codesign --force --sign - "$cli_path" 2>/dev/null || true
+        success "Fixed CLI binary signature"
+    fi
 
     success "Metis installed to /Applications/Metis.app"
 }
