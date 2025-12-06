@@ -15,10 +15,10 @@ Metis is a hierarchical project management system built on the Flight Levels met
 curl -fsSL https://raw.githubusercontent.com/colliery-io/metis/main/scripts/install.sh | bash
 ```
 
-This installs `metis` CLI and `metis-tui` to `~/.local/bin`. The MCP server is bundled with the CLI and accessible via `metis mcp`.
+This downloads and installs the Metis desktop application. On first launch, the app will prompt to install the CLI tools system-wide, which includes the MCP server for AI assistant integration.
 
-#### Desktop GUI Application
-For a visual interface, download the Metis desktop application:
+#### Manual Download
+Alternatively, download the installer directly:
 
 - **macOS (Apple Silicon)**: `Metis_x.x.x_aarch64.dmg`
 - **macOS (Intel)**: `Metis_x.x.x_x64.dmg`

@@ -1,15 +1,14 @@
 #!/bin/sh
-# Metis Installer
-# Usage: curl -sSL https://raw.githubusercontent.com/colliery-io/metis/main/scripts/install.sh | sh
+# Metis GUI Installer
+# Usage: curl -fsSL https://raw.githubusercontent.com/colliery-io/metis/main/scripts/install.sh | bash
+#
+# Downloads and installs the Metis desktop application.
+# The GUI includes the CLI which is installed on first launch.
 
 set -e
 
 # Configuration
 GITHUB_REPO="colliery-io/metis"
-# metis CLI includes MCP server via `metis mcp` subcommand
-# metis-tui is the standalone terminal UI
-BINARIES="metis metis-tui"
-DEFAULT_INSTALL_DIR="$HOME/.local/bin"
 
 # Colors (check if terminal supports colors)
 if [ -t 1 ]; then
@@ -18,7 +17,7 @@ if [ -t 1 ]; then
     YELLOW='\033[0;33m'
     BLUE='\033[0;34m'
     BOLD='\033[1m'
-    NC='\033[0m' # No Color
+    NC='\033[0m'
 else
     RED=''
     GREEN=''
@@ -49,7 +48,7 @@ error() {
 detect_os() {
     case "$(uname -s)" in
         Darwin*)
-            OS="darwin"
+            OS="macos"
             ;;
         Linux*)
             OS="linux"
@@ -67,7 +66,7 @@ detect_os() {
 detect_arch() {
     case "$(uname -m)" in
         x86_64|amd64)
-            ARCH="x86_64"
+            ARCH="x64"
             ;;
         arm64|aarch64)
             ARCH="aarch64"
@@ -80,11 +79,16 @@ detect_arch() {
 
 # Check for required commands
 check_dependencies() {
-    for cmd in curl tar; do
+    for cmd in curl; do
         if ! command -v "$cmd" >/dev/null 2>&1; then
             error "Required command not found: $cmd"
         fi
     done
+
+    # macOS needs hdiutil for dmg mounting
+    if [ "$OS" = "macos" ] && ! command -v hdiutil >/dev/null 2>&1; then
+        error "Required command not found: hdiutil"
+    fi
 }
 
 # Get the latest release version from GitHub
@@ -94,187 +98,201 @@ get_latest_version() {
         info "Using specified version: $VERSION"
     else
         info "Fetching latest release version..."
-        VERSION=$(curl -sSL "https://api.github.com/repos/${GITHUB_REPO}/releases/latest" | \
-            grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+
+        # Get latest release, handling the app-v prefix that tauri uses
+        VERSION=$(curl -sSL "https://api.github.com/repos/${GITHUB_REPO}/releases" | \
+            grep '"tag_name":' | grep 'app-v' | head -1 | sed -E 's/.*"app-v([^"]+)".*/\1/')
 
         if [ -z "$VERSION" ]; then
-            error "Could not determine latest version. Set METIS_VERSION environment variable to specify a version."
+            error "Could not determine latest version. Set METIS_VERSION environment variable to specify a version (e.g., 1.0.0)."
         fi
         info "Latest version: $VERSION"
     fi
 }
 
-# Download and install all binaries
-download_and_install() {
-    local install_dir="${METIS_INSTALL_DIR:-$DEFAULT_INSTALL_DIR}"
-    local temp_dir
-    temp_dir=$(mktemp -d)
-
-    # Create install directory if it doesn't exist
-    mkdir -p "$install_dir"
-
-    info "Downloading Metis ${VERSION} for ${OS}/${ARCH}..."
-
-    # Download and install each binary
-    for binary in $BINARIES; do
-        # Expected asset name pattern: {binary}-{version}-{arch}-{os}.tar.gz
-        local asset_name="${binary}-${VERSION}-${ARCH}-${OS}.tar.gz"
-        local download_url="https://github.com/${GITHUB_REPO}/releases/download/${VERSION}/${asset_name}"
-
-        info "Downloading ${binary}..."
-
-        # Download the tarball
-        if ! curl -sSL "$download_url" -o "${temp_dir}/${binary}.tar.gz" 2>/dev/null; then
-            warn "Failed to download ${binary} - skipping (may not be available for this platform)"
-            continue
-        fi
-
-        # Check if download was successful (file exists and is not empty)
-        if [ ! -s "${temp_dir}/${binary}.tar.gz" ]; then
-            warn "Empty download for ${binary} - skipping"
-            continue
-        fi
-
-        # Extract
-        if ! tar -xzf "${temp_dir}/${binary}.tar.gz" -C "$temp_dir" 2>/dev/null; then
-            warn "Failed to extract ${binary} - skipping"
-            continue
-        fi
-
-        # Find the binary in extracted files
-        local binary_path
-        binary_path=$(find "$temp_dir" -name "$binary" -type f 2>/dev/null | head -1)
-
-        if [ -z "$binary_path" ]; then
-            # Try to find executable files
-            binary_path=$(find "$temp_dir" -name "${binary}*" -type f -perm +111 2>/dev/null | head -1)
-        fi
-
-        if [ -z "$binary_path" ]; then
-            warn "Could not find ${binary} in archive - skipping"
-            continue
-        fi
-
-        # Install the binary
-        cp "$binary_path" "${install_dir}/${binary}"
-        chmod +x "${install_dir}/${binary}"
-
-        # macOS: Remove quarantine attribute
-        if [ "$OS" = "darwin" ]; then
-            xattr -d com.apple.quarantine "${install_dir}/${binary}" 2>/dev/null || true
-        fi
-
-        success "Installed ${binary}"
-
-        # Clean up extracted files for this binary
-        rm -f "${temp_dir}/${binary}.tar.gz"
-        find "$temp_dir" -name "${binary}*" -delete 2>/dev/null || true
-    done
-
-    # Cleanup temp directory
-    rm -rf "$temp_dir"
-
-    # Store for PATH check
-    INSTALL_DIR="$install_dir"
+# Build asset name based on OS/arch
+get_asset_name() {
+    case "$OS" in
+        macos)
+            echo "Metis_${VERSION}_${ARCH}.dmg"
+            ;;
+        linux)
+            echo "Metis_${VERSION}_amd64.AppImage"
+            ;;
+        windows)
+            echo "Metis_${VERSION}_x64-setup.exe"
+            ;;
+    esac
 }
 
-# Check if install directory is in PATH
-check_path() {
+# Install on macOS
+install_macos() {
+    local dmg_file="$1"
+    local mount_point
+
+    info "Mounting disk image..."
+    mount_point=$(hdiutil attach "$dmg_file" -nobrowse -quiet | tail -1 | awk '{print $3}')
+
+    if [ -z "$mount_point" ]; then
+        # Try alternate parsing
+        mount_point="/Volumes/Metis"
+    fi
+
+    info "Installing to /Applications..."
+
+    # Remove existing installation
+    if [ -d "/Applications/Metis.app" ]; then
+        warn "Removing existing Metis installation..."
+        rm -rf "/Applications/Metis.app"
+    fi
+
+    # Copy app
+    cp -R "${mount_point}/Metis.app" /Applications/
+
+    # Unmount
+    info "Cleaning up..."
+    hdiutil detach "$mount_point" -quiet 2>/dev/null || true
+
+    # Remove quarantine
+    info "Removing quarantine attribute..."
+    xattr -rd com.apple.quarantine /Applications/Metis.app 2>/dev/null || true
+
+    success "Metis installed to /Applications/Metis.app"
+}
+
+# Install on Linux
+install_linux() {
+    local appimage_file="$1"
+    local install_dir="$HOME/.local/bin"
+
+    mkdir -p "$install_dir"
+
+    info "Installing to ${install_dir}/metis..."
+    cp "$appimage_file" "${install_dir}/metis"
+    chmod +x "${install_dir}/metis"
+
+    success "Metis installed to ${install_dir}/metis"
+
+    # Check PATH
     case ":$PATH:" in
-        *":${INSTALL_DIR}:"*)
-            success "${INSTALL_DIR} is already in your PATH"
+        *":${install_dir}:"*)
             ;;
         *)
-            warn "${INSTALL_DIR} is not in your PATH"
+            warn "${install_dir} is not in your PATH"
             echo ""
             echo "Add it to your shell configuration:"
-            echo ""
-
-            # Detect shell and provide appropriate instructions
-            case "${SHELL##*/}" in
-                bash)
-                    echo "  echo 'export PATH=\"\$HOME/.local/bin:\$PATH\"' >> ~/.bashrc"
-                    echo "  source ~/.bashrc"
-                    ;;
-                zsh)
-                    echo "  echo 'export PATH=\"\$HOME/.local/bin:\$PATH\"' >> ~/.zshrc"
-                    echo "  source ~/.zshrc"
-                    ;;
-                fish)
-                    echo "  fish_add_path ~/.local/bin"
-                    ;;
-                *)
-                    echo "  export PATH=\"\$HOME/.local/bin:\$PATH\""
-                    ;;
-            esac
+            echo "  echo 'export PATH=\"\$HOME/.local/bin:\$PATH\"' >> ~/.bashrc"
             echo ""
             ;;
     esac
 }
 
-# Verify installation
-verify_installation() {
+# Install on Windows (just download, user runs manually)
+install_windows() {
+    local exe_file="$1"
+    local downloads_dir="$HOME/Downloads"
+
+    mkdir -p "$downloads_dir"
+    cp "$exe_file" "${downloads_dir}/Metis_Setup.exe"
+
+    success "Installer downloaded to ${downloads_dir}/Metis_Setup.exe"
     echo ""
-    info "Verifying installation..."
-
-    local installed_count=0
-    for binary in $BINARIES; do
-        if [ -x "${INSTALL_DIR}/${binary}" ]; then
-            local version_output
-            version_output=$("${INSTALL_DIR}/${binary}" --version 2>/dev/null || echo "installed")
-            success "${binary}: ${version_output}"
-            installed_count=$((installed_count + 1))
-        fi
-    done
-
-    if [ "$installed_count" -eq 0 ]; then
-        error "No binaries were installed successfully"
-    fi
+    echo "Please run the installer manually to complete installation."
 }
 
-# Print usage information
-print_usage() {
+# Main download and install
+download_and_install() {
+    local asset_name
+    asset_name=$(get_asset_name)
+    local download_url="https://github.com/${GITHUB_REPO}/releases/download/app-v${VERSION}/${asset_name}"
+
+    local temp_dir
+    temp_dir=$(mktemp -d)
+    local download_path="${temp_dir}/${asset_name}"
+
+    info "Downloading Metis ${VERSION} for ${OS}/${ARCH}..."
+    info "URL: ${download_url}"
+
+    if ! curl -fSL "$download_url" -o "$download_path" 2>/dev/null; then
+        rm -rf "$temp_dir"
+        error "Failed to download Metis. Check that version ${VERSION} exists for ${OS}/${ARCH}."
+    fi
+
+    # Verify download
+    if [ ! -s "$download_path" ]; then
+        rm -rf "$temp_dir"
+        error "Downloaded file is empty"
+    fi
+
+    success "Downloaded ${asset_name}"
+
+    # Install based on OS
+    case "$OS" in
+        macos)
+            install_macos "$download_path"
+            ;;
+        linux)
+            install_linux "$download_path"
+            ;;
+        windows)
+            install_windows "$download_path"
+            ;;
+    esac
+
+    # Cleanup
+    rm -rf "$temp_dir"
+}
+
+# Print post-install info
+print_info() {
     echo ""
-    echo "${BOLD}Installed Components:${NC}"
+    echo "${BOLD}Installation Complete${NC}"
     echo ""
-    echo "  ${BOLD}metis${NC}      - CLI with built-in MCP server (via 'metis mcp')"
-    echo "  ${BOLD}metis-tui${NC}  - Interactive terminal user interface"
+    echo "The Metis desktop application has been installed."
     echo ""
-    echo "${BOLD}Quick Start:${NC}"
+    echo "${BOLD}What's Included:${NC}"
+    echo "  - Visual kanban interface for project management"
+    echo "  - Built-in CLI (installed on first launch)"
+    echo "  - MCP server for AI assistant integration"
     echo ""
-    echo "  # Initialize a new project"
-    echo "  metis init"
-    echo ""
-    echo "  # Launch the TUI"
-    echo "  metis-tui"
-    echo ""
-    echo "${BOLD}MCP Server Configuration (Claude Code):${NC}"
-    echo ""
-    echo "  Add to your MCP settings:"
-    echo "  {\"mcpServers\": {\"metis\": {\"command\": \"${INSTALL_DIR}/metis\", \"args\": [\"mcp\"]}}}"
+    echo "${BOLD}Getting Started:${NC}"
+    case "$OS" in
+        macos)
+            echo "  Open Metis from /Applications or Spotlight"
+            echo ""
+            echo "  On first launch, you'll be prompted to install the CLI."
+            echo "  This enables terminal and AI assistant usage."
+            ;;
+        linux)
+            echo "  Run: metis"
+            echo ""
+            echo "  Or add to your application menu."
+            ;;
+        windows)
+            echo "  Run the installer, then launch Metis from the Start menu."
+            ;;
+    esac
     echo ""
     echo "For more information: https://github.com/${GITHUB_REPO}"
 }
 
-# Main installation flow
+# Main
 main() {
     echo ""
     echo "=============================="
-    echo "      Metis Installer"
+    echo "     Metis GUI Installer"
     echo "=============================="
     echo ""
 
-    check_dependencies
     detect_os
     detect_arch
+    check_dependencies
     get_latest_version
     download_and_install
-    check_path
-    verify_installation
-    print_usage
+    print_info
 
     echo ""
-    success "Installation complete!"
+    success "Done!"
     echo ""
 }
 
