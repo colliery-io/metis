@@ -218,6 +218,15 @@ pub async fn install_cli_internal(app: &AppHandle) -> Result<CliInstallResult, S
             .map_err(|e| format!("Failed to set executable permissions: {}", e))?;
     }
 
+    // Remove quarantine attribute on macOS
+    #[cfg(target_os = "macos")]
+    {
+        Command::new("xattr")
+            .args(["-rd", "com.apple.quarantine", &target_path.to_string_lossy()])
+            .output()
+            .ok(); // Best effort - ignore errors
+    }
+
     // Try to create symlink for PATH integration
     #[cfg(not(windows))]
     {
