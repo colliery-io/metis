@@ -43,6 +43,7 @@ fn extract_short_code(result: &rust_mcp_sdk::schema::CallToolResult) -> String {
 async fn get_vision_short_code(metis_path: &str) -> String {
     let list_tool = ListDocumentsTool {
         project_path: metis_path.to_string(),
+        include_archived: None,
     };
     let result = list_tool.call_tool().await.unwrap();
 

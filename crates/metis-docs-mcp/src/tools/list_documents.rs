@@ -20,6 +20,9 @@ use std::path::Path;
 pub struct ListDocumentsTool {
     /// Path to the .metis folder to list documents from
     pub project_path: String,
+    /// Include archived documents in results (defaults to false)
+    #[serde(default)]
+    pub include_archived: Option<bool>,
 }
 
 impl ListDocumentsTool {
@@ -40,8 +43,9 @@ impl ListDocumentsTool {
 
         let mut repo = db.into_repository();
 
-        // List all documents
-        let mut documents = self.list_all_documents(&mut repo)?;
+        // List all documents (respecting include_archived flag, defaults to false)
+        let include_archived = self.include_archived.unwrap_or(false);
+        let mut documents = self.list_all_documents(&mut repo, include_archived)?;
         let total_count = documents.len();
 
         // Build formatted output
@@ -91,12 +95,18 @@ impl ListDocumentsTool {
     fn list_all_documents(
         &self,
         repo: &mut metis_core::dal::database::repository::DocumentRepository,
+        include_archived: bool,
     ) -> Result<Vec<metis_core::dal::database::models::Document>, CallToolError> {
         let mut all_docs = Vec::new();
 
         // Collect all document types
         for doc_type in ["vision", "strategy", "initiative", "task", "adr"] {
-            let mut docs = repo.find_by_type(doc_type).map_err(|e| {
+            let mut docs = if include_archived {
+                repo.find_by_type(doc_type)
+            } else {
+                repo.find_by_type_unarchived(doc_type)
+            }
+            .map_err(|e| {
                 CallToolError::new(std::io::Error::new(
                     std::io::ErrorKind::Other,
                     format!("Failed to query {} documents: {}", doc_type, e),

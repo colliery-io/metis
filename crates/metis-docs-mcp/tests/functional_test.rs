@@ -40,6 +40,7 @@ fn extract_short_code(result: &rust_mcp_sdk::schema::CallToolResult) -> String {
 async fn get_vision_short_code(metis_path: &str) -> String {
     let list_tool = ListDocumentsTool {
         project_path: metis_path.to_string(),
+        include_archived: None,
     };
     let result = list_tool.call_tool().await.unwrap();
 
@@ -228,4 +229,192 @@ initiatives_enabled = true
 
     let result = archive_tool.call_tool().await;
     assert!(result.is_ok(), "Archive should succeed");
+}
+
+#[tokio::test]
+async fn test_search_with_short_code_hyphen() {
+    // This tests the FTS special character fix - hyphens in queries like "PROJ-I-0001"
+    // were being interpreted as the NOT operator causing "no such column: I" errors
+    let temp_dir = tempdir().unwrap();
+    let project_path = temp_dir.path().to_string_lossy().to_string();
+    let metis_path = format!("{}/.metis", project_path);
+
+    // Initialize project
+    let init_tool = InitializeProjectTool {
+        project_path: project_path.clone(),
+        prefix: None,
+    };
+    init_tool.call_tool().await.unwrap();
+
+    // Use streamlined configuration - initiative links directly to vision
+    let config_path = format!("{}/config.toml", metis_path);
+    let config_content = r#"
+[project]
+name = "Test Project"
+prefix = "PROJ"
+
+[flight_levels]
+strategies_enabled = false
+initiatives_enabled = true
+"#;
+    std::fs::write(&config_path, config_content).unwrap();
+
+    // Get vision and create an initiative (streamlined: vision -> initiative)
+    let vision_short_code = get_vision_short_code(&metis_path).await;
+
+    let create_initiative = CreateDocumentTool {
+        project_path: metis_path.clone(),
+        document_type: "initiative".to_string(),
+        title: "Search Test Initiative".to_string(),
+        parent_id: Some(vision_short_code),
+        risk_level: None,
+        complexity: Some("m".to_string()),
+        stakeholders: None,
+        decision_maker: None,
+    };
+
+    let result = create_initiative.call_tool().await;
+    if let Err(ref e) = result {
+        println!("Initiative creation error: {:?}", e);
+    }
+    assert!(result.is_ok(), "Create initiative should succeed");
+    let initiative_short_code = extract_short_code(&result.unwrap());
+    println!("Created initiative: {}", initiative_short_code);
+
+    // Now search using the short code with hyphens
+    let search_tool = SearchDocumentsTool {
+        project_path: metis_path.clone(),
+        query: initiative_short_code.clone(),
+        document_type: None,
+        limit: None,
+        include_archived: None,
+    };
+
+    let result = search_tool.call_tool().await;
+    assert!(result.is_ok(), "Search with hyphenated short code should succeed (not fail with 'no such column' error)");
+
+    if let Ok(ref search_result) = result {
+        if let Some(text) = extract_text_from_result(search_result) {
+            println!("Search result: {}", text);
+            // Should find our initiative
+            assert!(text.contains(&initiative_short_code), "Search should find the initiative by short code");
+        }
+    }
+}
+
+#[tokio::test]
+async fn test_list_and_search_include_archived() {
+    // Test that include_archived=true shows archived documents
+    // and include_archived=false (default) hides them
+    let temp_dir = tempdir().unwrap();
+    let project_path = temp_dir.path().to_string_lossy().to_string();
+    let metis_path = format!("{}/.metis", project_path);
+
+    // Initialize project
+    let init_tool = InitializeProjectTool {
+        project_path: project_path.clone(),
+        prefix: None,
+    };
+    init_tool.call_tool().await.unwrap();
+
+    // Enable full configuration
+    let config_path = format!("{}/config.toml", metis_path);
+    let config_content = r#"
+[project]
+name = "Test Project"
+prefix = "PROJ"
+
+[flight_levels]
+strategies_enabled = true
+initiatives_enabled = true
+"#;
+    std::fs::write(&config_path, config_content).unwrap();
+
+    // Get vision and create a strategy
+    let vision_short_code = get_vision_short_code(&metis_path).await;
+
+    let create_strategy = CreateDocumentTool {
+        project_path: metis_path.clone(),
+        document_type: "strategy".to_string(),
+        title: "Archivable Strategy".to_string(),
+        parent_id: Some(vision_short_code),
+        risk_level: Some("low".to_string()),
+        complexity: None,
+        stakeholders: None,
+        decision_maker: None,
+    };
+
+    let result = create_strategy.call_tool().await.unwrap();
+    let strategy_short_code = extract_short_code(&result);
+    println!("Created strategy: {}", strategy_short_code);
+
+    // Verify strategy appears in list (default = unarchived only)
+    let list_tool = ListDocumentsTool {
+        project_path: metis_path.clone(),
+        include_archived: None,
+    };
+    let result = list_tool.call_tool().await.unwrap();
+    let text = extract_text_from_result(&result).unwrap();
+    assert!(text.contains(&strategy_short_code), "Strategy should appear in default list");
+
+    // Verify strategy appears in search
+    let search_tool = SearchDocumentsTool {
+        project_path: metis_path.clone(),
+        query: "Archivable".to_string(),
+        document_type: None,
+        limit: None,
+        include_archived: None,
+    };
+    let result = search_tool.call_tool().await.unwrap();
+    let text = extract_text_from_result(&result).unwrap();
+    assert!(text.contains(&strategy_short_code), "Strategy should appear in default search");
+
+    // Archive the strategy
+    let archive_tool = ArchiveDocumentTool {
+        project_path: metis_path.clone(),
+        short_code: strategy_short_code.clone(),
+    };
+    archive_tool.call_tool().await.unwrap();
+
+    // Verify strategy no longer appears in default list (unarchived only)
+    let list_tool = ListDocumentsTool {
+        project_path: metis_path.clone(),
+        include_archived: None,
+    };
+    let result = list_tool.call_tool().await.unwrap();
+    let text = extract_text_from_result(&result).unwrap();
+    assert!(!text.contains(&strategy_short_code), "Archived strategy should NOT appear in default list");
+
+    // Verify strategy DOES appear when include_archived=true
+    let list_tool = ListDocumentsTool {
+        project_path: metis_path.clone(),
+        include_archived: Some(true),
+    };
+    let result = list_tool.call_tool().await.unwrap();
+    let text = extract_text_from_result(&result).unwrap();
+    assert!(text.contains(&strategy_short_code), "Archived strategy SHOULD appear when include_archived=true");
+
+    // Verify strategy no longer appears in default search (unarchived only)
+    let search_tool = SearchDocumentsTool {
+        project_path: metis_path.clone(),
+        query: "Archivable".to_string(),
+        document_type: None,
+        limit: None,
+        include_archived: None,
+    };
+    let result = search_tool.call_tool().await.unwrap();
+    let text = extract_text_from_result(&result).unwrap();
+    assert!(!text.contains(&strategy_short_code), "Archived strategy should NOT appear in default search");
+
+    // Verify strategy DOES appear in search when include_archived=true
+    let search_tool = SearchDocumentsTool {
+        project_path: metis_path.clone(),
+        query: "Archivable".to_string(),
+        document_type: None,
+        limit: None,
+        include_archived: Some(true),
+    };
+    let result = search_tool.call_tool().await.unwrap();
+    let text = extract_text_from_result(&result).unwrap();
+    assert!(text.contains(&strategy_short_code), "Archived strategy SHOULD appear in search when include_archived=true");
 }
