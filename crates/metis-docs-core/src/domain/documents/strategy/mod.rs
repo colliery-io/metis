@@ -66,11 +66,38 @@ impl Strategy {
         stakeholders: Vec<String>,
         short_code: String,
     ) -> Result<Self, DocumentValidationError> {
+        // Use embedded default template
+        let template_content = include_str!("content.md");
+        Self::new_with_template(
+            title,
+            parent_id,
+            blocked_by,
+            tags,
+            archived,
+            risk_level,
+            stakeholders,
+            short_code,
+            template_content,
+        )
+    }
+
+    /// Create a new Strategy document with a custom template
+    #[allow(clippy::too_many_arguments)]
+    pub fn new_with_template(
+        title: String,
+        parent_id: Option<DocumentId>,
+        blocked_by: Vec<DocumentId>,
+        tags: Vec<Tag>,
+        archived: bool,
+        risk_level: RiskLevel,
+        stakeholders: Vec<String>,
+        short_code: String,
+        template_content: &str,
+    ) -> Result<Self, DocumentValidationError> {
         // Create fresh metadata
         let metadata = DocumentMetadata::new(short_code);
 
         // Render the content template
-        let template_content = include_str!("content.md");
         let mut tera = Tera::default();
         tera.add_raw_template("strategy_content", template_content)
             .map_err(|e| {

@@ -21,11 +21,23 @@ impl Vision {
         archived: bool,
         short_code: String,
     ) -> Result<Self, DocumentValidationError> {
+        // Use embedded default template
+        let template_content = include_str!("content.md");
+        Self::new_with_template(title, tags, archived, short_code, template_content)
+    }
+
+    /// Create a new Vision document with a custom template
+    pub fn new_with_template(
+        title: String,
+        tags: Vec<Tag>,
+        archived: bool,
+        short_code: String,
+        template_content: &str,
+    ) -> Result<Self, DocumentValidationError> {
         // Create fresh metadata
         let metadata = DocumentMetadata::new(short_code);
 
         // Render the content template
-        let template_content = include_str!("content.md");
         let mut tera = Tera::default();
         tera.add_raw_template("vision_content", template_content)
             .map_err(|e| {

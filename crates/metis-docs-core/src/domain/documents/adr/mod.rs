@@ -30,11 +30,38 @@ impl Adr {
         archived: bool,
         short_code: String,
     ) -> Result<Self, DocumentValidationError> {
+        // Use embedded default template
+        let template_content = include_str!("content.md");
+        Self::new_with_template(
+            number,
+            title,
+            decision_maker,
+            decision_date,
+            parent_id,
+            tags,
+            archived,
+            short_code,
+            template_content,
+        )
+    }
+
+    /// Create a new ADR document with a custom template
+    #[allow(clippy::too_many_arguments)]
+    pub fn new_with_template(
+        number: u32,
+        title: String,
+        decision_maker: String,
+        decision_date: Option<chrono::DateTime<Utc>>,
+        parent_id: Option<DocumentId>,
+        tags: Vec<Tag>,
+        archived: bool,
+        short_code: String,
+        template_content: &str,
+    ) -> Result<Self, DocumentValidationError> {
         // Create fresh metadata
         let metadata = DocumentMetadata::new(short_code);
 
         // Render the content template
-        let template_content = include_str!("content.md");
         let mut tera = Tera::default();
         tera.add_raw_template("adr_content", template_content)
             .map_err(|e| {

@@ -248,6 +248,79 @@ your-project/
 
 The `initialize_project` tool creates a clean `.metis/` subdirectory to keep all project files organized. Documents are created as individual markdown files and automatically indexed in the SQLite database for fast search.
 
+## Custom Templates
+
+Metis supports custom templates for document content and exit criteria. Templates use the [Tera](https://tera.netlify.app/) templating engine.
+
+### Template Locations
+
+Templates are loaded with a fallback chain:
+
+1. **Project-level**: `.metis/templates/{type}/content.md` (highest priority)
+2. **Global-level**: `~/.config/metis/templates/{type}/content.md`
+3. **Embedded defaults** (compiled into binary)
+
+### Template Structure
+
+```
+.metis/templates/
+  vision/
+    content.md           # Content template for vision documents
+    exit_criteria.md     # Exit criteria template
+  strategy/
+    content.md
+    exit_criteria.md
+  initiative/
+    content.md
+    exit_criteria.md
+  task/
+    content.md
+    exit_criteria.md
+  adr/
+    content.md
+    exit_criteria.md
+```
+
+### Available Template Variables
+
+All document types have access to these common variables:
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `{{ title }}` | Document title | "My Initiative" |
+| `{{ slug }}` | URL-safe ID | "my-initiative" |
+| `{{ short_code }}` | Unique identifier | "PROJ-I-0001" |
+| `{{ created_at }}` | Creation timestamp | "2025-01-01T00:00:00Z" |
+| `{{ updated_at }}` | Last update timestamp | "2025-01-01T00:00:00Z" |
+
+Type-specific variables:
+
+| Type | Variable | Description |
+|------|----------|-------------|
+| Task | `{{ parent_title }}` | Title of parent initiative |
+| ADR | `{{ number }}` | ADR sequence number |
+
+### Example: Custom Task Template
+
+Create `.metis/templates/task/content.md`:
+
+```markdown
+# {{ title }}
+
+## Definition of Done
+
+- [ ] Requirement 1
+- [ ] Requirement 2
+
+## Notes
+
+*Add implementation notes here*
+```
+
+### Template Validation
+
+Templates are validated on load by rendering with sample data. Invalid templates (syntax errors or undefined variables) will fail with a clear error message, preventing broken documents from being created.
+
 ## Command Line Interface (CLI)
 
 Metis provides a comprehensive CLI for direct project management:

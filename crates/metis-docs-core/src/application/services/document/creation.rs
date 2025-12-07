@@ -1,3 +1,4 @@
+use crate::application::services::template::TemplateLoader;
 use crate::dal::database::configuration_repository::ConfigurationRepository;
 use crate::domain::configuration::FlightLevelConfig;
 use crate::domain::documents::initiative::Complexity;
@@ -14,6 +15,7 @@ use std::path::{Path, PathBuf};
 pub struct DocumentCreationService {
     workspace_dir: PathBuf,
     db_path: PathBuf,
+    template_loader: TemplateLoader,
 }
 
 /// Configuration for creating a new document
@@ -42,9 +44,11 @@ impl DocumentCreationService {
     pub fn new<P: AsRef<Path>>(workspace_dir: P) -> Self {
         let workspace_path = workspace_dir.as_ref().to_path_buf();
         let db_path = workspace_path.join("metis.db");
+        let template_loader = TemplateLoader::for_workspace(&workspace_path);
         Self {
             workspace_dir: workspace_path,
             db_path,
+            template_loader,
         }
     }
 
@@ -76,6 +80,12 @@ impl DocumentCreationService {
         // Generate short code for vision
         let short_code = self.generate_short_code("vision")?;
 
+        // Load template (with fallback chain)
+        let template_content = self
+            .template_loader
+            .load_content_template("vision")
+            .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
+
         // Create vision with defaults
         let mut tags = vec![
             Tag::Label("vision".to_string()),
@@ -83,11 +93,12 @@ impl DocumentCreationService {
         ];
         tags.extend(config.tags);
 
-        let vision = Vision::new(
+        let vision = Vision::new_with_template(
             config.title.clone(),
             tags,
             false, // not archived
             short_code.clone(),
+            &template_content,
         )
         .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
 
@@ -124,6 +135,12 @@ impl DocumentCreationService {
             });
         }
 
+        // Load template (with fallback chain)
+        let template_content = self
+            .template_loader
+            .load_content_template("strategy")
+            .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
+
         // Create strategy with defaults
         let mut tags = vec![
             Tag::Label("strategy".to_string()),
@@ -131,7 +148,7 @@ impl DocumentCreationService {
         ];
         tags.extend(config.tags);
 
-        let strategy = Strategy::new(
+        let strategy = Strategy::new_with_template(
             config.title.clone(),
             config.parent_id,
             Vec::new(), // blocked_by
@@ -140,6 +157,7 @@ impl DocumentCreationService {
             config.risk_level.unwrap_or(RiskLevel::Medium), // use config risk_level or default to Medium
             Vec::new(),                                     // stakeholders - empty by default
             short_code.clone(),
+            &template_content,
         )
         .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
 
@@ -271,6 +289,12 @@ impl DocumentCreationService {
             });
         }
 
+        // Load template (with fallback chain)
+        let template_content = self
+            .template_loader
+            .load_content_template("initiative")
+            .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
+
         // Create initiative with defaults
         let mut tags = vec![
             Tag::Label("initiative".to_string()),
@@ -284,7 +308,7 @@ impl DocumentCreationService {
             .map(ParentReference::Some)
             .unwrap_or(parent_ref);
 
-        let initiative = Initiative::new(
+        let initiative = Initiative::new_with_template(
             config.title.clone(),
             parent_id.parent_id().cloned(), // Extract actual parent ID for document creation
             Some(DocumentId::from(effective_strategy_id)), // strategy_id from configuration
@@ -293,6 +317,7 @@ impl DocumentCreationService {
             false,                                      // not archived
             config.complexity.unwrap_or(Complexity::M), // use config complexity or default to M
             short_code.clone(),
+            &template_content,
         )
         .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
 
@@ -447,6 +472,12 @@ impl DocumentCreationService {
             });
         }
 
+        // Load template (with fallback chain)
+        let template_content = self
+            .template_loader
+            .load_content_template("task")
+            .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
+
         // Create task with defaults
         let mut tags = vec![
             Tag::Label("task".to_string()),
@@ -460,7 +491,7 @@ impl DocumentCreationService {
             .map(ParentReference::Some)
             .unwrap_or(parent_ref);
 
-        let task = Task::new(
+        let task = Task::new_with_template(
             config.title.clone(),
             parent_id.parent_id().cloned(), // Extract actual parent ID for document creation
             parent_title,                   // parent title for template
@@ -478,6 +509,7 @@ impl DocumentCreationService {
             tags,
             false, // not archived
             short_code.clone(),
+            &template_content,
         )
         .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
 
@@ -521,6 +553,12 @@ impl DocumentCreationService {
             });
         }
 
+        // Load template (with fallback chain)
+        let template_content = self
+            .template_loader
+            .load_content_template("task")
+            .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
+
         // Create backlog item with defaults - no parent, Backlog phase
         let mut tags = vec![
             Tag::Label("task".to_string()),
@@ -528,7 +566,7 @@ impl DocumentCreationService {
         ];
         tags.extend(config.tags);
 
-        let task = Task::new(
+        let task = Task::new_with_template(
             config.title.clone(),
             None,       // No parent for backlog items
             None,       // No parent title for template
@@ -538,6 +576,7 @@ impl DocumentCreationService {
             tags,
             false, // not archived
             short_code.clone(),
+            &template_content,
         )
         .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
 
@@ -597,6 +636,12 @@ impl DocumentCreationService {
         // Find the next ADR number for the document content (still needed for ADR numbering)
         let adr_number = self.get_next_adr_number()?;
 
+        // Load template (with fallback chain)
+        let template_content = self
+            .template_loader
+            .load_content_template("adr")
+            .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
+
         // Create ADR with defaults
         let mut tags = vec![
             Tag::Label("adr".to_string()),
@@ -604,7 +649,7 @@ impl DocumentCreationService {
         ];
         tags.extend(config.tags);
 
-        let adr = Adr::new(
+        let adr = Adr::new_with_template(
             adr_number,
             config.title.clone(),
             String::new(), // decision_maker - will be set when transitioning to decided
@@ -613,6 +658,7 @@ impl DocumentCreationService {
             tags,
             false, // not archived
             short_code.clone(),
+            &template_content,
         )
         .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
 
@@ -991,5 +1037,209 @@ mod tests {
             .file_path
             .to_string_lossy()
             .contains("strategies/NULL/initiatives/NULL"));
+    }
+
+    #[tokio::test]
+    async fn test_create_vision_with_custom_template() {
+        let temp_dir = tempdir().unwrap();
+        let workspace_dir = temp_dir.path().join(".metis");
+        fs::create_dir_all(&workspace_dir).unwrap();
+
+        // Create custom template directory and file
+        let template_dir = workspace_dir.join("templates").join("vision");
+        fs::create_dir_all(&template_dir).unwrap();
+
+        let custom_template = r#"# {{ title }}
+
+## Custom Vision Section
+
+This is a custom template for testing.
+
+## Goals
+
+- Custom goal 1
+- Custom goal 2
+"#;
+        fs::write(template_dir.join("content.md"), custom_template).unwrap();
+
+        // Create and initialize database
+        let db_path = workspace_dir.join("metis.db");
+        let _db = crate::Database::new(&db_path.to_string_lossy()).unwrap();
+
+        // Set up project prefix
+        let mut config_repo = ConfigurationRepository::new(
+            SqliteConnection::establish(&db_path.to_string_lossy()).unwrap(),
+        );
+        config_repo.set_project_prefix("TEST").unwrap();
+
+        let service = DocumentCreationService::new(&workspace_dir);
+        let config = DocumentCreationConfig {
+            title: "Custom Vision".to_string(),
+            description: None,
+            parent_id: None,
+            tags: vec![],
+            phase: None,
+            complexity: None,
+            risk_level: None,
+        };
+
+        let result = service.create_vision(config).await.unwrap();
+
+        // Read the created file and verify it uses the custom template
+        let content = fs::read_to_string(&result.file_path).unwrap();
+        assert!(
+            content.contains("Custom Vision Section"),
+            "Should contain custom template section"
+        );
+        assert!(
+            content.contains("Custom goal 1"),
+            "Should contain custom template content"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_create_task_with_custom_template() {
+        let temp_dir = tempdir().unwrap();
+        let workspace_dir = temp_dir.path().join(".metis");
+        fs::create_dir_all(&workspace_dir).unwrap();
+
+        // Create custom template directory and file
+        let template_dir = workspace_dir.join("templates").join("task");
+        fs::create_dir_all(&template_dir).unwrap();
+
+        let custom_template = r#"# {{ title }}
+
+## Definition of Done
+
+- [ ] Custom criterion 1
+- [ ] Custom criterion 2
+
+## Parent: {{ parent_title }}
+"#;
+        fs::write(template_dir.join("content.md"), custom_template).unwrap();
+
+        // Create and initialize database
+        let db_path = workspace_dir.join("metis.db");
+        let _db = crate::Database::new(&db_path.to_string_lossy()).unwrap();
+
+        // Set up project prefix and flight level config
+        let mut config_repo = ConfigurationRepository::new(
+            SqliteConnection::establish(&db_path.to_string_lossy()).unwrap(),
+        );
+        config_repo.set_project_prefix("TEST").unwrap();
+
+        let service = DocumentCreationService::new(&workspace_dir);
+        let flight_config = FlightLevelConfig::direct();
+
+        let task_config = DocumentCreationConfig {
+            title: "Custom Task".to_string(),
+            description: None,
+            parent_id: None,
+            tags: vec![],
+            phase: None,
+            complexity: None,
+            risk_level: None,
+        };
+
+        let result = service
+            .create_task_with_config(task_config, "NULL", "NULL", &flight_config)
+            .await
+            .unwrap();
+
+        // Read the created file and verify it uses the custom template
+        let content = fs::read_to_string(&result.file_path).unwrap();
+        assert!(
+            content.contains("Definition of Done"),
+            "Should contain custom template section"
+        );
+        assert!(
+            content.contains("Custom criterion 1"),
+            "Should contain custom template content"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_create_document_falls_back_to_embedded_template() {
+        let temp_dir = tempdir().unwrap();
+        let workspace_dir = temp_dir.path().join(".metis");
+        fs::create_dir_all(&workspace_dir).unwrap();
+
+        // No custom templates - should use embedded defaults
+
+        // Create and initialize database
+        let db_path = workspace_dir.join("metis.db");
+        let _db = crate::Database::new(&db_path.to_string_lossy()).unwrap();
+
+        // Set up project prefix
+        let mut config_repo = ConfigurationRepository::new(
+            SqliteConnection::establish(&db_path.to_string_lossy()).unwrap(),
+        );
+        config_repo.set_project_prefix("TEST").unwrap();
+
+        let service = DocumentCreationService::new(&workspace_dir);
+        let config = DocumentCreationConfig {
+            title: "Fallback Vision".to_string(),
+            description: None,
+            parent_id: None,
+            tags: vec![],
+            phase: None,
+            complexity: None,
+            risk_level: None,
+        };
+
+        let result = service.create_vision(config).await.unwrap();
+
+        // Should succeed with embedded template
+        assert!(result.file_path.exists());
+
+        // Verify it contains expected embedded template content
+        let content = fs::read_to_string(&result.file_path).unwrap();
+        assert!(
+            content.contains("Fallback Vision"),
+            "Should contain the title"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_invalid_custom_template_fails_gracefully() {
+        let temp_dir = tempdir().unwrap();
+        let workspace_dir = temp_dir.path().join(".metis");
+        fs::create_dir_all(&workspace_dir).unwrap();
+
+        // Create invalid template (unclosed Tera tag)
+        let template_dir = workspace_dir.join("templates").join("vision");
+        fs::create_dir_all(&template_dir).unwrap();
+
+        let invalid_template = r#"# {{ title }
+
+This template has a syntax error (unclosed tag above).
+"#;
+        fs::write(template_dir.join("content.md"), invalid_template).unwrap();
+
+        // Create and initialize database
+        let db_path = workspace_dir.join("metis.db");
+        let _db = crate::Database::new(&db_path.to_string_lossy()).unwrap();
+
+        // Set up project prefix
+        let mut config_repo = ConfigurationRepository::new(
+            SqliteConnection::establish(&db_path.to_string_lossy()).unwrap(),
+        );
+        config_repo.set_project_prefix("TEST").unwrap();
+
+        let service = DocumentCreationService::new(&workspace_dir);
+        let config = DocumentCreationConfig {
+            title: "Should Fail".to_string(),
+            description: None,
+            parent_id: None,
+            tags: vec![],
+            phase: None,
+            complexity: None,
+            risk_level: None,
+        };
+
+        let result = service.create_vision(config).await;
+
+        // Should fail due to invalid template
+        assert!(result.is_err(), "Should fail with invalid template");
     }
 }
