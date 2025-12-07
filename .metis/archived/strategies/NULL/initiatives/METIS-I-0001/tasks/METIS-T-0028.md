@@ -1,13 +1,13 @@
 ---
-id: create-anti-patterns-md-common
+id: create-tech-debt-md-pattern-debt
 level: task
-title: "Create anti-patterns.md - Common mistakes and corrections"
-short_code: "METIS-T-0026"
-created_at: 2025-12-07T00:22:13.848446+00:00
-updated_at: 2025-12-07T01:19:43.965101+00:00
+title: "Create tech-debt.md pattern - Debt reduction campaigns"
+short_code: "METIS-T-0028"
+created_at: 2025-12-07T00:22:23.867558+00:00
+updated_at: 2025-12-07T01:22:47.138520+00:00
 parent: METIS-I-0001
 blocked_by: []
-archived: false
+archived: true
 
 tags:
   - "#task"
@@ -19,7 +19,7 @@ strategy_id: NULL
 initiative_id: METIS-I-0001
 ---
 
-# Create anti-patterns.md - Common mistakes and corrections
+# Create tech-debt.md pattern - Debt reduction campaigns
 
 *This template includes sections for various types of tasks. Delete sections that don't apply to your specific use case.*
 
@@ -29,7 +29,7 @@ initiative_id: METIS-I-0001
 
 ## Objective
 
-Create `skill/methodology/anti-patterns.md` documenting common mistakes when using Metis and how to correct them.
+Create `skill/patterns/tech-debt.md` documenting the pattern for running technical debt reduction campaigns using Metis.
 
 ## Backlog Item Details **[CONDITIONAL: Backlog Item]**
 
@@ -64,6 +64,8 @@ Create `skill/methodology/anti-patterns.md` documenting common mistakes when usi
 - **Current Problems**: {What's difficult/slow/buggy now}
 - **Benefits of Fixing**: {What improves after refactoring}
 - **Risk Assessment**: {Risks of not addressing this}
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 

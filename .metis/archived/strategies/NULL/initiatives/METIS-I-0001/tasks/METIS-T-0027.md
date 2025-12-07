@@ -1,13 +1,13 @@
 ---
-id: validate-skill-with-claude-code
+id: create-greenfield-md-pattern-new
 level: task
-title: "Validate skill with Claude Code against test scenarios"
-short_code: "METIS-T-0036"
-created_at: 2025-12-07T00:22:32.351821+00:00
-updated_at: 2025-12-07T01:53:45.849543+00:00
+title: "Create greenfield.md pattern - New project setup"
+short_code: "METIS-T-0027"
+created_at: 2025-12-07T00:22:23.798878+00:00
+updated_at: 2025-12-07T01:22:36.331161+00:00
 parent: METIS-I-0001
 blocked_by: []
-archived: false
+archived: true
 
 tags:
   - "#task"
@@ -19,7 +19,7 @@ strategy_id: NULL
 initiative_id: METIS-I-0001
 ---
 
-# Validate skill with Claude Code against test scenarios
+# Create greenfield.md pattern - New project setup
 
 *This template includes sections for various types of tasks. Delete sections that don't apply to your specific use case.*
 
@@ -29,7 +29,7 @@ initiative_id: METIS-I-0001
 
 ## Objective
 
-Test the assembled skill with Claude Code against realistic scenarios to validate agent decision-making quality improves with the skill loaded.
+Create `skill/patterns/greenfield.md` documenting the pattern for starting new projects from scratch with Metis.
 
 ## Backlog Item Details **[CONDITIONAL: Backlog Item]**
 
@@ -64,6 +64,8 @@ Test the assembled skill with Claude Code against realistic scenarios to validat
 - **Current Problems**: {What's difficult/slow/buggy now}
 - **Benefits of Fixing**: {What improves after refactoring}
 - **Risk Assessment**: {Risks of not addressing this}
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 

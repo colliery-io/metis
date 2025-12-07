@@ -1,13 +1,13 @@
 ---
-id: create-gemini-extension-json
+id: create-anti-patterns-md-common
 level: task
-title: "Create gemini-extension.json - Gemini CLI format"
-short_code: "METIS-T-0035"
-created_at: 2025-12-07T00:22:32.198043+00:00
-updated_at: 2025-12-07T01:23:49.349992+00:00
+title: "Create anti-patterns.md - Common mistakes and corrections"
+short_code: "METIS-T-0026"
+created_at: 2025-12-07T00:22:13.848446+00:00
+updated_at: 2025-12-07T01:19:43.965101+00:00
 parent: METIS-I-0001
 blocked_by: []
-archived: false
+archived: true
 
 tags:
   - "#task"
@@ -19,7 +19,7 @@ strategy_id: NULL
 initiative_id: METIS-I-0001
 ---
 
-# Create gemini-extension.json - Gemini CLI format
+# Create anti-patterns.md - Common mistakes and corrections
 
 *This template includes sections for various types of tasks. Delete sections that don't apply to your specific use case.*
 
@@ -29,7 +29,7 @@ initiative_id: METIS-I-0001
 
 ## Objective
 
-Create `skill/gemini-extension.json` manifest pointing to skill content for Gemini CLI integration.
+Create `skill/methodology/anti-patterns.md` documenting common mistakes when using Metis and how to correct them.
 
 ## Backlog Item Details **[CONDITIONAL: Backlog Item]**
 
@@ -64,6 +64,8 @@ Create `skill/gemini-extension.json` manifest pointing to skill content for Gemi
 - **Current Problems**: {What's difficult/slow/buggy now}
 - **Benefits of Fixing**: {What improves after refactoring}
 - **Risk Assessment**: {Risks of not addressing this}
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 

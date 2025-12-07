@@ -1,13 +1,13 @@
 ---
-id: assemble-skill-md-claude-code
+id: validate-skill-with-claude-code
 level: task
-title: "Assemble SKILL.md - Claude Code format"
-short_code: "METIS-T-0033"
-created_at: 2025-12-07T00:22:32.062060+00:00
-updated_at: 2025-12-07T01:23:42.417247+00:00
+title: "Validate skill with Claude Code against test scenarios"
+short_code: "METIS-T-0036"
+created_at: 2025-12-07T00:22:32.351821+00:00
+updated_at: 2025-12-07T01:53:45.849543+00:00
 parent: METIS-I-0001
 blocked_by: []
-archived: false
+archived: true
 
 tags:
   - "#task"
@@ -19,7 +19,7 @@ strategy_id: NULL
 initiative_id: METIS-I-0001
 ---
 
-# Assemble SKILL.md - Claude Code format
+# Validate skill with Claude Code against test scenarios
 
 *This template includes sections for various types of tasks. Delete sections that don't apply to your specific use case.*
 
@@ -29,7 +29,7 @@ initiative_id: METIS-I-0001
 
 ## Objective
 
-Create `skill/SKILL.md` assembling the modular methodology content into Claude Code's expected skill format. Should reference methodology modules and MCP instructions.
+Test the assembled skill with Claude Code against realistic scenarios to validate agent decision-making quality improves with the skill loaded.
 
 ## Backlog Item Details **[CONDITIONAL: Backlog Item]**
 
@@ -64,6 +64,8 @@ Create `skill/SKILL.md` assembling the modular methodology content into Claude C
 - **Current Problems**: {What's difficult/slow/buggy now}
 - **Benefits of Fixing**: {What improves after refactoring}
 - **Risk Assessment**: {Risks of not addressing this}
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 

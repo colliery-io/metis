@@ -1,13 +1,13 @@
 ---
-id: create-incident-response-md
+id: create-phase-transitions-md-exit
 level: task
-title: "Create incident-response.md pattern - Urgent/reactive work"
-short_code: "METIS-T-0029"
-created_at: 2025-12-07T00:22:23.980312+00:00
-updated_at: 2025-12-07T01:22:47.214343+00:00
+title: "Create phase-transitions.md - Exit criteria and advancement"
+short_code: "METIS-T-0025"
+created_at: 2025-12-07T00:22:13.681080+00:00
+updated_at: 2025-12-07T01:18:59.588141+00:00
 parent: METIS-I-0001
 blocked_by: []
-archived: false
+archived: true
 
 tags:
   - "#task"
@@ -19,7 +19,7 @@ strategy_id: NULL
 initiative_id: METIS-I-0001
 ---
 
-# Create incident-response.md pattern - Urgent/reactive work
+# Create phase-transitions.md - Exit criteria and advancement
 
 *This template includes sections for various types of tasks. Delete sections that don't apply to your specific use case.*
 
@@ -29,7 +29,7 @@ initiative_id: METIS-I-0001
 
 ## Objective
 
-Create `skill/patterns/incident-response.md` documenting the pattern for handling urgent/reactive work within Metis structure.
+Create `skill/methodology/phase-transitions.md` documenting when and why to transition documents through phases, and how to evaluate exit criteria.
 
 ## Backlog Item Details **[CONDITIONAL: Backlog Item]**
 
@@ -64,6 +64,8 @@ Create `skill/patterns/incident-response.md` documenting the pattern for handlin
 - **Current Problems**: {What's difficult/slow/buggy now}
 - **Benefits of Fixing**: {What improves after refactoring}
 - **Risk Assessment**: {Risks of not addressing this}
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 

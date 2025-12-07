@@ -1,13 +1,13 @@
 ---
-id: create-decomposition-md-breaking
+id: create-gemini-extension-json
 level: task
-title: "Create decomposition.md - Breaking work down effectively"
-short_code: "METIS-T-0024"
-created_at: 2025-12-07T00:22:13.550202+00:00
-updated_at: 2025-12-07T01:14:47.073167+00:00
+title: "Create gemini-extension.json - Gemini CLI format"
+short_code: "METIS-T-0035"
+created_at: 2025-12-07T00:22:32.198043+00:00
+updated_at: 2025-12-07T01:23:49.349992+00:00
 parent: METIS-I-0001
 blocked_by: []
-archived: false
+archived: true
 
 tags:
   - "#task"
@@ -19,7 +19,7 @@ strategy_id: NULL
 initiative_id: METIS-I-0001
 ---
 
-# Create decomposition.md - Breaking work down effectively
+# Create gemini-extension.json - Gemini CLI format
 
 *This template includes sections for various types of tasks. Delete sections that don't apply to your specific use case.*
 
@@ -29,7 +29,7 @@ initiative_id: METIS-I-0001
 
 ## Objective
 
-Create `skill/methodology/decomposition.md` teaching agents how to break work down effectively across Flight Levels.
+Create `skill/gemini-extension.json` manifest pointing to skill content for Gemini CLI integration.
 
 ## Backlog Item Details **[CONDITIONAL: Backlog Item]**
 
@@ -64,6 +64,8 @@ Create `skill/methodology/decomposition.md` teaching agents how to break work do
 - **Current Problems**: {What's difficult/slow/buggy now}
 - **Benefits of Fixing**: {What improves after refactoring}
 - **Risk Assessment**: {Risks of not addressing this}
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 

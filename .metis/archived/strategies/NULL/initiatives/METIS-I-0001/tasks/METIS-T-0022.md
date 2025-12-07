@@ -7,7 +7,7 @@ created_at: 2025-12-07T00:22:13.407986+00:00
 updated_at: 2025-12-07T00:41:58.112326+00:00
 parent: METIS-I-0001
 blocked_by: []
-archived: false
+archived: true
 
 tags:
   - "#task"
@@ -41,6 +41,8 @@ The document should cover:
 4. **The Cache Principle** - Filesystem is source of truth, database is derived
 5. **Phase-Gated Progress** - Work advances through phases with exit criteria
 6. **Reference to MCP Instructions** - Point to `crates/metis-docs-mcp/instructions.md` for operational details
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 

@@ -1,13 +1,13 @@
 ---
-id: create-tech-debt-md-pattern-debt
+id: create-decomposition-md-breaking
 level: task
-title: "Create tech-debt.md pattern - Debt reduction campaigns"
-short_code: "METIS-T-0028"
-created_at: 2025-12-07T00:22:23.867558+00:00
-updated_at: 2025-12-07T01:22:47.138520+00:00
+title: "Create decomposition.md - Breaking work down effectively"
+short_code: "METIS-T-0024"
+created_at: 2025-12-07T00:22:13.550202+00:00
+updated_at: 2025-12-07T01:14:47.073167+00:00
 parent: METIS-I-0001
 blocked_by: []
-archived: false
+archived: true
 
 tags:
   - "#task"
@@ -19,7 +19,7 @@ strategy_id: NULL
 initiative_id: METIS-I-0001
 ---
 
-# Create tech-debt.md pattern - Debt reduction campaigns
+# Create decomposition.md - Breaking work down effectively
 
 *This template includes sections for various types of tasks. Delete sections that don't apply to your specific use case.*
 
@@ -29,7 +29,7 @@ initiative_id: METIS-I-0001
 
 ## Objective
 
-Create `skill/patterns/tech-debt.md` documenting the pattern for running technical debt reduction campaigns using Metis.
+Create `skill/methodology/decomposition.md` teaching agents how to break work down effectively across Flight Levels.
 
 ## Backlog Item Details **[CONDITIONAL: Backlog Item]**
 
@@ -64,6 +64,8 @@ Create `skill/patterns/tech-debt.md` documenting the pattern for running technic
 - **Current Problems**: {What's difficult/slow/buggy now}
 - **Benefits of Fixing**: {What improves after refactoring}
 - **Risk Assessment**: {Risks of not addressing this}
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 

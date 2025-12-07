@@ -1,13 +1,13 @@
 ---
-id: create-document-type-md-decision
+id: create-preset-selection-md-full-vs
 level: task
-title: "Create document-type.md decision tree - Which doc type for this work"
-short_code: "METIS-T-0031"
-created_at: 2025-12-07T00:22:24.285568+00:00
-updated_at: 2025-12-07T01:22:47.444239+00:00
+title: "Create preset-selection.md - Full vs Streamlined vs Direct"
+short_code: "METIS-T-0023"
+created_at: 2025-12-07T00:22:13.474616+00:00
+updated_at: 2025-12-07T00:57:07.721274+00:00
 parent: METIS-I-0001
 blocked_by: []
-archived: false
+archived: true
 
 tags:
   - "#task"
@@ -19,7 +19,7 @@ strategy_id: NULL
 initiative_id: METIS-I-0001
 ---
 
-# Create document-type.md decision tree - Which doc type for this work
+# Create preset-selection.md - Full vs Streamlined vs Direct
 
 *This template includes sections for various types of tasks. Delete sections that don't apply to your specific use case.*
 
@@ -29,7 +29,7 @@ initiative_id: METIS-I-0001
 
 ## Objective
 
-Create `skill/decision-trees/document-type.md` providing a decision framework for choosing the right document type (Vision, Initiative, Task, ADR, Backlog) for a given piece of work.
+Create `skill/methodology/preset-selection.md` documenting when to use Full, Streamlined, or Direct presets based on project characteristics.
 
 ## Backlog Item Details **[CONDITIONAL: Backlog Item]**
 
@@ -64,6 +64,8 @@ Create `skill/decision-trees/document-type.md` providing a decision framework fo
 - **Current Problems**: {What's difficult/slow/buggy now}
 - **Benefits of Fixing**: {What improves after refactoring}
 - **Risk Assessment**: {Risks of not addressing this}
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 

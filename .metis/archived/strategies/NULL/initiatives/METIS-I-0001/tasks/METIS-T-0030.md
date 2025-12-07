@@ -7,7 +7,7 @@ created_at: 2025-12-07T00:22:24.122028+00:00
 updated_at: 2025-12-07T01:22:47.308399+00:00
 parent: METIS-I-0001
 blocked_by: []
-archived: false
+archived: true
 
 tags:
   - "#task"
@@ -64,6 +64,8 @@ Create `skill/patterns/feature-development.md` documenting the standard pattern 
 - **Current Problems**: {What's difficult/slow/buggy now}
 - **Benefits of Fixing**: {What improves after refactoring}
 - **Risk Assessment**: {Risks of not addressing this}
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 

@@ -1,13 +1,13 @@
 ---
-id: assemble-agents-md-codex-format
+id: create-document-type-md-decision
 level: task
-title: "Assemble AGENTS.md - Codex format"
-short_code: "METIS-T-0034"
-created_at: 2025-12-07T00:22:32.125666+00:00
-updated_at: 2025-12-07T01:23:49.281501+00:00
+title: "Create document-type.md decision tree - Which doc type for this work"
+short_code: "METIS-T-0031"
+created_at: 2025-12-07T00:22:24.285568+00:00
+updated_at: 2025-12-07T01:22:47.444239+00:00
 parent: METIS-I-0001
 blocked_by: []
-archived: false
+archived: true
 
 tags:
   - "#task"
@@ -19,7 +19,7 @@ strategy_id: NULL
 initiative_id: METIS-I-0001
 ---
 
-# Assemble AGENTS.md - Codex format
+# Create document-type.md decision tree - Which doc type for this work
 
 *This template includes sections for various types of tasks. Delete sections that don't apply to your specific use case.*
 
@@ -29,7 +29,7 @@ initiative_id: METIS-I-0001
 
 ## Objective
 
-Create `skill/AGENTS.md` assembling the modular methodology content into Codex's expected agent format.
+Create `skill/decision-trees/document-type.md` providing a decision framework for choosing the right document type (Vision, Initiative, Task, ADR, Backlog) for a given piece of work.
 
 ## Backlog Item Details **[CONDITIONAL: Backlog Item]**
 
@@ -64,6 +64,8 @@ Create `skill/AGENTS.md` assembling the modular methodology content into Codex's
 - **Current Problems**: {What's difficult/slow/buggy now}
 - **Benefits of Fixing**: {What improves after refactoring}
 - **Risk Assessment**: {Risks of not addressing this}
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 

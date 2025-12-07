@@ -1,13 +1,13 @@
 ---
-id: create-preset-selection-md-full-vs
+id: create-incident-response-md
 level: task
-title: "Create preset-selection.md - Full vs Streamlined vs Direct"
-short_code: "METIS-T-0023"
-created_at: 2025-12-07T00:22:13.474616+00:00
-updated_at: 2025-12-07T00:57:07.721274+00:00
+title: "Create incident-response.md pattern - Urgent/reactive work"
+short_code: "METIS-T-0029"
+created_at: 2025-12-07T00:22:23.980312+00:00
+updated_at: 2025-12-07T01:22:47.214343+00:00
 parent: METIS-I-0001
 blocked_by: []
-archived: false
+archived: true
 
 tags:
   - "#task"
@@ -19,7 +19,7 @@ strategy_id: NULL
 initiative_id: METIS-I-0001
 ---
 
-# Create preset-selection.md - Full vs Streamlined vs Direct
+# Create incident-response.md pattern - Urgent/reactive work
 
 *This template includes sections for various types of tasks. Delete sections that don't apply to your specific use case.*
 
@@ -29,7 +29,7 @@ initiative_id: METIS-I-0001
 
 ## Objective
 
-Create `skill/methodology/preset-selection.md` documenting when to use Full, Streamlined, or Direct presets based on project characteristics.
+Create `skill/patterns/incident-response.md` documenting the pattern for handling urgent/reactive work within Metis structure.
 
 ## Backlog Item Details **[CONDITIONAL: Backlog Item]**
 
@@ -64,6 +64,8 @@ Create `skill/methodology/preset-selection.md` documenting when to use Full, Str
 - **Current Problems**: {What's difficult/slow/buggy now}
 - **Benefits of Fixing**: {What improves after refactoring}
 - **Risk Assessment**: {Risks of not addressing this}
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 

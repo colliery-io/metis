@@ -1,13 +1,13 @@
 ---
-id: create-greenfield-md-pattern-new
+id: assemble-skill-md-claude-code
 level: task
-title: "Create greenfield.md pattern - New project setup"
-short_code: "METIS-T-0027"
-created_at: 2025-12-07T00:22:23.798878+00:00
-updated_at: 2025-12-07T01:22:36.331161+00:00
+title: "Assemble SKILL.md - Claude Code format"
+short_code: "METIS-T-0033"
+created_at: 2025-12-07T00:22:32.062060+00:00
+updated_at: 2025-12-07T01:23:42.417247+00:00
 parent: METIS-I-0001
 blocked_by: []
-archived: false
+archived: true
 
 tags:
   - "#task"
@@ -19,7 +19,7 @@ strategy_id: NULL
 initiative_id: METIS-I-0001
 ---
 
-# Create greenfield.md pattern - New project setup
+# Assemble SKILL.md - Claude Code format
 
 *This template includes sections for various types of tasks. Delete sections that don't apply to your specific use case.*
 
@@ -29,7 +29,7 @@ initiative_id: METIS-I-0001
 
 ## Objective
 
-Create `skill/patterns/greenfield.md` documenting the pattern for starting new projects from scratch with Metis.
+Create `skill/SKILL.md` assembling the modular methodology content into Claude Code's expected skill format. Should reference methodology modules and MCP instructions.
 
 ## Backlog Item Details **[CONDITIONAL: Backlog Item]**
 
@@ -64,6 +64,8 @@ Create `skill/patterns/greenfield.md` documenting the pattern for starting new p
 - **Current Problems**: {What's difficult/slow/buggy now}
 - **Benefits of Fixing**: {What improves after refactoring}
 - **Risk Assessment**: {Risks of not addressing this}
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 
