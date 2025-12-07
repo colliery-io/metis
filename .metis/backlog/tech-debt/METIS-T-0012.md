@@ -4,18 +4,18 @@ level: task
 title: "Database as cache only"
 short_code: "METIS-T-0012"
 created_at: 2025-11-06T10:02:34.158101+00:00
-updated_at: 2025-11-06T10:02:34.158101+00:00
+updated_at: 2025-12-06T23:15:08.158649+00:00
 parent: 
 blocked_by: []
 archived: false
 
 tags:
   - "#task"
-  - "#phase/backlog"
   - "#tech-debt"
+  - "#tech-debt"
+  - "#phase/completed"
 
 
-  - "#tech-debt"
 exit_criteria_met: false
 strategy_id: NULL
 initiative_id: NULL
@@ -72,6 +72,12 @@ This requires changing the project detection logic to rely on filesystem indicat
   - Current git workflow is severely hampered by database conflicts
   - Users frequently forget to sync, leading to stale data issues
   - Without this fix, multi-developer collaboration remains problematic
+
+## Acceptance Criteria
+
+## Acceptance Criteria
+
+## Acceptance Criteria
 
 ## Acceptance Criteria **\[REQUIRED\]**
 

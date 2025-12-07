@@ -1,0 +1,19 @@
+{
+  "name": "metis-flight-levels",
+  "version": "1.0.0",
+  "description": "Flight Levels methodology for Metis work management",
+  "instructions": "./SKILL.md",
+  "requires": {
+    "mcp_servers": ["metis"]
+  },
+  "capabilities": [
+    "work-management",
+    "project-planning",
+    "kanban-methodology"
+  ],
+  "documentation": {
+    "methodology": "./methodology/",
+    "patterns": "./patterns/",
+    "decision_trees": "./decision-trees/"
+  }
+}

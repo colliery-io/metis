@@ -7,7 +7,7 @@ created_at: 2025-11-25T02:33:01.340238+00:00
 updated_at: 2025-11-25T02:50:47.135981+00:00
 parent: 
 blocked_by: []
-archived: false
+archived: true
 
 tags:
   - "#task"
@@ -28,6 +28,8 @@ initiative_id: NULL
 ## Context
 
 MCP tool results render as markdown in Claude Code. Raw JSON dumps and unstructured text are hard to parse visually. A thin formatting layer can standardize output across tools without coupling to specific rendering implementations.
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 

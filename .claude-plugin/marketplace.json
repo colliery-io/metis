@@ -1,0 +1,15 @@
+{
+  "name": "colliery-io-metis",
+  "owner": {
+    "name": "Colliery",
+    "email": "support@colliery.io"
+  },
+  "plugins": [
+    {
+      "name": "metis",
+      "source": "./skill",
+      "description": "Flight Levels methodology for Metis work management. Teaches when and why to use Metis tools for project planning, work decomposition, and phase management.",
+      "version": "1.0.0"
+    }
+  ]
+}

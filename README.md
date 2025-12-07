@@ -93,6 +93,15 @@ Add to your `claude_desktop_config.json`:
 claude mcp add --scope user --transport stdio metis -- metis mcp
 ```
 
+**Optional: Install the Flight Levels Skill**
+
+The Metis skill teaches Claude *when* and *why* to use Metis tools (methodology, decomposition patterns, anti-patterns):
+
+```bash
+/plugin marketplace add colliery-io/metis
+/plugin install metis@colliery-io-metis
+```
+
 #### For Cursor
 Add to your Cursor MCP configuration:
 ```json

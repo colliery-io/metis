@@ -7,7 +7,7 @@ created_at: 2025-11-25T11:57:59.361676+00:00
 updated_at: 2025-11-25T12:23:41.482571+00:00
 parent: 
 blocked_by: []
-archived: false
+archived: true
 
 tags:
   - "#task"
@@ -52,6 +52,8 @@ Fix all critical and high-priority code quality issues across all four crates (c
 - Excellent MCP documentation in instructions.md
 - CLI covers all operations (create, list, search, transition, archive, sync, validate)
 - GUI has multi-board Kanban with drag-drop, theming, and CLI auto-install
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 

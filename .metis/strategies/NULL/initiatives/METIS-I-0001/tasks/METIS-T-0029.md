@@ -1,35 +1,35 @@
 ---
-id: multi-developer-short-code
+id: create-incident-response-md
 level: task
-title: "Multi-developer short code collision resolution"
-short_code: "METIS-T-0014"
-created_at: 2025-11-07T17:28:19.258966+00:00
-updated_at: 2025-11-07T17:28:19.258966+00:00
-parent: 
+title: "Create incident-response.md pattern - Urgent/reactive work"
+short_code: "METIS-T-0029"
+created_at: 2025-12-07T00:22:23.980312+00:00
+updated_at: 2025-12-07T01:22:47.214343+00:00
+parent: METIS-I-0001
 blocked_by: []
 archived: false
 
 tags:
   - "#task"
-  - "#phase/todo"
+  - "#phase/completed"
 
 
 exit_criteria_met: false
 strategy_id: NULL
-initiative_id: NULL
+initiative_id: METIS-I-0001
 ---
 
-# Multi-developer short code collision resolution
+# Create incident-response.md pattern - Urgent/reactive work
 
 *This template includes sections for various types of tasks. Delete sections that don't apply to your specific use case.*
 
 ## Parent Initiative **[CONDITIONAL: Assigned Task]**
 
-[[Parent Initiative]]
+[[METIS-I-0001]]
 
-## Objective **[REQUIRED]**
+## Objective
 
-{Clear statement of what this task accomplishes}
+Create `skill/patterns/incident-response.md` documenting the pattern for handling urgent/reactive work within Metis structure.
 
 ## Backlog Item Details **[CONDITIONAL: Backlog Item]**
 
@@ -64,6 +64,10 @@ initiative_id: NULL
 - **Current Problems**: {What's difficult/slow/buggy now}
 - **Benefits of Fixing**: {What improves after refactoring}
 - **Risk Assessment**: {Risks of not addressing this}
+
+## Acceptance Criteria
+
+## Acceptance Criteria
 
 ## Acceptance Criteria **[REQUIRED]**
 
