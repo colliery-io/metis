@@ -1,6 +1,6 @@
 ---
 name: metis
-description: Flight Levels methodology for Metis work management. Use when working with Metis projects, creating documents (vision, strategy, initiative, task, ADR), decomposing work, or managing project phases. Teaches when and why to use Metis tools.
+description: Flight Levels methodology for project and work management. Use when planning projects, decomposing work into tasks, deciding document types, managing phases, or coordinating initiatives. Applies Kanban-based pull systems and hierarchical work alignment (Vision -> Strategy -> Initiative -> Task). Teaches when and why to use Metis tools.
 ---
 
 # Metis Flight Levels Skill
