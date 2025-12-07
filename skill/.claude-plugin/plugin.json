@@ -1,10 +1,5 @@
 {
   "name": "metis",
   "version": "1.0.0",
-  "description": "Flight Levels methodology for Metis work management. Use when working with Metis projects, creating documents (vision, strategy, initiative, task, ADR), decomposing work, or managing project phases.",
-  "skills": [
-    {
-      "source": "./SKILL.md"
-    }
-  ]
+  "description": "Flight Levels methodology for Metis work management. Use when working with Metis projects, creating documents (vision, strategy, initiative, task, ADR), decomposing work, or managing project phases."
 }
