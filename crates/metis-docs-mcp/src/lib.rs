@@ -23,7 +23,7 @@ use rust_mcp_sdk::{
         Implementation, InitializeResult, ServerCapabilities, ServerCapabilitiesTools,
         LATEST_PROTOCOL_VERSION,
     },
-    McpServer, StdioTransport, TransportOptions,
+    McpServer, StdioTransport, ToMcpServerHandler, TransportOptions,
 };
 use tracing::info;
 
@@ -166,6 +166,9 @@ pub async fn run() -> AnyhowResult<()> {
             name: "Metis Documentation Management System".to_string(),
             version: env!("CARGO_PKG_VERSION").to_string(),
             title: Some("Metis MCP Server".to_string()),
+            description: Some("MCP server for managing project documentation with Flight Levels methodology".to_string()),
+            icons: vec![],
+            website_url: None,
         },
         capabilities: ServerCapabilities {
             tools: Some(ServerCapabilitiesTools { list_changed: None }),
@@ -181,7 +184,7 @@ pub async fn run() -> AnyhowResult<()> {
         .map_err(|e| anyhow::anyhow!("Failed to create transport: {}", e))?;
 
     // Create handler
-    let handler = MetisServerHandler::new(config);
+    let handler = MetisServerHandler::new(config).to_mcp_server_handler();
 
     // Create and start server
     let server = server_runtime::create_server(server_details, transport, handler);

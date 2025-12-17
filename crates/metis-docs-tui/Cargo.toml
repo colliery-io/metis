@@ -32,7 +32,7 @@ tracing-subscriber = { workspace = true }
 chrono = { workspace = true }
 
 # Local dependencies
-metis-docs-core = { path = "../metis-docs-core", version = "1.0.1" }
+metis-docs-core = { path = "../metis-docs-core", version = "1.0.2" }
 
 # TUI-specific dependencies
 ratatui = "0.28"

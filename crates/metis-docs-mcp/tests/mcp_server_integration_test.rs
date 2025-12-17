@@ -65,13 +65,46 @@ impl McpServerProcess {
         writeln!(stdin, "{}", request_str)?;
         stdin.flush()?;
 
-        // Read response
+        // Read response - skip any non-JSON debug output lines
         let mut reader = BufReader::new(stdout);
-        let mut response_line = String::new();
-        reader.read_line(&mut response_line)?;
+        loop {
+            let mut response_line = String::new();
+            reader.read_line(&mut response_line)?;
+            let trimmed = response_line.trim();
 
-        let response: Value = serde_json::from_str(response_line.trim())?;
-        Ok(response)
+            // Skip empty lines and debug output (lines not starting with '{')
+            if trimmed.is_empty() || !trimmed.starts_with('{') {
+                continue;
+            }
+
+            let response: Value = serde_json::from_str(trimmed)?;
+            return Ok(response);
+        }
+    }
+
+    /// Send MCP protocol initialization handshake
+    fn mcp_initialize(child: &mut std::process::Child) -> Result<()> {
+        let request = json!({
+            "jsonrpc": "2.0",
+            "id": 0,
+            "method": "initialize",
+            "params": {
+                "protocolVersion": "2025-11-25",
+                "capabilities": {},
+                "clientInfo": {
+                    "name": "metis-test",
+                    "version": "1.0.0"
+                }
+            }
+        });
+
+        let response = Self::send_mcp_request(child, request)?;
+
+        if response.get("error").is_some() {
+            return Err(anyhow::anyhow!("MCP initialize failed: {:?}", response));
+        }
+
+        Ok(())
     }
 
     /// Initialize the project using MCP protocol
@@ -211,6 +244,10 @@ async fn test_mcp_server_archive_document_integration() -> Result<()> {
     println!("Spawning MCP server process...");
     let mut child = test_helper.spawn_server()?;
 
+    // Step 3.5: MCP protocol handshake
+    println!("Sending MCP initialize handshake...");
+    McpServerProcess::mcp_initialize(&mut child)?;
+
     // Step 4: Initialize project
     println!("Initializing project via MCP...");
     test_helper.initialize_project(&mut child).await?;
@@ -241,6 +278,10 @@ async fn test_mcp_server_list_tools() -> Result<()> {
     McpServerProcess::build_server()?;
     let test_helper = McpServerProcess::new()?;
     let mut child = test_helper.spawn_server()?;
+
+    // MCP protocol handshake
+    println!("Sending MCP initialize handshake...");
+    McpServerProcess::mcp_initialize(&mut child)?;
 
     // Send list_tools request
     let request = json!({

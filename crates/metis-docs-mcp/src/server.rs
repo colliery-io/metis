@@ -6,7 +6,7 @@ use crate::MetisServerConfig;
 use async_trait::async_trait;
 use rust_mcp_sdk::{
     mcp_server::ServerHandler,
-    schema::{CallToolRequest, CallToolResult, ListToolsRequest, ListToolsResult},
+    schema::{CallToolRequestParams, CallToolResult, ListToolsResult, PaginatedRequestParams, RpcError},
     McpServer,
 };
 use std::sync::Arc;
@@ -30,9 +30,9 @@ impl MetisServerHandler {
 impl ServerHandler for MetisServerHandler {
     async fn handle_list_tools_request(
         &self,
-        _request: ListToolsRequest,
-        _server: &dyn McpServer,
-    ) -> Result<ListToolsResult, rust_mcp_sdk::schema::RpcError> {
+        _params: Option<PaginatedRequestParams>,
+        _runtime: Arc<dyn McpServer>,
+    ) -> Result<ListToolsResult, RpcError> {
         Ok(ListToolsResult {
             tools: MetisTools::tools(),
             meta: None,
@@ -42,12 +42,12 @@ impl ServerHandler for MetisServerHandler {
 
     async fn handle_call_tool_request(
         &self,
-        request: CallToolRequest,
-        _server: &dyn McpServer,
+        params: CallToolRequestParams,
+        _runtime: Arc<dyn McpServer>,
     ) -> Result<CallToolResult, rust_mcp_sdk::schema::schema_utils::CallToolError> {
-        let args = serde_json::Value::Object(request.params.arguments.unwrap_or_default());
+        let args = serde_json::Value::Object(params.arguments.unwrap_or_default());
 
-        match request.params.name.as_str() {
+        match params.name.as_str() {
             "initialize_project" => {
                 let tool: InitializeProjectTool = serde_json::from_value(args)
                     .map_err(rust_mcp_sdk::schema::schema_utils::CallToolError::new)?;
@@ -90,7 +90,7 @@ impl ServerHandler for MetisServerHandler {
             }
             _ => Err(
                 rust_mcp_sdk::schema::schema_utils::CallToolError::unknown_tool(
-                    request.params.name,
+                    params.name,
                 ),
             ),
         }
