@@ -1,13 +1,12 @@
 <template>
   <div class="relative" ref="containerRef">
     <!-- Search Input -->
-    <div class="relative">
+    <div class="search-input-wrapper">
       <input
         v-model="searchQuery"
         type="text"
         placeholder="Search documents..."
-        class="w-full bg-transparent text-primary placeholder-secondary focus:outline-none"
-        style="padding: 12px 24px 12px 48px; font-size: 18px; border: 1px solid var(--color-border-primary); border-radius: 8px; min-width: 200px;"
+        class="search-input"
         @input="handleSearch"
         @focus="showResults = true"
         @keydown.escape="clearSearch"
@@ -234,6 +233,42 @@ watch(results, () => {
 </script>
 
 <style scoped>
+/* Search input wrapper with focus effects */
+.search-input-wrapper {
+  position: relative;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 10px;
+}
+
+.search-input-wrapper:focus-within {
+  transform: scale(1.02);
+}
+
+.search-input {
+  width: 100%;
+  padding: 12px 24px 12px 48px;
+  font-family: var(--font-body);
+  font-size: 15px;
+  background: var(--color-background-elevated);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border-primary);
+  border-radius: 10px;
+  min-width: 200px;
+  outline: none;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.search-input::placeholder {
+  color: var(--color-text-tertiary);
+}
+
+.search-input:focus {
+  border-color: var(--color-interactive-primary);
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--color-interactive-primary) 20%, transparent),
+    0 8px 24px -8px rgba(0, 0, 0, 0.15);
+}
+
 /* Dropdown container */
 .search-dropdown {
   position: absolute;
@@ -289,11 +324,13 @@ watch(results, () => {
 
 /* Type badge */
 .type-badge {
-  padding: 2px 8px;
-  font-size: 11px;
-  font-weight: 500;
+  font-family: var(--font-mono);
+  padding: 3px 8px;
+  font-size: 10px;
+  font-weight: 600;
   border-radius: 4px;
   flex-shrink: 0;
+  letter-spacing: 0.02em;
 }
 
 .badge-vision {

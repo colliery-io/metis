@@ -32,16 +32,13 @@
         <div class="bg-secondary flex items-center">
           <!-- Left section - matches sidebar width -->
           <div class="w-1/5 flex items-center justify-between px-6 py-4">
-            <div class="flex flex-col items-center">
-              <img
-                :src="getMascotImage()"
-                alt="Home"
-                @click="setCurrentProject(null)"
-                class="home-icon-topbar cursor-pointer"
-                title="Home"
-              />
-              <span class="text-xs text-secondary mt-1">v{{ appVersion }}</span>
-            </div>
+            <img
+              :src="getMascotImage()"
+              alt="Home"
+              @click="setCurrentProject(null)"
+              class="home-icon-topbar cursor-pointer"
+              title="Home"
+            />
             <SettingsMenu />
           </div>
           
@@ -72,15 +69,24 @@
             />
             
             <!-- Home Screen -->
-            <div v-else class="flex-1 flex items-center justify-center">
-              <div class="text-center">
+            <div v-else class="home-screen">
+              <!-- Atmospheric Background -->
+              <div class="home-atmosphere"></div>
+
+              <div class="home-content">
                 <!-- Mascot -->
-                <div>
+                <div class="mascot-container">
                   <img
                     :src="getMascotImage()"
                     alt="Metis mascot"
                     class="home-icon-main"
                   />
+                </div>
+
+                <!-- Tagline -->
+                <div class="home-tagline">
+                  <p class="tagline-text">Flight Levels Project Management</p>
+                  <p class="tagline-sub">Vision → Initiative → Task</p>
                 </div>
               </div>
             </div>
@@ -100,13 +106,12 @@ import SettingsMenu from './components/SettingsMenu.vue'
 import ProjectSidebar from './components/ProjectSidebar.vue'
 import KanbanBoard from './components/KanbanBoard.vue'
 import SearchBar from './components/SearchBar.vue'
-import { ProjectInfo, DocumentInfo, getAppVersion } from './lib/tauri-api'
+import { ProjectInfo, DocumentInfo } from './lib/tauri-api'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 
 
 const { currentProject, setCurrentProject, loadProject } = useProject()
 const { themeName } = useTheme()
-const appVersion = ref('...')
 
 // Toast notification state
 const toastMessage = ref<string | null>(null)
@@ -136,13 +141,6 @@ const hideToast = () => {
 }
 
 onMounted(async () => {
-  try {
-    appVersion.value = await getAppVersion()
-  } catch (error) {
-    console.error('Failed to get app version:', error)
-    appVersion.value = '0.0.0'
-  }
-
   // Listen for CLI installation events
   unlistenCliInstalled = await listen<string>('cli-installed', (event) => {
     showToast(event.payload)
@@ -244,7 +242,9 @@ const getProjectDisplayName = () => {
 /* Home Icon - Top Bar (no glow) */
 .home-icon-topbar {
   width: clamp(56px, 10vw, 80px);
-  height: clamp(56px, 10vw, 80px);
+  height: auto;
+  aspect-ratio: 1;
+  object-fit: contain;
   cursor: pointer;
   transition: all 0.3s ease;
 }
@@ -255,21 +255,22 @@ const getProjectDisplayName = () => {
 
 /* Home Icon - Main Screen */
 .home-icon-main {
-  width: clamp(320px, 45vw, 640px);
-  height: clamp(320px, 45vw, 640px);
-  max-width: 90vw;
-  max-height: 70vh;
+  width: min(45vw, 70vh, 500px);
+  height: auto;
+  aspect-ratio: 1;
+  object-fit: contain;
+  min-width: 200px;
   margin: 0 auto;
   display: block;
   animation: bounce-gentle 3s ease-in-out infinite;
-  filter: drop-shadow(0 0 var(--glow-size-base-1, 24px) var(--glow-color, rgba(59, 130, 246, 0.5))) 
+  filter: drop-shadow(0 0 var(--glow-size-base-1, 24px) var(--glow-color, rgba(59, 130, 246, 0.5)))
           drop-shadow(0 0 var(--glow-size-base-2, 48px) var(--glow-color, rgba(59, 130, 246, 0.2)));
   transition: all 0.3s ease;
 }
 
 .home-icon-main:hover {
   transform: scale(1.02);
-  filter: drop-shadow(0 0 var(--glow-size-hover-1, 32px) var(--glow-color, rgba(59, 130, 246, 0.7))) 
+  filter: drop-shadow(0 0 var(--glow-size-hover-1, 32px) var(--glow-color, rgba(59, 130, 246, 0.7)))
           drop-shadow(0 0 var(--glow-size-hover-2, 64px) var(--glow-color, rgba(59, 130, 246, 0.3)));
 }
 
@@ -297,5 +298,94 @@ const getProjectDisplayName = () => {
 .toast-leave-to {
   opacity: 0;
   transform: translateY(20px);
+}
+
+/* Home Screen */
+.home-screen {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Atmospheric background with gradient blobs */
+.home-atmosphere {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+:global([data-theme="light"]) .home-atmosphere {
+  background:
+    radial-gradient(ellipse 60% 50% at 25% 30%, rgba(157, 107, 83, 0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 60% at 75% 70%, rgba(91, 124, 101, 0.06) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 40% at 50% 50%, rgba(201, 162, 39, 0.04) 0%, transparent 50%);
+}
+
+:global([data-theme="dark"]) .home-atmosphere {
+  background:
+    radial-gradient(ellipse 60% 50% at 20% 25%, rgba(96, 165, 250, 0.06) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 60% at 80% 75%, rgba(56, 189, 248, 0.05) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 40% at 50% 50%, rgba(167, 139, 250, 0.04) 0%, transparent 50%);
+}
+
+:global([data-theme="hyper"]) .home-atmosphere {
+  background:
+    radial-gradient(ellipse 60% 50% at 20% 25%, rgba(224, 64, 251, 0.1) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 60% at 80% 75%, rgba(0, 229, 255, 0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 40% at 50% 50%, rgba(0, 230, 118, 0.05) 0%, transparent 50%);
+}
+
+.home-content {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+}
+
+.mascot-container {
+  margin-bottom: 24px;
+}
+
+/* Tagline */
+.home-tagline {
+  animation: tagline-enter 0.8s ease-out 0.3s backwards;
+}
+
+.tagline-text {
+  font-family: var(--font-display);
+  font-size: clamp(1rem, 2vw, 1.25rem);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0 0 8px 0;
+  letter-spacing: -0.01em;
+}
+
+.tagline-sub {
+  font-family: var(--font-mono);
+  font-size: clamp(0.75rem, 1.2vw, 0.875rem);
+  color: var(--color-text-tertiary);
+  margin: 0;
+  letter-spacing: 0.05em;
+}
+
+@keyframes tagline-enter {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .home-tagline {
+    animation: none;
+  }
 }
 </style>

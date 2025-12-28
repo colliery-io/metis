@@ -58,11 +58,18 @@
 .btn {
   padding: 1rem 1rem;
   border-radius: 0.5rem;
+  font-family: var(--font-display);
   font-weight: 500;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
   border: 1px solid;
   outline: none;
+}
+
+/* Tactile press feedback */
+.btn:active {
+  transform: scale(0.97);
+  transition: transform 0.1s ease;
 }
 
 /* Button variants */
@@ -192,14 +199,113 @@
 }
 
 /* Theme-specific overrides */
-[data-theme="hyper"] {
-  /* Add any hyper-specific effects like glows, shadows, etc. */
+
+/* ================================
+   HYPER THEME - Cyberpunk Effects
+   ================================ */
+
+/* Subtle CRT scanline effect */
+[data-theme="hyper"]::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.015) 2px,
+    rgba(0, 0, 0, 0.015) 4px
+  );
+  pointer-events: none;
+  z-index: 9999;
 }
 
+/* Neon glow on primary buttons */
 [data-theme="hyper"] .btn-primary {
-  box-shadow: 0 0 10px var(--color-interactive-primary);
+  box-shadow:
+    0 0 10px rgba(224, 64, 251, 0.4),
+    0 0 20px rgba(224, 64, 251, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  text-shadow: 0 0 8px rgba(224, 64, 251, 0.6);
 }
 
+[data-theme="hyper"] .btn-primary:hover {
+  box-shadow:
+    0 0 15px rgba(224, 64, 251, 0.5),
+    0 0 30px rgba(224, 64, 251, 0.3),
+    0 0 45px rgba(224, 64, 251, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+/* Neon focus states */
 [data-theme="hyper"] .border-focus {
-  box-shadow: 0 0 5px var(--color-border-focus);
+  box-shadow:
+    0 0 8px var(--color-border-focus),
+    0 0 16px rgba(224, 64, 251, 0.3);
+}
+
+/* Enhanced card glow on hover */
+[data-theme="hyper"] .kanban-card {
+  border-color: rgba(224, 64, 251, 0.2);
+}
+
+[data-theme="hyper"] .kanban-card:hover {
+  box-shadow:
+    0 0 20px -5px rgba(224, 64, 251, 0.3),
+    0 0 40px -10px rgba(224, 64, 251, 0.15),
+    0 8px 20px -4px rgba(0, 0, 0, 0.3);
+  border-color: rgba(224, 64, 251, 0.4);
+}
+
+/* Neon accent on column headers */
+[data-theme="hyper"] .column-header::after {
+  background: linear-gradient(90deg,
+    var(--color-interactive-primary) 0%,
+    rgba(0, 229, 255, 0.5) 50%,
+    transparent 100%);
+  box-shadow: 0 0 8px var(--color-interactive-primary);
+}
+
+/* Glowing search input */
+[data-theme="hyper"] .search-input:focus {
+  box-shadow:
+    0 0 0 2px rgba(224, 64, 251, 0.3),
+    0 0 15px rgba(224, 64, 251, 0.2),
+    0 0 30px rgba(224, 64, 251, 0.1);
+  border-color: var(--color-interactive-primary);
+}
+
+/* Pulsing accent on active elements */
+[data-theme="hyper"] .kanban-card.highlighted {
+  animation: hyper-highlight-pulse 2s ease-out;
+}
+
+@keyframes hyper-highlight-pulse {
+  0% {
+    box-shadow:
+      0 0 0 3px var(--color-interactive-primary),
+      0 0 20px var(--color-interactive-primary),
+      0 10px 15px -3px rgba(0, 0, 0, 0.2);
+  }
+  50% {
+    box-shadow:
+      0 0 0 6px var(--color-interactive-primary),
+      0 0 40px var(--color-interactive-primary),
+      0 10px 15px -3px rgba(0, 0, 0, 0.2);
+  }
+  100% {
+    box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.08);
+  }
+}
+
+/* Electric text glow for headings */
+[data-theme="hyper"] h1,
+[data-theme="hyper"] h2,
+[data-theme="hyper"] h3 {
+  text-shadow: 0 0 20px rgba(224, 64, 251, 0.15);
+}
+
+/* Subtle glow on interactive primary text */
+[data-theme="hyper"] .text-interactive-primary {
+  text-shadow: 0 0 10px currentColor;
 }

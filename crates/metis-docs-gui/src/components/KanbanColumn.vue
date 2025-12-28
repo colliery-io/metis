@@ -140,19 +140,35 @@ const handleDrop = async (dropResult: any) => {
 }
 
 .column-header {
+  position: relative;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-bottom: 12px;
+  padding-bottom: 14px;
   margin-bottom: 16px;
-  border-bottom: 1px solid var(--color-border-primary);
   flex-shrink: 0;
 }
 
+.column-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 50%;
+  height: 2px;
+  background: linear-gradient(90deg,
+    var(--color-interactive-primary) 0%,
+    transparent 100%);
+  border-radius: 1px;
+}
+
 .column-title {
+  font-family: var(--font-display);
   color: var(--color-text-primary);
-  font-size: 18px;
-  font-weight: 600;
+  font-size: var(--text-base);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   margin: 0;
 }
 
@@ -203,6 +219,36 @@ const handleDrop = async (dropResult: any) => {
 
 .column-container :deep(.smooth-dnd-draggable-wrapper) {
   margin-bottom: 12px;
+  animation: card-enter 0.4s ease-out backwards;
+}
+
+/* Staggered entrance animation for cards */
+.column-container :deep(.smooth-dnd-draggable-wrapper:nth-child(1)) { animation-delay: 0.05s; }
+.column-container :deep(.smooth-dnd-draggable-wrapper:nth-child(2)) { animation-delay: 0.1s; }
+.column-container :deep(.smooth-dnd-draggable-wrapper:nth-child(3)) { animation-delay: 0.15s; }
+.column-container :deep(.smooth-dnd-draggable-wrapper:nth-child(4)) { animation-delay: 0.2s; }
+.column-container :deep(.smooth-dnd-draggable-wrapper:nth-child(5)) { animation-delay: 0.25s; }
+.column-container :deep(.smooth-dnd-draggable-wrapper:nth-child(6)) { animation-delay: 0.3s; }
+.column-container :deep(.smooth-dnd-draggable-wrapper:nth-child(7)) { animation-delay: 0.35s; }
+.column-container :deep(.smooth-dnd-draggable-wrapper:nth-child(8)) { animation-delay: 0.4s; }
+.column-container :deep(.smooth-dnd-draggable-wrapper:nth-child(n+9)) { animation-delay: 0.45s; }
+
+@keyframes card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .column-container :deep(.smooth-dnd-draggable-wrapper) {
+    animation: none;
+  }
 }
 
 .column-container :deep(.smooth-dnd-ghost) {

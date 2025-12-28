@@ -1,5 +1,20 @@
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  /* Typography System - Distinctive fonts */
+  --font-display: 'Manrope', system-ui, sans-serif;
+  --font-body: 'DM Sans', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  /* Type Scale - Fluid sizing */
+  --text-xs: clamp(0.625rem, 0.6rem + 0.125vw, 0.75rem);
+  --text-sm: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
+  --text-base: clamp(0.875rem, 0.825rem + 0.25vw, 1rem);
+  --text-lg: clamp(1rem, 0.95rem + 0.25vw, 1.125rem);
+  --text-xl: clamp(1.125rem, 1.05rem + 0.375vw, 1.25rem);
+  --text-2xl: clamp(1.25rem, 1.15rem + 0.5vw, 1.5rem);
+  --text-3xl: clamp(1.5rem, 1.35rem + 0.75vw, 1.875rem);
+
+  /* Default to body font */
+  font-family: var(--font-body);
   line-height: 1.5;
   font-weight: 400;
 
@@ -12,6 +27,21 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
+}
+
+/* Display font for headings */
+h1, h2, h3, h4, h5, h6,
+.font-display {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* Monospace for code and short codes */
+code, pre, kbd, samp,
+.font-mono {
+  font-family: var(--font-mono);
+  font-feature-settings: 'liga' 1, 'calt' 1;
 }
 
 body {
