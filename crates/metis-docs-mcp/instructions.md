@@ -166,6 +166,7 @@ create_document:
 ## Key Principles
 
 - **Read before edit**: Always `read_document` before `edit_document`
+- **Delete unused sections**: Templates contain optional sections. If a section doesn't apply to your document, delete it entirely rather than leaving it empty or with placeholder text
 - **Auto-transition**: Omit phase parameter to follow natural workflow
 - **Hierarchy matters**: Tasks need initiatives, initiatives need visions
 - **Short codes everywhere**: Reference documents by ID, not title
