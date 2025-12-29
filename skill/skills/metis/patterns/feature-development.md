@@ -100,9 +100,9 @@ Each task should be:
 
 Pull tasks as capacity allows:
 ```
-transition_phase(PROJ-T-0042) # todo -> doing
+transition_phase(PROJ-T-0042) # todo -> active
 # ... do the work ...
-transition_phase(PROJ-T-0042) # doing -> completed
+transition_phase(PROJ-T-0042) # active -> completed
 ```
 
 As tasks complete, the initiative progresses.

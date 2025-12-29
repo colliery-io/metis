@@ -44,10 +44,10 @@ create_document(
 )
 ```
 
-2. **Transition to doing:**
+2. **Transition to active:**
 ```
 transition_phase(PROJ-T-XXXX)  # backlog -> todo
-transition_phase(PROJ-T-XXXX)  # todo -> doing
+transition_phase(PROJ-T-XXXX)  # todo -> active
 ```
 
 3. **Add context to the document:**
@@ -58,7 +58,7 @@ transition_phase(PROJ-T-XXXX)  # todo -> doing
 
 4. **Complete when resolved:**
 ```
-transition_phase(PROJ-T-XXXX)  # doing -> completed
+transition_phase(PROJ-T-XXXX)  # active -> completed
 ```
 
 ### For Incidents Requiring Initiative-Level Response
@@ -152,7 +152,7 @@ create_document(
 
 # It's already fixed, mark complete
 transition_phase(PROJ-T-0099) # to todo
-transition_phase(PROJ-T-0099) # to doing
+transition_phase(PROJ-T-0099) # to active
 transition_phase(PROJ-T-0099) # to completed
 
 # Create follow-ups

@@ -121,7 +121,7 @@ Documents advance through phases with exit criteria:
 - **Visions**: draft -> review -> published
 - **Strategies**: shaping -> design -> ready -> active -> completed
 - **Initiatives**: discovery -> design -> ready -> decompose -> active -> completed
-- **Tasks**: todo -> doing -> completed (or backlog -> todo -> doing -> completed)
+- **Tasks**: todo -> active -> completed (or backlog -> todo -> active -> completed)
 
 **Key principle**: Don't skip phases. Each phase exists to prevent common failures:
 - Skipping discovery leads to solving the wrong problem
@@ -129,6 +129,33 @@ Documents advance through phases with exit criteria:
 - Skipping decompose leads to vague, untrackable work
 
 Use `transition_phase` without specifying a target to auto-advance. Only specify a phase for non-linear transitions (e.g., marking something blocked).
+
+## Using Active Tasks as Working Memory
+
+**CRITICAL**: Active tasks and initiatives serve as persistent working memory. While a task is in the `active` phase, you MUST regularly update it with progress, findings, and plan changes as you work.
+
+### Why This Matters
+- Long-running tasks may experience context compaction (memory loss)
+- Documents persist across sessions and context windows
+- Future work can reference past decisions and discoveries
+- Other agents/humans can pick up where you left off
+
+### What to Record in Active Tasks
+Update frequently during active work:
+- **Progress**: What you've completed, files modified, tests run
+- **Findings**: Unexpected discoveries, code patterns found, blockers encountered
+- **Decisions**: Why you chose approach A over B, trade-offs considered
+- **Plan changes**: If original approach didn't work, document what changed and why
+- **Next steps**: What remains to be done if work is interrupted
+
+### How Often to Update
+- After completing each significant step
+- When you discover something unexpected
+- When your approach changes from the original plan
+- Every few tool calls during long operations
+- Before ending a session with incomplete work
+
+This ensures no work is lost even if context is compacted or the session ends unexpectedly.
 
 ## Source of Truth
 

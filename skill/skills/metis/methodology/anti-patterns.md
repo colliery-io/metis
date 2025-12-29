@@ -48,7 +48,7 @@ Common mistakes when using Metis, how to recognize them, and how to recover.
 
 ## Too Many Active Items
 
-**What it is**: Multiple initiatives or tasks in active/doing state simultaneously.
+**What it is**: Multiple initiatives or tasks in active state simultaneously.
 
 **Why it's bad**:
 - Context switching kills productivity

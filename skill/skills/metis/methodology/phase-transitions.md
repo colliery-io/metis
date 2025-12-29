@@ -35,15 +35,15 @@ discovery -> design -> ready -> decompose -> active -> completed
 
 ### Task
 ```
-todo -> doing -> completed
+todo -> active -> completed
 ```
 Or for backlog items:
 ```
-backlog -> todo -> doing -> completed
+backlog -> todo -> active -> completed
 ```
 - **backlog**: Captured but not committed to
 - **todo**: Ready to be pulled when capacity exists
-- **doing**: Actively being worked
+- **active**: Actively being worked
 - **completed**: Done, acceptance criteria met
 
 ### ADR
@@ -88,10 +88,35 @@ Each phase has exit criteria - conditions that must be true before transitioning
 - Task backlog is sufficient to start
 - Team understands the work
 
-**For doing -> completed (tasks):**
+**For active -> completed (tasks):**
 - Acceptance criteria met
 - Work verified/tested as appropriate
 - No known defects
+
+## Phase Transition Constraints
+
+**IMPORTANT**: You cannot skip phases. Transitions are constrained to adjacent phases only.
+
+### What This Means
+
+- **Cannot skip phases**: A task in "todo" cannot go directly to "completed" - it must go through "active" first
+- **Cannot skip phases**: An initiative in "discovery" cannot jump to "active" - it must progress through design, ready, decompose
+- **Backward movement is limited**: You can only go back to the immediately previous phase (for rework/revision)
+
+### Common Mistakes
+
+**Phase skipping will fail**: These transitions are INVALID and will error:
+- `todo → completed` (must go todo → active → completed)
+- `discovery → active` (must progress through all intermediate phases)
+- `draft → published` (must go draft → review → published)
+
+**To complete a task**, call `transition_phase` twice:
+1. First call: todo → active (start working)
+2. Second call: active → completed (finish work)
+
+**To publish a vision**, call `transition_phase` twice:
+1. First call: draft → review
+2. Second call: review → published
 
 ## When to Transition
 
@@ -100,7 +125,7 @@ Each phase has exit criteria - conditions that must be true before transitioning
 Most transitions happen when capacity exists at the next phase:
 
 - Move an initiative to **active** when you have capacity to work tasks
-- Move a task to **doing** when you're ready to start it
+- Move a task to **active** when you're ready to start it
 - Move work to **completed** when it's actually done
 
 ### Don't Rush Transitions

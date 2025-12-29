@@ -101,7 +101,7 @@ When unsure what to do:
 
 **Do work:**
 1. Pull tasks when capacity exists
-2. Transition to doing when starting
+2. Transition to active when starting
 3. Complete when acceptance criteria met
 4. Look up for next work when backlog is low
 
@@ -113,6 +113,9 @@ When unsure what to do:
 
 - **Work is pulled, never pushed** - Low backlog signals to look up
 - **All work traces to vision** - If it doesn't align, question its value
-- **Phases exist for a reason** - Don't skip them
+- **Phases exist for a reason** - Don't skip them (transitions will fail if you try)
 - **Filesystem is truth** - Database is just a cache
 - **Scope over time** - Size by capability increment, not duration
+- **Read before edit** - Always `read_document` before `edit_document`
+- **Delete unused sections** - Templates contain optional sections; delete what doesn't apply rather than leaving empty placeholders
+- **Update active tasks** - Use active tasks as working memory; record progress, findings, and decisions regularly
