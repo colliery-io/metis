@@ -21,6 +21,7 @@ pub struct DocumentInfo {
     pub created_at: f64,
     pub updated_at: f64,
     pub tags: Vec<String>,
+    pub initiative_id: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -306,6 +307,7 @@ pub async fn list_documents(
             created_at: doc.created_at,
             updated_at: doc.updated_at,
             tags,
+            initiative_id: doc.initiative_id,
         });
     }
 
@@ -410,6 +412,7 @@ pub async fn search_documents(
             created_at: doc.created_at,
             updated_at: doc.updated_at,
             tags: vec![], // Search results don't need tags for board categorization
+            initiative_id: doc.initiative_id,
         })
         .collect();
 

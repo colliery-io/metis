@@ -3,7 +3,25 @@
     <!-- Board Selection Header -->
     <div class="board-header">
       <div class="flex items-center justify-between">
-        <h2>{{ currentBoardConfig?.title || 'Kanban Board' }}</h2>
+        <div class="flex items-center gap-4">
+          <h2>{{ currentBoardConfig?.title || 'Kanban Board' }}</h2>
+          <!-- Initiative filter dropdown for task board -->
+          <div v-if="currentBoard === 'task' && activeInitiatives.length > 0" class="initiative-filter">
+            <select
+              v-model="selectedInitiativeFilter"
+              class="initiative-select"
+            >
+              <option :value="null">All Initiatives</option>
+              <option
+                v-for="initiative in activeInitiatives"
+                :key="initiative.short_code"
+                :value="initiative.short_code"
+              >
+                {{ initiative.short_code }}: {{ initiative.title }}
+              </option>
+            </select>
+          </div>
+        </div>
         <div class="flex items-center gap-2">
           <button
             @click="handleRefresh"
@@ -130,7 +148,7 @@ import type { DocumentInfo } from '../lib/tauri-api'
 import { listDocuments, transitionPhase, archiveDocument, syncProject, getProjectConfig } from '../lib/tauri-api'
 import { emit } from '@tauri-apps/api/event'
 import { useProject } from '../composables/useProject'
-import { getBoardConfig, getDocumentsByPhase } from '../lib/board-config'
+import { getBoardConfig, getDocumentsByPhase, getActiveInitiatives, type InitiativeFilterOption } from '../lib/board-config'
 import type { BoardType } from '../types/board'
 import KanbanColumn from './KanbanColumn.vue'
 import VisionDisplay from './VisionDisplay.vue'
@@ -151,6 +169,10 @@ const availableBoards = ref<BoardType[]>(['vision', 'initiative', 'task', 'adr',
 const currentBoard = ref<BoardType>('vision')
 const allDocuments = ref<DocumentInfo[]>([])
 const showCreateDialog = ref(false)
+
+// Initiative filter for task board
+const selectedInitiativeFilter = ref<string | null>(null)
+const activeInitiatives = computed<InitiativeFilterOption[]>(() => getActiveInitiatives(allDocuments.value))
 
 // Document viewer modal state
 const showDocumentViewer = ref(false)
@@ -176,7 +198,9 @@ const visionDocument = computed(() => {
 
 // Update documents by phase when board changes or documents load
 const updateDocumentsByPhase = () => {
-  documentsByPhase.value = getDocumentsByPhase(allDocuments.value, currentBoard.value)
+  // Pass initiative filter only for task board
+  const filter = currentBoard.value === 'task' ? selectedInitiativeFilter.value : null
+  documentsByPhase.value = getDocumentsByPhase(allDocuments.value, currentBoard.value, filter)
 }
 
 // Load project configuration and set available boards
@@ -422,6 +446,13 @@ watch(() => props.highlightedDocument, (doc) => {
     }
   }
 })
+
+// Watch for initiative filter changes to update task board
+watch(selectedInitiativeFilter, () => {
+  if (currentBoard.value === 'task') {
+    updateDocumentsByPhase()
+  }
+})
 </script>
 
 <style scoped>
@@ -442,13 +473,50 @@ watch(() => props.highlightedDocument, (doc) => {
   color: var(--color-text-primary);
   font-size: 24px;
   font-weight: 600;
-  margin: 0 0 16px 0;
+  margin: 0;
+}
+
+/* Initiative filter dropdown */
+.initiative-filter {
+  display: flex;
+  align-items: center;
+}
+
+.initiative-select {
+  padding: 8px 12px;
+  border: 1px solid var(--color-border-primary);
+  background-color: var(--color-background-secondary);
+  color: var(--color-text-primary);
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  min-width: 200px;
+  max-width: 350px;
+  transition: all 0.2s ease;
+}
+
+.initiative-select:hover {
+  border-color: var(--color-interactive-primary);
+  background-color: var(--color-background-elevated);
+}
+
+.initiative-select:focus {
+  outline: none;
+  border-color: var(--color-interactive-primary);
+  box-shadow: 0 0 0 2px rgba(var(--color-interactive-primary-rgb, 59, 130, 246), 0.2);
+}
+
+.initiative-select option {
+  padding: 8px;
+  background-color: var(--color-background-secondary);
+  color: var(--color-text-primary);
 }
 
 .board-tabs {
   display: flex;
   gap: 8px;
-  margin-top: 16px;
+  margin-top: 20px;
   flex-wrap: wrap;
 }
 

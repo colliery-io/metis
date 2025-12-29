@@ -8,11 +8,50 @@ Metis organizes work hierarchically using Flight Levels methodology: Vision (str
 |------|---------|--------|-----------------|
 | **Vision** | Strategic direction (6mo-2yr) | draft -> review -> published | No |
 | **Initiative** | Concrete projects (1-6mo) | discovery -> design -> ready -> decompose -> active -> completed | Vision (published) |
-| **Task** | Individual work (1-14 days) | todo -> doing -> completed | Initiative (decompose/active) |
-| **Backlog** | Standalone bugs/features/debt | backlog -> todo -> doing -> completed | No (use `backlog_category`) |
+| **Task** | Individual work (1-14 days) | todo -> active -> completed | Initiative (decompose/active) |
+| **Backlog** | Standalone bugs/features/debt | backlog -> todo -> active -> completed | No (use `backlog_category`) |
 | **ADR** | Architecture decisions | draft -> discussion -> decided -> superseded | No |
 
 **Note**: Configuration may disable some document types. The current project shows enabled types in tool responses.
+
+## Phase Transition Rules
+
+**IMPORTANT**: Phase transitions are constrained. You can only move to adjacent phases - you cannot skip phases.
+
+### Valid Transitions by Document Type
+
+**Vision**:
+- draft → review (only)
+- review → draft OR published
+- published → review (only)
+
+**Initiative**:
+- discovery → design (only)
+- design → discovery OR ready
+- ready → design OR decompose
+- decompose → ready OR active
+- active → decompose OR completed
+- completed → (terminal, no transitions)
+
+**Task**:
+- backlog → todo (only)
+- todo → active OR blocked
+- active → todo OR completed OR blocked
+- blocked → todo OR active
+- completed → (terminal, no transitions)
+
+**ADR**:
+- draft → discussion (only)
+- discussion → draft OR decided
+- decided → superseded (only)
+- superseded → (terminal, no transitions)
+
+### What This Means
+
+- **Cannot skip phases**: A task in "todo" cannot go directly to "completed" - it must go through "active" first
+- **Cannot skip phases**: An initiative in "discovery" cannot jump to "active" - it must progress through design, ready, decompose
+- **Backward movement is limited**: You can only go back to the immediately previous phase (for rework/revision)
+- **Use auto-advance**: Omit the `phase` parameter to automatically move to the next phase in sequence
 
 ## Short Codes
 
@@ -76,14 +115,18 @@ replace_all: bool (optional) - Replace all occurrences (default: false)
 ```
 
 ### transition_phase
-Move document to next phase or specific phase.
+Advance document to its next phase or transition to a valid adjacent phase.
 ```
 project_path: string (required) - Path to .metis folder
 short_code: string (required) - Document ID
-phase: string (optional) - Target phase (omit for auto-advance)
+phase: string (optional) - Target phase (must be a valid adjacent phase - see Phase Transition Rules)
 force: bool (optional) - Skip exit criteria validation
 ```
-**Best practice**: Omit `phase` to auto-advance. Only specify phase for non-linear transitions like marking tasks "blocked".
+**IMPORTANT**: You cannot skip phases. See "Phase Transition Rules" section for valid transitions from each phase.
+**Best practice**: Omit `phase` to auto-advance to the next sequential phase. Only specify phase for:
+- Moving backward (e.g., design → discovery for rework)
+- Moving to blocked state (tasks only)
+- Choosing between valid options (e.g., review → draft OR published)
 
 ### archive_document
 Archive a document and all its children.
@@ -127,3 +170,53 @@ create_document:
 - **Hierarchy matters**: Tasks need initiatives, initiatives need visions
 - **Short codes everywhere**: Reference documents by ID, not title
 - **Archive completed work**: Use `archive_document` to clean up finished trees
+
+## Using Active Tasks as Working Memory
+
+**CRITICAL**: Active tasks and initiatives serve as persistent working memory. While a task is in the `active` phase, you MUST regularly update it with progress, findings, and plan changes as you work.
+
+### Why This Matters
+- Long-running tasks may experience context compaction (memory loss)
+- Documents persist across sessions and context windows
+- Future work can reference past decisions and discoveries
+- Other agents/humans can pick up where you left off
+
+### What to Record in Active Tasks
+Update frequently during active work:
+- **Progress**: What you've completed, files modified, tests run
+- **Findings**: Unexpected discoveries, code patterns found, blockers encountered
+- **Decisions**: Why you chose approach A over B, trade-offs considered
+- **Plan changes**: If original approach didn't work, document what changed and why
+- **Next steps**: What remains to be done if work is interrupted
+
+### How Often to Update
+- After completing each significant step
+- When you discover something unexpected
+- When your approach changes from the original plan
+- Every few tool calls during long operations
+- Before ending a session with incomplete work
+
+### Example Update Pattern
+```
+edit_document:
+  short_code: "PROJ-T-0042"
+  search: "## Progress"
+  replace: "## Progress\n\n### Session 1\n- Investigated auth module, found rate limiter at src/auth/limiter.rs\n- Original plan to modify middleware won't work - limiter is applied earlier\n- New approach: add bypass flag to limiter config\n- Modified: src/auth/limiter.rs, src/config/auth.yaml\n- Tests passing locally, need integration test"
+```
+
+This ensures no work is lost even if context is compacted or the session ends unexpectedly.
+
+## Common Mistakes to Avoid
+
+**Phase skipping will fail**: These transitions are INVALID and will error:
+- `todo → completed` (must go todo → active → completed)
+- `discovery → active` (must progress through all intermediate phases)
+- `draft → published` (must go draft → review → published)
+
+**To complete a task**, call `transition_phase` twice:
+1. First call: todo → active (start working)
+2. Second call: active → completed (finish work)
+
+**To publish a vision**, call `transition_phase` twice:
+1. First call: draft → review
+2. Second call: review → published

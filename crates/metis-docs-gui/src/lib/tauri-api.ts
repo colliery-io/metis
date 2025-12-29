@@ -18,6 +18,7 @@ export interface DocumentInfo {
   created_at: number;
   updated_at: number;
   tags: string[];
+  initiative_id: string | null;
 }
 
 export interface DocumentContent {

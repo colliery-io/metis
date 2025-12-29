@@ -12,7 +12,7 @@ use std::path::Path;
 
 #[mcp_tool(
     name = "transition_phase",
-    description = "Transition a document to a new phase using its short code (e.g., PROJ-V-0001). If phase is not provided, transitions to the next valid phase automatically",
+    description = "Transition a document to a new phase using its short code (e.g., PROJ-V-0001). If phase is not provided, transitions to the next valid phase automatically. IMPORTANT: You can only transition to adjacent phases - you cannot skip phases (e.g., todo->completed is invalid; must go todo->active->completed).",
     idempotent_hint = false,
     destructive_hint = false,
     open_world_hint = false,

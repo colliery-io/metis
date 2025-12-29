@@ -181,7 +181,7 @@ export const boardConfigs: BoardConfig[] = [
     phases: taskPhases,
     documentFilter: (doc) => doc.document_type === 'task' && (
       // Has a parent (assigned to initiative) OR has been picked up (todo/active/blocked/completed phase)
-      (doc as any).parent || ['todo', 'active', 'blocked', 'completed'].includes(doc.phase)
+      !!doc.initiative_id || ['todo', 'active', 'blocked', 'completed'].includes(doc.phase)
     ),
   },
   {
@@ -198,7 +198,7 @@ export const boardConfigs: BoardConfig[] = [
     phases: backlogPhases,
     documentFilter: (doc) => doc.document_type === 'task' && (
       // No parent AND phase is backlog (or not picked up to todo/active/blocked/completed yet)
-      !(doc as any).parent && (doc.phase === 'backlog' || !['todo', 'active', 'blocked', 'completed'].includes(doc.phase))
+      !doc.initiative_id && (doc.phase === 'backlog' || !['todo', 'active', 'blocked', 'completed'].includes(doc.phase))
     ),
   },
 ];
@@ -207,11 +207,45 @@ export function getBoardConfig(boardType: BoardType): BoardConfig | undefined {
   return boardConfigs.find(config => config.id === boardType);
 }
 
-export function getDocumentsByPhase(documents: DocumentInfo[], boardType: BoardType) {
+export interface InitiativeFilterOption {
+  short_code: string;
+  title: string;
+}
+
+/**
+ * Get active initiatives (in decompose or active phase) for the filter dropdown
+ */
+export function getActiveInitiatives(documents: DocumentInfo[]): InitiativeFilterOption[] {
+  return documents
+    .filter(doc => doc.document_type === 'initiative' && ['decompose', 'active'].includes(doc.phase))
+    .map(doc => ({ short_code: doc.short_code, title: doc.title }))
+    .sort((a, b) => a.title.localeCompare(b.title));
+}
+
+/**
+ * Get documents organized by phase for a board type
+ * @param documents All documents
+ * @param boardType The board to get documents for
+ * @param initiativeFilter Optional initiative short_code to filter tasks by (only applies to task board)
+ */
+export function getDocumentsByPhase(
+  documents: DocumentInfo[],
+  boardType: BoardType,
+  initiativeFilter?: string | null
+) {
   const config = getBoardConfig(boardType);
   if (!config) return {};
 
-  const filteredDocuments = documents.filter(config.documentFilter);
+  let filteredDocuments = documents.filter(config.documentFilter);
+
+  // Apply initiative filter for task board
+  // Always include standalone tasks (no initiative_id) as they're typically small features/bugs/tech-debt
+  if (boardType === 'task' && initiativeFilter) {
+    filteredDocuments = filteredDocuments.filter(doc =>
+      !doc.initiative_id || doc.initiative_id === initiativeFilter
+    );
+  }
+
   const documentsByPhase: Record<string, DocumentInfo[]> = {};
 
   // Initialize all phases
