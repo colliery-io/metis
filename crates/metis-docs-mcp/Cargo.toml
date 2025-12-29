@@ -15,7 +15,7 @@ name = "metis-mcp"
 path = "src/main.rs"
 
 [dependencies]
-metis-docs-core = { path = "../metis-docs-core", version = "1.0.5" }
+metis-docs-core = { path = "../metis-docs-core", version = "1.0.6" }
 
 # Shared dependencies
 tokio = { workspace = true }
@@ -27,7 +27,7 @@ tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 
 # MCP Server-specific dependencies
-rust-mcp-sdk = { git = "https://github.com/rust-mcp-stack/rust-mcp-sdk", rev = "54d0237f04befce3ce21c9d8ffe19cb567c1ffad", default-features = false, features = [
+rust-mcp-sdk = { version = "0.7.4", git = "https://github.com/rust-mcp-stack/rust-mcp-sdk", rev = "54d0237f04befce3ce21c9d8ffe19cb567c1ffad", default-features = false, features = [
     "server",
     "macros",
     "hyper-server",
@@ -44,7 +44,7 @@ clap = { version = "4.0", features = ["derive", "env"] }
 chrono = { version = "0.4", features = ["serde"] }
 
 [dev-dependencies]
-metis-docs-core = { path = "../metis-docs-core", version = "1.0.5", features = ["test-utils"] }
+metis-docs-core = { path = "../metis-docs-core", version = "1.0.6", features = ["test-utils"] }
 tempfile = { workspace = true }
 sqlx = { version = "0.8", features = ["sqlite", "runtime-tokio-rustls"] }
 regex = "1"
