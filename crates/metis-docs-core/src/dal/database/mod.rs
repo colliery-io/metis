@@ -14,6 +14,24 @@ pub struct Database {
     connection_string: String,
 }
 
+/// Configure SQLite connection for better concurrency
+///
+/// Sets pragmas to reduce "database is locked" errors when multiple
+/// connections access the database simultaneously.
+fn configure_connection(connection: &mut SqliteConnection) -> Result<(), diesel::result::Error> {
+    // Wait up to 5 seconds when encountering a lock instead of failing immediately
+    diesel::sql_query("PRAGMA busy_timeout = 5000").execute(connection)?;
+
+    // Use Write-Ahead Logging for better concurrent read/write performance
+    // WAL allows readers and writers to operate simultaneously
+    diesel::sql_query("PRAGMA journal_mode = WAL").execute(connection)?;
+
+    // Synchronous NORMAL is safe with WAL and faster than FULL
+    diesel::sql_query("PRAGMA synchronous = NORMAL").execute(connection)?;
+
+    Ok(())
+}
+
 impl Database {
     /// Create a new database connection and run migrations
     ///
@@ -22,6 +40,7 @@ impl Database {
     pub fn new(connection_string: &str) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
         // Run migrations once to ensure the database is set up
         let mut connection = SqliteConnection::establish(connection_string)?;
+        configure_connection(&mut connection)?;
         connection.run_pending_migrations(MIGRATIONS)?;
 
         Ok(Self {
@@ -34,6 +53,7 @@ impl Database {
         &self,
     ) -> Result<SqliteConnection, Box<dyn std::error::Error + Send + Sync>> {
         let mut connection = SqliteConnection::establish(&self.connection_string)?;
+        configure_connection(&mut connection)?;
 
         // For in-memory databases, we need to run migrations on each connection
         // since each connection is a separate database

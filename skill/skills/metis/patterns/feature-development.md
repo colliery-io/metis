@@ -49,6 +49,15 @@ create_document(
 )
 ```
 
+**Important**: After creation, immediately read and fill in the document:
+```
+read_document(short_code)    # See the template
+edit_document(short_code, ...) # Fill in Context, Goals, etc.
+edit_document(short_code, ...) # Remove unused optional sections
+```
+
+Never leave template placeholders. The initiative should have real content describing what's being built and why before moving on.
+
 The feature request backlog item can be archived or kept as reference.
 
 ### 4. Discovery Phase

@@ -31,6 +31,18 @@ When using Metis tools, this agent understands:
 - **Backlog**: Ad-hoc bugs/features/tech-debt - standalone or feeds into initiatives
 - **ADR**: Architectural decisions - when "why did we do it this way?" matters
 
+### Terminology Mapping
+
+When users request tickets using common terms, create backlog items:
+
+| User Says | Create |
+|-----------|--------|
+| "bug ticket", "bug", "defect" | `create_document(type="task", backlog_category="bug", ...)` |
+| "feature ticket", "feature request" | `create_document(type="task", backlog_category="feature", ...)` |
+| "tech debt ticket", "tech debt", "debt" | `create_document(type="task", backlog_category="tech-debt", ...)` |
+
+These are standalone tasks not tied to an initiative. They live in the backlog until prioritized.
+
 ### Patterns
 - Greenfield projects: Vision first, then initiatives
 - Tech debt campaigns: Backlog items → grouped initiatives
@@ -47,10 +59,22 @@ When using Metis tools, this agent understands:
 ## Key Behaviors
 
 ### When Creating Work
-1. Check alignment to vision/strategy/initiative
-2. Choose appropriate document type based on scope
-3. Set parent relationships correctly
-4. Define clear acceptance criteria
+
+**CRITICAL: Documents must be completed after creation, not left as templates.**
+
+The workflow for every document creation:
+1. `create_document` - Creates document from template
+2. `read_document` - Read the created document to see template structure
+3. `edit_document` - Fill in ALL required sections with actual content
+4. `edit_document` - Delete any optional sections that don't apply (remove placeholders)
+
+**Never leave a document with template placeholders like `{Describe the context}` or `{Primary objective 1}`.** Every document should have real content before moving on.
+
+Additional creation guidelines:
+- Check alignment to vision/strategy/initiative
+- Choose appropriate document type based on scope
+- Set parent relationships correctly
+- Define clear acceptance criteria
 
 ### When Transitioning Phases
 1. Verify exit criteria are met

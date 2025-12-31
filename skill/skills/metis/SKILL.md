@@ -95,9 +95,10 @@ When unsure what to do:
 
 **Start a project:**
 1. `initialize_project` with appropriate prefix
-2. Create and publish a vision
-3. Create initiatives aligned to vision
-4. Decompose initiatives into tasks
+2. `create_document` for vision, then `read_document` and `edit_document` to fill in all sections
+3. Transition vision to published when complete
+4. Create initiatives aligned to vision (create → read → edit for each)
+5. Decompose initiatives into tasks (create → read → edit for each)
 
 **Do work:**
 1. Pull tasks when capacity exists
@@ -105,9 +106,15 @@ When unsure what to do:
 3. Complete when acceptance criteria met
 4. Look up for next work when backlog is low
 
-**Handle ad-hoc work:**
-1. Create backlog item with category (bug/feature/tech-debt)
-2. Either work independently (if critical) or feed into initiative
+**Handle ad-hoc work (bugs, features, tech debt):**
+
+When users say "create a bug/feature/tech debt ticket", create a backlog item:
+```
+create_document(type="task", title="...", backlog_category="bug")      # for bugs
+create_document(type="task", title="...", backlog_category="feature")  # for features
+create_document(type="task", title="...", backlog_category="tech-debt") # for tech debt
+```
+Then read and fill in the document with details. Either work independently (if critical) or feed into initiative later.
 
 ### Key Principles
 
@@ -117,5 +124,6 @@ When unsure what to do:
 - **Filesystem is truth** - Database is just a cache
 - **Scope over time** - Size by capability increment, not duration
 - **Read before edit** - Always `read_document` before `edit_document`
+- **Complete documents after creation** - Never leave a document with template placeholders. After `create_document`, immediately `read_document` then `edit_document` to fill in all required sections with actual content
 - **Delete unused sections** - Templates contain optional sections; delete what doesn't apply rather than leaving empty placeholders
 - **Update active tasks** - Use active tasks as working memory; record progress, findings, and decisions regularly
