@@ -135,6 +135,16 @@ project_path: string (required) - Path to .metis folder
 short_code: string (required) - Document ID
 ```
 
+### reassign_parent
+Move a task to a different parent initiative or to/from the backlog.
+```
+project_path: string (required) - Path to .metis folder
+short_code: string (required) - Task short code to reassign
+new_parent_id: string (optional) - Target initiative short code. Omit to move to backlog.
+backlog_category: string (optional) - Required when moving to backlog: bug, feature, tech-debt
+```
+**Note**: Only tasks can be reassigned. Target initiative must be in `decompose` or `active` phase.
+
 ## Common Workflows
 
 ### Starting a Project
@@ -162,6 +172,21 @@ create_document:
 1. Transition initiative to "decompose" phase
 2. Create tasks with parent_id pointing to the initiative
 3. Transition initiative to "active" when ready to execute
+
+### Assigning Backlog Items to Initiatives
+To move a standalone backlog item into an initiative:
+```
+reassign_parent:
+  short_code: "PROJ-T-0042"
+  new_parent_id: "PROJ-I-0005"
+```
+
+To move a task back to the backlog:
+```
+reassign_parent:
+  short_code: "PROJ-T-0042"
+  backlog_category: "tech-debt"
+```
 
 ## Key Principles
 

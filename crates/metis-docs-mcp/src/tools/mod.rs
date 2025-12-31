@@ -5,6 +5,7 @@ pub mod edit_document;
 pub mod initialize_project;
 pub mod list_documents;
 pub mod read_document;
+pub mod reassign_parent;
 pub mod search_documents;
 pub mod transition_phase;
 
@@ -15,5 +16,6 @@ pub use edit_document::*;
 pub use initialize_project::*;
 pub use list_documents::*;
 pub use read_document::*;
+pub use reassign_parent::*;
 pub use search_documents::*;
 pub use transition_phase::*;

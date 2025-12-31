@@ -2,7 +2,8 @@ use super::{
     archive_document::ArchiveDocumentTool, create_document::CreateDocumentTool,
     edit_document::EditDocumentTool, initialize_project::InitializeProjectTool,
     list_documents::ListDocumentsTool, read_document::ReadDocumentTool,
-    search_documents::SearchDocumentsTool, transition_phase::TransitionPhaseTool,
+    reassign_parent::ReassignParentTool, search_documents::SearchDocumentsTool,
+    transition_phase::TransitionPhaseTool,
 };
 use rust_mcp_sdk::tool_box;
 
@@ -17,6 +18,7 @@ tool_box!(
         CreateDocumentTool,
         EditDocumentTool,
         TransitionPhaseTool,
-        ArchiveDocumentTool
+        ArchiveDocumentTool,
+        ReassignParentTool
     ]
 );
