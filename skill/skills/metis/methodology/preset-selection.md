@@ -102,7 +102,17 @@ Streamlined is the safe default. It provides enough structure to track projects 
 
 ## Changing Presets
 
-Presets can be changed via `metis config set --preset <name>`.
+> **Note**: Preset configuration requires the Metis CLI. There is no MCP tool for changing presets—this is intentional, as preset changes affect project structure and should be deliberate decisions.
+
+**Check current preset:**
+```bash
+metis config show
+```
+
+**Change preset:**
+```bash
+metis config set --preset <name>  # full, streamlined, or direct
+```
 
 **Upgrading** (Direct -> Streamlined -> Full):
 - Existing documents remain valid

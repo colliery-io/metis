@@ -147,10 +147,11 @@ Common mistakes when using Metis, how to recognize them, and how to recover.
 - Initiatives stuck in early phases indefinitely
 
 **How to fix**:
-- Regular grooming - archive or delete stale items
+- Regular grooming - use `archive_document` to remove stale items from active listings
 - If something's been in backlog for months, question its value
 - Set expectations: "We'll revisit this in X, or archive it"
 - Don't let the backlog become a graveyard
+- Archived items are preserved (can use `include_archived=true` to see them) but don't clutter daily work
 
 ## Wrong Granularity
 

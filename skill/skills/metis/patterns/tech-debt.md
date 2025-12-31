@@ -26,7 +26,7 @@ Use for:
 ### Initiative (Campaigns)
 Coordinated debt reduction efforts:
 ```
-create_document(type="initiative", title="Q1 Performance Optimization", parent="VISION-ID")
+create_document(type="initiative", title="Q1 Performance Optimization", parent="VISION-ID", complexity="l")
 ```
 
 Use for:

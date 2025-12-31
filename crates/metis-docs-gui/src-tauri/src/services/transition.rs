@@ -23,7 +23,7 @@ fn parse_phase(phase_str: &str) -> Result<Phase, String> {
         "ready" => Ok(Phase::Ready),
         "decompose" => Ok(Phase::Decompose),
         "discovery" => Ok(Phase::Discovery),
-        "doing" => Ok(Phase::Active), // Map "doing" to Active
+        "doing" => Ok(Phase::Active), // Legacy compatibility for old documents
         _ => Err(format!("Unknown phase: {}", phase_str)),
     }
 }
@@ -117,7 +117,7 @@ mod tests {
     async fn test_parse_phase_valid() {
         assert!(parse_phase("draft").is_ok());
         assert!(parse_phase("review").is_ok());
-        assert!(parse_phase("doing").is_ok()); // Should map to Active
+        assert!(parse_phase("doing").is_ok()); // Legacy compatibility
     }
 
     #[tokio::test]

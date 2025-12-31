@@ -85,13 +85,25 @@ When unsure what to do:
 | Type | Purpose | Parent Required |
 |------|---------|-----------------|
 | Vision | North star objectives | No |
-| Strategy | Coordinated approaches | Vision |
-| Initiative | Capability increments | Strategy/Vision |
+| Strategy† | Coordinated approaches | Vision |
+| Initiative | Capability increments | Strategy or Vision‡ |
 | Task | Atomic work units | Initiative |
-| Backlog | Ad-hoc work (bug/feature/debt) | No |
+| Task (backlog) | Ad-hoc work (bug/feature/debt) | No* |
 | ADR | Architectural decisions | No |
 
+*Backlog items are tasks created with `backlog_category` parameter instead of `parent_id`. Use `reassign_parent` to move them into an initiative later, if desired.
+
+†Strategy documents are only available in the **Full** preset. See [preset-selection.md](methodology/preset-selection.md).
+
+‡In Streamlined preset (no Strategy), Initiatives parent directly to Vision.
+
 ### Common Operations
+
+**Check existing work before starting:**
+```
+list_documents(project_path)  # See all active visions, initiatives, and tasks
+```
+Always check the current state before creating new documents. This prevents duplicate work and helps you understand where new items should fit in the hierarchy.
 
 **Start a project:**
 1. `initialize_project` with appropriate prefix
@@ -115,6 +127,12 @@ create_document(type="task", title="...", backlog_category="feature")  # for fea
 create_document(type="task", title="...", backlog_category="tech-debt") # for tech debt
 ```
 Then read and fill in the document with details. Either work independently (if critical) or feed into initiative later.
+
+**Clean up completed work:**
+```
+archive_document(short_code="PROJ-I-0001")  # Archives initiative and all its tasks
+```
+Archive completed initiatives to keep active document lists focused. Archived documents are preserved but hidden from default listings.
 
 ### Key Principles
 

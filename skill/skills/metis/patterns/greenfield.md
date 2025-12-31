@@ -98,8 +98,8 @@ Day 1:
 Day 2:
 - Review vision with stakeholders
 - transition_phase(ACME-V-0001) # review -> published
-- create_document(type="initiative", title="Development Foundation", parent="ACME-V-0001")
-- create_document(type="initiative", title="Core Feature: User Management", parent="ACME-V-0001")
+- create_document(type="initiative", title="Development Foundation", parent="ACME-V-0001", complexity="m")
+- create_document(type="initiative", title="Core Feature: User Management", parent="ACME-V-0001", complexity="l")
 
 Week 1:
 - Discovery and design on Foundation initiative

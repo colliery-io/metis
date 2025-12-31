@@ -46,7 +46,8 @@ pub mod phases {
     pub const INITIATIVE_COMPLETED: &str = "completed";
 
     pub const TASK_TODO: &str = "todo";
-    pub const TASK_DOING: &str = "doing";
+    pub const TASK_ACTIVE: &str = "active";
+    pub const TASK_BLOCKED: &str = "blocked";
     pub const TASK_COMPLETED: &str = "completed";
 
     pub const ADR_DRAFT: &str = "draft";

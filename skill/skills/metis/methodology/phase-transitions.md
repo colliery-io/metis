@@ -36,15 +36,22 @@ discovery -> design -> ready -> decompose -> active -> completed
 ### Task
 ```
 todo -> active -> completed
+       ↕
+    blocked
 ```
 Or for backlog items:
 ```
 backlog -> todo -> active -> completed
+             ↕
+          blocked
 ```
 - **backlog**: Captured but not committed to
 - **todo**: Ready to be pulled when capacity exists
 - **active**: Actively being worked
+- **blocked**: Waiting on external dependency (requires `blocked_by` field)
 - **completed**: Done, acceptance criteria met
+
+**Blocked transitions**: Tasks can move to `blocked` from `todo` or `active`, and return to either when unblocked. Use `transition_phase(short_code, phase="blocked")` to mark blocked, then `transition_phase(short_code, phase="active")` or `phase="todo"` when unblocked.
 
 ### ADR
 ```
@@ -92,6 +99,21 @@ Each phase has exit criteria - conditions that must be true before transitioning
 - Acceptance criteria met
 - Work verified/tested as appropriate
 - No known defects
+
+### Tracking Exit Criteria Status
+
+Documents have an `exit_criteria_met` frontmatter field that tracks whether exit criteria have been satisfied:
+
+```yaml
+exit_criteria_met: false  # or true
+```
+
+This field is:
+- Stored in the document frontmatter and database
+- Currently requires manual update (set to `true` when criteria are met)
+- Used by `transition_phase` with `force: false` to prevent premature transitions
+
+When transitioning without `force: true`, the system may warn if exit criteria haven't been marked as met. To force a transition anyway (acknowledging the risk), use `force: true`.
 
 ## Phase Transition Constraints
 

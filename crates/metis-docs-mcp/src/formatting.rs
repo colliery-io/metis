@@ -350,14 +350,14 @@ mod tests {
     #[test]
     fn test_phase_progress() {
         let output = ToolOutput::new()
-            .phase_progress(&["todo", "doing", "done"], 1)
+            .phase_progress(&["todo", "active", "completed"], 1)
             .build();
 
         assert!(output.contains(Icons::ACTIVE));
         assert!(output.contains(Icons::PENDING));
         assert!(output.contains("todo"));
-        assert!(output.contains("doing"));
-        assert!(output.contains("done"));
+        assert!(output.contains("active"));
+        assert!(output.contains("completed"));
     }
 
     #[test]

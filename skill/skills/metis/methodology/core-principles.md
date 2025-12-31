@@ -121,7 +121,7 @@ Documents advance through phases with exit criteria:
 - **Visions**: draft -> review -> published
 - **Strategies**: shaping -> design -> ready -> active -> completed
 - **Initiatives**: discovery -> design -> ready -> decompose -> active -> completed
-- **Tasks**: todo -> active -> completed (or backlog -> todo -> active -> completed)
+- **Tasks**: todo -> active -> completed (or backlog -> todo -> ...), with blocked as a side state
 
 **Key principle**: Don't skip phases. Each phase exists to prevent common failures:
 - Skipping discovery leads to solving the wrong problem
@@ -183,11 +183,32 @@ Always reference documents by short code, not title. Titles can change; short co
 
 ## Hierarchy Enforcement
 
-Parent requirements are enforced:
-- Strategies require a published Vision as parent
-- Initiatives require an active Strategy as parent (or published Vision in streamlined mode)
-- Tasks require an Initiative in decompose or active phase as parent
-- Backlog items (standalone bugs/features/tech-debt) have no parent requirement
+Parent requirements guide proper document relationships based on type and preset configuration.
+
+### Parent Requirements Table
+
+| Document Type | Parent Type | Parent Should Be | Notes |
+|---------------|-------------|------------------|-------|
+| Vision | None | - | Top-level document |
+| Strategy | Vision | `published` | Full preset only |
+| Initiative | Strategy | `active` | Full preset |
+| Initiative | Vision | `published` | Streamlined preset (no strategy) |
+| Task | Initiative | `decompose` or `active` | Regular tasks |
+| Task (backlog) | None | - | Uses `backlog_category` parameter |
+| ADR | None | - | Standalone decisions |
+
+### What This Means
+
+**Child documents should only be created when the parent is in the appropriate phase:**
+- Strategy should have a published Vision as parent
+- Initiative should have an active Strategy (Full) or published Vision (Streamlined) as parent
+- Task should have an Initiative in `decompose` or `active` phase as parent
+
+**Backlog items are the exception** - they have no parent requirement because they represent ad-hoc work not yet tied to an initiative. However, backlog items can be assigned to a parent initiative later when:
+- The work gets prioritized into an existing initiative
+- You create a periodic "bug bash" or "debt repayment" initiative to group and tackle accumulated backlog items
+
+Use `reassign_parent` to move a backlog item into an initiative's task list, if desired.
 
 **Judgment call**: If you're creating orphan tasks, you're probably missing an initiative. Step back and ask what project this work belongs to.
 
