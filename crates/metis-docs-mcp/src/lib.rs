@@ -18,7 +18,7 @@ use metis_core::{
     domain::configuration::FlightLevelConfig,
 };
 use rust_mcp_sdk::{
-    mcp_server::server_runtime,
+    mcp_server::{server_runtime, McpServerOptions},
     schema::{
         Implementation, InitializeResult, ServerCapabilities, ServerCapabilitiesTools,
         LATEST_PROTOCOL_VERSION,
@@ -187,7 +187,13 @@ pub async fn run() -> AnyhowResult<()> {
     let handler = MetisServerHandler::new(config).to_mcp_server_handler();
 
     // Create and start server
-    let server = server_runtime::create_server(server_details, transport, handler);
+    let server = server_runtime::create_server(McpServerOptions {
+        server_details,
+        transport,
+        handler,
+        task_store: None,
+        client_task_store: None,
+    });
 
     info!("MCP Server starting on stdio transport");
     server
