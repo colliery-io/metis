@@ -223,6 +223,16 @@ export function getActiveInitiatives(documents: DocumentInfo[]): InitiativeFilte
 }
 
 /**
+ * Get all non-archived initiatives for the filter dropdown
+ */
+export function getAllInitiatives(documents: DocumentInfo[]): InitiativeFilterOption[] {
+  return documents
+    .filter(doc => doc.document_type === 'initiative')
+    .map(doc => ({ short_code: doc.short_code, title: doc.title }))
+    .sort((a, b) => a.title.localeCompare(b.title));
+}
+
+/**
  * Get documents organized by phase for a board type
  * @param documents All documents
  * @param boardType The board to get documents for

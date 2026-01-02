@@ -119,12 +119,20 @@ impl FrontmatterParser {
     }
 
     /// Extract an optional string field from frontmatter
+    /// Returns None for empty strings, "NULL" placeholder, or missing fields
     pub fn extract_optional_string(
         map: &std::collections::HashMap<String, gray_matter::Pod>,
         key: &str,
     ) -> Option<String> {
         match map.get(key) {
-            Some(gray_matter::Pod::String(s)) => Some(s.clone()),
+            Some(gray_matter::Pod::String(s)) => {
+                // Treat "NULL" placeholder and empty strings as None
+                if s.is_empty() || s == "NULL" {
+                    None
+                } else {
+                    Some(s.clone())
+                }
+            }
             _ => None,
         }
     }

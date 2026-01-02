@@ -6,14 +6,14 @@
         <div class="flex items-center gap-4">
           <h2>{{ currentBoardConfig?.title || 'Kanban Board' }}</h2>
           <!-- Initiative filter dropdown for task board -->
-          <div v-if="currentBoard === 'task' && activeInitiatives.length > 0" class="initiative-filter">
+          <div v-if="currentBoard === 'task'" class="initiative-filter">
             <select
               v-model="selectedInitiativeFilter"
               class="initiative-select"
             >
               <option :value="null">All Initiatives</option>
               <option
-                v-for="initiative in activeInitiatives"
+                v-for="initiative in allInitiatives"
                 :key="initiative.short_code"
                 :value="initiative.short_code"
               >
@@ -148,7 +148,7 @@ import type { DocumentInfo } from '../lib/tauri-api'
 import { listDocuments, transitionPhase, archiveDocument, syncProject, getProjectConfig } from '../lib/tauri-api'
 import { emit } from '@tauri-apps/api/event'
 import { useProject } from '../composables/useProject'
-import { getBoardConfig, getDocumentsByPhase, getActiveInitiatives, type InitiativeFilterOption } from '../lib/board-config'
+import { getBoardConfig, getDocumentsByPhase, getAllInitiatives, type InitiativeFilterOption } from '../lib/board-config'
 import type { BoardType } from '../types/board'
 import KanbanColumn from './KanbanColumn.vue'
 import VisionDisplay from './VisionDisplay.vue'
@@ -172,7 +172,7 @@ const showCreateDialog = ref(false)
 
 // Initiative filter for task board
 const selectedInitiativeFilter = ref<string | null>(null)
-const activeInitiatives = computed<InitiativeFilterOption[]>(() => getActiveInitiatives(allDocuments.value))
+const allInitiatives = computed<InitiativeFilterOption[]>(() => getAllInitiatives(allDocuments.value))
 
 // Document viewer modal state
 const showDocumentViewer = ref(false)

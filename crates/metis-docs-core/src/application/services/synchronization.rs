@@ -223,6 +223,8 @@ impl<'a> SyncService<'a> {
             }
             // backlog/{task-id}.md (no lineage)
             ["backlog", _] => (None, None),
+            // backlog/{category}/{task-id}.md (no lineage) - handles bugs, features, tech-debt subdirs
+            ["backlog", _, _] => (None, None),
             // adrs/{adr-id}.md (no lineage)
             ["adrs", _] => (None, None),
             // vision.md (no lineage)
