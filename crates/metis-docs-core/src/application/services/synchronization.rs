@@ -131,19 +131,27 @@ impl<'a> SyncService<'a> {
             .to_string();
 
         // Extract lineage from filesystem path if workspace directory is available
-        let (fs_strategy_id, fs_initiative_id) = if let Some(workspace_dir) = self.workspace_dir {
-            Self::extract_lineage_from_path(filepath, workspace_dir)
-        } else {
-            (None, None)
-        };
+        let (fs_strategy_id, fs_initiative_id, is_backlog) =
+            if let Some(workspace_dir) = self.workspace_dir {
+                let (strat, init) = Self::extract_lineage_from_path(filepath, workspace_dir);
+                let is_backlog = Self::is_backlog_path(filepath, workspace_dir);
+                (strat, init, is_backlog)
+            } else {
+                (None, None, false)
+            };
 
         // Use filesystem lineage if available, otherwise use document lineage
+        // Exception: backlog items should NEVER have initiative_id (filesystem overrides frontmatter)
         let final_strategy_id = fs_strategy_id
             .or_else(|| core.strategy_id.clone())
             .map(|id| id.to_string());
-        let final_initiative_id = fs_initiative_id
-            .or_else(|| core.initiative_id.clone())
-            .map(|id| id.to_string());
+        let final_initiative_id = if is_backlog {
+            None // Backlog items must not have initiative_id, regardless of frontmatter
+        } else {
+            fs_initiative_id
+                .or_else(|| core.initiative_id.clone())
+                .map(|id| id.to_string())
+        };
 
         Ok(NewDocument {
             filepath: filepath.to_string(),
@@ -232,6 +240,27 @@ impl<'a> SyncService<'a> {
             // Default: no lineage
             _ => (None, None),
         }
+    }
+
+    /// Check if a file path is within the backlog directory
+    /// Backlog items should never have initiative_id, regardless of frontmatter content
+    fn is_backlog_path<P: AsRef<Path>>(file_path: P, workspace_dir: &Path) -> bool {
+        let path = file_path.as_ref();
+
+        // Get relative path from workspace
+        let relative_path = match path.strip_prefix(workspace_dir) {
+            Ok(rel) => rel,
+            Err(_) => return false,
+        };
+
+        // Get path components
+        let components: Vec<&str> = relative_path
+            .components()
+            .filter_map(|c| c.as_os_str().to_str())
+            .collect();
+
+        // Check if first component is "backlog"
+        matches!(components.first(), Some(&"backlog"))
     }
 
     /// Extract document short code from file without keeping the document object around
@@ -1135,5 +1164,52 @@ mod tests {
                 results.iter().map(|r| r.filepath()).collect::<Vec<_>>()
             );
         }
+    }
+
+    #[test]
+    fn test_is_backlog_path() {
+        let workspace = Path::new("/workspace");
+
+        // Backlog paths should return true
+        assert!(SyncService::is_backlog_path(
+            "/workspace/backlog/task.md",
+            workspace
+        ));
+        assert!(SyncService::is_backlog_path(
+            "/workspace/backlog/bug/task.md",
+            workspace
+        ));
+        assert!(SyncService::is_backlog_path(
+            "/workspace/backlog/feature/task.md",
+            workspace
+        ));
+        assert!(SyncService::is_backlog_path(
+            "/workspace/backlog/tech-debt/task.md",
+            workspace
+        ));
+
+        // Non-backlog paths should return false
+        assert!(!SyncService::is_backlog_path(
+            "/workspace/strategies/strat-1/initiatives/init-1/tasks/task.md",
+            workspace
+        ));
+        assert!(!SyncService::is_backlog_path(
+            "/workspace/initiatives/init-1/tasks/task.md",
+            workspace
+        ));
+        assert!(!SyncService::is_backlog_path(
+            "/workspace/vision.md",
+            workspace
+        ));
+        assert!(!SyncService::is_backlog_path(
+            "/workspace/adrs/adr-001.md",
+            workspace
+        ));
+
+        // Path outside workspace should return false
+        assert!(!SyncService::is_backlog_path(
+            "/other/backlog/task.md",
+            workspace
+        ));
     }
 }

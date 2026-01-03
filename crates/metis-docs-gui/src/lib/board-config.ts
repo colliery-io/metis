@@ -181,7 +181,8 @@ export const boardConfigs: BoardConfig[] = [
     phases: taskPhases,
     documentFilter: (doc) => doc.document_type === 'task' && (
       // Has a parent (assigned to initiative) OR has been picked up (todo/active/blocked/completed phase)
-      !!doc.initiative_id || ['todo', 'active', 'blocked', 'completed'].includes(doc.phase)
+      // Note: initiative_id could be "NULL" string from legacy data, treat as falsy
+      (!!doc.initiative_id && doc.initiative_id !== 'NULL') || ['todo', 'active', 'blocked', 'completed'].includes(doc.phase)
     ),
   },
   {
@@ -198,7 +199,8 @@ export const boardConfigs: BoardConfig[] = [
     phases: backlogPhases,
     documentFilter: (doc) => doc.document_type === 'task' && (
       // No parent AND phase is backlog (or not picked up to todo/active/blocked/completed yet)
-      !doc.initiative_id && (doc.phase === 'backlog' || !['todo', 'active', 'blocked', 'completed'].includes(doc.phase))
+      // Note: initiative_id could be "NULL" string from legacy data, treat as falsy
+      (!doc.initiative_id || doc.initiative_id === 'NULL') && (doc.phase === 'backlog' || !['todo', 'active', 'blocked', 'completed'].includes(doc.phase))
     ),
   },
 ];
