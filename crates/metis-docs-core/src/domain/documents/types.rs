@@ -185,6 +185,94 @@ impl FromStr for DocumentType {
     }
 }
 
+impl DocumentType {
+    /// Get valid transitions from a given phase for this document type.
+    /// This is the single source of truth for phase transition rules.
+    /// Transitions are forward-only, except for Task which can return from Blocked.
+    pub fn valid_transitions_from(&self, from_phase: Phase) -> Vec<Phase> {
+        match self {
+            DocumentType::Vision => match from_phase {
+                Phase::Draft => vec![Phase::Review],
+                Phase::Review => vec![Phase::Published],
+                _ => vec![],
+            },
+            DocumentType::Strategy => match from_phase {
+                Phase::Shaping => vec![Phase::Design],
+                Phase::Design => vec![Phase::Ready],
+                Phase::Ready => vec![Phase::Active],
+                Phase::Active => vec![Phase::Completed],
+                _ => vec![],
+            },
+            DocumentType::Initiative => match from_phase {
+                Phase::Discovery => vec![Phase::Design],
+                Phase::Design => vec![Phase::Ready],
+                Phase::Ready => vec![Phase::Decompose],
+                Phase::Decompose => vec![Phase::Active],
+                Phase::Active => vec![Phase::Completed],
+                _ => vec![],
+            },
+            DocumentType::Task => match from_phase {
+                Phase::Backlog => vec![Phase::Todo],
+                Phase::Todo => vec![Phase::Active, Phase::Blocked],
+                Phase::Active => vec![Phase::Completed, Phase::Blocked],
+                Phase::Blocked => vec![Phase::Todo, Phase::Active],
+                _ => vec![],
+            },
+            DocumentType::Adr => match from_phase {
+                Phase::Draft => vec![Phase::Discussion],
+                Phase::Discussion => vec![Phase::Decided],
+                Phase::Decided => vec![Phase::Superseded],
+                _ => vec![],
+            },
+        }
+    }
+
+    /// Check if a transition from one phase to another is valid for this document type.
+    pub fn can_transition(&self, from: Phase, to: Phase) -> bool {
+        self.valid_transitions_from(from).contains(&to)
+    }
+
+    /// Get the next phase in the natural sequence for this document type.
+    /// Returns None if at terminal phase or phase is invalid for this type.
+    pub fn next_phase(&self, current: Phase) -> Option<Phase> {
+        self.valid_transitions_from(current).first().copied()
+    }
+
+    /// Get the ordered phase sequence for this document type (for display purposes).
+    pub fn phase_sequence(&self) -> Vec<Phase> {
+        match self {
+            DocumentType::Vision => vec![Phase::Draft, Phase::Review, Phase::Published],
+            DocumentType::Strategy => vec![
+                Phase::Shaping,
+                Phase::Design,
+                Phase::Ready,
+                Phase::Active,
+                Phase::Completed,
+            ],
+            DocumentType::Initiative => vec![
+                Phase::Discovery,
+                Phase::Design,
+                Phase::Ready,
+                Phase::Decompose,
+                Phase::Active,
+                Phase::Completed,
+            ],
+            DocumentType::Task => vec![
+                Phase::Backlog,
+                Phase::Todo,
+                Phase::Active,
+                Phase::Completed,
+            ],
+            DocumentType::Adr => vec![
+                Phase::Draft,
+                Phase::Discussion,
+                Phase::Decided,
+                Phase::Superseded,
+            ],
+        }
+    }
+}
+
 /// Document phase/status
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Phase {
@@ -416,5 +504,96 @@ mod tests {
             let parsed_back = str_repr.parse::<Tag>().unwrap();
             assert_eq!(tag, parsed_back);
         }
+    }
+
+    #[test]
+    fn test_document_type_valid_transitions() {
+        // Vision transitions
+        assert_eq!(
+            DocumentType::Vision.valid_transitions_from(Phase::Draft),
+            vec![Phase::Review]
+        );
+        assert_eq!(
+            DocumentType::Vision.valid_transitions_from(Phase::Review),
+            vec![Phase::Published]
+        );
+        assert!(DocumentType::Vision
+            .valid_transitions_from(Phase::Published)
+            .is_empty());
+
+        // Task transitions including blocked state
+        assert_eq!(
+            DocumentType::Task.valid_transitions_from(Phase::Todo),
+            vec![Phase::Active, Phase::Blocked]
+        );
+        assert_eq!(
+            DocumentType::Task.valid_transitions_from(Phase::Blocked),
+            vec![Phase::Todo, Phase::Active]
+        );
+    }
+
+    #[test]
+    fn test_document_type_can_transition() {
+        // Valid forward transitions
+        assert!(DocumentType::Vision.can_transition(Phase::Draft, Phase::Review));
+        assert!(DocumentType::Strategy.can_transition(Phase::Shaping, Phase::Design));
+        assert!(DocumentType::Task.can_transition(Phase::Todo, Phase::Active));
+
+        // Invalid - skipping phases
+        assert!(!DocumentType::Vision.can_transition(Phase::Draft, Phase::Published));
+        assert!(!DocumentType::Strategy.can_transition(Phase::Shaping, Phase::Active));
+
+        // Invalid - backward transitions (except blocked)
+        assert!(!DocumentType::Vision.can_transition(Phase::Review, Phase::Draft));
+        assert!(!DocumentType::Strategy.can_transition(Phase::Design, Phase::Shaping));
+
+        // Valid - returning from blocked
+        assert!(DocumentType::Task.can_transition(Phase::Blocked, Phase::Active));
+        assert!(DocumentType::Task.can_transition(Phase::Blocked, Phase::Todo));
+    }
+
+    #[test]
+    fn test_document_type_next_phase() {
+        assert_eq!(
+            DocumentType::Vision.next_phase(Phase::Draft),
+            Some(Phase::Review)
+        );
+        assert_eq!(
+            DocumentType::Vision.next_phase(Phase::Review),
+            Some(Phase::Published)
+        );
+        assert_eq!(DocumentType::Vision.next_phase(Phase::Published), None);
+
+        assert_eq!(
+            DocumentType::Task.next_phase(Phase::Backlog),
+            Some(Phase::Todo)
+        );
+        assert_eq!(
+            DocumentType::Task.next_phase(Phase::Blocked),
+            Some(Phase::Todo) // First valid transition
+        );
+    }
+
+    #[test]
+    fn test_document_type_phase_sequence() {
+        assert_eq!(
+            DocumentType::Vision.phase_sequence(),
+            vec![Phase::Draft, Phase::Review, Phase::Published]
+        );
+        assert_eq!(
+            DocumentType::Task.phase_sequence(),
+            vec![Phase::Backlog, Phase::Todo, Phase::Active, Phase::Completed]
+        );
+        assert_eq!(
+            DocumentType::Initiative.phase_sequence(),
+            vec![
+                Phase::Discovery,
+                Phase::Design,
+                Phase::Ready,
+                Phase::Decompose,
+                Phase::Active,
+                Phase::Completed
+            ]
+        );
     }
 }

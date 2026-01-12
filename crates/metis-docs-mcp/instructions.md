@@ -6,57 +6,65 @@ Metis organizes work hierarchically using Flight Levels methodology: Vision (str
 
 | Type | Purpose | Phases | Parent Required |
 |------|---------|--------|-----------------|
-| **Vision** | Strategic direction (6mo-2yr) | draft -> review -> published | No |
-| **Initiative** | Concrete projects (1-6mo) | discovery -> design -> ready -> decompose -> active -> completed | Vision (published) |
-| **Task** | Individual work (1-14 days) | todo -> active -> completed | Initiative (decompose/active) |
-| **Backlog** | Standalone bugs/features/debt | backlog -> todo -> active -> completed | No (use `backlog_category`) |
-| **ADR** | Architecture decisions | draft -> discussion -> decided -> superseded | No |
+| **Vision** | Strategic direction (6mo-2yr) | draft → review → published | No |
+| **Strategy** | Coordinated approaches (Full preset only) | shaping → design → ready → active → completed | Vision (published) |
+| **Initiative** | Concrete projects (1-6mo) | discovery → design → ready → decompose → active → completed | Strategy or Vision (published) |
+| **Task** | Individual work (1-14 days) | todo → active → completed | Initiative (decompose/active) |
+| **Backlog** | Standalone bugs/features/debt | backlog → todo → active → completed | No (use `backlog_category`) |
+| **ADR** | Architecture decisions | draft → discussion → decided → superseded | No |
 
 **Note**: Configuration may disable some document types. The current project shows enabled types in tool responses.
 
 ## Phase Transition Rules
 
-**IMPORTANT**: Phase transitions are constrained. You can only move to adjacent phases - you cannot skip phases.
+**IMPORTANT**: Phase transitions are forward-only. You cannot skip phases or go backward.
 
 ### Valid Transitions by Document Type
 
-**Vision**:
-- draft → review (only)
-- review → draft OR published
-- published → review (only)
+**Vision**: `draft → review → published`
+- draft → review
+- review → published
+- published → (terminal)
 
-**Initiative**:
-- discovery → design (only)
-- design → discovery OR ready
-- ready → design OR decompose
-- decompose → ready OR active
-- active → decompose OR completed
-- completed → (terminal, no transitions)
+**Strategy** (Full preset only): `shaping → design → ready → active → completed`
+- shaping → design
+- design → ready
+- ready → active
+- active → completed
+- completed → (terminal)
 
-**Task**:
-- backlog → todo (only)
+**Initiative**: `discovery → design → ready → decompose → active → completed`
+- discovery → design
+- design → ready
+- ready → decompose
+- decompose → active
+- active → completed
+- completed → (terminal)
+
+**Task**: `backlog → todo → active → completed` (with blocked as alternate state)
+- backlog → todo
 - todo → active OR blocked
-- active → todo OR completed OR blocked
+- active → completed OR blocked
 - blocked → todo OR active
-- completed → (terminal, no transitions)
+- completed → (terminal)
 
-**ADR**:
-- draft → discussion (only)
-- discussion → draft OR decided
-- decided → superseded (only)
-- superseded → (terminal, no transitions)
+**ADR**: `draft → discussion → decided → superseded`
+- draft → discussion
+- discussion → decided
+- decided → superseded
+- superseded → (terminal)
 
 ### What This Means
 
 - **Cannot skip phases**: A task in "todo" cannot go directly to "completed" - it must go through "active" first
 - **Cannot skip phases**: An initiative in "discovery" cannot jump to "active" - it must progress through design, ready, decompose
-- **Backward movement is limited**: You can only go back to the immediately previous phase (for rework/revision)
+- **Forward-only**: Phases progress forward; use blocked state for tasks that are stuck
 - **Use auto-advance**: Omit the `phase` parameter to automatically move to the next phase in sequence
 
 ## Short Codes
 
 All documents get unique IDs: `PREFIX-TYPE-NNNN` (e.g., `PROJ-V-0001`, `ACME-T-0042`)
-- **V**=Vision, **I**=Initiative, **T**=Task, **A**=ADR
+- **V**=Vision, **S**=Strategy, **I**=Initiative, **T**=Task, **A**=ADR
 - Use short codes to reference documents in all operations
 
 ## Tools Reference
@@ -65,7 +73,7 @@ All documents get unique IDs: `PREFIX-TYPE-NNNN` (e.g., `PROJ-V-0001`, `ACME-T-0
 Create a new Metis workspace.
 ```
 project_path: string (required) - Path where .metis/ will be created
-prefix: string (optional) - Short code prefix, max 6 chars (default: "PROJ")
+prefix: string (optional) - Short code prefix, 2-8 uppercase letters (default: "PROJ")
 ```
 
 ### list_documents
@@ -80,7 +88,7 @@ Full-text search across documents.
 ```
 project_path: string (required) - Path to .metis folder
 query: string (required) - Search text
-document_type: string (optional) - Filter: vision, initiative, task, adr
+document_type: string (optional) - Filter: vision, strategy, initiative, task, adr
 limit: number (optional) - Max results
 include_archived: bool (optional) - Include archived docs (default: false)
 ```
@@ -96,9 +104,10 @@ short_code: string (required) - Document ID (e.g., PROJ-I-0001)
 Create a new document.
 ```
 project_path: string (required) - Path to .metis folder
-document_type: string (required) - vision, initiative, task, adr
+document_type: string (required) - vision, strategy, initiative, task, adr
 title: string (required) - Document title
-parent_id: string (optional) - Parent short code (required for initiative/task)
+parent_id: string (optional) - Parent short code (required for strategy/initiative/task)
+risk_level: string (optional) - For strategies: low, medium, high, critical
 complexity: string (optional) - For initiatives: xs, s, m, l, xl
 decision_maker: string (optional) - For ADRs
 backlog_category: string (optional) - For backlog items: bug, feature, tech-debt
@@ -124,9 +133,8 @@ force: bool (optional) - Skip exit criteria validation
 ```
 **IMPORTANT**: You cannot skip phases. See "Phase Transition Rules" section for valid transitions from each phase.
 **Best practice**: Omit `phase` to auto-advance to the next sequential phase. Only specify phase for:
-- Moving backward (e.g., design → discovery for rework)
 - Moving to blocked state (tasks only)
-- Choosing between valid options (e.g., review → draft OR published)
+- Returning from blocked to todo or active (tasks only)
 
 ### archive_document
 Archive a document and all its children.
@@ -193,7 +201,7 @@ reassign_parent:
 - **Read before edit**: Always `read_document` before `edit_document`
 - **Delete unused sections**: Templates contain optional sections. If a section doesn't apply to your document, delete it entirely rather than leaving it empty or with placeholder text
 - **Auto-transition**: Omit phase parameter to follow natural workflow
-- **Hierarchy matters**: Tasks need initiatives, initiatives need visions
+- **Hierarchy matters**: Tasks need initiatives, initiatives need strategies (Full) or visions (Streamlined)
 - **Short codes everywhere**: Reference documents by ID, not title
 - **Archive completed work**: Use `archive_document` to clean up finished trees
 
@@ -238,6 +246,8 @@ This ensures no work is lost even if context is compacted or the session ends un
 - `todo → completed` (must go todo → active → completed)
 - `discovery → active` (must progress through all intermediate phases)
 - `draft → published` (must go draft → review → published)
+
+**Backward transitions are not supported**: Phases only move forward. Use the blocked state for tasks that are stuck.
 
 **To complete a task**, call `transition_phase` twice:
 1. First call: todo → active (start working)

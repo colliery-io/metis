@@ -4,63 +4,68 @@ Documents in Metis advance through phases. Each phase represents a stage in the 
 
 ## Phase Sequences by Document Type
 
+Phases move forward only. You cannot go backward to a previous phase (except returning from blocked state for tasks).
+
 ### Vision
 ```
-draft -> review -> published
+draft → review → published
 ```
 - **draft**: Initial capture of objectives and values
 - **review**: Stakeholder feedback and refinement
-- **published**: Stable north star, ready to drive work
+- **published**: Stable north star, ready to drive work (terminal)
 
 ### Strategy
 ```
-shaping -> design -> ready -> active -> completed
+shaping → design → ready → active → completed
 ```
 - **shaping**: Exploring approaches, gathering constraints
 - **design**: Defining the strategic approach
 - **ready**: Strategy validated, waiting for capacity
 - **active**: Initiatives being executed under this strategy
-- **completed**: Strategic objectives achieved
+- **completed**: Terminal state
 
 ### Initiative
 ```
-discovery -> design -> ready -> decompose -> active -> completed
+discovery → design → ready → decompose → active → completed
 ```
 - **discovery**: Understanding the problem space
 - **design**: Defining the solution approach
 - **ready**: Solution validated, ready to break down
 - **decompose**: Creating tasks from the design
 - **active**: Tasks being executed
-- **completed**: Initiative outcomes delivered
+- **completed**: Terminal state
 
 ### Task
 ```
-todo -> active -> completed
-       ↕
-    blocked
-```
-Or for backlog items:
-```
-backlog -> todo -> active -> completed
-             ↕
-          blocked
+backlog → todo → active → completed
+            ↓       ↓
+         blocked ←──┘
 ```
 - **backlog**: Captured but not committed to
 - **todo**: Ready to be pulled when capacity exists
 - **active**: Actively being worked
-- **blocked**: Waiting on external dependency (requires `blocked_by` field)
-- **completed**: Done, acceptance criteria met
+- **blocked**: Waiting on external dependency (can return to todo or active)
+- **completed**: Terminal state
 
-**Blocked transitions**: Tasks can move to `blocked` from `todo` or `active`, and return to either when unblocked. Use `transition_phase(short_code, phase="blocked")` to mark blocked, then `transition_phase(short_code, phase="active")` or `phase="todo"` when unblocked.
+Valid transitions:
+- backlog → todo
+- todo → active
+- todo → blocked
+- active → completed
+- active → blocked
+- blocked → todo (return from blocked)
+- blocked → active (return from blocked)
 
 ### ADR
 ```
-draft -> discussion -> decided -> superseded
+draft → discussion → decided → superseded
 ```
 - **draft**: Initial proposal
 - **discussion**: Gathering input, debating options
 - **decided**: Decision made and binding
-- **superseded**: Replaced by a newer decision
+- **superseded**: Replaced by a newer decision (terminal)
+
+**WARNING**: Auto-advancing from `decided` moves to `superseded`. Most ADRs should stay in `decided` indefinitely. Only manually transition to `superseded` when explicitly replacing with a new ADR.
 
 ## Exit Criteria
 
@@ -117,13 +122,13 @@ When transitioning without `force: true`, the system may warn if exit criteria h
 
 ## Phase Transition Constraints
 
-**IMPORTANT**: You cannot skip phases. Transitions are constrained to adjacent phases only.
+**IMPORTANT**: Phases move forward only. You cannot skip phases or go backward.
 
 ### What This Means
 
 - **Cannot skip phases**: A task in "todo" cannot go directly to "completed" - it must go through "active" first
 - **Cannot skip phases**: An initiative in "discovery" cannot jump to "active" - it must progress through design, ready, decompose
-- **Backward movement is limited**: You can only go back to the immediately previous phase (for rework/revision)
+- **Forward-only**: Once you advance a phase, you cannot go back (except returning from blocked for tasks)
 
 ### Common Mistakes
 
@@ -131,6 +136,8 @@ When transitioning without `force: true`, the system may warn if exit criteria h
 - `todo → completed` (must go todo → active → completed)
 - `discovery → active` (must progress through all intermediate phases)
 - `draft → published` (must go draft → review → published)
+
+**Backward transitions are not supported**: You cannot move from review back to draft, or from design back to discovery.
 
 **To complete a task**, call `transition_phase` twice:
 1. First call: todo → active (start working)
@@ -162,13 +169,14 @@ Most transitions happen when capacity exists at the next phase:
 
 ### Blocked Work
 
-Sometimes work gets stuck. Rather than forcing it through phases:
+Sometimes work gets stuck. Use the blocked state for tasks:
 
-1. Identify the blocker explicitly (update `blocked_by` field)
-2. Address the blocker (may require work at a different level)
-3. Resume the phase once unblocked
+1. Transition to blocked: `transition_phase(short_code, phase="blocked")`
+2. Identify the blocker explicitly (update `blocked_by` field)
+3. Address the blocker (may require work at a different level)
+4. Return from blocked: `transition_phase(short_code, phase="active")` or `phase="todo"`
 
-Don't skip phases to work around blockers. That just moves the problem downstream.
+Blocked is the only state that allows "backward" movement - but it's returning from a paused state, not reversing progress. Only tasks support the blocked state.
 
 ## Using transition_phase
 
@@ -180,11 +188,11 @@ transition_phase(short_code="PROJ-I-0001")
 ```
 Moves to the next valid phase. Validates exit criteria.
 
-**Explicit phase (when needed):**
+**Explicit phase (for blocked state only):**
 ```
 transition_phase(short_code="PROJ-T-0042", phase="blocked")
 ```
-Use explicit phases only for non-linear transitions like marking work blocked.
+Use explicit phases only for moving to/from the blocked state (tasks only).
 
 **Force (use sparingly):**
 ```

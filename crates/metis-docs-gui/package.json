@@ -1,7 +1,7 @@
 {
   "name": "metis-docs-gui",
   "private": true,
-  "version": "1.0.8",
+  "version": "1.0.10",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -18,7 +18,7 @@
   },
   "dependencies": {
     "@tauri-apps/api": "^2.9.0",
-    "@tauri-apps/plugin-dialog": "^2.4.0",
+    "@tauri-apps/plugin-dialog": "^2.5.0",
     "@tiptap/extension-placeholder": "^3.6.6",
     "@tiptap/extension-table": "^3.7.2",
     "@tiptap/extension-table-cell": "^3.7.2",

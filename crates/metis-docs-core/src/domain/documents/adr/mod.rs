@@ -354,11 +354,8 @@ impl Document for Adr {
 
     fn can_transition_to(&self, phase: Phase) -> bool {
         if let Ok(current_phase) = self.phase() {
-            use Phase::*;
-            matches!(
-                (current_phase, phase),
-                (Draft, Discussion) | (Discussion, Decided) | (Decided, Superseded)
-            )
+            // Delegate to DocumentType - the single source of truth
+            DocumentType::Adr.can_transition(current_phase, phase)
         } else {
             false // Can't transition if we can't determine current phase
         }

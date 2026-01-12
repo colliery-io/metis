@@ -265,11 +265,8 @@ impl Document for Vision {
 
     fn can_transition_to(&self, phase: Phase) -> bool {
         if let Ok(current_phase) = self.phase() {
-            use Phase::*;
-            matches!(
-                (current_phase, phase),
-                (Draft, Review) | (Review, Published)
-            )
+            // Delegate to DocumentType - the single source of truth
+            DocumentType::Vision.can_transition(current_phase, phase)
         } else {
             false // Can't transition if we can't determine current phase
         }

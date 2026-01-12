@@ -352,17 +352,8 @@ impl Document for Task {
 
     fn can_transition_to(&self, phase: Phase) -> bool {
         if let Ok(current_phase) = self.phase() {
-            use Phase::*;
-            match (current_phase, phase) {
-                (Backlog, Todo) => true, // Move from backlog to todo when assigned to initiative
-                (Todo, Active) => true,
-                (Active, Completed) => true,
-                (Active, Blocked) => true,
-                (Todo, Blocked) => true, // Can pre emptively be blocked while in backlog
-                (Blocked, Active) => true,
-                (Blocked, Todo) => true, // Can go back to todo if unblocked
-                _ => false,
-            }
+            // Delegate to DocumentType - the single source of truth
+            DocumentType::Task.can_transition(current_phase, phase)
         } else {
             false // Can't transition if we can't determine current phase
         }

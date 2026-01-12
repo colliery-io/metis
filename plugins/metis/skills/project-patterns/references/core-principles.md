@@ -199,10 +199,12 @@ Parent requirements guide proper document relationships based on type and preset
 
 ### What This Means
 
-**Child documents should only be created when the parent is in the appropriate phase:**
-- Strategy should have a published Vision as parent
-- Initiative should have an active Strategy (Full) or published Vision (Streamlined) as parent
-- Task should have an Initiative in `decompose` or `active` phase as parent
+**Recommended workflow for creating child documents:**
+- Strategy typically under a published Vision
+- Initiative typically under an active Strategy (Full) or published Vision (Streamlined)
+- Task typically under an Initiative in `decompose` or `active` phase
+
+Note: The `reassign_parent` tool enforces initiative phase (must be decompose/active). Task creation does not enforce this.
 
 **Backlog items are the exception** - they have no parent requirement because they represent ad-hoc work not yet tied to an initiative. However, backlog items can be assigned to a parent initiative later when:
 - The work gets prioritized into an existing initiative

@@ -1,0 +1,41 @@
+---
+description: "Execute a Metis task with Ralph loop"
+argument-hint: "SHORT_CODE [--max-iterations N]"
+allowed-tools: ["Bash(${CLAUDE_PLUGIN_ROOT}/scripts/setup-metis-ralph.sh:*)"]
+hide-from-slash-command-tool: "true"
+---
+
+# Metis Ralph - Task Execution
+
+Execute the setup script to initialize the loop:
+
+```!
+"${CLAUDE_PLUGIN_ROOT}/scripts/setup-metis-ralph.sh" $ARGUMENTS
+```
+
+## Your Task
+
+You are now in a Metis Ralph loop. Follow these steps:
+
+### 1. Initialize
+- Use `mcp__metis__read_document` to read the task content
+- Use `mcp__metis__transition_phase` to transition the task to "active"
+
+### 2. Execute
+- Implement what the task describes
+- Write code, create files, run tests as needed
+- The task content defines your success criteria
+
+### 3. Complete
+When the task is FULLY complete:
+- Use `mcp__metis__transition_phase` to transition the task to "completed"
+- Output: `<promise>TASK COMPLETE</promise>`
+
+## Critical Rules
+
+- **ONLY** output the promise when the task is genuinely complete
+- **ALWAYS** transition to "completed" before outputting the promise
+- Do NOT lie or output false promises to escape the loop
+- If stuck, continue iterating - the loop is designed for persistence
+
+The loop will continue until you output the promise after completing the task.

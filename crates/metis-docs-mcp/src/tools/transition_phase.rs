@@ -1,7 +1,7 @@
 use crate::formatting::ToolOutput;
 use metis_core::{
     application::services::workspace::{PhaseTransitionService, WorkspaceDetectionService},
-    domain::documents::types::Phase,
+    domain::documents::types::{DocumentType, Phase},
 };
 use rust_mcp_sdk::{
     macros::{mcp_tool, JsonSchema},
@@ -116,28 +116,19 @@ impl TransitionPhaseTool {
     }
 
     fn get_phase_sequence(&self, document_type: &str) -> Vec<String> {
-        match document_type {
-            "vision" => vec!["draft", "review", "published"]
-                .into_iter()
-                .map(String::from)
-                .collect(),
-            "strategy" => vec!["shaping", "design", "ready", "active", "completed"]
-                .into_iter()
-                .map(String::from)
-                .collect(),
-            "initiative" => vec!["discovery", "design", "ready", "decompose", "active", "completed"]
-                .into_iter()
-                .map(String::from)
-                .collect(),
-            "task" => vec!["todo", "active", "completed"]
-                .into_iter()
-                .map(String::from)
-                .collect(),
-            "adr" => vec!["draft", "discussion", "decided", "superseded"]
-                .into_iter()
-                .map(String::from)
-                .collect(),
-            _ => vec!["unknown".to_string()],
+        // Use DocumentType::phase_sequence() - the single source of truth
+        let doc_type = match document_type {
+            "vision" => Some(DocumentType::Vision),
+            "strategy" => Some(DocumentType::Strategy),
+            "initiative" => Some(DocumentType::Initiative),
+            "task" => Some(DocumentType::Task),
+            "adr" => Some(DocumentType::Adr),
+            _ => None,
+        };
+
+        match doc_type {
+            Some(dt) => dt.phase_sequence().iter().map(|p| p.to_string()).collect(),
+            None => vec!["unknown".to_string()],
         }
     }
 }

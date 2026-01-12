@@ -245,134 +245,22 @@ impl PhaseTransitionService {
         Ok(())
     }
 
-    /// Get valid transitions from a given phase for a document type
+    /// Get valid transitions from a given phase for a document type.
+    /// Delegates to DocumentType::valid_transitions_from() - the single source of truth.
     fn get_valid_transitions(&self, doc_type: DocumentType, from_phase: Phase) -> Vec<Phase> {
-        match doc_type {
-            DocumentType::Vision => match from_phase {
-                Phase::Draft => vec![Phase::Review],
-                Phase::Review => vec![Phase::Draft, Phase::Published],
-                Phase::Published => vec![Phase::Review],
-                _ => vec![],
-            },
-            DocumentType::Strategy => match from_phase {
-                Phase::Shaping => vec![Phase::Design],
-                Phase::Design => vec![Phase::Shaping, Phase::Ready],
-                Phase::Ready => vec![Phase::Design, Phase::Active],
-                Phase::Active => vec![Phase::Ready, Phase::Completed],
-                Phase::Completed => vec![],
-                _ => vec![],
-            },
-            DocumentType::Initiative => match from_phase {
-                Phase::Discovery => vec![Phase::Design],
-                Phase::Design => vec![Phase::Discovery, Phase::Ready],
-                Phase::Ready => vec![Phase::Design, Phase::Decompose],
-                Phase::Decompose => vec![Phase::Ready, Phase::Active],
-                Phase::Active => vec![Phase::Decompose, Phase::Completed],
-                Phase::Completed => vec![],
-                _ => vec![],
-            },
-            DocumentType::Task => match from_phase {
-                Phase::Backlog => vec![Phase::Todo],
-                Phase::Todo => vec![Phase::Active, Phase::Blocked],
-                Phase::Active => vec![Phase::Todo, Phase::Completed, Phase::Blocked],
-                Phase::Blocked => vec![Phase::Todo, Phase::Active],
-                Phase::Completed => vec![],
-                _ => vec![],
-            },
-            DocumentType::Adr => match from_phase {
-                Phase::Draft => vec![Phase::Discussion],
-                Phase::Discussion => vec![Phase::Draft, Phase::Decided],
-                Phase::Decided => vec![Phase::Superseded],
-                Phase::Superseded => vec![],
-                _ => vec![],
-            },
-        }
+        doc_type.valid_transitions_from(from_phase)
     }
 
-    /// Get the next phase in the natural sequence for a document type
+    /// Get the next phase in the natural sequence for a document type.
+    /// Delegates to DocumentType::next_phase() - the single source of truth.
     fn get_next_phase(&self, doc_type: DocumentType, current_phase: Phase) -> Result<Phase> {
-        match doc_type {
-            DocumentType::Vision => match current_phase {
-                Phase::Draft => Ok(Phase::Review),
-                Phase::Review => Ok(Phase::Published),
-                Phase::Published => Err(MetisError::InvalidPhaseTransition {
-                    from: current_phase.to_string(),
-                    to: "none".to_string(),
-                    doc_type: "vision".to_string(),
-                }),
-                _ => Err(MetisError::InvalidPhaseTransition {
-                    from: current_phase.to_string(),
-                    to: "unknown".to_string(),
-                    doc_type: "vision".to_string(),
-                }),
-            },
-            DocumentType::Strategy => match current_phase {
-                Phase::Shaping => Ok(Phase::Design),
-                Phase::Design => Ok(Phase::Ready),
-                Phase::Ready => Ok(Phase::Active),
-                Phase::Active => Ok(Phase::Completed),
-                Phase::Completed => Err(MetisError::InvalidPhaseTransition {
-                    from: current_phase.to_string(),
-                    to: "none".to_string(),
-                    doc_type: "strategy".to_string(),
-                }),
-                _ => Err(MetisError::InvalidPhaseTransition {
-                    from: current_phase.to_string(),
-                    to: "unknown".to_string(),
-                    doc_type: "strategy".to_string(),
-                }),
-            },
-            DocumentType::Initiative => match current_phase {
-                Phase::Discovery => Ok(Phase::Design),
-                Phase::Design => Ok(Phase::Ready),
-                Phase::Ready => Ok(Phase::Decompose),
-                Phase::Decompose => Ok(Phase::Active),
-                Phase::Active => Ok(Phase::Completed),
-                Phase::Completed => Err(MetisError::InvalidPhaseTransition {
-                    from: current_phase.to_string(),
-                    to: "none".to_string(),
-                    doc_type: "initiative".to_string(),
-                }),
-                _ => Err(MetisError::InvalidPhaseTransition {
-                    from: current_phase.to_string(),
-                    to: "unknown".to_string(),
-                    doc_type: "initiative".to_string(),
-                }),
-            },
-            DocumentType::Task => {
-                match current_phase {
-                    Phase::Backlog => Ok(Phase::Todo), // Transition from backlog to todo
-                    Phase::Todo => Ok(Phase::Active),
-                    Phase::Active => Ok(Phase::Completed),
-                    Phase::Blocked => Ok(Phase::Active), // Unblock by default
-                    Phase::Completed => Err(MetisError::InvalidPhaseTransition {
-                        from: current_phase.to_string(),
-                        to: "none".to_string(),
-                        doc_type: "task".to_string(),
-                    }),
-                    _ => Err(MetisError::InvalidPhaseTransition {
-                        from: current_phase.to_string(),
-                        to: "unknown".to_string(),
-                        doc_type: "task".to_string(),
-                    }),
-                }
+        doc_type.next_phase(current_phase).ok_or_else(|| {
+            MetisError::InvalidPhaseTransition {
+                from: current_phase.to_string(),
+                to: "none".to_string(),
+                doc_type: doc_type.to_string(),
             }
-            DocumentType::Adr => match current_phase {
-                Phase::Draft => Ok(Phase::Discussion),
-                Phase::Discussion => Ok(Phase::Decided),
-                Phase::Decided => Ok(Phase::Superseded),
-                Phase::Superseded => Err(MetisError::InvalidPhaseTransition {
-                    from: current_phase.to_string(),
-                    to: "none".to_string(),
-                    doc_type: "adr".to_string(),
-                }),
-                _ => Err(MetisError::InvalidPhaseTransition {
-                    from: current_phase.to_string(),
-                    to: "unknown".to_string(),
-                    doc_type: "adr".to_string(),
-                }),
-            },
-        }
+        })
     }
 
     /// Check if a phase transition is valid without performing it
@@ -568,27 +456,32 @@ mod tests {
 
         let transition_service = PhaseTransitionService::new(&workspace_dir);
 
-        // Test vision transitions
+        // Test vision transitions (forward-only)
         let vision_draft_transitions =
             transition_service.get_valid_transitions_for(DocumentType::Vision, Phase::Draft);
         assert_eq!(vision_draft_transitions, vec![Phase::Review]);
 
         let vision_review_transitions =
             transition_service.get_valid_transitions_for(DocumentType::Vision, Phase::Review);
-        assert_eq!(
-            vision_review_transitions,
-            vec![Phase::Draft, Phase::Published]
-        );
+        assert_eq!(vision_review_transitions, vec![Phase::Published]);
 
-        // Test strategy transitions
+        // Test strategy transitions (forward-only)
         let strategy_shaping_transitions =
             transition_service.get_valid_transitions_for(DocumentType::Strategy, Phase::Shaping);
         assert_eq!(strategy_shaping_transitions, vec![Phase::Design]);
 
-        // Test task transitions - specifically backlog to todo
+        // Test task transitions - backlog to todo
         let task_backlog_transitions =
             transition_service.get_valid_transitions_for(DocumentType::Task, Phase::Backlog);
         assert_eq!(task_backlog_transitions, vec![Phase::Todo]);
+
+        // Test task transitions - blocked can return to todo or active
+        let task_blocked_transitions =
+            transition_service.get_valid_transitions_for(DocumentType::Task, Phase::Blocked);
+        assert_eq!(
+            task_blocked_transitions,
+            vec![Phase::Todo, Phase::Active]
+        );
     }
 
     #[tokio::test]
@@ -598,7 +491,7 @@ mod tests {
 
         let transition_service = PhaseTransitionService::new(&workspace_dir);
 
-        // Valid transitions
+        // Valid forward transitions
         assert!(transition_service.is_valid_transition(
             DocumentType::Vision,
             Phase::Draft,
@@ -610,7 +503,7 @@ mod tests {
             Phase::Design
         ));
 
-        // Invalid transitions
+        // Invalid transitions - skipping phases
         assert!(!transition_service.is_valid_transition(
             DocumentType::Vision,
             Phase::Draft,
@@ -620,6 +513,18 @@ mod tests {
             DocumentType::Strategy,
             Phase::Shaping,
             Phase::Active
+        ));
+
+        // Invalid transitions - backward (not supported)
+        assert!(!transition_service.is_valid_transition(
+            DocumentType::Vision,
+            Phase::Review,
+            Phase::Draft
+        ));
+        assert!(!transition_service.is_valid_transition(
+            DocumentType::Strategy,
+            Phase::Design,
+            Phase::Shaping
         ));
     }
 }

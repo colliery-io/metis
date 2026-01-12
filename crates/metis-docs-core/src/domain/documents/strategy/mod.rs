@@ -407,11 +407,8 @@ impl Document for Strategy {
 
     fn can_transition_to(&self, phase: Phase) -> bool {
         if let Ok(current_phase) = self.phase() {
-            use Phase::*;
-            matches!(
-                (current_phase, phase),
-                (Shaping, Design) | (Design, Ready) | (Ready, Active) | (Active, Completed)
-            )
+            // Delegate to DocumentType - the single source of truth
+            DocumentType::Strategy.can_transition(current_phase, phase)
         } else {
             false // Can't transition if we can't determine current phase
         }

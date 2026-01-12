@@ -7,9 +7,9 @@
   "plugins": [
     {
       "name": "metis",
-      "source": "./skill",
+      "source": "./plugins/metis",
       "description": "Flight Levels methodology for project and work management. Teaches when and why to use Metis tools for project planning, work decomposition, and phase management.",
-      "version": "1.0.0"
+      "version": "1.0.10"
     }
   ]
 }
