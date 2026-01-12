@@ -36,6 +36,11 @@ When working with this project:
 - **decomposition** - Patterns for breaking down work into tasks
 - **project-patterns** - Common project patterns (greenfield, tech debt, incident response, feature development)
 
+## Available Commands
+- `/metis-ralph <short-code>` - Execute a task with an iterative Ralph loop
+- `/metis-decompose <short-code>` - Decompose an initiative into tasks
+- `/cancel-metis-ralph` - Cancel an active Ralph loop
+
 ## MCP Server
 The `metis` MCP server should be connected. If Metis tools are not available, the MCP server may need to be started.
 EOF
