@@ -7,13 +7,13 @@ if [ ! -d "$CLAUDE_PROJECT_DIR/.metis" ]; then
     exit 0
 fi
 
-# Check if metis-mcp is installed
-if ! command -v metis-mcp &> /dev/null; then
+# Check if metis is installed
+if ! command -v metis &> /dev/null; then
     cat << 'ENDJSON'
 {
     "hookSpecificOutput": {
         "hookEventName": "SessionStart",
-        "additionalContext": "WARNING: This is a Metis project (`.metis` directory found) but the `metis-mcp` command is not installed or not in PATH. Install it from: https://github.com/colliery-io/metis"
+        "additionalContext": "WARNING: This is a Metis project (`.metis` directory found) but the `metis` command is not installed or not in PATH. Install it from: https://github.com/colliery-io/metis"
     }
 }
 ENDJSON

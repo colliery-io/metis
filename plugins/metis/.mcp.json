@@ -1,8 +1,8 @@
 {
   "mcpServers": {
     "metis": {
-      "command": "metis-mcp",
-      "args": [],
+      "command": "metis",
+      "args": ["mcp"],
       "env": {}
     }
   }
