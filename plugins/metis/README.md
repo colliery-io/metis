@@ -9,7 +9,8 @@ Flight Levels methodology plugin for Metis work management. Includes methodology
 | **Skills** | Flight Levels methodology guidance (decomposition, phases, patterns) |
 | **Agent** | `flight-levels` - Methodology expert for document selection and best practices |
 | **Commands** | `/metis-ralph`, `/metis-decompose`, `/cancel-metis-ralph` - Iterative work loops |
-| **Hooks** | Stop hook for Ralph loop control |
+| **Hooks** | SessionStart (project detection), Stop (Ralph loop control) |
+| **MCP** | Metis MCP server configuration |
 
 ## Skills: Flight Levels Methodology
 

@@ -1,6 +1,17 @@
 {
-  "description": "Metis Ralph stop hook for task execution and initiative decomposition loops",
+  "description": "Metis hooks for project detection and Ralph loops",
   "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/session-start-hook.sh"
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "matcher": "*",
