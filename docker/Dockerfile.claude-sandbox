@@ -44,9 +44,9 @@ RUN mkdir -p /home/agent/.claude/plugins/marketplaces/colliery-io-metis/plugins 
     && cp -r /tmp/metis-plugin/plugins/metis /home/agent/.claude/plugins/marketplaces/colliery-io-metis/plugins/ \
     && rm -rf /tmp/metis-plugin
 
-# Configure MCP server for Metis
+# Configure MCP server for Metis (project_path is passed per-tool-call, not at startup)
 RUN mkdir -p /home/agent/.claude && \
-    echo '{"mcpServers":{"metis":{"command":"metis","args":["mcp","--project-path","/workspace"]}}}' > /home/agent/.mcp.json
+    echo '{"mcpServers":{"metis":{"command":"metis","args":["mcp"]}}}' > /home/agent/.mcp.json
 
 # Back to agent user for runtime
 WORKDIR /workspace
