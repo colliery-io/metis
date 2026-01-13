@@ -135,22 +135,20 @@ if [[ ! -d "$PROJECT_PATH" ]]; then
   exit 1
 fi
 
-# Create state file
+# Create pointer file with loop state
+# Document access goes through MCP - no file path needed
 mkdir -p .claude
 
-cat > .claude/metis-ralph.local.md <<EOF
----
-active: true
-mode: decompose
+cat > .claude/metis-ralph-active.yaml <<EOF
+# Metis Ralph Loop State
+# Progress is logged to the initiative document via MCP
 short_code: "$SHORT_CODE"
 project_path: "$PROJECT_PATH"
+mode: decompose
 iteration: 1
 max_iterations: $MAX_ITERATIONS
 completion_promise: "DECOMPOSITION COMPLETE"
 started_at: "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
----
-
-Decompose Metis initiative $SHORT_CODE into tasks
 EOF
 
 # Output setup message
@@ -165,12 +163,12 @@ INSTRUCTIONS:
 1. Read the initiative using mcp__metis__read_document
 2. Transition the initiative to "decompose" using mcp__metis__transition_phase
 3. Analyze the initiative and create tasks using mcp__metis__create_document
-4. Iterate: review coverage, add more tasks, refine
+4. Log progress to the initiative's Status Updates section using mcp__metis__edit_document
 5. When decomposition is complete:
-   - Transition to "active" using mcp__metis__transition_phase
+   - Do NOT transition to "active" (user will do this after review)
    - Output: <promise>DECOMPOSITION COMPLETE</promise>
 
-The loop will continue until you output the promise after completing decomposition.
+Progress is logged to the initiative document. User reviews and approves the final transition.
 
 To cancel: /cancel-metis-ralph
 EOF

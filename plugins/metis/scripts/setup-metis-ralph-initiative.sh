@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Metis Ralph Setup Script - Task Execution Mode
-# Creates state file for Ralph loop driven by a Metis task
+# Metis Ralph Initiative Setup Script
+# Creates state file for Ralph loop to execute all tasks under an initiative
 # Supports --sandboxed mode for isolated Docker execution
 
 set -euo pipefail
@@ -14,13 +14,13 @@ SANDBOXED=false
 
 show_help() {
   cat << 'HELP_EOF'
-Metis Ralph - Execute a Metis task with Ralph loop
+Metis Ralph Initiative - Execute all tasks under a decomposed initiative
 
 USAGE:
-  /metis-ralph <SHORT_CODE> [OPTIONS]
+  /metis-ralph-initiative <SHORT_CODE> [OPTIONS]
 
 ARGUMENTS:
-  SHORT_CODE    Metis task short code (e.g., PROJ-T-0001)
+  SHORT_CODE    Metis initiative short code (e.g., PROJ-I-0001)
 
 OPTIONS:
   --project-path <path>    Path to .metis folder (default: auto-detect)
@@ -29,11 +29,11 @@ OPTIONS:
   -h, --help               Show this help message
 
 DESCRIPTION:
-  Starts a Ralph loop to execute a Metis task. Claude will:
-  1. Read the task content from Metis
-  2. Transition the task to "active" phase
-  3. Work on implementing the task
-  4. Iterate until complete
+  Starts a Ralph loop to execute ALL tasks under a decomposed initiative. Claude will:
+  1. Read the initiative and list all its tasks
+  2. Work through each task in "todo" phase
+  3. Implement each task, logging progress
+  4. Continue until all tasks are complete
   5. Signal ready for user review
 
 SANDBOXED MODE:
@@ -43,10 +43,14 @@ SANDBOXED MODE:
   - Runs detached - monitor with docker logs
   - Container exits when complete
 
+PREREQUISITES:
+  The initiative should be in "decompose" or "active" phase with tasks created.
+  Use /metis-decompose first if the initiative hasn't been broken down yet.
+
 EXAMPLES:
-  /metis-ralph PROJ-T-0001
-  /metis-ralph PROJ-T-0001 --max-iterations 20
-  /metis-ralph PROJ-T-0001 --sandboxed
+  /metis-ralph-initiative PROJ-I-0001
+  /metis-ralph-initiative PROJ-I-0001 --max-iterations 50
+  /metis-ralph-initiative PROJ-I-0001 --sandboxed
 
 STOPPING:
   Local: Use /cancel-metis-ralph
@@ -100,22 +104,22 @@ done
 
 # Validate short code
 if [[ -z "$SHORT_CODE" ]]; then
-  echo "Error: No task short code provided" >&2
+  echo "Error: No initiative short code provided" >&2
   echo "" >&2
-  echo "Usage: /metis-ralph <SHORT_CODE> [OPTIONS]" >&2
+  echo "Usage: /metis-ralph-initiative <SHORT_CODE> [OPTIONS]" >&2
   echo "" >&2
   echo "Examples:" >&2
-  echo "  /metis-ralph PROJ-T-0001" >&2
-  echo "  /metis-ralph PROJ-T-0001 --max-iterations 20" >&2
+  echo "  /metis-ralph-initiative PROJ-I-0001" >&2
+  echo "  /metis-ralph-initiative PROJ-I-0001 --max-iterations 50" >&2
   exit 1
 fi
 
-# Validate short code format (should be a task: PREFIX-T-NNNN)
-if ! [[ "$SHORT_CODE" =~ ^[A-Z]+-T-[0-9]+$ ]]; then
-  echo "Error: Invalid task short code format: $SHORT_CODE" >&2
+# Validate short code format (should be an initiative: PREFIX-I-NNNN)
+if ! [[ "$SHORT_CODE" =~ ^[A-Z]+-I-[0-9]+$ ]]; then
+  echo "Error: Invalid initiative short code format: $SHORT_CODE" >&2
   echo "" >&2
-  echo "Expected format: PREFIX-T-NNNN (e.g., PROJ-T-0001)" >&2
-  echo "Note: /metis-ralph is for tasks. Use /metis-decompose for initiatives." >&2
+  echo "Expected format: PREFIX-I-NNNN (e.g., PROJ-I-0001)" >&2
+  echo "Note: /metis-ralph-initiative is for initiatives. Use /metis-ralph for single tasks." >&2
   exit 1
 fi
 
@@ -162,51 +166,53 @@ if [[ "$SANDBOXED" == "true" ]]; then
     exit 1
   fi
 
-  # Build args for sandbox script (pass task as-is, script handles it)
-  SANDBOX_ARGS="$SHORT_CODE --task"
+  # Build args for sandbox script
+  SANDBOX_ARGS="$SHORT_CODE"
   if [[ $MAX_ITERATIONS -gt 0 ]]; then
     SANDBOX_ARGS="$SANDBOX_ARGS --max-iterations $MAX_ITERATIONS"
   fi
 
-  echo "Launching sandboxed Ralph task..."
+  echo "Launching sandboxed Ralph initiative..."
   echo ""
   exec "$SANDBOX_SCRIPT" $SANDBOX_ARGS
 fi
 
 # Local mode - create pointer file with loop state
-# Document access goes through MCP - no file path needed
 mkdir -p .claude
 
 cat > .claude/metis-ralph-active.yaml <<EOF
-# Metis Ralph Loop State
-# Progress is logged to the task document via MCP
+# Metis Ralph Loop State - Initiative Execution Mode
+# Working through all tasks under an initiative
 short_code: "$SHORT_CODE"
 project_path: "$PROJECT_PATH"
-mode: task
+mode: initiative
 iteration: 1
 max_iterations: $MAX_ITERATIONS
-completion_promise: "TASK COMPLETE"
+completion_promise: "INITIATIVE COMPLETE"
 started_at: "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 EOF
 
 # Output setup message
 cat <<EOF
-Metis Ralph activated for task execution
+Metis Ralph activated for initiative execution
 
-Task: $SHORT_CODE
+Initiative: $SHORT_CODE
 Project: $PROJECT_PATH
 Max iterations: $(if [[ $MAX_ITERATIONS -gt 0 ]]; then echo $MAX_ITERATIONS; else echo "unlimited"; fi)
 
 INSTRUCTIONS:
-1. Read the task using mcp__metis__read_document
-2. Transition the task to "active" using mcp__metis__transition_phase
-3. Implement what the task describes
-4. Log progress to the task's "Status Updates" section using mcp__metis__edit_document
-5. When FULLY complete:
-   - Do NOT transition to "completed" (user will do this after review)
-   - Output: <promise>TASK COMPLETE</promise>
+1. Read the initiative using mcp__metis__read_document
+2. List tasks under it using mcp__metis__list_documents
+3. For each task in "todo" phase:
+   - Transition to "active"
+   - Implement the task
+   - Log progress to the task's Status Updates
+   - Transition to "completed" when done
+4. When ALL tasks are complete:
+   - Do NOT transition the initiative (user reviews)
+   - Output: <promise>INITIATIVE COMPLETE</promise>
 
-Progress is logged to the task document. User reviews and approves the final transition.
+Tasks are auto-completed. User reviews the initiative as a whole at the end.
 
 To cancel: /cancel-metis-ralph
 EOF

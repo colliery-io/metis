@@ -2,7 +2,8 @@
 
 # Metis Ralph Stop Hook
 # Prevents session exit when a metis-ralph loop is active
-# Feeds the task/initiative prompt back to continue the loop
+# Feeds the task prompt back to continue the loop
+# Progress is logged to the task document via MCP
 
 set -euo pipefail
 
@@ -10,23 +11,20 @@ set -euo pipefail
 HOOK_INPUT=$(cat)
 
 # Check if metis-ralph loop is active
-STATE_FILE=".claude/metis-ralph.local.md"
+STATE_FILE=".claude/metis-ralph-active.yaml"
 
 if [[ ! -f "$STATE_FILE" ]]; then
   # No active loop - allow exit
   exit 0
 fi
 
-# Parse markdown frontmatter (YAML between ---) and extract values
-FRONTMATTER=$(sed -n '/^---$/,/^---$/{ /^---$/d; p; }' "$STATE_FILE")
-
-# Extract values from frontmatter
-ITERATION=$(echo "$FRONTMATTER" | grep '^iteration:' | sed 's/iteration: *//')
-MAX_ITERATIONS=$(echo "$FRONTMATTER" | grep '^max_iterations:' | sed 's/max_iterations: *//')
-MODE=$(echo "$FRONTMATTER" | grep '^mode:' | sed 's/mode: *//')
-SHORT_CODE=$(echo "$FRONTMATTER" | grep '^short_code:' | sed 's/short_code: *//' | tr -d '"')
-PROJECT_PATH=$(echo "$FRONTMATTER" | grep '^project_path:' | sed 's/project_path: *//' | tr -d '"')
-COMPLETION_PROMISE=$(echo "$FRONTMATTER" | grep '^completion_promise:' | sed 's/completion_promise: *//' | tr -d '"')
+# Parse YAML values (simple grep-based parsing)
+ITERATION=$(grep '^iteration:' "$STATE_FILE" | sed 's/iteration: *//')
+MAX_ITERATIONS=$(grep '^max_iterations:' "$STATE_FILE" | sed 's/max_iterations: *//')
+MODE=$(grep '^mode:' "$STATE_FILE" | sed 's/mode: *//')
+SHORT_CODE=$(grep '^short_code:' "$STATE_FILE" | sed 's/short_code: *//' | tr -d '"')
+PROJECT_PATH=$(grep '^project_path:' "$STATE_FILE" | sed 's/project_path: *//' | tr -d '"')
+COMPLETION_PROMISE=$(grep '^completion_promise:' "$STATE_FILE" | sed 's/completion_promise: *//' | tr -d '"')
 
 # Validate numeric fields
 if [[ ! "$ITERATION" =~ ^[0-9]+$ ]]; then
@@ -95,7 +93,7 @@ if [[ -n "$COMPLETION_PROMISE" ]]; then
 
   if [[ -n "$PROMISE_TEXT" ]] && [[ "$PROMISE_TEXT" = "$COMPLETION_PROMISE" ]]; then
     if [[ "$MODE" == "task" ]]; then
-      echo "Metis Ralph: Task $SHORT_CODE completed"
+      echo "Metis Ralph: Task $SHORT_CODE completed successfully"
     else
       echo "Metis Ralph: Initiative $SHORT_CODE decomposition completed"
     fi
@@ -107,25 +105,50 @@ fi
 # Not complete - continue loop
 NEXT_ITERATION=$((ITERATION + 1))
 
-# Extract prompt (everything after closing ---)
-PROMPT_TEXT=$(awk '/^---$/{i++; next} i>=2' "$STATE_FILE")
-
-if [[ -z "$PROMPT_TEXT" ]]; then
-  echo "Metis Ralph: State file missing prompt" >&2
-  rm "$STATE_FILE"
-  exit 0
-fi
-
 # Update iteration in state file
 TEMP_FILE="${STATE_FILE}.tmp.$$"
 sed "s/^iteration: .*/iteration: $NEXT_ITERATION/" "$STATE_FILE" > "$TEMP_FILE"
 mv "$TEMP_FILE" "$STATE_FILE"
 
-# Build context message based on mode
+# Build prompt based on mode
 if [[ "$MODE" == "task" ]]; then
-  SYSTEM_MSG="Metis Ralph iteration $NEXT_ITERATION | Task: $SHORT_CODE | Complete the task, transition to 'completed', then output <promise>$COMPLETION_PROMISE</promise>"
+  PROMPT_TEXT="Continue working on Metis task $SHORT_CODE.
+
+1. Read the task using mcp__metis__read_document with short_code=\"$SHORT_CODE\" and project_path=\"$PROJECT_PATH\"
+2. Review what you've done so far (check the Status Updates section)
+3. Continue implementing what the task describes
+4. Log your progress to the task's Status Updates section using mcp__metis__edit_document
+5. When FULLY complete:
+   - Do NOT transition to \"completed\" (user will review and approve)
+   - Output: <promise>$COMPLETION_PROMISE</promise>"
+  SYSTEM_MSG="Metis Ralph iteration $NEXT_ITERATION | Task: $SHORT_CODE | Log progress, complete work, output <promise>$COMPLETION_PROMISE</promise> when ready for review"
+elif [[ "$MODE" == "initiative" ]]; then
+  PROMPT_TEXT="Continue executing tasks under Metis initiative $SHORT_CODE.
+
+1. Read the initiative using mcp__metis__read_document with short_code=\"$SHORT_CODE\" and project_path=\"$PROJECT_PATH\"
+2. List all tasks under it using mcp__metis__list_documents
+3. Find tasks in \"todo\" or \"active\" phase
+4. For each incomplete task:
+   - If in \"todo\", transition to \"active\"
+   - Implement the task
+   - Log progress to the task's Status Updates section
+   - Transition the task to \"completed\" when done
+5. When ALL tasks are complete (no todo/active remain):
+   - Do NOT transition the initiative (user reviews)
+   - Output: <promise>$COMPLETION_PROMISE</promise>"
+  SYSTEM_MSG="Metis Ralph iteration $NEXT_ITERATION | Initiative: $SHORT_CODE | Execute and complete tasks, output <promise>$COMPLETION_PROMISE</promise> when all done"
 else
-  SYSTEM_MSG="Metis Ralph iteration $NEXT_ITERATION | Initiative: $SHORT_CODE | Complete decomposition, transition to 'active', then output <promise>$COMPLETION_PROMISE</promise>"
+  # decompose mode
+  PROMPT_TEXT="Continue decomposing Metis initiative $SHORT_CODE.
+
+1. Read the initiative using mcp__metis__read_document with short_code=\"$SHORT_CODE\" and project_path=\"$PROJECT_PATH\"
+2. Review existing tasks created so far
+3. Continue creating tasks to fully decompose the initiative
+4. Log your progress to the initiative's Status Updates section using mcp__metis__edit_document
+5. When FULLY decomposed:
+   - Do NOT transition to \"active\" (user will review and approve)
+   - Output: <promise>$COMPLETION_PROMISE</promise>"
+  SYSTEM_MSG="Metis Ralph iteration $NEXT_ITERATION | Initiative: $SHORT_CODE | Complete decomposition, output <promise>$COMPLETION_PROMISE</promise> when ready for review"
 fi
 
 # Output JSON to block stop and feed prompt back
