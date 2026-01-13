@@ -2,7 +2,6 @@
 
 # Metis Ralph Initiative Setup Script
 # Creates state file for Ralph loop to execute all tasks under an initiative
-# Supports --sandboxed mode for isolated Docker execution
 
 set -euo pipefail
 
@@ -10,7 +9,6 @@ set -euo pipefail
 SHORT_CODE=""
 MAX_ITERATIONS=0
 PROJECT_PATH=""
-SANDBOXED=false
 
 show_help() {
   cat << 'HELP_EOF'
@@ -25,7 +23,6 @@ ARGUMENTS:
 OPTIONS:
   --project-path <path>    Path to .metis folder (default: auto-detect)
   --max-iterations <n>     Maximum iterations before auto-stop (default: unlimited)
-  --sandboxed              Run in isolated Docker container (no network, detached)
   -h, --help               Show this help message
 
 DESCRIPTION:
@@ -36,13 +33,6 @@ DESCRIPTION:
   4. Continue until all tasks are complete
   5. Signal ready for user review
 
-SANDBOXED MODE:
-  With --sandboxed, the Ralph loop runs in an isolated Docker container:
-  - No network access (fully isolated)
-  - Project mounted read-write
-  - Runs detached - monitor with docker logs
-  - Container exits when complete
-
 PREREQUISITES:
   The initiative should be in "decompose" or "active" phase with tasks created.
   Use /metis-decompose first if the initiative hasn't been broken down yet.
@@ -50,11 +40,9 @@ PREREQUISITES:
 EXAMPLES:
   /metis-ralph-initiative PROJ-I-0001
   /metis-ralph-initiative PROJ-I-0001 --max-iterations 50
-  /metis-ralph-initiative PROJ-I-0001 --sandboxed
 
 STOPPING:
-  Local: Use /cancel-metis-ralph
-  Sandboxed: docker stop <container-name>
+  Use /cancel-metis-ralph to stop the loop.
 HELP_EOF
   exit 0
 }
@@ -80,10 +68,6 @@ while [[ $# -gt 0 ]]; do
       fi
       PROJECT_PATH="$2"
       shift 2
-      ;;
-    --sandboxed)
-      SANDBOXED=true
-      shift
       ;;
     -*)
       echo "Error: Unknown option: $1" >&2
@@ -151,33 +135,7 @@ if [[ ! -d "$PROJECT_PATH" ]]; then
   exit 1
 fi
 
-# Get project root (parent of .metis)
-PROJECT_ROOT="$(dirname "$PROJECT_PATH")"
-
-# Handle sandboxed mode - launch Docker container and exit
-if [[ "$SANDBOXED" == "true" ]]; then
-  SANDBOX_SCRIPT="$PROJECT_ROOT/docker/run-sandboxed-ralph.sh"
-
-  if [[ ! -f "$SANDBOX_SCRIPT" ]]; then
-    echo "Error: Sandbox script not found at $SANDBOX_SCRIPT" >&2
-    echo "" >&2
-    echo "Sandboxed mode requires docker/run-sandboxed-ralph.sh in your project." >&2
-    echo "See: https://github.com/colliery-io/metis for setup instructions." >&2
-    exit 1
-  fi
-
-  # Build args for sandbox script
-  SANDBOX_ARGS="$SHORT_CODE"
-  if [[ $MAX_ITERATIONS -gt 0 ]]; then
-    SANDBOX_ARGS="$SANDBOX_ARGS --max-iterations $MAX_ITERATIONS"
-  fi
-
-  echo "Launching sandboxed Ralph initiative..."
-  echo ""
-  exec "$SANDBOX_SCRIPT" $SANDBOX_ARGS
-fi
-
-# Local mode - create pointer file with loop state
+# Create pointer file with loop state
 mkdir -p .claude
 
 cat > .claude/metis-ralph-active.yaml <<EOF
