@@ -38,15 +38,18 @@ RUN git clone --depth 1 --branch ${METIS_VERSION} https://github.com/colliery-io
 USER agent
 
 # Clone Metis repo to get plugin files (uses same version as CLI build)
+# Marketplace structure requires:
+#   .claude-plugin/marketplace.json - describes available plugins
+#   plugins/metis/ - actual plugin content
 ARG PLUGIN_VERSION=main
-RUN mkdir -p /home/agent/.claude/plugins/marketplaces/colliery-io-metis/plugins \
+RUN mkdir -p /home/agent/.claude/plugins/marketplaces/colliery-io-metis \
     && git clone --depth 1 --branch ${PLUGIN_VERSION} https://github.com/colliery-io/metis.git /tmp/metis-plugin \
-    && cp -r /tmp/metis-plugin/plugins/metis /home/agent/.claude/plugins/marketplaces/colliery-io-metis/plugins/ \
+    && cp -r /tmp/metis-plugin/.claude-plugin /home/agent/.claude/plugins/marketplaces/colliery-io-metis/ \
+    && cp -r /tmp/metis-plugin/plugins /home/agent/.claude/plugins/marketplaces/colliery-io-metis/ \
     && rm -rf /tmp/metis-plugin
 
-# Configure MCP server for Metis (project_path is passed per-tool-call, not at startup)
-RUN mkdir -p /home/agent/.claude && \
-    echo '{"mcpServers":{"metis":{"command":"metis","args":["mcp"]}}}' > /home/agent/.mcp.json
+# Configure MCP server for Metis (inside .claude directory)
+RUN echo '{"mcpServers":{"metis":{"command":"metis","args":["mcp"]}}}' > /home/agent/.claude/.mcp.json
 
 # Back to agent user for runtime
 WORKDIR /workspace
