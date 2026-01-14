@@ -99,3 +99,22 @@ Note: This removes the loop state but does NOT revert Metis document phase trans
 - Tasks requiring human judgment
 - Exploratory work
 - One-shot operations
+
+---
+
+## Docker Sandbox (Autonomous Execution)
+
+For fully autonomous execution without permission prompts, run Ralph in a Docker sandbox:
+
+```bash
+docker sandbox run -w "$(pwd)" claude
+```
+
+Then install the plugin and MCP inside the sandbox:
+```
+/plugin marketplace add colliery-io/metis
+/plugin install metis@colliery-io-metis
+!claude mcp add --scope user metis metis mcp
+```
+
+See full instructions: https://github.com/colliery-io/metis/blob/main/docs/docker-sandbox.md
