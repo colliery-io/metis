@@ -1,7 +1,20 @@
 use crate::workspace;
 use anyhow::Result;
-use clap::Args;
+use clap::{Args, ValueEnum};
 use metis_core::{Application, Database, Result as MetisResult};
+use serde::Serialize;
+
+/// Output format for CLI commands
+#[derive(Debug, Clone, Copy, ValueEnum, Default)]
+pub enum OutputFormat {
+    /// Human-readable table (default)
+    #[default]
+    Table,
+    /// Compact single-line per document for scripts
+    Compact,
+    /// JSON output for programmatic use
+    Json,
+}
 
 #[derive(Args)]
 pub struct ListCommand {
@@ -20,6 +33,20 @@ pub struct ListCommand {
     /// Include archived documents in the list
     #[arg(long)]
     pub include_archived: bool,
+
+    /// Output format (table, compact, json)
+    #[arg(short = 'f', long, value_enum, default_value = "table")]
+    pub format: OutputFormat,
+}
+
+/// JSON-serializable document for output
+#[derive(Serialize)]
+struct DocumentOutput {
+    #[serde(rename = "type")]
+    doc_type: String,
+    code: String,
+    title: String,
+    phase: String,
 }
 
 impl ListCommand {
@@ -68,13 +95,20 @@ impl ListCommand {
             self.list_all_documents(&mut repo).await?
         };
 
-        // 5. Display results
+        // 5. Display results based on format
         if documents.is_empty() {
-            println!("No documents found matching the criteria.");
+            match self.format {
+                OutputFormat::Json => println!("[]"),
+                _ => println!("No documents found matching the criteria."),
+            }
             return Ok(());
         }
 
-        self.display_documents(&documents);
+        match self.format {
+            OutputFormat::Table => self.display_table(&documents),
+            OutputFormat::Compact => self.display_compact(&documents),
+            OutputFormat::Json => self.display_json(&documents),
+        }
 
         Ok(())
     }
@@ -86,7 +120,7 @@ impl ListCommand {
         // For listing all documents, we can query each type
         let mut all_docs = Vec::new();
 
-        // Collect all document types
+        // Collect all document types in display order (matching MCP)
         for doc_type in ["vision", "strategy", "initiative", "task", "adr"] {
             let mut docs = repo.find_by_type(doc_type)?;
             all_docs.append(&mut docs);
@@ -97,39 +131,74 @@ impl ListCommand {
             all_docs.retain(|doc| !doc.archived);
         }
 
-        // Sort by updated_at descending
+        // Sort by type order, then by short_code (matching MCP behavior)
+        let type_order = |t: &str| match t {
+            "vision" => 0,
+            "strategy" => 1,
+            "initiative" => 2,
+            "task" => 3,
+            "adr" => 4,
+            _ => 5,
+        };
+
         all_docs.sort_by(|a, b| {
-            b.updated_at
-                .partial_cmp(&a.updated_at)
-                .unwrap_or(std::cmp::Ordering::Equal)
+            let type_cmp = type_order(&a.document_type).cmp(&type_order(&b.document_type));
+            if type_cmp != std::cmp::Ordering::Equal {
+                type_cmp
+            } else {
+                a.short_code.cmp(&b.short_code)
+            }
         });
 
         Ok(all_docs)
     }
 
-    fn display_documents(&self, documents: &[metis_core::dal::database::models::Document]) {
+    /// Display documents as a human-readable table
+    /// Columns match MCP list_documents: Type, Code, Title, Phase
+    fn display_table(&self, documents: &[metis_core::dal::database::models::Document]) {
         println!(
-            "\n{:<15} {:<30} {:<15} {:<15} {:<20}",
-            "TYPE", "TITLE", "PHASE", "ID", "UPDATED"
+            "\n{:<12} {:<14} {:<50} {:<12}",
+            "Type", "Code", "Title", "Phase"
         );
-        println!("{}", "-".repeat(95));
+        println!("{}", "-".repeat(90));
 
         for doc in documents {
-            let updated = chrono::DateTime::from_timestamp(doc.updated_at as i64, 0)
-                .map(|dt| dt.format("%Y-%m-%d %H:%M").to_string())
-                .unwrap_or_else(|| "Unknown".to_string());
-
             println!(
-                "{:<15} {:<30} {:<15} {:<15} {:<20}",
+                "{:<12} {:<14} {:<50} {:<12}",
                 doc.document_type,
-                self.truncate_string(&doc.title, 28),
-                doc.phase,
-                self.truncate_string(&doc.id, 13),
-                updated
+                doc.short_code,
+                self.truncate_string(&doc.title, 48),
+                doc.phase
             );
         }
 
         println!("\nTotal: {} documents", documents.len());
+    }
+
+    /// Display documents in compact format (one line per document)
+    /// Format: CODE PHASE TITLE
+    fn display_compact(&self, documents: &[metis_core::dal::database::models::Document]) {
+        for doc in documents {
+            println!("{} {} {}", doc.short_code, doc.phase, doc.title);
+        }
+    }
+
+    /// Display documents as JSON array
+    fn display_json(&self, documents: &[metis_core::dal::database::models::Document]) {
+        let output: Vec<DocumentOutput> = documents
+            .iter()
+            .map(|doc| DocumentOutput {
+                doc_type: doc.document_type.clone(),
+                code: doc.short_code.clone(),
+                title: doc.title.clone(),
+                phase: doc.phase.clone(),
+            })
+            .collect();
+
+        match serde_json::to_string_pretty(&output) {
+            Ok(json) => println!("{}", json),
+            Err(e) => eprintln!("Error serializing to JSON: {}", e),
+        }
     }
 
     fn truncate_string(&self, s: &str, max_len: usize) -> String {
@@ -162,6 +231,7 @@ mod tests {
             phase: None,
             all: false,
             include_archived: false,
+            format: OutputFormat::Table,
         };
 
         let result = cmd.execute().await;
@@ -201,6 +271,7 @@ mod tests {
             phase: None,
             all: true,
             include_archived: false,
+            format: OutputFormat::Table,
         };
 
         let result = cmd.execute().await;

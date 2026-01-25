@@ -42,9 +42,9 @@ pub async fn create_new_task(title: &str, initiative_id: &str) -> Result<()> {
         .map_err(|e| anyhow::anyhow!("Failed to create task: {}", e))?;
 
     println!("✓ Created task: {}", result.file_path.display());
-    println!("  ID: {}", result.document_id);
+    println!("  Short Code: {}", result.short_code);
     println!("  Title: {}", title);
-    println!("  Parent Initiative: {}", initiative_doc_id);
+    println!("  Parent Initiative: {}", initiative_id);
 
     Ok(())
 }

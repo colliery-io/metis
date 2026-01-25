@@ -1,27 +1,31 @@
+use crate::commands::list::OutputFormat;
 use crate::workspace;
 use anyhow::Result;
 use clap::Args;
 use metis_core::{Application, Database, Result as MetisResult};
-use tabled::{Table, Tabled};
+use serde::Serialize;
 
 #[derive(Args)]
 pub struct StatusCommand {
     /// Include archived documents in the status view
     #[arg(long)]
     pub include_archived: bool,
+
+    /// Output format (table, compact, json)
+    #[arg(short = 'f', long, value_enum, default_value = "table")]
+    pub format: OutputFormat,
 }
 
-#[derive(Tabled)]
-struct StatusRow {
-    #[tabled(rename = "TITLE")]
+/// JSON-serializable status row for output
+#[derive(Serialize)]
+struct StatusOutput {
+    code: String,
     title: String,
-    #[tabled(rename = "TYPE")]
+    #[serde(rename = "type")]
     doc_type: String,
-    #[tabled(rename = "PHASE")]
     phase: String,
-    #[tabled(rename = "BLOCKED BY")]
+    #[serde(skip_serializing_if = "String::is_empty")]
     blocked_by: String,
-    #[tabled(rename = "UPDATED")]
     updated: String,
 }
 
@@ -87,19 +91,6 @@ impl StatusCommand {
         });
     }
 
-    /// Format a single document into a status row
-    fn create_status_row(&self, doc: &metis_core::dal::database::models::Document) -> StatusRow {
-        StatusRow {
-            title: self.truncate_string(&doc.title, 35),
-            doc_type: doc.document_type.clone(),
-            phase: doc.phase.clone(),
-            blocked_by: self.extract_blocked_by_info(doc),
-            updated: chrono::DateTime::from_timestamp(doc.updated_at as i64, 0)
-                .map(|dt| self.format_relative_time(dt))
-                .unwrap_or_else(|| "Unknown".to_string()),
-        }
-    }
-
     /// Count documents by phase for insights
     fn count_documents_by_phase(
         &self,
@@ -137,11 +128,18 @@ impl StatusCommand {
 
         // 5. Display results
         if documents.is_empty() {
-            println!("No documents found in workspace.");
+            match self.format {
+                OutputFormat::Json => println!("[]"),
+                _ => println!("No documents found in workspace."),
+            }
             return Ok(());
         }
 
-        self.display_status(&documents);
+        match self.format {
+            OutputFormat::Table => self.display_table(&documents),
+            OutputFormat::Compact => self.display_compact(&documents),
+            OutputFormat::Json => self.display_json(&documents),
+        }
         Ok(())
     }
 
@@ -160,23 +158,71 @@ impl StatusCommand {
         }
     }
 
-    fn display_status(&self, documents: &[metis_core::dal::database::models::Document]) {
+    /// Display status as a human-readable table
+    fn display_table(&self, documents: &[metis_core::dal::database::models::Document]) {
         println!("\nWORKSPACE STATUS\n");
 
-        // Convert documents to table rows
-        let rows: Vec<StatusRow> = documents
-            .iter()
-            .map(|doc| self.create_status_row(doc))
-            .collect();
+        println!(
+            "{:<14} {:<35} {:<12} {:<12} {:<18} {:<12}",
+            "Code", "Title", "Type", "Phase", "Blocked By", "Updated"
+        );
+        println!("{}", "-".repeat(105));
 
-        // Create and display table
-        let table = Table::new(rows);
-        println!("{}", table);
+        for doc in documents {
+            println!(
+                "{:<14} {:<35} {:<12} {:<12} {:<18} {:<12}",
+                doc.short_code,
+                self.truncate_string(&doc.title, 33),
+                doc.document_type,
+                doc.phase,
+                self.extract_blocked_by_info(doc),
+                chrono::DateTime::from_timestamp(doc.updated_at as i64, 0)
+                    .map(|dt| self.format_relative_time(dt))
+                    .unwrap_or_else(|| "Unknown".to_string())
+            );
+        }
 
         println!("\nTotal: {} documents", documents.len());
 
         // Summary insights
         self.display_insights(documents);
+    }
+
+    /// Display status in compact format (one line per document)
+    fn display_compact(&self, documents: &[metis_core::dal::database::models::Document]) {
+        for doc in documents {
+            let blocked_by = self.extract_blocked_by_info(doc);
+            if blocked_by.is_empty() {
+                println!("{} {} {}", doc.short_code, doc.phase, doc.title);
+            } else {
+                println!(
+                    "{} {} {} [blocked by: {}]",
+                    doc.short_code, doc.phase, doc.title, blocked_by
+                );
+            }
+        }
+    }
+
+    /// Display status as JSON array
+    fn display_json(&self, documents: &[metis_core::dal::database::models::Document]) {
+        let output: Vec<StatusOutput> = documents
+            .iter()
+            .map(|doc| StatusOutput {
+                code: doc.short_code.clone(),
+                title: doc.title.clone(),
+                doc_type: doc.document_type.clone(),
+                phase: doc.phase.clone(),
+                blocked_by: self.extract_blocked_by_info(doc),
+                updated: chrono::DateTime::from_timestamp(doc.updated_at as i64, 0)
+                    .map(|dt| self.format_relative_time(dt))
+                    .unwrap_or_else(|| "Unknown".to_string()),
+            })
+            .collect();
+
+        match serde_json::to_string_pretty(&output) {
+            Ok(json) => println!("{}", json),
+            Err(e) => eprintln!("Error serializing to JSON: {}", e),
+        }
     }
 
     fn extract_blocked_by_info(&self, doc: &metis_core::dal::database::models::Document) -> String {
@@ -279,6 +325,7 @@ mod tests {
 
         let cmd = StatusCommand {
             include_archived: false,
+            format: OutputFormat::Table,
         };
 
         let result = cmd.execute().await;
@@ -315,6 +362,7 @@ mod tests {
 
         let cmd = StatusCommand {
             include_archived: false,
+            format: OutputFormat::Table,
         };
 
         let result = cmd.execute().await;
@@ -332,6 +380,7 @@ mod tests {
     fn test_action_priority() {
         let cmd = StatusCommand {
             include_archived: false,
+            format: OutputFormat::Table,
         };
 
         // Create mock documents with different phases

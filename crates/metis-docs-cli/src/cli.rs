@@ -4,7 +4,7 @@ use tracing_subscriber::filter::LevelFilter;
 
 use crate::commands::{
     ArchiveCommand, ConfigCommand, CreateCommand, InitCommand, ListCommand, McpCommand,
-    SearchCommand, StatusCommand, SyncCommand, TransitionCommand, ValidateCommand,
+    OutputFormat, SearchCommand, StatusCommand, SyncCommand, TransitionCommand, ValidateCommand,
 };
 
 #[derive(Parser)]
@@ -260,12 +260,14 @@ mod tests {
             phase: None,
             all: true,
             include_archived: true,
+            format: OutputFormat::Table,
         };
         list_cmd.execute().await.expect("Failed to list documents");
 
         // 13. Test status command
         let status_cmd = StatusCommand {
             include_archived: false,
+            format: OutputFormat::Table,
         };
         status_cmd.execute().await.expect("Failed to get status");
 
@@ -273,6 +275,7 @@ mod tests {
         let search_cmd = SearchCommand {
             query: "test".to_string(),
             limit: 10,
+            format: OutputFormat::Table,
         };
         search_cmd
             .execute()

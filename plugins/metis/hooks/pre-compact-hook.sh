@@ -1,6 +1,6 @@
 #!/bin/bash
 # PreCompact hook for Metis projects
-# Re-injects Metis context after context compaction
+# Re-injects Metis context after context compaction with current project state
 
 # Exit silently if not in a Metis project
 if [ ! -d "$CLAUDE_PROJECT_DIR/.metis" ]; then
@@ -17,29 +17,70 @@ ENDJSON
     exit 0
 fi
 
+# Get current project state
+# Try compact format first (newer versions), fall back to default output
+cd "$CLAUDE_PROJECT_DIR" || exit 0
+STATUS_OUTPUT=$(metis status --format compact 2>/dev/null)
+if [ -z "$STATUS_OUTPUT" ]; then
+    # Fall back to default output and extract what we can
+    STATUS_OUTPUT=$(metis status 2>/dev/null | grep -E "^[A-Z]+-[A-Z]-[0-9]+")
+fi
+ACTIVE_WORK=$(echo "$STATUS_OUTPUT" | grep -E "(active|todo|blocked)" | head -10)
+BLOCKED_COUNT=$(echo "$STATUS_OUTPUT" | grep -c "blocked" 2>/dev/null || true)
+ACTIVE_COUNT=$(echo "$STATUS_OUTPUT" | grep -c "active" 2>/dev/null || true)
+TODO_COUNT=$(echo "$STATUS_OUTPUT" | grep -c "todo" 2>/dev/null || true)
+# Ensure counts are numbers (handle empty strings)
+[ -z "$BLOCKED_COUNT" ] && BLOCKED_COUNT=0
+[ -z "$ACTIVE_COUNT" ] && ACTIVE_COUNT=0
+[ -z "$TODO_COUNT" ] && TODO_COUNT=0
+
+# Build state summary
+STATE_SUMMARY=""
+if [ "$BLOCKED_COUNT" != "0" ]; then
+    STATE_SUMMARY="**${BLOCKED_COUNT} BLOCKED**, "
+fi
+if [ "$ACTIVE_COUNT" != "0" ]; then
+    STATE_SUMMARY="${STATE_SUMMARY}${ACTIVE_COUNT} active, "
+fi
+if [ "$TODO_COUNT" != "0" ]; then
+    STATE_SUMMARY="${STATE_SUMMARY}${TODO_COUNT} ready to start"
+fi
+STATE_SUMMARY="${STATE_SUMMARY:-No actionable items}"
+
 # Build context message for active Metis project
-read -r -d '' CONTEXT << 'EOF'
-This is a **Metis project** (detected `.metis` directory).
+read -r -d '' CONTEXT << EOF
+## CONTEXT RESTORED: Metis Project
 
-## Quick Reference
-- Use `mcp__metis__list_documents` to see current project state
-- Check active work items and their phases
-- Use Metis skills for methodology guidance
+### CRITICAL: Work Tracking Rules
+- **Do NOT use TodoWrite** for tracking work. Metis documents ARE your work tracking system.
+- **ALWAYS update active Metis tasks** with progress as you work.
+- Check for active tasks with \`mcp__metis__list_documents\`.
 
-## Available Skills
-When working with this project:
-- **document-selection** - Guidance on choosing the right document type (vision, strategy, initiative, task, ADR)
-- **phase-transitions** - How to transition documents through phases correctly
-- **decomposition** - Patterns for breaking down work into tasks
-- **project-patterns** - Common project patterns (greenfield, tech debt, incident response, feature development)
+### Current Project State
+${STATE_SUMMARY}
 
-## Available Commands
-- `/metis-ralph <short-code>` - Execute a task with an iterative Ralph loop
-- `/metis-decompose <short-code>` - Decompose an initiative into tasks
-- `/cancel-metis-ralph` - Cancel an active Ralph loop
+### Actionable Work Items
+\`\`\`
+${ACTIVE_WORK:-No active or ready tasks found}
+\`\`\`
 
-## MCP Server
-The `metis` MCP server should be connected. If Metis tools are not available, the MCP server may need to be started.
+### MCP Tools
+- \`mcp__metis__list_documents\` - List all documents
+- \`mcp__metis__read_document\` - Read by short code (e.g., METIS-T-0001)
+- \`mcp__metis__edit_document\` - Update document content
+- \`mcp__metis__transition_phase\` - Move through phases (todo->active->completed)
+- \`mcp__metis__create_document\` - Create new documents
+- \`mcp__metis__reassign_parent\` - Move tasks between initiatives
+
+### Task Workflow
+1. \`read_document\` - Understand the task
+2. \`transition_phase\` - Move to "active"
+3. Work and update task with progress
+4. \`transition_phase\` - Move to "completed"
+
+### Skills
+- \`/metis-ralph <short-code>\` - Execute task with Ralph loop
+- \`/metis-decompose <short-code>\` - Break initiative into tasks
 EOF
 
 # Output JSON for Claude - PreCompact uses systemContext field
