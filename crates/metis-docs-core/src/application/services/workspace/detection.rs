@@ -79,11 +79,44 @@ impl WorkspaceDetectionService {
         Ok(None)
     }
 
+    /// Resolve a path to the `.metis` directory.
+    ///
+    /// Accepts either the `.metis` directory itself or the project root containing it.
+    /// If the path doesn't end in `.metis` but contains a valid `.metis` subdirectory
+    /// (verified by the presence of `config.toml`), returns the `.metis` subdirectory path.
+    pub fn resolve_metis_dir(&self, path: &Path) -> PathBuf {
+        // If path already ends with .metis, use as-is
+        if path.file_name().map(|f| f == METIS_DIR_NAME).unwrap_or(false) {
+            return path.to_path_buf();
+        }
+
+        // Check if path contains a valid .metis workspace (has config.toml)
+        let metis_subdir = path.join(METIS_DIR_NAME);
+        if metis_subdir.is_dir() && metis_subdir.join("config.toml").exists() {
+            tracing::info!(
+                "Auto-corrected project_path from '{}' to '{}'",
+                path.display(),
+                metis_subdir.display()
+            );
+            return metis_subdir;
+        }
+
+        // Return as-is and let validation handle the error
+        path.to_path_buf()
+    }
+
     /// Prepare a workspace for use by ensuring database exists and is synced
     /// This should be called by all commands/tools before performing operations
     ///
+    /// Accepts either the `.metis` directory or the project root containing it.
+    /// If the project root is passed, `.metis` is automatically appended.
+    ///
     /// Returns a Database instance that's been synced and is ready for use
     pub async fn prepare_workspace(&self, metis_dir: &Path) -> Result<Database> {
+        // Auto-correct: if caller passed project root instead of .metis dir, resolve it
+        let metis_dir = self.resolve_metis_dir(metis_dir);
+        let metis_dir = metis_dir.as_path();
+
         // Validate workspace exists
         if self.validate_workspace(metis_dir)?.is_none() {
             anyhow::bail!("Not a valid Metis workspace: {}", metis_dir.display());
@@ -166,6 +199,58 @@ mod tests {
         let result = service.find_workspace_from(&nested_dir).unwrap();
         assert!(result.is_some());
         assert_eq!(result.unwrap(), metis_dir);
+    }
+
+    #[test]
+    fn test_resolve_metis_dir_already_metis() {
+        let service = WorkspaceDetectionService::new();
+        let temp_dir = TempDir::new().unwrap();
+        let metis_dir = temp_dir.path().join(".metis");
+        fs::create_dir_all(&metis_dir).unwrap();
+
+        // When path already ends in .metis, returns as-is (no config.toml check needed)
+        let resolved = service.resolve_metis_dir(&metis_dir);
+        assert_eq!(resolved, metis_dir);
+    }
+
+    #[test]
+    fn test_resolve_metis_dir_from_project_root() {
+        let service = WorkspaceDetectionService::new();
+        let temp_dir = TempDir::new().unwrap();
+        let project_root = temp_dir.path();
+        let metis_dir = project_root.join(".metis");
+        fs::create_dir_all(&metis_dir).unwrap();
+        // Must have config.toml to be recognized as a valid workspace
+        fs::write(metis_dir.join("config.toml"), "[project]\nprefix = \"TEST\"").unwrap();
+
+        // Passing project root should resolve to .metis subdir
+        let resolved = service.resolve_metis_dir(project_root);
+        assert_eq!(resolved, metis_dir);
+    }
+
+    #[test]
+    fn test_resolve_metis_dir_no_config_toml() {
+        let service = WorkspaceDetectionService::new();
+        let temp_dir = TempDir::new().unwrap();
+        let project_root = temp_dir.path();
+        let metis_dir = project_root.join(".metis");
+        fs::create_dir_all(&metis_dir).unwrap();
+        // .metis dir exists but no config.toml — should NOT auto-correct
+
+        let resolved = service.resolve_metis_dir(project_root);
+        assert_eq!(resolved, project_root.to_path_buf());
+    }
+
+    #[test]
+    fn test_resolve_metis_dir_no_metis_subdir() {
+        let service = WorkspaceDetectionService::new();
+        let temp_dir = TempDir::new().unwrap();
+        let some_path = temp_dir.path().join("random");
+        fs::create_dir_all(&some_path).unwrap();
+
+        // No .metis subdir, returns as-is
+        let resolved = service.resolve_metis_dir(&some_path);
+        assert_eq!(resolved, some_path);
     }
 
     #[test]

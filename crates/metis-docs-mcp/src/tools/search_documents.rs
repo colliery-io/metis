@@ -17,7 +17,7 @@ use std::path::Path;
 )]
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct SearchDocumentsTool {
-    /// Path to the .metis folder to search documents in
+    /// Path to the .metis folder (e.g., "/Users/me/my-project/.metis"). Must end with .metis
     pub project_path: String,
     /// Search query to match against document content
     pub query: String,

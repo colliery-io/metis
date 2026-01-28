@@ -19,7 +19,7 @@ use std::path::Path;
 )]
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct ReassignParentTool {
-    /// Path to the .metis folder containing the document
+    /// Path to the .metis folder (e.g., "/Users/me/my-project/.metis"). Must end with .metis
     pub project_path: String,
     /// Short code of the task to reassign (e.g., PROJ-T-0001)
     pub short_code: String,

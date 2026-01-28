@@ -18,7 +18,7 @@ use std::path::Path;
 )]
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct ListDocumentsTool {
-    /// Path to the .metis folder to list documents from
+    /// Path to the .metis folder (e.g., "/Users/me/my-project/.metis"). Must end with .metis
     pub project_path: String,
     /// Include archived documents in results (defaults to false)
     #[serde(default)]

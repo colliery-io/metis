@@ -18,7 +18,7 @@ use tokio::fs;
 )]
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct EditDocumentTool {
-    /// Path to the .metis folder containing the document
+    /// Path to the .metis folder (e.g., "/Users/me/my-project/.metis"). Must end with .metis
     pub project_path: String,
     /// Document short code (e.g., PROJ-V-0001) to identify the document
     pub short_code: String,

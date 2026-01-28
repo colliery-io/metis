@@ -25,7 +25,7 @@ use std::str::FromStr;
 )]
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct CreateDocumentTool {
-    /// Path to the .metis folder where the document will be created
+    /// Path to the .metis folder (e.g., "/Users/me/my-project/.metis"). Must end with .metis
     pub project_path: String,
     /// Document type: vision, strategy, initiative, task, adr
     pub document_type: String,

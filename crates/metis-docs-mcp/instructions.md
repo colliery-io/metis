@@ -67,6 +67,15 @@ All documents get unique IDs: `PREFIX-TYPE-NNNN` (e.g., `PROJ-V-0001`, `ACME-T-0
 - **V**=Vision, **S**=Strategy, **I**=Initiative, **T**=Task, **A**=ADR
 - Use short codes to reference documents in all operations
 
+## CRITICAL: project_path Format
+
+All tools require a `project_path` parameter. This **MUST** be the path to the `.metis` directory, NOT the project root.
+
+- **Correct**: `/Users/me/my-project/.metis`
+- **WRONG**: `/Users/me/my-project`
+
+The server will attempt to auto-correct if you pass the project root, but always include `.metis` in the path.
+
 ## Tools Reference
 
 ### initialize_project
@@ -79,14 +88,14 @@ prefix: string (optional) - Short code prefix, 2-8 uppercase letters (default: "
 ### list_documents
 List all documents in the project.
 ```
-project_path: string (required) - Path to .metis folder
+project_path: string (required) - Path to the .metis folder (e.g., "/path/to/project/.metis")
 include_archived: bool (optional) - Include archived docs (default: false)
 ```
 
 ### search_documents
 Full-text search across documents.
 ```
-project_path: string (required) - Path to .metis folder
+project_path: string (required) - Path to the .metis folder (e.g., "/path/to/project/.metis")
 query: string (required) - Search text
 document_type: string (optional) - Filter: vision, strategy, initiative, task, adr
 limit: number (optional) - Max results
@@ -96,14 +105,14 @@ include_archived: bool (optional) - Include archived docs (default: false)
 ### read_document
 Get full document content and metadata.
 ```
-project_path: string (required) - Path to .metis folder
+project_path: string (required) - Path to the .metis folder (e.g., "/path/to/project/.metis")
 short_code: string (required) - Document ID (e.g., PROJ-I-0001)
 ```
 
 ### create_document
 Create a new document.
 ```
-project_path: string (required) - Path to .metis folder
+project_path: string (required) - Path to the .metis folder (e.g., "/path/to/project/.metis")
 document_type: string (required) - vision, strategy, initiative, task, adr
 title: string (required) - Document title
 parent_id: string (optional) - Parent short code (required for strategy/initiative/task)
@@ -117,7 +126,7 @@ backlog_category: string (optional) - For backlog items: bug, feature, tech-debt
 ### edit_document
 Search-and-replace edit on document content.
 ```
-project_path: string (required) - Path to .metis folder
+project_path: string (required) - Path to the .metis folder (e.g., "/path/to/project/.metis")
 short_code: string (required) - Document ID
 search: string (required) - Text to find
 replace: string (required) - Replacement text
@@ -127,7 +136,7 @@ replace_all: bool (optional) - Replace all occurrences (default: false)
 ### transition_phase
 Advance document to its next phase or transition to a valid adjacent phase.
 ```
-project_path: string (required) - Path to .metis folder
+project_path: string (required) - Path to the .metis folder (e.g., "/path/to/project/.metis")
 short_code: string (required) - Document ID
 phase: string (optional) - Target phase (must be a valid adjacent phase - see Phase Transition Rules)
 force: bool (optional) - Skip exit criteria validation
@@ -142,14 +151,14 @@ force: bool (optional) - Skip exit criteria validation
 ### archive_document
 Archive a document and all its children.
 ```
-project_path: string (required) - Path to .metis folder
+project_path: string (required) - Path to the .metis folder (e.g., "/path/to/project/.metis")
 short_code: string (required) - Document ID
 ```
 
 ### reassign_parent
 Move a task to a different parent initiative or to/from the backlog.
 ```
-project_path: string (required) - Path to .metis folder
+project_path: string (required) - Path to the .metis folder (e.g., "/path/to/project/.metis")
 short_code: string (required) - Task short code to reassign
 new_parent_id: string (optional) - Target initiative short code. Omit to move to backlog.
 backlog_category: string (optional) - Required when moving to backlog: bug, feature, tech-debt
