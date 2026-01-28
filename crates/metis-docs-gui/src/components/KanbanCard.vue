@@ -7,6 +7,7 @@
       `doc-type-${document.document_type}`
     ]"
     :style="{ '--accent-color': accentColor }"
+    @click="$emit('view', document)"
     @mouseenter="handleMouseEnter"
     @mouseleave="handleMouseLeave"
   >

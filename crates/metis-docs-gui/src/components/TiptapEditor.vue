@@ -78,6 +78,7 @@ const getMarkdown = (): string => {
 
 const editor = useEditor({
   content: '',
+  editable: props.editable,
   extensions: [
     StarterKit.configure({
       heading: { levels: [1, 2, 3, 4, 5, 6] }

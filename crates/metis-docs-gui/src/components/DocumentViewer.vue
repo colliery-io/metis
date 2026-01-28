@@ -26,7 +26,7 @@
         class="flex items-center justify-between p-6 border-b"
         :style="{ borderColor: theme.colors.border.primary }"
       >
-        <div class="flex items-center space-x-4">
+        <div class="flex-1 min-w-0">
           <div>
             <h2 
               class="text-xl font-bold"
@@ -34,30 +34,21 @@
             >
               {{ document.title }}
             </h2>
-            <div class="flex items-center space-x-3 mt-1">
-              <span 
+            <div class="flex items-center justify-between mt-2" style="width: 100%;">
+              <span
                 class="text-sm font-mono"
                 :style="{ color: theme.colors.text.secondary }"
               >
-                {{ document.short_code }}
+                {{ document.document_type.toUpperCase() }}: {{ document.short_code }}
               </span>
               <span
-                class="px-2 py-1 rounded-full text-xs font-medium"
+                class="px-3 py-1 rounded-full text-xs font-semibold tracking-wide"
                 :style="{
                   backgroundColor: getPhaseColor(document.phase) + '20',
                   color: getPhaseColor(document.phase),
                 }"
               >
                 {{ document.phase }}
-              </span>
-              <span
-                class="px-2 py-1 rounded text-xs font-medium"
-                :style="{
-                  backgroundColor: theme.colors.background.secondary,
-                  color: theme.colors.text.secondary,
-                }"
-              >
-                {{ document.document_type.toUpperCase() }}
               </span>
             </div>
           </div>
@@ -74,6 +65,18 @@
             {{ saveStatusText }}
           </span>
           
+          <button
+            @click="toggleEditMode"
+            class="px-4 py-2 text-sm font-medium rounded-lg transition-all"
+            :style="{
+              backgroundColor: isEditing ? theme.colors.status.active + '20' : theme.colors.interactive.primary,
+              color: isEditing ? theme.colors.status.active : theme.colors.text.inverse,
+              border: isEditing ? `1px solid ${theme.colors.status.active}` : 'none'
+            }"
+          >
+            {{ isEditing ? 'Reading' : 'Edit' }}
+          </button>
+
           <button
             @click="handleClose"
             class="font-bold transition-colors p-2 rounded-lg"
@@ -153,7 +156,7 @@ const content = ref('')
 const loading = ref(false)
 const error = ref<string | null>(null)
 const documentContent = ref<DocumentContent | null>(null)
-const isEditing = ref(true) // Always start in edit mode
+const isEditing = ref(false) // Start in read mode
 const saveStatus = ref<'saving' | 'saved' | 'error' | null>(null)
 const originalFrontmatter = ref('')
 
@@ -249,9 +252,12 @@ const saveDocument = async () => {
 // Debounced save function
 const debouncedSave = debounce(saveDocument, 1000)
 
-// Edit mode functions removed - always in edit mode now
+const toggleEditMode = () => {
+  isEditing.value = !isEditing.value
+}
 
 const handleClose = () => {
+  isEditing.value = false
   error.value = null
   emit('close')
 }

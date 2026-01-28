@@ -69,8 +69,14 @@ ${ACTIVE_WORK:-No active or ready tasks found}
 - \`mcp__metis__read_document\` - Read by short code (e.g., METIS-T-0001)
 - \`mcp__metis__edit_document\` - Update document content
 - \`mcp__metis__transition_phase\` - Move through phases (todo->active->completed)
-- \`mcp__metis__create_document\` - Create new documents
+- \`mcp__metis__create_document\` - Create new documents (MUST populate content after!)
 - \`mcp__metis__reassign_parent\` - Move tasks between initiatives
+
+### CRITICAL: Creating Documents
+After \`create_document\`, you MUST: \`read_document\` then \`edit_document\` to populate ALL content. Never leave placeholder text.
+
+### CRITICAL: Human-in-the-Loop
+For initiatives/strategies: ALWAYS check in with the human before phase transitions, design decisions, or decomposition. Present options and get approval.
 
 ### Task Workflow
 1. \`read_document\` - Understand the task

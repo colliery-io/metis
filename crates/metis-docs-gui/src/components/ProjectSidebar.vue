@@ -33,7 +33,7 @@
         <div v-if="recentProjects.length > 0" class="px-3">
           <div class="space-y-2">
             <ProjectCard
-              v-for="(project, index) in recentProjects.slice(0, 8)"
+              v-for="(project, index) in recentProjects"
               :key="`${project.path}-${index}`"
               :project="project"
               :isActive="currentProject?.path === project.path"

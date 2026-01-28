@@ -112,6 +112,7 @@ complexity: string (optional) - For initiatives: xs, s, m, l, xl
 decision_maker: string (optional) - For ADRs
 backlog_category: string (optional) - For backlog items: bug, feature, tech-debt
 ```
+**CRITICAL**: Creating a document is only the first step. You MUST immediately follow up with `read_document` then `edit_document` to populate the content sections with actual information. A document with only template placeholders is incomplete and useless.
 
 ### edit_document
 Search-and-replace edit on document content.
@@ -135,6 +136,8 @@ force: bool (optional) - Skip exit criteria validation
 **Best practice**: Omit `phase` to auto-advance to the next sequential phase. Only specify phase for:
 - Moving to blocked state (tasks only)
 - Returning from blocked to todo or active (tasks only)
+
+**For initiatives and strategies**: ALWAYS check in with the human before transitioning phases. Summarize current state and get explicit approval to proceed.
 
 ### archive_document
 Archive a document and all its children.
@@ -198,12 +201,56 @@ reassign_parent:
 
 ## Key Principles
 
+- **ALWAYS populate document content**: Creating a document is NOT complete until you edit it with real content. The workflow is: `create_document` → `read_document` → `edit_document` with actual information. Never leave template placeholders.
 - **Read before edit**: Always `read_document` before `edit_document`
 - **Delete unused sections**: Templates contain optional sections. If a section doesn't apply to your document, delete it entirely rather than leaving it empty or with placeholder text
 - **Auto-transition**: Omit phase parameter to follow natural workflow
 - **Hierarchy matters**: Tasks need initiatives, initiatives need strategies (Full) or visions (Streamlined)
 - **Short codes everywhere**: Reference documents by ID, not title
 - **Archive completed work**: Use `archive_document` to clean up finished trees
+
+## Human-in-the-Loop for Strategic Work
+
+**CRITICAL**: Initiatives and strategies represent higher-level strategic decisions that require human oversight. Agents should guide and support, but humans must remain in control of strategic direction.
+
+### When to Check In With Humans
+
+**ALWAYS pause and consult the human before:**
+- Transitioning an initiative or strategy to a new phase
+- Making architectural or design decisions
+- Decomposing an initiative into tasks
+- Any action that commits significant resources or direction
+
+### Required Behaviors for Initiatives/Strategies
+
+1. **Discovery Phase**: Ask clarifying questions about scope, priorities, and constraints. Do NOT assume you understand the full context.
+
+2. **Design Phase**: Present multiple options with trade-offs. Let the human choose the approach rather than deciding unilaterally.
+
+3. **Before Decomposition**: Review the proposed task breakdown with the human. Get explicit approval before creating tasks.
+
+4. **Phase Transitions**: Summarize current state, what was accomplished, and what the next phase entails. Ask for approval to proceed.
+
+### How to Check In
+
+When working on initiatives or strategies:
+```
+"Here's the current state of [INITIATIVE-CODE]:
+- Completed: [summary]
+- Current phase: [phase]
+- Proposed next steps: [what you plan to do]
+
+Do you want me to proceed, or would you like to adjust the direction?"
+```
+
+### What NOT to Do
+
+- Do NOT autonomously transition initiatives through multiple phases
+- Do NOT create large numbers of tasks without human review
+- Do NOT make strategic assumptions - ask instead
+- Do NOT skip the check-in because "it seems obvious"
+
+Agents are powerful assistants for strategic work, but the human must drive the decisions. When in doubt, ask.
 
 ## Using Active Tasks as Working Memory
 
@@ -241,6 +288,13 @@ edit_document:
 This ensures no work is lost even if context is compacted or the session ends unexpectedly.
 
 ## Common Mistakes to Avoid
+
+**Creating documents without content**: This is the #1 mistake. You MUST populate documents with real information immediately after creation. The correct workflow is:
+1. `create_document` - Creates document with template
+2. `read_document` - Read the template to see what sections exist
+3. `edit_document` - Replace placeholder text with actual content
+
+Do NOT move on to other tasks until the document has meaningful content. A document full of `{placeholder text}` is worthless.
 
 **Phase skipping will fail**: These transitions are INVALID and will error:
 - `todo → completed` (must go todo → active → completed)

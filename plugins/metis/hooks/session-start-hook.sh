@@ -76,6 +76,23 @@ Use these MCP tools for all Metis operations:
 - \`mcp__metis__create_document\` - Create new vision, initiative, task, or ADR documents
 - \`mcp__metis__reassign_parent\` - Move tasks between initiatives or to/from backlog
 
+## CRITICAL: Creating Documents
+When you create a document, you MUST immediately populate it with content:
+1. \`mcp__metis__create_document\` - Creates document with template
+2. \`mcp__metis__read_document\` - Read the template structure
+3. \`mcp__metis__edit_document\` - Replace ALL placeholders with real content
+
+**A document with template placeholders is INCOMPLETE. Never leave {placeholder} text.**
+
+## CRITICAL: Human-in-the-Loop for Initiatives/Strategies
+For initiatives and strategies, you MUST check in with the human before:
+- Transitioning to a new phase
+- Making design/architectural decisions
+- Decomposing into tasks
+- Any significant directional choice
+
+Present options, ask clarifying questions, and get explicit approval. Do NOT proceed autonomously on strategic work.
+
 ## Working on a Task
 When you receive a task short code:
 1. \`mcp__metis__read_document\` - Read the task to understand requirements

@@ -261,7 +261,7 @@ print_info() {
     echo ""
     echo "${BOLD}What's Included:${NC}"
     echo "  - Visual kanban interface for project management"
-    echo "  - Built-in CLI (installed on first launch)"
+    echo "  - Built-in CLI (installed/updated on GUI launch)"
     echo "  - MCP server for AI assistant integration"
     echo ""
     echo "${BOLD}Getting Started:${NC}"
@@ -269,7 +269,7 @@ print_info() {
         macos)
             echo "  Open Metis from /Applications or Spotlight"
             echo ""
-            echo "  On first launch, you'll be prompted to install the CLI."
+            echo "  On first launch, the CLI will be installed automatically."
             echo "  This enables terminal and AI assistant usage."
             ;;
         linux)
@@ -281,6 +281,10 @@ print_info() {
             echo "  Run the installer, then launch Metis from the Start menu."
             ;;
     esac
+    echo ""
+    echo "${BOLD}${YELLOW}Important for Updates:${NC}"
+    echo "  After updating, launch the Metis GUI at least once to update the CLI."
+    echo "  Then restart Claude Code to pick up the new MCP server."
     echo ""
     echo "For more information: https://github.com/${GITHUB_REPO}"
 }
