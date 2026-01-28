@@ -99,9 +99,9 @@ get_latest_version() {
     else
         info "Fetching latest release version..."
 
-        # Get latest release, handling the app-v prefix that tauri uses
-        VERSION=$(curl -sSL "https://api.github.com/repos/${GITHUB_REPO}/releases" | \
-            grep '"tag_name":' | grep 'app-v' | head -1 | sed -E 's/.*"app-v([^"]+)".*/\1/')
+        # Get latest release version from the v*.*.* tag
+        VERSION=$(curl -sSL "https://api.github.com/repos/${GITHUB_REPO}/releases/latest" | \
+            grep '"tag_name":' | head -1 | sed -E 's/.*"v([^"]+)".*/\1/')
 
         if [ -z "$VERSION" ]; then
             error "Could not determine latest version. Set METIS_VERSION environment variable to specify a version (e.g., 1.0.0)."
@@ -213,7 +213,7 @@ install_windows() {
 download_and_install() {
     local asset_name
     asset_name=$(get_asset_name)
-    local download_url="https://github.com/${GITHUB_REPO}/releases/download/app-v${VERSION}/${asset_name}"
+    local download_url="https://github.com/${GITHUB_REPO}/releases/download/v${VERSION}/${asset_name}"
 
     local temp_dir
     temp_dir=$(mktemp -d)
