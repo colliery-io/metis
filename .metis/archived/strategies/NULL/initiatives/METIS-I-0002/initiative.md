@@ -2,7 +2,7 @@
 id: custom-templates
 level: initiative
 title: "Custom Templates"
-short_code: "METIS-I-0016"
+short_code: "METIS-I-0002"
 created_at: 2025-12-07T03:01:01.822298+00:00
 updated_at: 2025-12-07T03:40:57.436955+00:00
 parent: METIS-V-0001

@@ -1,13 +1,13 @@
 ---
-id: home-screen-atmosphere
+id: hyper-theme-effects
 level: task
-title: "Home screen atmosphere"
-short_code: "METIS-T-0050"
-created_at: 2025-12-28T19:39:44.215719+00:00
-updated_at: 2025-12-28T19:57:20.173166+00:00
+title: "Hyper theme effects"
+short_code: "METIS-T-0051"
+created_at: 2025-12-28T19:39:44.343889+00:00
+updated_at: 2025-12-28T19:57:57.494099+00:00
 parent: METIS-I-0017
 blocked_by: []
-archived: false
+archived: true
 
 tags:
   - "#task"
@@ -19,7 +19,7 @@ strategy_id: NULL
 initiative_id: METIS-I-0017
 ---
 
-# Home screen atmosphere
+# Hyper theme effects
 
 *This template includes sections for various types of tasks. Delete sections that don't apply to your specific use case.*
 
@@ -29,32 +29,51 @@ initiative_id: METIS-I-0017
 
 ## Objective **[REQUIRED]**
 
-Transform the home screen from a simple mascot display to an atmospheric, welcoming experience.
+Push the Hyper theme further with dramatic neon effects, glows, and cyberpunk aesthetics.
 
-### Background Atmosphere
+### Card Effects
 ```css
-.home-screen {
-  background: 
-    radial-gradient(ellipse at 30% 20%, rgba(var(--accent-rgb), 0.08) 0%, transparent 50%),
-    radial-gradient(ellipse at 70% 80%, rgba(var(--secondary-rgb), 0.06) 0%, transparent 50%);
+[data-theme="hyper"] .kanban-card {
+  border: 1px solid rgba(192, 38, 211, 0.3);
+  box-shadow: 
+    0 0 20px -5px rgba(192, 38, 211, 0.15),
+    inset 0 1px 0 rgba(255,255,255,0.05);
+}
+
+[data-theme="hyper"] .kanban-card:hover {
+  box-shadow: 
+    0 0 30px -5px rgba(192, 38, 211, 0.3),
+    0 0 60px -10px rgba(192, 38, 211, 0.2);
 }
 ```
 
-### Enhancements
-1. **Gradient mesh background** - subtle, theme-aware color blobs
-2. **Mascot parallax** - slight movement based on mouse position
-3. **Animated tagline** - fade/slide in below mascot
-4. **Quick stats** (optional) - recent activity, project count
-5. **Subtle particle effects** for hyper theme
+### CRT Scanline Effect (subtle)
+```css
+[data-theme="hyper"]::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.03) 2px,
+    rgba(0,0,0,0.03) 4px
+  );
+  pointer-events: none;
+  z-index: 9999;
+}
+```
 
-### Implementation
-- Add mouse tracking for parallax effect
-- Create theme-specific background gradients
-- Add entrance animations for text elements
+### Additional Effects
+- Neon glow on primary buttons
+- Animated gradient borders on focus states
+- Pulsing accent colors on active elements
+- Optional: subtle chromatic aberration on hover
 
 ### Files to Modify
-- `App.vue` - home screen section
-- New CSS for atmospheric effects
+- `theme.css` - hyper-specific overrides
+- `themes/definitions.ts` - intensify hyper colors
 
 ## Backlog Item Details **[CONDITIONAL: Backlog Item]**
 
@@ -94,14 +113,16 @@ Transform the home screen from a simple mascot display to an atmospheric, welcom
 
 ## Acceptance Criteria
 
+## Acceptance Criteria
+
 ## Acceptance Criteria **[REQUIRED]**
 
-- [ ] Home screen has atmospheric gradient background
-- [ ] Background adapts to current theme
-- [ ] Mascot has subtle parallax on mouse movement (optional)
-- [ ] Text/tagline animates in on load
-- [ ] Performance remains smooth (no jank on gradient render)
-- [ ] Home screen feels welcoming, not empty
+- [ ] Cards have neon glow effect on hover
+- [ ] Subtle CRT scanline overlay is visible
+- [ ] Primary buttons have neon box-shadow
+- [ ] Focus states have animated/glowing borders
+- [ ] Effects don't impact performance significantly
+- [ ] Hyper theme feels distinctly "cyberpunk" compared to dark theme
 
 ## Test Cases **[CONDITIONAL: Testing Task]**
 

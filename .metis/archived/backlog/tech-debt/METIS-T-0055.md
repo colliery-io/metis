@@ -7,15 +7,15 @@ created_at: 2026-01-01T21:13:20.405676+00:00
 updated_at: 2026-01-01T21:13:20.405676+00:00
 parent: 
 blocked_by: []
-archived: false
+archived: true
 
 tags:
   - "#task"
   - "#phase/backlog"
   - "#tech-debt"
-
-
   - "#tech-debt"
+
+
 exit_criteria_met: false
 strategy_id: NULL
 initiative_id: NULL
@@ -66,6 +66,8 @@ initiative_id: NULL
 - **Current Problems**: {What's difficult/slow/buggy now}
 - **Benefits of Fixing**: {What improves after refactoring}
 - **Risk Assessment**: {Risks of not addressing this}
+
+## Acceptance Criteria
 
 ## Acceptance Criteria **[REQUIRED]**
 

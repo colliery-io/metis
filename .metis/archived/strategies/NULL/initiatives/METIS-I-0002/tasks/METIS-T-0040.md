@@ -7,7 +7,7 @@ created_at: 2025-12-07T03:25:05.153868+00:00
 updated_at: 2025-12-07T03:39:59.584974+00:00
 parent: METIS-I-0002
 blocked_by: []
-archived: false
+archived: true
 
 tags:
   - "#task"
@@ -64,6 +64,8 @@ initiative_id: METIS-I-0002
 - **Current Problems**: {What's difficult/slow/buggy now}
 - **Benefits of Fixing**: {What improves after refactoring}
 - **Risk Assessment**: {Risks of not addressing this}
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 

@@ -7,7 +7,7 @@ created_at: 2025-12-29T16:52:24.081829+00:00
 updated_at: 2025-12-29T16:52:24.081829+00:00
 parent: 
 blocked_by: []
-archived: false
+archived: true
 
 tags:
   - "#task"
@@ -41,6 +41,8 @@ This caused agents to receive conflicting instructions.
 - **Current Problems**: Manual sync required between MCP instructions and skill docs; easy to forget; plugin cache adds another layer of staleness
 - **Benefits of Fixing**: Single source of truth; automatic propagation; no more terminology drift
 - **Risk Assessment**: Low risk if not addressed immediately, but recurring maintenance burden and potential for agent confusion
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 

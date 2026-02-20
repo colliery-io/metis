@@ -7,7 +7,7 @@ created_at: 2026-01-12T13:13:49.387803+00:00
 updated_at: 2026-01-12T17:33:38.770114+00:00
 parent: 
 blocked_by: []
-archived: false
+archived: true
 
 tags:
   - "#task"
@@ -54,6 +54,8 @@ Extract transition rules to a single location (e.g., constants or a dedicated mo
 - `crates/metis-docs-core/src/domain/documents/initiative/mod.rs`
 - `crates/metis-docs-core/src/domain/documents/task/mod.rs`
 - `crates/metis-docs-core/src/domain/documents/adr/mod.rs`
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 

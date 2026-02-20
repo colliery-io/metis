@@ -7,7 +7,7 @@ created_at: 2025-12-31T16:40:14.523160+00:00
 updated_at: 2025-12-31T17:54:29.013968+00:00
 parent: 
 blocked_by: []
-archived: false
+archived: true
 
 tags:
   - "#task"
@@ -38,6 +38,8 @@ Fix ambiguous language and missing interface/process descriptions in the Metis s
 - **Current Problems**: Agents receive conflicting or incomplete guidance, leading to errors like creating documents under wrong parent states, not knowing about archive operations, or confusion about backlog items vs tasks
 - **Benefits of Fixing**: Agents will have clear, unambiguous instructions; fewer user interventions needed; consistent document creation workflow
 - **Risk Assessment**: Medium - agents currently work but make avoidable mistakes; fixing improves reliability
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 

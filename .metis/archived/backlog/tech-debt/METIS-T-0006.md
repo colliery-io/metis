@@ -1,51 +1,37 @@
 ---
-id: typography-overhaul
+id: gui-frame-work-uat-testing
 level: task
-title: "Typography overhaul"
-short_code: "METIS-T-0046"
-created_at: 2025-12-28T19:39:43.785596+00:00
-updated_at: 2025-12-28T19:52:21.828032+00:00
-parent: METIS-I-0017
+title: "GUI Frame work UAT testing"
+short_code: "METIS-T-0006"
+created_at: 2025-10-16T02:13:25.638763+00:00
+updated_at: 2025-10-16T02:13:25.638763+00:00
+parent: 
 blocked_by: []
-archived: false
+archived: true
 
 tags:
   - "#task"
-  - "#phase/completed"
+  - "#phase/backlog"
+  - "#tech-debt"
+  - "#tech-debt"
 
 
 exit_criteria_met: false
 strategy_id: NULL
-initiative_id: METIS-I-0017
+initiative_id: NULL
 ---
 
-# Typography overhaul
+# GUI Frame work UAT testing
 
 *This template includes sections for various types of tasks. Delete sections that don't apply to your specific use case.*
 
 ## Parent Initiative **[CONDITIONAL: Assigned Task]**
 
-[[METIS-I-0017]]
+[[Parent Initiative]]
 
 ## Objective **[REQUIRED]**
 
-Replace generic "AI slop" typography (Inter, system-ui, Arial) with distinctive, characterful fonts that elevate the interface.
-
-### Font Stack Changes
-- **Display font (headers)**: `Satoshi`, `Manrope`, or similar geometric sans
-- **Body font**: `DM Sans`, `Outfit`, or refined sans-serif
-- **Monospace (short codes)**: `JetBrains Mono`, `IBM Plex Mono`
-
-### Theme-Specific Typography (optional)
-- **Light theme**: Editorial feel with `Newsreader` or serif headers
-- **Dark theme**: Modern geometric with `Satoshi` or `General Sans`
-- **Hyper theme**: Futuristic with `Clash Display` or tight-tracked geometric
-
-### Implementation
-1. Add font imports to `index.html` or via `@font-face` in CSS
-2. Update `styles.css` `:root` font-family declarations
-3. Create CSS variables: `--font-display`, `--font-body`, `--font-mono`
-4. Create type scale with consistent sizing (clamp for fluid typography)
+{Clear statement of what this task accomplishes}
 
 ## Backlog Item Details **[CONDITIONAL: Backlog Item]**
 
@@ -83,16 +69,11 @@ Replace generic "AI slop" typography (Inter, system-ui, Arial) with distinctive,
 
 ## Acceptance Criteria
 
-## Acceptance Criteria
-
 ## Acceptance Criteria **[REQUIRED]**
 
-- [ ] No Inter, Arial, Helvetica, or system fonts in use
-- [ ] Display font loaded and applied to headers/titles
-- [ ] Body font loaded and applied to content text
-- [ ] Monospace font applied to short codes (e.g., METIS-T-0046)
-- [ ] Font loading doesn't cause visible FOUT/FOIT
-- [ ] All three themes render with appropriate typography
+- [ ] {Specific, testable requirement 1}
+- [ ] {Specific, testable requirement 2}
+- [ ] {Specific, testable requirement 3}
 
 ## Test Cases **[CONDITIONAL: Testing Task]**
 

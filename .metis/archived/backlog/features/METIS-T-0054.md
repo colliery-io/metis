@@ -7,7 +7,7 @@ created_at: 2025-12-31T16:51:51.628299+00:00
 updated_at: 2025-12-31T17:36:23.303467+00:00
 parent: 
 blocked_by: []
-archived: false
+archived: true
 
 tags:
   - "#task"
@@ -40,6 +40,8 @@ Add a `reassign_parent` MCP tool that allows moving documents between parents (e
 - **User Value**: Currently, reassigning a backlog item to an initiative requires knowing the filesystem structure and manually moving files. A dedicated tool makes this discoverable and simple.
 - **Business Value**: Improves workflow for managing backlog items through their lifecycle
 - **Effort Estimate**: M (Medium)
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 

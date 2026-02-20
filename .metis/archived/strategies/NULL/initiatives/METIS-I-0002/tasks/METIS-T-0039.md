@@ -1,13 +1,13 @@
 ---
-id: create-templateloader-service
+id: integrate-templateloader-into
 level: task
-title: "Create TemplateLoader service"
-short_code: "METIS-T-0037"
-created_at: 2025-12-07T03:25:04.793393+00:00
-updated_at: 2025-12-07T03:31:55.064708+00:00
+title: "Integrate TemplateLoader into DocumentCreationService"
+short_code: "METIS-T-0039"
+created_at: 2025-12-07T03:25:04.951856+00:00
+updated_at: 2025-12-07T03:39:26.230556+00:00
 parent: METIS-I-0002
 blocked_by: []
-archived: false
+archived: true
 
 tags:
   - "#task"
@@ -19,7 +19,7 @@ strategy_id: NULL
 initiative_id: METIS-I-0002
 ---
 
-# Create TemplateLoader service
+# Integrate TemplateLoader into DocumentCreationService
 
 *This template includes sections for various types of tasks. Delete sections that don't apply to your specific use case.*
 
@@ -64,6 +64,8 @@ initiative_id: METIS-I-0002
 - **Current Problems**: {What's difficult/slow/buggy now}
 - **Benefits of Fixing**: {What improves after refactoring}
 - **Risk Assessment**: {Risks of not addressing this}
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 

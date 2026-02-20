@@ -1,13 +1,13 @@
 ---
-id: color-refinement
+id: home-screen-atmosphere
 level: task
-title: "Color refinement"
-short_code: "METIS-T-0048"
-created_at: 2025-12-28T19:39:43.985316+00:00
-updated_at: 2025-12-28T19:55:28.926561+00:00
+title: "Home screen atmosphere"
+short_code: "METIS-T-0050"
+created_at: 2025-12-28T19:39:44.215719+00:00
+updated_at: 2025-12-28T19:57:20.173166+00:00
 parent: METIS-I-0017
 blocked_by: []
-archived: false
+archived: true
 
 tags:
   - "#task"
@@ -19,7 +19,7 @@ strategy_id: NULL
 initiative_id: METIS-I-0017
 ---
 
-# Color refinement
+# Home screen atmosphere
 
 *This template includes sections for various types of tasks. Delete sections that don't apply to your specific use case.*
 
@@ -29,37 +29,32 @@ initiative_id: METIS-I-0017
 
 ## Objective **[REQUIRED]**
 
-Replace generic color palettes with distinctive, memorable color schemes per theme.
+Transform the home screen from a simple mascot display to an atmospheric, welcoming experience.
 
-### Light Theme - "Editorial"
-```typescript
-interactive: {
-  primary: '#2D3142',      // Deep charcoal ink
-  primaryHover: '#1A1D2B',
-},
-documentType: {
-  vision: '#C17767',       // Warm terracotta
-  initiative: '#5B7C65',   // Sage green
-  task: '#D4A84B',         // Warm gold
+### Background Atmosphere
+```css
+.home-screen {
+  background: 
+    radial-gradient(ellipse at 30% 20%, rgba(var(--accent-rgb), 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 70% 80%, rgba(var(--secondary-rgb), 0.06) 0%, transparent 50%);
 }
 ```
 
-### Dark Theme - "Midnight Observatory"
-```typescript
-background: {
-  primary: '#0B0F14',      // True deep black
-  secondary: '#141B24',    // Navy undertone
-},
-interactive: {
-  primary: '#4ECCA3',      // Mint accent
-}
-```
+### Enhancements
+1. **Gradient mesh background** - subtle, theme-aware color blobs
+2. **Mascot parallax** - slight movement based on mouse position
+3. **Animated tagline** - fade/slide in below mascot
+4. **Quick stats** (optional) - recent activity, project count
+5. **Subtle particle effects** for hyper theme
 
-### Hyper Theme
-Keep pushing the neon aesthetic - more dramatic fuchsia/cyan contrasts.
+### Implementation
+- Add mouse tracking for parallax effect
+- Create theme-specific background gradients
+- Add entrance animations for text elements
 
 ### Files to Modify
-- `themes/definitions.ts` - all color definitions
+- `App.vue` - home screen section
+- New CSS for atmospheric effects
 
 ## Backlog Item Details **[CONDITIONAL: Backlog Item]**
 
@@ -99,14 +94,16 @@ Keep pushing the neon aesthetic - more dramatic fuchsia/cyan contrasts.
 
 ## Acceptance Criteria
 
+## Acceptance Criteria
+
 ## Acceptance Criteria **[REQUIRED]**
 
-- [ ] Light theme uses distinctive editorial palette (not purple primary)
-- [ ] Dark theme uses deeper blacks with navy undertones
-- [ ] Document type colors are harmonious within each theme
-- [ ] Sufficient contrast ratios maintained (WCAG AA)
-- [ ] Interactive states (hover, active, focus) are clearly distinguishable
-- [ ] Theme switching works correctly with new colors
+- [ ] Home screen has atmospheric gradient background
+- [ ] Background adapts to current theme
+- [ ] Mascot has subtle parallax on mouse movement (optional)
+- [ ] Text/tagline animates in on load
+- [ ] Performance remains smooth (no jank on gradient render)
+- [ ] Home screen feels welcoming, not empty
 
 ## Test Cases **[CONDITIONAL: Testing Task]**
 

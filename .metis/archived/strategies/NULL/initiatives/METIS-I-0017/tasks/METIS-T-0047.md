@@ -1,13 +1,13 @@
 ---
-id: integrate-templateloader-into
+id: card-redesign
 level: task
-title: "Integrate TemplateLoader into DocumentCreationService"
-short_code: "METIS-T-0039"
-created_at: 2025-12-07T03:25:04.951856+00:00
-updated_at: 2025-12-07T03:39:26.230556+00:00
-parent: METIS-I-0002
+title: "Card redesign"
+short_code: "METIS-T-0047"
+created_at: 2025-12-28T19:39:43.870030+00:00
+updated_at: 2025-12-28T19:54:15.493746+00:00
+parent: METIS-I-0017
 blocked_by: []
-archived: false
+archived: true
 
 tags:
   - "#task"
@@ -16,20 +16,45 @@ tags:
 
 exit_criteria_met: false
 strategy_id: NULL
-initiative_id: METIS-I-0002
+initiative_id: METIS-I-0017
 ---
 
-# Integrate TemplateLoader into DocumentCreationService
+# Card redesign
 
 *This template includes sections for various types of tasks. Delete sections that don't apply to your specific use case.*
 
 ## Parent Initiative **[CONDITIONAL: Assigned Task]**
 
-[[METIS-I-0002]]
+[[METIS-I-0017]]
 
 ## Objective **[REQUIRED]**
 
-{Clear statement of what this task accomplishes}
+Redesign Kanban cards from generic rounded rectangles to distinctive, characterful components.
+
+### Design Changes
+1. **Remove colored header bar** - too visually heavy
+2. **Add left accent stripe** (3-4px) colored by document type
+3. **Asymmetric border radius**: `4px 12px 12px 4px`
+4. **Subtle gradient backgrounds** that hint at document type
+5. **Texture overlay** at low opacity (0.02) for depth
+6. **Enhanced short code badge** treatment - more prominent
+
+### CSS Implementation
+```css
+.kanban-card {
+  background: linear-gradient(
+    145deg,
+    var(--color-background-elevated) 0%,
+    color-mix(in srgb, var(--color-background-elevated) 95%, var(--card-accent)) 100%
+  );
+  border-left: 3px solid var(--card-accent);
+  border-radius: 4px 12px 12px 4px;
+}
+```
+
+### Files to Modify
+- `KanbanCard.vue` - template and styles
+- `theme.css` - card utility classes
 
 ## Backlog Item Details **[CONDITIONAL: Backlog Item]**
 
@@ -69,11 +94,17 @@ initiative_id: METIS-I-0002
 
 ## Acceptance Criteria
 
+## Acceptance Criteria
+
 ## Acceptance Criteria **[REQUIRED]**
 
-- [ ] {Specific, testable requirement 1}
-- [ ] {Specific, testable requirement 2}
-- [ ] {Specific, testable requirement 3}
+- [ ] Colored header bar removed from cards
+- [ ] Left accent stripe shows document type color
+- [ ] Cards have asymmetric border radius
+- [ ] Subtle gradient background applied
+- [ ] Short code is prominently displayed as badge
+- [ ] Cards maintain drag-and-drop functionality
+- [ ] All document types (vision, initiative, task, adr, backlog) have distinct accent colors
 
 ## Test Cases **[CONDITIONAL: Testing Task]**
 

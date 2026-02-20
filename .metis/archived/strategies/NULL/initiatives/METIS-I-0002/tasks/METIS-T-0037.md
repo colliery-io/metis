@@ -1,13 +1,13 @@
 ---
-id: micro-interactions
+id: create-templateloader-service
 level: task
-title: "Micro-interactions"
-short_code: "METIS-T-0049"
-created_at: 2025-12-28T19:39:44.096530+00:00
-updated_at: 2025-12-28T19:56:34.937212+00:00
-parent: METIS-I-0017
+title: "Create TemplateLoader service"
+short_code: "METIS-T-0037"
+created_at: 2025-12-07T03:25:04.793393+00:00
+updated_at: 2025-12-07T03:31:55.064708+00:00
+parent: METIS-I-0002
 blocked_by: []
-archived: false
+archived: true
 
 tags:
   - "#task"
@@ -16,67 +16,20 @@ tags:
 
 exit_criteria_met: false
 strategy_id: NULL
-initiative_id: METIS-I-0017
+initiative_id: METIS-I-0002
 ---
 
-# Micro-interactions
+# Create TemplateLoader service
 
 *This template includes sections for various types of tasks. Delete sections that don't apply to your specific use case.*
 
 ## Parent Initiative **[CONDITIONAL: Assigned Task]**
 
-[[METIS-I-0017]]
+[[METIS-I-0002]]
 
 ## Objective **[REQUIRED]**
 
-Add delightful micro-interactions and animations that enhance user experience without being distracting.
-
-### Staggered Card Entrance
-```css
-.kanban-card {
-  animation: card-enter 0.4s ease-out backwards;
-}
-.kanban-card:nth-child(1) { animation-delay: 0.05s; }
-.kanban-card:nth-child(2) { animation-delay: 0.1s; }
-/* Continue pattern */
-
-@keyframes card-enter {
-  from {
-    opacity: 0;
-    transform: translateY(12px) scale(0.96);
-  }
-}
-```
-
-### Enhanced Drag Feedback
-```css
-.kanbancard-drag:active {
-  transform: rotate(1.5deg) scale(1.02);
-  box-shadow: 0 20px 40px -10px rgba(0,0,0,0.2);
-}
-```
-
-### Button Press Effects
-```css
-.btn:active {
-  transform: scale(0.97);
-}
-```
-
-### Search Bar Focus
-```css
-.search-bar:focus-within {
-  transform: scale(1.02);
-  box-shadow: 
-    0 0 0 2px var(--color-interactive-primary),
-    0 10px 30px -10px rgba(0,0,0,0.2);
-}
-```
-
-### Files to Modify
-- `KanbanCard.vue`, `KanbanColumn.vue` - card animations
-- `SearchBar.vue` - focus states
-- `theme.css` - global button/interaction styles
+{Clear statement of what this task accomplishes}
 
 ## Backlog Item Details **[CONDITIONAL: Backlog Item]**
 
@@ -116,14 +69,13 @@ Add delightful micro-interactions and animations that enhance user experience wi
 
 ## Acceptance Criteria
 
+## Acceptance Criteria
+
 ## Acceptance Criteria **[REQUIRED]**
 
-- [ ] Cards animate in with staggered delays when column loads
-- [ ] Dragged cards have enhanced shadow and slight rotation
-- [ ] Buttons have tactile press feedback (scale down)
-- [ ] Search bar expands/glows on focus
-- [ ] Animations respect `prefers-reduced-motion` media query
-- [ ] No janky or stuttering animations on typical hardware
+- [ ] {Specific, testable requirement 1}
+- [ ] {Specific, testable requirement 2}
+- [ ] {Specific, testable requirement 3}
 
 ## Test Cases **[CONDITIONAL: Testing Task]**
 

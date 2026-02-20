@@ -1,79 +1,36 @@
 ---
-id: hyper-theme-effects
+id: add-dependency-tracking-to-metis
 level: task
-title: "Hyper theme effects"
-short_code: "METIS-T-0051"
-created_at: 2025-12-28T19:39:44.343889+00:00
-updated_at: 2025-12-28T19:57:57.494099+00:00
-parent: METIS-I-0017
+title: "Add dependency tracking to Metis tasks (Beads-inspired)"
+short_code: "METIS-T-0057"
+created_at: 2026-01-25T19:59:05.182008+00:00
+updated_at: 2026-01-25T19:59:05.182008+00:00
+parent: 
 blocked_by: []
-archived: false
+archived: true
 
 tags:
   - "#task"
-  - "#phase/completed"
+  - "#phase/backlog"
+  - "#feature"
 
 
 exit_criteria_met: false
 strategy_id: NULL
-initiative_id: METIS-I-0017
+initiative_id: NULL
 ---
 
-# Hyper theme effects
+# Add dependency tracking to Metis tasks (Beads-inspired)
 
 *This template includes sections for various types of tasks. Delete sections that don't apply to your specific use case.*
 
 ## Parent Initiative **[CONDITIONAL: Assigned Task]**
 
-[[METIS-I-0017]]
+[[Parent Initiative]]
 
 ## Objective **[REQUIRED]**
 
-Push the Hyper theme further with dramatic neon effects, glows, and cyberpunk aesthetics.
-
-### Card Effects
-```css
-[data-theme="hyper"] .kanban-card {
-  border: 1px solid rgba(192, 38, 211, 0.3);
-  box-shadow: 
-    0 0 20px -5px rgba(192, 38, 211, 0.15),
-    inset 0 1px 0 rgba(255,255,255,0.05);
-}
-
-[data-theme="hyper"] .kanban-card:hover {
-  box-shadow: 
-    0 0 30px -5px rgba(192, 38, 211, 0.3),
-    0 0 60px -10px rgba(192, 38, 211, 0.2);
-}
-```
-
-### CRT Scanline Effect (subtle)
-```css
-[data-theme="hyper"]::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background: repeating-linear-gradient(
-    0deg,
-    transparent,
-    transparent 2px,
-    rgba(0,0,0,0.03) 2px,
-    rgba(0,0,0,0.03) 4px
-  );
-  pointer-events: none;
-  z-index: 9999;
-}
-```
-
-### Additional Effects
-- Neon glow on primary buttons
-- Animated gradient borders on focus states
-- Pulsing accent colors on active elements
-- Optional: subtle chromatic aberration on hover
-
-### Files to Modify
-- `theme.css` - hyper-specific overrides
-- `themes/definitions.ts` - intensify hyper colors
+{Clear statement of what this task accomplishes}
 
 ## Backlog Item Details **[CONDITIONAL: Backlog Item]**
 
@@ -111,16 +68,11 @@ Push the Hyper theme further with dramatic neon effects, glows, and cyberpunk ae
 
 ## Acceptance Criteria
 
-## Acceptance Criteria
-
 ## Acceptance Criteria **[REQUIRED]**
 
-- [ ] Cards have neon glow effect on hover
-- [ ] Subtle CRT scanline overlay is visible
-- [ ] Primary buttons have neon box-shadow
-- [ ] Focus states have animated/glowing borders
-- [ ] Effects don't impact performance significantly
-- [ ] Hyper theme feels distinctly "cyberpunk" compared to dark theme
+- [ ] {Specific, testable requirement 1}
+- [ ] {Specific, testable requirement 2}
+- [ ] {Specific, testable requirement 3}
 
 ## Test Cases **[CONDITIONAL: Testing Task]**
 

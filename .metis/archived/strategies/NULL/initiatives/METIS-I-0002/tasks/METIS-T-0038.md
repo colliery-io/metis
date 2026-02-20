@@ -1,33 +1,31 @@
 ---
-id: gui-frame-work-uat-testing
+id: add-sample-context-generation-for
 level: task
-title: "GUI Frame work UAT testing"
-short_code: "METIS-T-0006"
-created_at: 2025-10-16T02:13:25.638763+00:00
-updated_at: 2025-10-16T02:13:25.638763+00:00
-parent: 
+title: "Add sample context generation for template validation"
+short_code: "METIS-T-0038"
+created_at: 2025-12-07T03:25:04.863388+00:00
+updated_at: 2025-12-07T03:31:55.292635+00:00
+parent: METIS-I-0002
 blocked_by: []
-archived: false
+archived: true
 
 tags:
   - "#task"
-  - "#phase/backlog"
-  - "#tech-debt"
+  - "#phase/completed"
 
 
-  - "#tech-debt"
 exit_criteria_met: false
 strategy_id: NULL
-initiative_id: NULL
+initiative_id: METIS-I-0002
 ---
 
-# GUI Frame work UAT testing
+# Add sample context generation for template validation
 
 *This template includes sections for various types of tasks. Delete sections that don't apply to your specific use case.*
 
 ## Parent Initiative **[CONDITIONAL: Assigned Task]**
 
-[[Parent Initiative]]
+[[METIS-I-0002]]
 
 ## Objective **[REQUIRED]**
 
@@ -66,6 +64,12 @@ initiative_id: NULL
 - **Current Problems**: {What's difficult/slow/buggy now}
 - **Benefits of Fixing**: {What improves after refactoring}
 - **Risk Assessment**: {Risks of not addressing this}
+
+## Acceptance Criteria
+
+## Acceptance Criteria
+
+## Acceptance Criteria
 
 ## Acceptance Criteria **[REQUIRED]**
 
