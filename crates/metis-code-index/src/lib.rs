@@ -7,11 +7,13 @@
 //! Vendored from colliery-io/muninn/crates/muninn-graph with storage,
 //! graph building, and file watching removed.
 
+pub mod formatter;
 pub mod lang;
 pub mod parser;
 pub mod symbols;
 pub mod walker;
 
+pub use formatter::{format_index, write_index_file};
 pub use lang::go::GoExtractor;
 pub use lang::python::PythonExtractor;
 pub use lang::rust::RustExtractor;
