@@ -7,6 +7,13 @@
 
 set -euo pipefail
 
+# Check for dirty index and run incremental re-index before exit
+DIRTY_FILE="$CLAUDE_PROJECT_DIR/.metis/.index-dirty"
+if [ -f "$DIRTY_FILE" ] && [ -s "$DIRTY_FILE" ]; then
+    metis index --incremental 2>/dev/null || true
+    rm -f "$DIRTY_FILE"
+fi
+
 # Read hook input from stdin
 HOOK_INPUT=$(cat)
 

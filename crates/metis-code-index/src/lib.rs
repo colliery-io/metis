@@ -8,12 +8,14 @@
 //! graph building, and file watching removed.
 
 pub mod formatter;
+pub mod hasher;
 pub mod lang;
 pub mod parser;
 pub mod symbols;
 pub mod walker;
 
-pub use formatter::{format_index, write_index_file};
+pub use formatter::{format_index, parse_existing_summaries, write_index_file};
+pub use hasher::{HashManifest, IncrementalDiff, SymbolCache};
 pub use lang::go::GoExtractor;
 pub use lang::python::PythonExtractor;
 pub use lang::rust::RustExtractor;

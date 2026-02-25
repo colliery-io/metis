@@ -36,3 +36,6 @@ lcov.info
 
 # Build artifacts
 **/*.orig
+
+# Metis ephemeral state
+.metis/.index-dirty

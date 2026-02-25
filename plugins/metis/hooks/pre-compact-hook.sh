@@ -20,6 +20,17 @@ fi
 # Get current project state
 # Try compact format first (newer versions), fall back to default output
 cd "$CLAUDE_PROJECT_DIR" || exit 0
+
+# Check for dirty index and run incremental re-index
+DIRTY_FILE="$CLAUDE_PROJECT_DIR/.metis/.index-dirty"
+INDEX_UPDATE_MSG=""
+if [ -f "$DIRTY_FILE" ] && [ -s "$DIRTY_FILE" ]; then
+    DIRTY_COUNT=$(wc -l < "$DIRTY_FILE" | tr -d ' ')
+    metis index --incremental 2>/dev/null
+    INDEX_UPDATE_MSG="Code index updated (${DIRTY_COUNT} files re-indexed). Module summaries may need updating for changed directories."
+    rm "$DIRTY_FILE"
+fi
+
 STATUS_OUTPUT=$(metis status --format compact 2>/dev/null)
 if [ -z "$STATUS_OUTPUT" ]; then
     # Fall back to default output and extract what we can
@@ -59,6 +70,7 @@ read -r -d '' CONTEXT << EOF
 ### Current Project State
 ${STATE_SUMMARY}
 
+$([ -n "$INDEX_UPDATE_MSG" ] && printf '%s\n\n' "### Code Index" "${INDEX_UPDATE_MSG}")
 ### Actionable Work Items
 \`\`\`
 ${ACTIVE_WORK:-No active or ready tasks found}
