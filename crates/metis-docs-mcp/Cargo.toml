@@ -16,6 +16,7 @@ path = "src/main.rs"
 
 [dependencies]
 metis-docs-core = { path = "../metis-docs-core", version = "1.0.9" }
+metis-code-index = { path = "../metis-code-index" }
 
 # Shared dependencies
 tokio = { workspace = true }

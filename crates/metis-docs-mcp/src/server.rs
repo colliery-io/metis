@@ -1,12 +1,15 @@
 use crate::tools::{
-    ArchiveDocumentTool, CreateDocumentTool, EditDocumentTool, InitializeProjectTool,
-    ListDocumentsTool, MetisTools, ReadDocumentTool, SearchDocumentsTool, TransitionPhaseTool,
+    ArchiveDocumentTool, CreateDocumentTool, EditDocumentTool, IndexCodeTool,
+    InitializeProjectTool, ListDocumentsTool, MetisTools, ReadDocumentTool, SearchDocumentsTool,
+    TransitionPhaseTool,
 };
 use crate::MetisServerConfig;
 use async_trait::async_trait;
 use rust_mcp_sdk::{
     mcp_server::ServerHandler,
-    schema::{CallToolRequestParams, CallToolResult, ListToolsResult, PaginatedRequestParams, RpcError},
+    schema::{
+        CallToolRequestParams, CallToolResult, ListToolsResult, PaginatedRequestParams, RpcError,
+    },
     McpServer,
 };
 use std::sync::Arc;
@@ -88,11 +91,12 @@ impl ServerHandler for MetisServerHandler {
                     .map_err(rust_mcp_sdk::schema::schema_utils::CallToolError::new)?;
                 tool.call_tool().await
             }
-            _ => Err(
-                rust_mcp_sdk::schema::schema_utils::CallToolError::unknown_tool(
-                    params.name,
-                ),
-            ),
+            "index_code" => {
+                let tool: IndexCodeTool = serde_json::from_value(args)
+                    .map_err(rust_mcp_sdk::schema::schema_utils::CallToolError::new)?;
+                tool.call_tool().await
+            }
+            _ => Err(rust_mcp_sdk::schema::schema_utils::CallToolError::unknown_tool(params.name)),
         }
     }
 }
