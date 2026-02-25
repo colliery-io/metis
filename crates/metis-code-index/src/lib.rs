@@ -10,6 +10,7 @@
 pub mod lang;
 pub mod parser;
 pub mod symbols;
+pub mod walker;
 
 pub use lang::go::GoExtractor;
 pub use lang::python::PythonExtractor;
@@ -17,3 +18,4 @@ pub use lang::rust::RustExtractor;
 pub use lang::typescript::TypeScriptExtractor;
 pub use parser::{Language, ParseError, ParsedFile, Parser};
 pub use symbols::{Symbol, SymbolKind, Visibility};
+pub use walker::{walk_directory, SourceFile, WalkError, WalkResult};

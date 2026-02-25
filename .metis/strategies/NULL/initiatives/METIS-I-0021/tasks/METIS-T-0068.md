@@ -4,14 +4,14 @@ level: task
 title: "Add Go tree-sitter extractor"
 short_code: "METIS-T-0068"
 created_at: 2026-02-20T14:47:06.846831+00:00
-updated_at: 2026-02-24T22:13:16.459391+00:00
+updated_at: 2026-02-25T01:22:43.619375+00:00
 parent: METIS-I-0021
 blocked_by: []
 archived: false
 
 tags:
   - "#task"
-  - "#phase/active"
+  - "#phase/completed"
 
 
 exit_criteria_met: false
@@ -27,6 +27,8 @@ initiative_id: METIS-I-0021
 ## Objective
 
 Add Go language support to the code index crate. Create a Go extractor using `tree-sitter-go` following the same pattern as existing extractors.
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 

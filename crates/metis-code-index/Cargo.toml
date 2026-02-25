@@ -16,6 +16,9 @@ tree-sitter-typescript = "0.23"
 tree-sitter-javascript = "0.25"
 tree-sitter-go = "0.25"
 
+# File walking (gitignore-aware)
+ignore = "0.4"
+
 # Iterator utilities (used by extractors)
 streaming-iterator = "0.1"
 
@@ -28,3 +31,4 @@ thiserror = { workspace = true }
 
 [dev-dependencies]
 serde_json = { workspace = true }
+tempfile = "3"
