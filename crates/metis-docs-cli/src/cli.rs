@@ -3,8 +3,9 @@ use clap::{Parser, Subcommand};
 use tracing_subscriber::filter::LevelFilter;
 
 use crate::commands::{
-    ArchiveCommand, ConfigCommand, CreateCommand, InitCommand, ListCommand, McpCommand,
-    OutputFormat, SearchCommand, StatusCommand, SyncCommand, TransitionCommand, ValidateCommand,
+    ArchiveCommand, ConfigCommand, CreateCommand, IndexCommand, InitCommand, ListCommand,
+    McpCommand, OutputFormat, SearchCommand, StatusCommand, SyncCommand, TransitionCommand,
+    ValidateCommand,
 };
 
 #[derive(Parser)]
@@ -44,6 +45,8 @@ pub enum Commands {
     Mcp(McpCommand),
     /// Manage flight level configuration
     Config(ConfigCommand),
+    /// Generate code index for AI agent navigation
+    Index(IndexCommand),
 }
 
 impl Cli {
@@ -74,6 +77,7 @@ impl Cli {
             Commands::Validate(cmd) => cmd.execute().await,
             Commands::Mcp(cmd) => cmd.execute().await,
             Commands::Config(cmd) => cmd.execute().await,
+            Commands::Index(cmd) => cmd.execute().await,
         }
     }
 }

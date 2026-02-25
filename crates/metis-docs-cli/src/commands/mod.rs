@@ -1,6 +1,7 @@
 pub mod archive;
 pub mod config;
 pub mod create;
+pub mod index;
 pub mod init;
 pub mod list;
 pub mod mcp;
@@ -13,6 +14,7 @@ pub mod validate;
 pub use archive::ArchiveCommand;
 pub use config::ConfigCommand;
 pub use create::CreateCommand;
+pub use index::IndexCommand;
 pub use init::InitCommand;
 pub use list::ListCommand;
 pub use list::OutputFormat;
