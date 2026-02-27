@@ -138,8 +138,5 @@ fn test_is_workspace_without_database() {
 
     // No database file needed
     let db_path = metis_dir.join("metis.db");
-    assert!(
-        !db_path.exists(),
-        "Test should work without database file"
-    );
+    assert!(!db_path.exists(), "Test should work without database file");
 }

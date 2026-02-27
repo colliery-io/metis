@@ -159,6 +159,9 @@ mod tests {
             preset: None,
             strategies: None,
             initiatives: None,
+            upstream: None,
+            workspace_prefix: None,
+            team: None,
             prefix: None,
         };
         if init_cmd.execute().await.is_err() {

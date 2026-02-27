@@ -1,9 +1,7 @@
 use crate::AppState;
 use metis_core::{
-    application::services::workspace::initialization::WorkspaceInitializationService, 
-    domain::configuration::FlightLevelConfig,
-    Application,
-    Database,
+    application::services::workspace::initialization::WorkspaceInitializationService,
+    domain::configuration::FlightLevelConfig, Application, Database,
 };
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -50,7 +48,7 @@ pub async fn initialize_project(
     // Set up database and apply flight level configuration
     let database = Database::new(result.database_path.to_str().unwrap())
         .map_err(|e| format!("Failed to initialize database: {}", e))?;
-    
+
     // Determine and set the flight level configuration based on preset
     let flight_config = determine_flight_config(preset.as_deref())?;
     let mut config_repo = database

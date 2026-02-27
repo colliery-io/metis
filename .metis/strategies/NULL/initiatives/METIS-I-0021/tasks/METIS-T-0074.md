@@ -4,14 +4,14 @@ level: task
 title: "Create code-index plugin skill for AI-generated module summaries"
 short_code: "METIS-T-0074"
 created_at: 2026-02-20T14:47:13.836008+00:00
-updated_at: 2026-02-20T14:47:13.836008+00:00
+updated_at: 2026-02-25T05:27:09.456045+00:00
 parent: METIS-I-0021
 blocked_by: []
 archived: false
 
 tags:
   - "#task"
-  - "#phase/todo"
+  - "#phase/completed"
 
 
 exit_criteria_met: false
@@ -27,6 +27,10 @@ initiative_id: METIS-I-0021
 ## Objective
 
 Create a plugin skill that guides Claude through generating Layer 2 module summaries. The skill teaches Claude how to read the structural index + source code, write per-directory summaries (purpose, key files, dependencies), and append them to `.metis/code-index.md`. Default model: Sonnet.
+
+## Acceptance Criteria
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 
@@ -52,4 +56,15 @@ No blockers -- can be done in parallel with Rust crate work. But the skill is mo
 
 ## Progress
 
-*Updated during implementation*
+### Session 1 (2026-02-24)
+- Created `plugins/metis/skills/code-index/SKILL.md` following existing skill pattern
+- Skill triggers on: "create a code index", "index this codebase", "update the code index", "generate code index", "build code index", "refresh module summaries"
+- Guides Claude through two-layer process:
+  - Layer 1: Run `index_code` MCP tool for structural index (file tree + symbols)
+  - Layer 2: Read source files, write per-directory module summaries
+- Summary format: Purpose (1 sentence), Key files (3-5), Dependencies
+- Includes complete example with real module summaries
+- Specifies Sonnet as default model for summary generation
+- Guidelines for when to regenerate (new project, major refactors, new modules)
+- Deployed to marketplace and cache directories
+- All acceptance criteria met

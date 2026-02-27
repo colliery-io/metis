@@ -1,5 +1,5 @@
-use metis_core::application::services::workspace::initialization::WorkspaceInitializationService;
 use crate::formatting::ToolOutput;
+use metis_core::application::services::workspace::initialization::WorkspaceInitializationService;
 use rust_mcp_sdk::{
     macros::{mcp_tool, JsonSchema},
     schema::{schema_utils::CallToolError, CallToolResult},

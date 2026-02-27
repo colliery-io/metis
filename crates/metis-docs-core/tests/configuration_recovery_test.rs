@@ -302,7 +302,10 @@ async fn test_migration_from_old_workspace_without_config_toml() {
 
     let config = ConfigFile::load(&config_file_path).unwrap();
     assert_eq!(config.prefix(), "TEST", "Should preserve prefix from DB");
-    println!("✓ config.toml created with correct prefix: {}", config.prefix());
+    println!(
+        "✓ config.toml created with correct prefix: {}",
+        config.prefix()
+    );
 
     println!("\n✅ Migration from old workspace successful!");
 }
@@ -345,7 +348,11 @@ async fn test_recovery_from_corrupted_database_file() {
 
     // Step 4: Corrupt the database file by writing garbage to it
     println!("\nStep 4: Corrupt database file with garbage data");
-    std::fs::write(&db_path, b"This is not a valid SQLite database file! Just garbage data to corrupt it.").unwrap();
+    std::fs::write(
+        &db_path,
+        b"This is not a valid SQLite database file! Just garbage data to corrupt it.",
+    )
+    .unwrap();
     assert!(
         std::path::Path::new(&db_path).exists(),
         "DB file should still exist (but corrupted)"

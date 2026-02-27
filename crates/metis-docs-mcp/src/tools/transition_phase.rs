@@ -79,9 +79,7 @@ impl TransitionPhaseTool {
             .header("Phase Transition")
             .text(&format!(
                 "{}: {} -> {}",
-                self.short_code,
-                result.from_phase,
-                result.to_phase
+                self.short_code, result.from_phase, result.to_phase
             ))
             .blank()
             .phase_progress(&phase_strs, current_index)

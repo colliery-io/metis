@@ -123,6 +123,27 @@ export class MetisAPI {
   static async installCliElevated(): Promise<void> {
     return invoke('install_cli_elevated');
   }
+
+  /**
+   * Trigger a full workspace sync (git + local db)
+   */
+  static async syncWorkspace(): Promise<WorkspaceSyncResult> {
+    return invoke('sync_workspace');
+  }
+
+  /**
+   * Get current sync status
+   */
+  static async getSyncStatus(): Promise<SyncStatus> {
+    return invoke('get_sync_status');
+  }
+
+  /**
+   * Check if upstream is configured for multi-workspace sync
+   */
+  static async isUpstreamConfigured(): Promise<boolean> {
+    return invoke('is_upstream_configured');
+  }
 }
 
 // Document type helpers
@@ -249,6 +270,24 @@ export interface SyncResult {
   messages: string[];
 }
 
+export interface WorkspaceSyncResult {
+  git_sync_performed: boolean;
+  pulled_workspaces: string[];
+  files_pushed: number;
+  push_retries: number;
+  is_noop: boolean;
+  summary: string;
+  elapsed_secs: number;
+  local_sync: SyncResult;
+}
+
+export interface SyncStatus {
+  in_progress: boolean;
+  last_synced: string | null;
+  last_error: string | null;
+  last_result_summary: string | null;
+}
+
 // API functions for document CRUD operations
 export class DocumentAPI {
   /**
@@ -294,3 +333,6 @@ export const syncProject = MetisAPI.syncProject;
 export const getAppVersion = MetisAPI.getAppVersion;
 export const installCli = MetisAPI.installCli;
 export const installCliElevated = MetisAPI.installCliElevated;
+export const syncWorkspace = MetisAPI.syncWorkspace;
+export const getSyncStatus = MetisAPI.getSyncStatus;
+export const isUpstreamConfigured = MetisAPI.isUpstreamConfigured;

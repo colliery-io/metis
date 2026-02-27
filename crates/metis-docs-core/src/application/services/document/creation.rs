@@ -849,7 +849,6 @@ mod tests {
         assert_eq!(initiative.title(), "Test Initiative");
     }
 
-
     #[tokio::test]
     async fn test_get_next_adr_number() {
         let temp_dir = tempdir().unwrap();

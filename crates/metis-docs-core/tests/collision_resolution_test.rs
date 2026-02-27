@@ -28,8 +28,7 @@ async fn test_short_code_collision_resolution() {
     // Simulating two developers creating tasks in different initiatives
 
     // Developer A's task (in initiative I-0001)
-    let init_a_dir = metis_dir
-        .join("strategies/NULL/initiatives/I-0001/tasks");
+    let init_a_dir = metis_dir.join("strategies/NULL/initiatives/I-0001/tasks");
     fs::create_dir_all(&init_a_dir).expect("Failed to create initiative A dir");
 
     let task_a = init_a_dir.join("T-0001.md");
@@ -56,8 +55,7 @@ This task was created by developer A.";
     fs::write(&task_a, task_a_content).expect("Failed to write task A");
 
     // Developer B's task (in initiative I-0002) - same short code!
-    let init_b_dir = metis_dir
-        .join("strategies/NULL/initiatives/I-0002/tasks");
+    let init_b_dir = metis_dir.join("strategies/NULL/initiatives/I-0002/tasks");
     fs::create_dir_all(&init_b_dir).expect("Failed to create initiative B dir");
 
     let task_b = init_b_dir.join("T-0001.md");
@@ -88,8 +86,7 @@ This task was created by developer B.";
     let db = Database::new(&db_path.to_string_lossy()).expect("Failed to open database");
     let mut db_service = DatabaseService::new(db.into_repository());
 
-    let mut sync_service = SyncService::new(&mut db_service)
-        .with_workspace_dir(&metis_dir);
+    let mut sync_service = SyncService::new(&mut db_service).with_workspace_dir(&metis_dir);
 
     let sync_results = sync_service
         .sync_directory(&metis_dir)
@@ -105,7 +102,12 @@ This task was created by developer B.";
     // Step 4: Verify collision was detected and resolved
     let renumbered_results: Vec<_> = sync_results
         .iter()
-        .filter(|r| matches!(r, metis_core::application::services::synchronization::SyncResult::Renumbered { .. }))
+        .filter(|r| {
+            matches!(
+                r,
+                metis_core::application::services::synchronization::SyncResult::Renumbered { .. }
+            )
+        })
         .collect();
 
     assert_eq!(
@@ -145,9 +147,13 @@ This task was created by developer B.";
         .filter(|p| p.extension().and_then(|e| e.to_str()) == Some("md"))
         .collect();
 
-    assert_eq!(task_b_files.len(), 1, "Should have exactly one file in init_b_dir");
-    let task_b_new_content = fs::read_to_string(&task_b_files[0])
-        .expect("Should be able to read task B");
+    assert_eq!(
+        task_b_files.len(),
+        1,
+        "Should have exactly one file in init_b_dir"
+    );
+    let task_b_new_content =
+        fs::read_to_string(&task_b_files[0]).expect("Should be able to read task B");
 
     // Verify both documents exist with different short codes
     assert!(
@@ -156,16 +162,20 @@ This task was created by developer B.";
     );
 
     // Verify they have different short codes
-    let has_0001 = task_a_new_content.contains("TEST-T-0001")
-        || task_b_new_content.contains("TEST-T-0001");
-    let has_0002 = task_a_new_content.contains("TEST-T-0002")
-        || task_b_new_content.contains("TEST-T-0002");
+    let has_0001 =
+        task_a_new_content.contains("TEST-T-0001") || task_b_new_content.contains("TEST-T-0001");
+    let has_0002 =
+        task_a_new_content.contains("TEST-T-0002") || task_b_new_content.contains("TEST-T-0002");
 
     assert!(has_0001, "One task should have TEST-T-0001");
-    assert!(has_0002, "One task should have TEST-T-0002 (renumbered task)");
+    assert!(
+        has_0002,
+        "One task should have TEST-T-0002 (renumbered task)"
+    );
 
     // Step 6: Verify both documents are in the database with unique short codes
-    let repo = db_service.find_by_type(metis_core::domain::documents::types::DocumentType::Task)
+    let repo = db_service
+        .find_by_type(metis_core::domain::documents::types::DocumentType::Task)
         .expect("Should be able to query tasks");
 
     let task_short_codes: Vec<String> = repo.iter().map(|t| t.short_code.clone()).collect();
@@ -191,8 +201,7 @@ async fn test_sibling_cross_reference_update() {
     let metis_dir = result.metis_dir;
 
     // Create initiative directory with two tasks
-    let tasks_dir = metis_dir
-        .join("strategies/NULL/initiatives/I-0001/tasks");
+    let tasks_dir = metis_dir.join("strategies/NULL/initiatives/I-0001/tasks");
     fs::create_dir_all(&tasks_dir).expect("Failed to create tasks dir");
 
     // Task 1 - will be renumbered
@@ -245,8 +254,7 @@ This task depends on TEST-T-0001 being completed.";
     let db = Database::new(&db_path.to_string_lossy()).expect("Failed to open database");
     let mut db_service = DatabaseService::new(db.into_repository());
 
-    let mut sync_service = SyncService::new(&mut db_service)
-        .with_workspace_dir(&metis_dir);
+    let mut sync_service = SyncService::new(&mut db_service).with_workspace_dir(&metis_dir);
 
     sync_service
         .sync_directory(&metis_dir)
@@ -333,8 +341,7 @@ exit_criteria_met: false\n\
     let db = Database::new(&db_path.to_string_lossy()).expect("Failed to open database");
     let mut db_service = DatabaseService::new(db.into_repository());
 
-    let mut sync_service = SyncService::new(&mut db_service)
-        .with_workspace_dir(&metis_dir);
+    let mut sync_service = SyncService::new(&mut db_service).with_workspace_dir(&metis_dir);
 
     sync_service
         .sync_directory(&metis_dir)
@@ -342,8 +349,8 @@ exit_criteria_met: false\n\
         .expect("Sync should succeed");
 
     // Verify shallow task kept TEST-T-0001
-    let shallow_updated = fs::read_to_string(&shallow_task)
-        .expect("Shallow task should exist at original path");
+    let shallow_updated =
+        fs::read_to_string(&shallow_task).expect("Shallow task should exist at original path");
 
     assert!(
         shallow_updated.contains("TEST-T-0001"),
@@ -357,9 +364,13 @@ exit_criteria_met: false\n\
         .filter(|p| p.extension().and_then(|e| e.to_str()) == Some("md"))
         .collect();
 
-    assert_eq!(deep_files.len(), 1, "Should have exactly one file in deep_dir");
-    let deep_updated = fs::read_to_string(&deep_files[0])
-        .expect("Should be able to read deep task");
+    assert_eq!(
+        deep_files.len(),
+        1,
+        "Should have exactly one file in deep_dir"
+    );
+    let deep_updated =
+        fs::read_to_string(&deep_files[0]).expect("Should be able to read deep task");
 
     // Should be renumbered to T-0002 (shallow task kept T-0001, deep task gets next number)
     let deep_filename = deep_files[0].file_name().unwrap().to_string_lossy();

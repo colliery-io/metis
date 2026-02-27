@@ -110,10 +110,7 @@ pub fn get_cli_install_status() -> Result<CliInstallStatus, String> {
 
     let version_info = read_version_info();
 
-    let installed = binary_path
-        .as_ref()
-        .map(|p| p.exists())
-        .unwrap_or(false);
+    let installed = binary_path.as_ref().map(|p| p.exists()).unwrap_or(false);
 
     let needs_update = if installed {
         version_info
@@ -193,13 +190,11 @@ pub async fn install_cli_internal(app: &AppHandle) -> Result<CliInstallResult, S
     // Get the bundled sidecar path
     let sidecar_path = get_sidecar_path(app)?;
 
-    let target_path =
-        get_cli_binary_path().ok_or("Failed to determine CLI installation path")?;
+    let target_path = get_cli_binary_path().ok_or("Failed to determine CLI installation path")?;
 
     // Create target directory
     if let Some(parent) = target_path.parent() {
-        fs::create_dir_all(parent)
-            .map_err(|e| format!("Failed to create CLI directory: {}", e))?;
+        fs::create_dir_all(parent).map_err(|e| format!("Failed to create CLI directory: {}", e))?;
     }
 
     // Copy the binary
@@ -353,8 +348,7 @@ pub async fn install_cli_elevated(app: AppHandle) -> Result<CliInstallResult, St
     let app_version = env!("CARGO_PKG_VERSION");
 
     // First ensure the binary is copied
-    let target_path =
-        get_cli_binary_path().ok_or("Failed to determine CLI installation path")?;
+    let target_path = get_cli_binary_path().ok_or("Failed to determine CLI installation path")?;
 
     if !target_path.exists() {
         // Need to copy first

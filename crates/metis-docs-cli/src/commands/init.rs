@@ -3,9 +3,10 @@ use anyhow::Result;
 use clap::Args;
 use metis_core::{
     application::services::workspace::WorkspaceInitializationService,
-    domain::configuration::FlightLevelConfig,
+    domain::configuration::{validate_workspace_prefix, ConfigFile, FlightLevelConfig},
     Database,
 };
+use std::time::Instant;
 
 #[derive(Args)]
 pub struct InitCommand {
@@ -24,65 +25,49 @@ pub struct InitCommand {
     /// Enable/disable initiatives (true/false)
     #[arg(long)]
     pub initiatives: Option<bool>,
+    /// Upstream central repo URL for multi-workspace sync
+    #[arg(short, long)]
+    pub upstream: Option<String>,
+    /// Workspace prefix — folder name in central repo (2-20 chars, lowercase alphanum + hyphens)
+    #[arg(short = 'w', long)]
+    pub workspace_prefix: Option<String>,
+    /// Team label for multi-workspace views (optional)
+    #[arg(short, long)]
+    pub team: Option<String>,
 }
 
 impl InitCommand {
     pub async fn execute(&self) -> Result<()> {
-        // Check if workspace already exists
+        // If --upstream is provided, use the upstream configuration flow
+        if self.upstream.is_some() {
+            return self.execute_with_upstream().await;
+        }
+
+        // --- Standard single-workspace init (unchanged) ---
+
         let (workspace_exists, _) = workspace::has_metis_vault();
         if workspace_exists {
             println!("Metis workspace already exists in this directory");
             return Ok(());
         }
 
-        // Get current directory for workspace creation
-        let current_dir = std::env::current_dir()?;
-
-        // Determine project name and prefix
-        let project_name = self.name.as_deref().unwrap_or("Project Vision");
-        let project_prefix = self.determine_project_prefix(project_name);
-
-        // Use WorkspaceInitializationService to create workspace
-        let result = WorkspaceInitializationService::initialize_workspace_with_prefix(
-            &current_dir,
-            project_name,
-            Some(&project_prefix),
-        )
-        .await
-        .map_err(|e| anyhow::anyhow!("Failed to initialize workspace: {}", e))?;
-
-        // If custom flight level config was specified, update it
-        let flight_config = self.determine_flight_config()?;
-        let db = Database::new(result.database_path.to_str().unwrap())
-            .map_err(|e| anyhow::anyhow!("Failed to open database: {}", e))?;
-        let mut config_repo = db
-            .configuration_repository()
-            .map_err(|e| anyhow::anyhow!("Failed to create configuration repository: {}", e))?;
-
-        // Update flight level config if it differs from default
-        let current_config = config_repo.get_flight_level_config()
-            .map_err(|e| anyhow::anyhow!("Failed to get flight level config: {}", e))?;
-        if flight_config != current_config {
-            config_repo
-                .set_flight_level_config(&flight_config)
-                .map_err(|e| anyhow::anyhow!("Failed to set flight level configuration: {}", e))?;
-
-            // Update config.toml to match
-            let config_file_path = result.metis_dir.join("config.toml");
-            let config_file = metis_core::domain::configuration::ConfigFile::new(
-                project_prefix.clone(),
-                flight_config.clone()
-            ).map_err(|e| anyhow::anyhow!("Failed to create config file: {}", e))?;
-            config_file.save(&config_file_path)
-                .map_err(|e| anyhow::anyhow!("Failed to save config.toml: {}", e))?;
-        }
+        let metis_dir = self.create_workspace().await?;
 
         // Create/update .gitignore in .metis directory to ignore database
-        let gitignore_path = result.metis_dir.join(".gitignore");
+        let gitignore_path = metis_dir.join(".gitignore");
         std::fs::write(&gitignore_path, "metis.db\nmetis-mcp-server.log\n")
             .map_err(|e| anyhow::anyhow!("Failed to create .gitignore: {}", e))?;
 
-        println!("[+] Initialized Metis workspace in {}", current_dir.display());
+        let current_dir = std::env::current_dir()?;
+        let project_prefix = self.determine_project_prefix(
+            self.name.as_deref().unwrap_or("Project Vision"),
+        );
+        let flight_config = self.determine_flight_config()?;
+
+        println!(
+            "[+] Initialized Metis workspace in {}",
+            current_dir.display()
+        );
         println!("[+] Created vision.md with project template");
         println!("[+] Created config.toml with project settings");
         println!("[+] Set project prefix: {}", project_prefix);
@@ -92,6 +77,246 @@ impl InitCommand {
         );
 
         Ok(())
+    }
+
+    /// Execute the upstream configuration flow: create workspace (if needed),
+    /// test connectivity, write upstream config, run initial sync.
+    async fn execute_with_upstream(&self) -> Result<()> {
+        let upstream_url = self.upstream.as_deref().unwrap();
+
+        // Validate workspace prefix is provided
+        let ws_prefix = self.workspace_prefix.as_deref().ok_or_else(|| {
+            anyhow::anyhow!(
+                "--workspace-prefix is required when using --upstream.\n\
+                 Example: metis init --upstream <url> --workspace-prefix api"
+            )
+        })?;
+
+        // Validate the workspace prefix format
+        validate_workspace_prefix(ws_prefix)
+            .map_err(|e| anyhow::anyhow!("{}", e))?;
+
+        let (workspace_exists, existing_dir) = workspace::has_metis_vault();
+
+        let metis_dir = if workspace_exists {
+            let dir = existing_dir.unwrap();
+
+            // Check for existing upstream configuration
+            let config_path = dir.join("config.toml");
+            if config_path.exists() {
+                let config = ConfigFile::load(&config_path)
+                    .map_err(|e| anyhow::anyhow!("Failed to load config: {}", e))?;
+                if config.is_multi_workspace() {
+                    anyhow::bail!(
+                        "Upstream already configured. Use `metis sync` to sync."
+                    );
+                }
+            }
+            println!("Adding upstream configuration to existing workspace...");
+            dir
+        } else {
+            // Create workspace first
+            let dir = self.create_workspace().await?;
+
+            // Create .gitignore
+            let gitignore_path = dir.join(".gitignore");
+            std::fs::write(&gitignore_path, "metis.db\nmetis-mcp-server.log\n")
+                .map_err(|e| anyhow::anyhow!("Failed to create .gitignore: {}", e))?;
+
+            println!("[+] Initialized Metis workspace");
+            dir
+        };
+
+        // Test connectivity before writing any config
+        println!("\nConnecting to {}...", upstream_url);
+        let mut ctx = metis_sync::SyncContext::new(upstream_url, ws_prefix)
+            .map_err(|e| Self::format_connectivity_error(e, upstream_url))?;
+        ctx.fetch()
+            .map_err(|e| Self::format_connectivity_error(e, upstream_url))?;
+        println!("  OK");
+
+        // Write upstream config to config.toml
+        let config_path = metis_dir.join("config.toml");
+        let mut config = ConfigFile::load(&config_path)
+            .map_err(|e| anyhow::anyhow!("Failed to load config: {}", e))?;
+        config
+            .set_workspace(ws_prefix.to_string(), self.team.clone())
+            .map_err(|e| anyhow::anyhow!("Failed to set workspace config: {}", e))?;
+        config
+            .set_sync(upstream_url.to_string())
+            .map_err(|e| anyhow::anyhow!("Failed to set sync config: {}", e))?;
+        config
+            .save(&config_path)
+            .map_err(|e| anyhow::anyhow!("Failed to save config: {}", e))?;
+
+        println!("[+] Workspace prefix: {}", ws_prefix);
+        if let Some(ref team) = self.team {
+            println!("[+] Team label: {}", team);
+        }
+
+        // Run initial sync
+        println!("\nRunning initial sync...");
+        Self::run_initial_sync(&metis_dir, upstream_url, ws_prefix, config.last_synced_commit())?;
+
+        println!("\nReady. Run `metis sync` to sync with central.");
+
+        Ok(())
+    }
+
+    /// Create a new Metis workspace and return the .metis directory path.
+    async fn create_workspace(&self) -> Result<std::path::PathBuf> {
+        let current_dir = std::env::current_dir()?;
+        let project_name = self.name.as_deref().unwrap_or("Project Vision");
+        let project_prefix = self.determine_project_prefix(project_name);
+
+        let result = WorkspaceInitializationService::initialize_workspace_with_prefix(
+            &current_dir,
+            project_name,
+            Some(&project_prefix),
+        )
+        .await
+        .map_err(|e| anyhow::anyhow!("Failed to initialize workspace: {}", e))?;
+
+        // Set flight level config if specified
+        let flight_config = self.determine_flight_config()?;
+        let db = Database::new(result.database_path.to_str().unwrap())
+            .map_err(|e| anyhow::anyhow!("Failed to open database: {}", e))?;
+        let mut config_repo = db
+            .configuration_repository()
+            .map_err(|e| anyhow::anyhow!("Failed to create configuration repository: {}", e))?;
+
+        let current_config = config_repo
+            .get_flight_level_config()
+            .map_err(|e| anyhow::anyhow!("Failed to get flight level config: {}", e))?;
+        if flight_config != current_config {
+            config_repo
+                .set_flight_level_config(&flight_config)
+                .map_err(|e| anyhow::anyhow!("Failed to set flight level configuration: {}", e))?;
+
+            let config_file_path = result.metis_dir.join("config.toml");
+            let config_file = ConfigFile::new(project_prefix, flight_config)
+                .map_err(|e| anyhow::anyhow!("Failed to create config file: {}", e))?;
+            config_file
+                .save(&config_file_path)
+                .map_err(|e| anyhow::anyhow!("Failed to save config.toml: {}", e))?;
+        }
+
+        Ok(result.metis_dir)
+    }
+
+    /// Run the initial sync cycle (fetch → hydrate → dehydrate → push).
+    fn run_initial_sync(
+        metis_dir: &std::path::Path,
+        upstream_url: &str,
+        ws_prefix: &str,
+        last_synced: Option<&str>,
+    ) -> Result<()> {
+        let start = Instant::now();
+
+        // Flatten local workspace documents for pushing
+        let flatten_result =
+            metis_core::application::services::layout::flatten_workspace(metis_dir)
+                .map_err(|e| anyhow::anyhow!("Failed to flatten workspace: {}", e))?;
+
+        let local_documents: Vec<metis_sync::dehydration::FlatDoc> = flatten_result
+            .documents
+            .iter()
+            .map(|d| metis_sync::dehydration::FlatDoc {
+                short_code: d.short_code.clone(),
+                filename: d.filename.clone(),
+                content: d.content.clone(),
+            })
+            .collect();
+
+        let sync_config = metis_sync::orchestration::SyncConfig {
+            upstream_url: upstream_url.to_string(),
+            workspace_prefix: ws_prefix.to_string(),
+            last_synced_commit: last_synced.map(|s| s.to_string()),
+        };
+
+        let sync_options = metis_sync::orchestration::SyncOptions::new();
+
+        let result = metis_sync::orchestration::sync(
+            &sync_config,
+            metis_dir,
+            &local_documents,
+            &sync_options,
+        )
+        .map_err(|e| Self::format_connectivity_error(e, upstream_url))?;
+
+        let elapsed = start.elapsed();
+
+        // Update last_synced_commit in config.toml
+        if let Some(ref new_sha) = result.new_synced_commit {
+            let config_path = metis_dir.join("config.toml");
+            if let Ok(mut cfg) = ConfigFile::load(&config_path) {
+                if cfg.update_last_synced_commit(new_sha).is_ok() {
+                    let _ = cfg.save(&config_path);
+                }
+            }
+        }
+
+        // Print results
+        if let Some(ref hydration) = result.hydration {
+            if !hydration.hydrated_workspaces.is_empty() {
+                for ws in &hydration.hydrated_workspaces {
+                    let ws_dir = metis_dir.join(ws);
+                    let count = std::fs::read_dir(&ws_dir)
+                        .map(|entries| {
+                            entries
+                                .filter_map(|e| e.ok())
+                                .filter(|e| {
+                                    e.path().extension().is_some_and(|ext| ext == "md")
+                                })
+                                .count()
+                        })
+                        .unwrap_or(0);
+                    println!("  Pulled: {}/ ({} docs)", ws, count);
+                }
+            }
+        }
+
+        if result.pushed() {
+            println!(
+                "  Registered: {}/ ({} docs pushed)",
+                ws_prefix,
+                result.files_pushed()
+            );
+        }
+
+        println!("  Sync complete in {:.1}s", elapsed.as_secs_f64());
+
+        Ok(())
+    }
+
+    /// Convert SyncError to a user-friendly error message for connectivity issues.
+    fn format_connectivity_error(
+        error: metis_sync::SyncError,
+        upstream_url: &str,
+    ) -> anyhow::Error {
+        match &error {
+            metis_sync::SyncError::Auth { message } => {
+                anyhow::anyhow!(
+                    "Authentication failed for {}: {}\nCheck your SSH keys or credentials.",
+                    upstream_url,
+                    message
+                )
+            }
+            metis_sync::SyncError::FetchFailed { url, reason } => {
+                anyhow::anyhow!(
+                    "Cannot reach {}: {}\nCheck your network connection and URL.",
+                    url,
+                    reason
+                )
+            }
+            metis_sync::SyncError::InvalidUrl { url } => {
+                anyhow::anyhow!(
+                    "Invalid upstream URL: {}\nExpected SSH (git@host:org/repo.git) or HTTPS (https://host/repo.git).",
+                    url
+                )
+            }
+            _ => anyhow::anyhow!("Connection failed: {}", error),
+        }
     }
 
     /// Determine the project prefix from command arguments or project name
@@ -158,6 +383,20 @@ mod tests {
     use std::fs;
     use tempfile::tempdir;
 
+    /// Helper to create a basic InitCommand with no upstream config.
+    fn basic_init(name: Option<&str>) -> InitCommand {
+        InitCommand {
+            name: name.map(|s| s.to_string()),
+            preset: None,
+            strategies: None,
+            initiatives: None,
+            prefix: None,
+            upstream: None,
+            workspace_prefix: None,
+            team: None,
+        }
+    }
+
     #[tokio::test]
     async fn test_init_command_creates_workspace() {
         let temp_dir = tempdir().unwrap();
@@ -166,15 +405,7 @@ mod tests {
         // Change to temp directory
         std::env::set_current_dir(temp_dir.path()).unwrap();
 
-        // Run init command
-        let cmd = InitCommand {
-            name: Some("Test Project".to_string()),
-            preset: None,
-            strategies: None,
-            initiatives: None,
-            prefix: None,
-        };
-
+        let cmd = basic_init(Some("Test Project"));
         let result = cmd.execute().await;
         assert!(result.is_ok());
 
@@ -245,15 +476,7 @@ mod tests {
         // Change to temp directory
         std::env::set_current_dir(temp_dir.path()).unwrap();
 
-        // Run init command
-        let cmd = InitCommand {
-            name: Some("Test Project".to_string()),
-            preset: None,
-            strategies: None,
-            initiatives: None,
-            prefix: None,
-        };
-
+        let cmd = basic_init(Some("Test Project"));
         let result = cmd.execute().await;
         assert!(result.is_ok());
 
@@ -275,15 +498,7 @@ mod tests {
         // Change to temp directory
         std::env::set_current_dir(temp_dir.path()).unwrap();
 
-        // Run init command without name
-        let cmd = InitCommand {
-            name: None,
-            preset: None,
-            strategies: None,
-            initiatives: None,
-            prefix: None,
-        };
-
+        let cmd = basic_init(None);
         let result = cmd.execute().await;
         assert!(result.is_ok());
 
@@ -306,13 +521,9 @@ mod tests {
         // Change to temp directory
         std::env::set_current_dir(temp_dir.path()).unwrap();
 
-        // Run init command with full preset
         let cmd = InitCommand {
-            name: Some("Test Project".to_string()),
             preset: Some("full".to_string()),
-            strategies: None,
-            initiatives: None,
-            prefix: None,
+            ..basic_init(Some("Test Project"))
         };
 
         let result = cmd.execute().await;
@@ -348,13 +559,10 @@ mod tests {
         // Change to temp directory
         std::env::set_current_dir(temp_dir.path()).unwrap();
 
-        // Run init command with custom flags (strategies disabled, initiatives enabled)
         let cmd = InitCommand {
-            name: Some("Test Project".to_string()),
-            preset: None,
             strategies: Some(false),
             initiatives: Some(true),
-            prefix: None,
+            ..basic_init(Some("Test Project"))
         };
 
         let result = cmd.execute().await;
@@ -385,15 +593,7 @@ mod tests {
         // Change to temp directory
         std::env::set_current_dir(temp_dir.path()).unwrap();
 
-        // Run init command with no preset specified (should default to streamlined)
-        let cmd = InitCommand {
-            name: Some("Test Project".to_string()),
-            preset: None,
-            strategies: None,
-            initiatives: None,
-            prefix: None,
-        };
-
+        let cmd = basic_init(Some("Test Project"));
         let result = cmd.execute().await;
         assert!(result.is_ok());
 
@@ -424,13 +624,9 @@ mod tests {
         // Change to temp directory
         std::env::set_current_dir(temp_dir.path()).unwrap();
 
-        // Run init command with invalid preset
         let cmd = InitCommand {
-            name: Some("Test Project".to_string()),
             preset: Some("invalid".to_string()),
-            strategies: None,
-            initiatives: None,
-            prefix: None,
+            ..basic_init(Some("Test Project"))
         };
 
         let result = cmd.execute().await;
@@ -438,6 +634,305 @@ mod tests {
         assert!(result.unwrap_err().to_string().contains("Invalid preset"));
 
         // Restore original directory
+        if let Some(original) = original_dir {
+            let _ = std::env::set_current_dir(&original);
+        }
+    }
+
+    // --- Upstream configuration tests ---
+
+    #[tokio::test]
+    async fn test_init_upstream_missing_workspace_prefix() {
+        let temp_dir = tempdir().unwrap();
+        let original_dir = std::env::current_dir().ok();
+
+        std::env::set_current_dir(temp_dir.path()).unwrap();
+
+        let cmd = InitCommand {
+            upstream: Some("git@github.com:org/repo.git".to_string()),
+            ..basic_init(Some("Test"))
+        };
+
+        let result = cmd.execute().await;
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("--workspace-prefix is required"));
+
+        if let Some(original) = original_dir {
+            let _ = std::env::set_current_dir(&original);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_init_upstream_invalid_workspace_prefix() {
+        let temp_dir = tempdir().unwrap();
+        let original_dir = std::env::current_dir().ok();
+
+        std::env::set_current_dir(temp_dir.path()).unwrap();
+
+        let cmd = InitCommand {
+            upstream: Some("git@github.com:org/repo.git".to_string()),
+            workspace_prefix: Some("INVALID".to_string()), // uppercase not allowed
+            ..basic_init(Some("Test"))
+        };
+
+        let result = cmd.execute().await;
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err().to_string();
+        assert!(
+            err_msg.contains("invalid") || err_msg.contains("Invalid"),
+            "Expected validation error, got: {}",
+            err_msg
+        );
+
+        if let Some(original) = original_dir {
+            let _ = std::env::set_current_dir(&original);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_init_upstream_unreachable() {
+        let temp_dir = tempdir().unwrap();
+        let original_dir = std::env::current_dir().ok();
+
+        std::env::set_current_dir(temp_dir.path()).unwrap();
+
+        let cmd = InitCommand {
+            upstream: Some("git@nonexistent.invalid:org/repo.git".to_string()),
+            workspace_prefix: Some("api".to_string()),
+            ..basic_init(Some("Test"))
+        };
+
+        let result = cmd.execute().await;
+        assert!(result.is_err());
+
+        // Config should NOT be written (connectivity test failed)
+        let config_path = temp_dir.path().join(".metis/config.toml");
+        if config_path.exists() {
+            let config = ConfigFile::load(&config_path).unwrap();
+            assert!(
+                !config.is_multi_workspace(),
+                "Config should not have upstream after connectivity failure"
+            );
+        }
+
+        if let Some(original) = original_dir {
+            let _ = std::env::set_current_dir(&original);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_init_upstream_already_configured() {
+        let temp_dir = tempdir().unwrap();
+        let original_dir = std::env::current_dir().ok();
+
+        std::env::set_current_dir(temp_dir.path()).unwrap();
+
+        // Create workspace with upstream already configured
+        let cmd = basic_init(Some("Test"));
+        cmd.execute().await.unwrap();
+
+        // Manually add upstream config
+        let config_path = temp_dir.path().join(".metis/config.toml");
+        let mut config = ConfigFile::load(&config_path).unwrap();
+        config
+            .set_workspace("existing".to_string(), None)
+            .unwrap();
+        config
+            .set_sync("git@github.com:org/repo.git".to_string())
+            .unwrap();
+        config.save(&config_path).unwrap();
+
+        // Try to add upstream again
+        let cmd2 = InitCommand {
+            upstream: Some("git@github.com:org/other.git".to_string()),
+            workspace_prefix: Some("api".to_string()),
+            ..basic_init(Some("Test"))
+        };
+
+        let result = cmd2.execute().await;
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Upstream already configured"));
+
+        if let Some(original) = original_dir {
+            let _ = std::env::set_current_dir(&original);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_init_upstream_e2e_new_project() {
+        let temp_dir = tempdir().unwrap();
+        let original_dir = std::env::current_dir().ok();
+
+        // Create bare git repo as "central"
+        let central_dir = temp_dir.path().join("central");
+        git2::Repository::init_bare(&central_dir).unwrap();
+        let central_url = format!("file://{}", central_dir.display());
+
+        // Work in a subdirectory
+        let project_dir = temp_dir.path().join("project");
+        std::fs::create_dir_all(&project_dir).unwrap();
+        std::env::set_current_dir(&project_dir).unwrap();
+
+        // Init with upstream (new project)
+        let cmd = InitCommand {
+            upstream: Some(central_url.clone()),
+            workspace_prefix: Some("api".to_string()),
+            prefix: Some("API".to_string()),
+            ..basic_init(Some("API Service"))
+        };
+
+        let result = cmd.execute().await;
+        assert!(result.is_ok(), "Init with upstream failed: {:?}", result);
+
+        // Verify workspace was created
+        let metis_dir = project_dir.join(".metis");
+        assert!(metis_dir.exists());
+
+        // Verify config has upstream
+        let config_path = metis_dir.join("config.toml");
+        let config = ConfigFile::load(&config_path).unwrap();
+        assert!(config.is_multi_workspace());
+        assert_eq!(config.workspace_prefix(), Some("api"));
+        assert_eq!(config.upstream_url(), Some(central_url.as_str()));
+
+        // Verify last_synced_commit was set (initial sync ran)
+        assert!(
+            config.last_synced_commit().is_some(),
+            "last_synced_commit should be set after initial sync"
+        );
+
+        if let Some(original) = original_dir {
+            let _ = std::env::set_current_dir(&original);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_init_upstream_e2e_existing_project() {
+        let temp_dir = tempdir().unwrap();
+        let original_dir = std::env::current_dir().ok();
+
+        // Create bare git repo as "central"
+        let central_dir = temp_dir.path().join("central");
+        git2::Repository::init_bare(&central_dir).unwrap();
+        let central_url = format!("file://{}", central_dir.display());
+
+        // Create existing workspace without upstream
+        let project_dir = temp_dir.path().join("project");
+        std::fs::create_dir_all(&project_dir).unwrap();
+        std::env::set_current_dir(&project_dir).unwrap();
+
+        let init_cmd = basic_init(Some("Existing Project"));
+        init_cmd.execute().await.unwrap();
+
+        // Verify no upstream
+        let config_path = project_dir.join(".metis/config.toml");
+        let config = ConfigFile::load(&config_path).unwrap();
+        assert!(!config.is_multi_workspace());
+
+        // Add upstream to existing project
+        let cmd = InitCommand {
+            upstream: Some(central_url.clone()),
+            workspace_prefix: Some("existing".to_string()),
+            ..basic_init(Some("Existing Project"))
+        };
+
+        let result = cmd.execute().await;
+        assert!(
+            result.is_ok(),
+            "Adding upstream to existing project failed: {:?}",
+            result
+        );
+
+        // Verify upstream was configured
+        let config2 = ConfigFile::load(&config_path).unwrap();
+        assert!(config2.is_multi_workspace());
+        assert_eq!(config2.workspace_prefix(), Some("existing"));
+        assert!(config2.last_synced_commit().is_some());
+
+        if let Some(original) = original_dir {
+            let _ = std::env::set_current_dir(&original);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_init_upstream_with_team_label() {
+        let temp_dir = tempdir().unwrap();
+        let original_dir = std::env::current_dir().ok();
+
+        let central_dir = temp_dir.path().join("central");
+        git2::Repository::init_bare(&central_dir).unwrap();
+        let central_url = format!("file://{}", central_dir.display());
+
+        let project_dir = temp_dir.path().join("project");
+        std::fs::create_dir_all(&project_dir).unwrap();
+        std::env::set_current_dir(&project_dir).unwrap();
+
+        let cmd = InitCommand {
+            upstream: Some(central_url),
+            workspace_prefix: Some("api".to_string()),
+            team: Some("platform".to_string()),
+            prefix: Some("API".to_string()),
+            ..basic_init(Some("API Service"))
+        };
+
+        let result = cmd.execute().await;
+        assert!(result.is_ok(), "Init with team failed: {:?}", result);
+
+        // Verify team label was written to config
+        let config_path = project_dir.join(".metis/config.toml");
+        let config_content = fs::read_to_string(&config_path).unwrap();
+        assert!(
+            config_content.contains("team = \"platform\""),
+            "Config should contain team label"
+        );
+
+        if let Some(original) = original_dir {
+            let _ = std::env::set_current_dir(&original);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_init_then_sync() {
+        let temp_dir = tempdir().unwrap();
+        let original_dir = std::env::current_dir().ok();
+
+        let central_dir = temp_dir.path().join("central");
+        git2::Repository::init_bare(&central_dir).unwrap();
+        let central_url = format!("file://{}", central_dir.display());
+
+        let project_dir = temp_dir.path().join("project");
+        std::fs::create_dir_all(&project_dir).unwrap();
+        std::env::set_current_dir(&project_dir).unwrap();
+
+        // Init with upstream
+        let cmd = InitCommand {
+            upstream: Some(central_url),
+            workspace_prefix: Some("api".to_string()),
+            prefix: Some("API".to_string()),
+            ..basic_init(Some("API Service"))
+        };
+        cmd.execute().await.unwrap();
+
+        // Subsequent sync should work (using SyncCommand)
+        use crate::commands::SyncCommand;
+        let sync_cmd = SyncCommand {
+            dry_run: false,
+            quiet: false,
+            force: false,
+        };
+        let result = sync_cmd.execute().await;
+        assert!(
+            result.is_ok(),
+            "Sync after init failed: {:?}",
+            result
+        );
+
         if let Some(original) = original_dir {
             let _ = std::env::set_current_dir(&original);
         }

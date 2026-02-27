@@ -112,7 +112,6 @@ pub async fn transition_phase(
 mod tests {
     use super::*;
 
-
     #[tokio::test]
     async fn test_parse_phase_valid() {
         assert!(parse_phase("draft").is_ok());

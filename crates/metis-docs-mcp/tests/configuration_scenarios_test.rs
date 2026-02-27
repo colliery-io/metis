@@ -17,9 +17,9 @@ fn extract_text_from_result(result: &rust_mcp_sdk::schema::CallToolResult) -> Op
         }
         Some(rust_mcp_sdk::schema::ContentBlock::EmbeddedResource(embedded)) => {
             match &embedded.resource {
-                rust_mcp_sdk::schema::EmbeddedResourceResource::TextResourceContents(text_resource) => {
-                    Some(text_resource.text.clone())
-                }
+                rust_mcp_sdk::schema::EmbeddedResourceResource::TextResourceContents(
+                    text_resource,
+                ) => Some(text_resource.text.clone()),
                 _ => None,
             }
         }
@@ -276,7 +276,8 @@ async fn test_full_configuration_workflows() -> Result<()> {
         .map_err(|e| anyhow::anyhow!("Failed to get config repo: {}", e))?;
 
     // Get current prefix
-    let prefix = config_repo.get_project_prefix()
+    let prefix = config_repo
+        .get_project_prefix()
         .map_err(|e| anyhow::anyhow!("Failed to get prefix: {}", e))?
         .unwrap_or_else(|| "PROJ".to_string());
 
@@ -291,7 +292,8 @@ async fn test_full_configuration_workflows() -> Result<()> {
     let config_file = ConfigFile::new(prefix, full_config)
         .map_err(|e| anyhow::anyhow!("Failed to create config file: {}", e))?;
     let config_file_path = format!("{}/config.toml", helper.metis_dir());
-    config_file.save(&config_file_path)
+    config_file
+        .save(&config_file_path)
         .map_err(|e| anyhow::anyhow!("Failed to save config file: {}", e))?;
 
     println!("=== Test Full Configuration ===");

@@ -166,7 +166,10 @@ pub async fn run() -> AnyhowResult<()> {
             name: "Metis Documentation Management System".to_string(),
             version: env!("CARGO_PKG_VERSION").to_string(),
             title: Some("Metis MCP Server".to_string()),
-            description: Some("MCP server for managing project documentation with Flight Levels methodology".to_string()),
+            description: Some(
+                "MCP server for managing project documentation with Flight Levels methodology"
+                    .to_string(),
+            ),
             icons: vec![],
             website_url: None,
         },

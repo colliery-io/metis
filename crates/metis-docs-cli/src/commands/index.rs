@@ -307,6 +307,9 @@ mod tests {
             preset: None,
             strategies: None,
             initiatives: None,
+            upstream: None,
+            workspace_prefix: None,
+            team: None,
         };
         init_cmd.execute().await.unwrap();
 
@@ -352,6 +355,9 @@ mod tests {
             preset: None,
             strategies: None,
             initiatives: None,
+            upstream: None,
+            workspace_prefix: None,
+            team: None,
         };
         init_cmd.execute().await.unwrap();
 
@@ -396,6 +402,9 @@ mod tests {
             preset: None,
             strategies: None,
             initiatives: None,
+            upstream: None,
+            workspace_prefix: None,
+            team: None,
         };
         init_cmd.execute().await.unwrap();
 
@@ -434,6 +443,9 @@ mod tests {
             preset: None,
             strategies: None,
             initiatives: None,
+            upstream: None,
+            workspace_prefix: None,
+            team: None,
         };
         init_cmd.execute().await.unwrap();
 
@@ -478,6 +490,9 @@ mod tests {
             preset: None,
             strategies: None,
             initiatives: None,
+            upstream: None,
+            workspace_prefix: None,
+            team: None,
         };
         init_cmd.execute().await.unwrap();
 

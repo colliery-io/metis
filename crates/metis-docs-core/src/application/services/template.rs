@@ -222,7 +222,10 @@ impl TemplateLoader {
         // Common variables for all document types
         context.insert("title", "Sample Document Title");
         context.insert("slug", "sample-document-title");
-        context.insert("short_code", &format!("TEST-{}-0001", doc_type_letter(doc_type)));
+        context.insert(
+            "short_code",
+            &format!("TEST-{}-0001", doc_type_letter(doc_type)),
+        );
         context.insert("created_at", "2025-01-01T00:00:00Z");
         context.insert("updated_at", "2025-01-01T00:00:00Z");
         context.insert("archived", "false");

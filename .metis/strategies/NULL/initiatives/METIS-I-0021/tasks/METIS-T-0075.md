@@ -4,14 +4,14 @@ level: task
 title: "Implement incremental re-indexing with content hash tracking"
 short_code: "METIS-T-0075"
 created_at: 2026-02-20T14:47:14.905539+00:00
-updated_at: 2026-02-20T14:47:14.905539+00:00
+updated_at: 2026-02-25T05:27:44.009221+00:00
 parent: METIS-I-0021
 blocked_by: []
 archived: false
 
 tags:
   - "#task"
-  - "#phase/todo"
+  - "#phase/active"
 
 
 exit_criteria_met: false
@@ -30,15 +30,17 @@ Add content hash tracking so `metis index --incremental` only re-parses changed 
 
 ## Acceptance Criteria
 
-- [ ] `.metis/code-index-hashes.json` created on first full index
-- [ ] Hash file maps file paths to content hashes (SHA-256 or similar)
-- [ ] `metis index --incremental` skips files with unchanged hashes
-- [ ] Changed files are re-parsed and their symbols updated in the output
-- [ ] Deleted files are removed from the index
-- [ ] New files are added to the index
-- [ ] Stats report shows files skipped vs re-indexed
-- [ ] Tests covering add/modify/delete scenarios
-- [ ] `angreal test` passes
+## Acceptance Criteria
+
+- [x] `.metis/code-index-hashes.json` created on first full index
+- [x] Hash file maps file paths to content hashes (BLAKE3)
+- [x] `metis index --incremental` skips files with unchanged hashes
+- [x] Changed files are re-parsed and their symbols updated in the output
+- [x] Deleted files are removed from the index
+- [x] New files are added to the index
+- [x] Stats report shows files skipped vs re-indexed
+- [x] Tests covering add/modify/delete scenarios
+- [x] `angreal test` passes
 
 ## Implementation Notes
 
@@ -55,4 +57,18 @@ Blocked by: METIS-T-0071 (needs the full pipeline working first)
 
 ## Progress
 
-*Updated during implementation*
+### Session 1 — hasher.rs module
+- Created `crates/metis-code-index/src/hasher.rs` with `HashManifest` (BLAKE3 hashing, load/save/diff/update) and `IncrementalDiff` structs
+- Added `blake3 = "1"` to metis-code-index Cargo.toml
+- 12 tests covering hash file, save/load, diff scenarios, manifest update, affected directories
+
+### Session 2 — Full incremental wiring
+- Added `SymbolCache` to hasher.rs (load/save/update/to_path_map/from_path_map) with 4 tests (total: 16 tests)
+- Wired incremental logic into CLI `commands/index.rs`:
+  - Full index now saves hash manifest + symbol cache for future incremental runs
+  - `--incremental` loads manifest, computes diff, parses only changed files, uses cached symbols for unchanged
+  - Reports stats: files re-indexed vs skipped
+  - Early return with cached symbols when nothing changed
+- Wired same logic into MCP `tools/index_code.rs` with incremental stats in response table
+- 3 new CLI tests: hash file creation, incremental skips unchanged, incremental detects changes
+- All tests pass via `angreal test`

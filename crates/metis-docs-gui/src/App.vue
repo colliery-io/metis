@@ -1,5 +1,13 @@
 <template>
   <div class="h-screen bg-secondary overflow-hidden">
+    <!-- Onboarding Wizard -->
+    <OnboardingWizard
+      :isOpen="showOnboarding"
+      @skip="handleOnboardingSkip"
+      @complete="handleOnboardingComplete"
+      @close="showOnboarding = false"
+    />
+
     <!-- Toast notification -->
     <Transition name="toast">
       <div
@@ -50,8 +58,10 @@
             </div>
             <!-- Centered project title -->
             <h1 class="flex-1 text-xl font-semibold text-primary text-center">{{ getProjectDisplayName() }}</h1>
-            <!-- Spacer to balance the search bar -->
-            <div class="w-80"></div>
+            <!-- Sync status + spacer to balance the search bar -->
+            <div class="w-80 flex items-center justify-end">
+              <SyncStatusIndicator v-if="currentProject" ref="syncStatusRef" />
+            </div>
           </div>
         </div>
 
@@ -106,7 +116,9 @@ import SettingsMenu from './components/SettingsMenu.vue'
 import ProjectSidebar from './components/ProjectSidebar.vue'
 import KanbanBoard from './components/KanbanBoard.vue'
 import SearchBar from './components/SearchBar.vue'
-import { ProjectInfo, DocumentInfo } from './lib/tauri-api'
+import SyncStatusIndicator from './components/SyncStatusIndicator.vue'
+import OnboardingWizard from './components/OnboardingWizard.vue'
+import { ProjectInfo, DocumentInfo, MetisAPI } from './lib/tauri-api'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 
 
@@ -121,6 +133,10 @@ let toastTimeout: ReturnType<typeof setTimeout> | null = null
 let unlistenCliInstalled: UnlistenFn | null = null
 let unlistenShowToast: UnlistenFn | null = null
 let unlistenSearchSelect: UnlistenFn | null = null
+
+// Onboarding wizard state
+const showOnboarding = ref(false)
+const syncStatusRef = ref<InstanceType<typeof SyncStatusIndicator> | null>(null)
 
 // Selected document from search (for highlighting/navigation)
 const selectedDocument = ref<DocumentInfo | null>(null)
@@ -172,8 +188,24 @@ onUnmounted(() => {
   }
 })
 
-watch(currentProject, () => {
-  // Project changed
+watch(currentProject, async (project) => {
+  if (project) {
+    // Check if upstream is configured — if not, offer onboarding
+    try {
+      const configured = await MetisAPI.isUpstreamConfigured()
+      if (!configured) {
+        // Check if onboarding was previously dismissed for this project
+        const dismissed = localStorage.getItem(`metis-onboarding-dismissed-${project.path}`)
+        if (!dismissed) {
+          showOnboarding.value = true
+        }
+      }
+    } catch {
+      // Silently fail — don't block app usage
+    }
+    // Refresh sync status indicator
+    syncStatusRef.value?.checkUpstream()
+  }
 }, { immediate: true })
 
 const handleProjectSelect = async (project: ProjectInfo) => {
@@ -190,6 +222,19 @@ const handleSearchSelect = (doc: DocumentInfo) => {
   setTimeout(() => {
     selectedDocument.value = null
   }, 2000)
+}
+
+const handleOnboardingSkip = () => {
+  showOnboarding.value = false
+  if (currentProject.value) {
+    localStorage.setItem(`metis-onboarding-dismissed-${currentProject.value.path}`, 'true')
+  }
+}
+
+const handleOnboardingComplete = () => {
+  showOnboarding.value = false
+  // Refresh sync status indicator to show the new upstream
+  syncStatusRef.value?.checkUpstream()
 }
 
 const getMascotImage = () => {

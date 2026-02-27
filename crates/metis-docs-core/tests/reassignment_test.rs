@@ -116,8 +116,12 @@ async fn test_reassign_backlog_to_initiative() {
     assert_eq!(result.short_code, "TEST-T-0001");
     assert!(!source_path.exists(), "Task should no longer be in backlog");
 
-    let dest_path = metis_dir.join("strategies/NULL/initiatives/test-initiative/tasks/TEST-T-0001.md");
-    assert!(dest_path.exists(), "Task should be in initiative tasks folder");
+    let dest_path =
+        metis_dir.join("strategies/NULL/initiatives/test-initiative/tasks/TEST-T-0001.md");
+    assert!(
+        dest_path.exists(),
+        "Task should be in initiative tasks folder"
+    );
 }
 
 /// Test reassigning a task from initiative to backlog
@@ -127,7 +131,8 @@ async fn test_reassign_task_to_backlog() {
 
     // First move the task into an initiative
     let source_path = metis_dir.join("backlog/features/TEST-T-0001.md");
-    let init_task_path = metis_dir.join("strategies/NULL/initiatives/test-initiative/tasks/TEST-T-0001.md");
+    let init_task_path =
+        metis_dir.join("strategies/NULL/initiatives/test-initiative/tasks/TEST-T-0001.md");
 
     // Manually move the file for this test
     fs::rename(&source_path, &init_task_path).expect("Failed to move task");
@@ -151,7 +156,10 @@ async fn test_reassign_task_to_backlog() {
 
     // Verify the move
     assert_eq!(result.short_code, "TEST-T-0001");
-    assert!(!init_task_path.exists(), "Task should no longer be in initiative");
+    assert!(
+        !init_task_path.exists(),
+        "Task should no longer be in initiative"
+    );
 
     let backlog_path = metis_dir.join("backlog/tech-debt/TEST-T-0001.md");
     assert!(backlog_path.exists(), "Task should be in tech-debt backlog");
@@ -194,7 +202,8 @@ initiative_id: second-initiative\n\
 
     // Move task from backlog to first initiative
     let source_path = metis_dir.join("backlog/features/TEST-T-0001.md");
-    let init1_task_path = metis_dir.join("strategies/NULL/initiatives/test-initiative/tasks/TEST-T-0001.md");
+    let init1_task_path =
+        metis_dir.join("strategies/NULL/initiatives/test-initiative/tasks/TEST-T-0001.md");
     fs::rename(&source_path, &init1_task_path).expect("Failed to move task to init1");
 
     // Sync workspace
@@ -216,10 +225,17 @@ initiative_id: second-initiative\n\
 
     // Verify the move
     assert_eq!(result.short_code, "TEST-T-0001");
-    assert!(!init1_task_path.exists(), "Task should no longer be in first initiative");
+    assert!(
+        !init1_task_path.exists(),
+        "Task should no longer be in first initiative"
+    );
 
-    let init2_task_path = metis_dir.join("strategies/NULL/initiatives/second-initiative/tasks/TEST-T-0001.md");
-    assert!(init2_task_path.exists(), "Task should be in second initiative");
+    let init2_task_path =
+        metis_dir.join("strategies/NULL/initiatives/second-initiative/tasks/TEST-T-0001.md");
+    assert!(
+        init2_task_path.exists(),
+        "Task should be in second initiative"
+    );
 }
 
 /// Test reassigning a task between initiatives under different strategies
@@ -288,7 +304,8 @@ initiative_id: strategy-initiative\n\
 
     // Move task from backlog to first initiative (under NULL strategy)
     let source_path = metis_dir.join("backlog/features/TEST-T-0001.md");
-    let init1_task_path = metis_dir.join("strategies/NULL/initiatives/test-initiative/tasks/TEST-T-0001.md");
+    let init1_task_path =
+        metis_dir.join("strategies/NULL/initiatives/test-initiative/tasks/TEST-T-0001.md");
     fs::rename(&source_path, &init1_task_path).expect("Failed to move task to init1");
 
     // Sync workspace
@@ -310,10 +327,17 @@ initiative_id: strategy-initiative\n\
 
     // Verify the move
     assert_eq!(result.short_code, "TEST-T-0001");
-    assert!(!init1_task_path.exists(), "Task should no longer be in NULL strategy initiative");
+    assert!(
+        !init1_task_path.exists(),
+        "Task should no longer be in NULL strategy initiative"
+    );
 
-    let strategy_task_path = metis_dir.join("strategies/test-strategy/initiatives/strategy-initiative/tasks/TEST-T-0001.md");
-    assert!(strategy_task_path.exists(), "Task should be in strategy initiative");
+    let strategy_task_path = metis_dir
+        .join("strategies/test-strategy/initiatives/strategy-initiative/tasks/TEST-T-0001.md");
+    assert!(
+        strategy_task_path.exists(),
+        "Task should be in strategy initiative"
+    );
 }
 
 /// Test that reassignment fails for non-task documents
@@ -362,7 +386,9 @@ async fn test_reassign_to_non_initiative_fails() {
     let reassignment_service = ReassignmentService::new(&metis_dir);
 
     // Get the vision short code
-    let visions = db_service.find_by_type(DocumentType::Vision).expect("Failed to get visions");
+    let visions = db_service
+        .find_by_type(DocumentType::Vision)
+        .expect("Failed to get visions");
     let vision_code = &visions[0].short_code;
 
     // Try to reassign to vision (should fail)
@@ -405,7 +431,10 @@ async fn test_reassign_to_wrong_phase_initiative_fails() {
         .reassign_to_initiative("TEST-T-0001", "TEST-I-0001", &mut db_service)
         .await;
 
-    assert!(result.is_err(), "Should not be able to reassign to discovery phase initiative");
+    assert!(
+        result.is_err(),
+        "Should not be able to reassign to discovery phase initiative"
+    );
     let err = result.unwrap_err();
     assert!(
         err.to_string().contains("phase"),

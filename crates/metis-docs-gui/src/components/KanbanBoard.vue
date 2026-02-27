@@ -83,6 +83,9 @@
       />
     </div>
 
+    <!-- Upstream Context Panel -->
+    <UpstreamContext @view-document="handleViewDocument" />
+
     <!-- Create Document Dialog -->
     <CreateDocumentDialog
       :isOpen="showCreateDialog"
@@ -145,7 +148,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue'
 import type { DocumentInfo } from '../lib/tauri-api'
-import { listDocuments, transitionPhase, archiveDocument, syncProject, getProjectConfig } from '../lib/tauri-api'
+import { listDocuments, transitionPhase, archiveDocument, syncProject, syncWorkspace, isUpstreamConfigured, getProjectConfig } from '../lib/tauri-api'
 import { emit } from '@tauri-apps/api/event'
 import { useProject } from '../composables/useProject'
 import { getBoardConfig, getDocumentsByPhase, getAllInitiatives, type InitiativeFilterOption } from '../lib/board-config'
@@ -154,6 +157,7 @@ import KanbanColumn from './KanbanColumn.vue'
 import VisionDisplay from './VisionDisplay.vue'
 import CreateDocumentDialog from './CreateDocumentDialog.vue'
 import DocumentViewer from './DocumentViewer.vue'
+import UpstreamContext from './UpstreamContext.vue'
 
 interface Props {
   onBackToProjects: () => void
@@ -252,28 +256,31 @@ const loadDocuments = async () => {
 // Handle refresh button - sync project and reload data
 const handleRefresh = async () => {
   if (!currentProject.value || isRefreshing.value) return
-  
+
   try {
     isRefreshing.value = true
-    
-    // Sync the project with database
-    const syncResult = await syncProject()
-    
-    // Log sync results (could show in a toast notification later)
-    console.log('Sync completed:', {
-      imported: syncResult.imported,
-      updated: syncResult.updated,
-      deleted: syncResult.deleted,
-      up_to_date: syncResult.up_to_date,
-      errors: syncResult.errors
-    })
-    
+
+    // Check if upstream is configured — use workspace sync if so
+    let hasUpstream = false
+    try {
+      hasUpstream = await isUpstreamConfigured()
+    } catch {
+      // Fall back to local sync
+    }
+
+    if (hasUpstream) {
+      const result = await syncWorkspace()
+      emit('show-toast', { message: result.summary, type: 'success' })
+    } else {
+      await syncProject()
+    }
+
     // Reload documents to reflect changes
     await loadDocuments()
-    
+
   } catch (error) {
     console.error('Failed to refresh project:', error)
-    // TODO: Show user-friendly error message
+    emit('show-toast', { message: `Sync failed: ${error}`, type: 'error' })
   } finally {
     isRefreshing.value = false
   }

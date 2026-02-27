@@ -84,10 +84,7 @@ impl SearchCommand {
     /// Display results as a human-readable table
     /// Columns match MCP search_documents: Code, Title, Type
     fn display_table(&self, documents: &[Document]) {
-        println!(
-            "\n{:<14} {:<60} {:<12}",
-            "Code", "Title", "Type"
-        );
+        println!("\n{:<14} {:<60} {:<12}", "Code", "Title", "Type");
         println!("{}", "-".repeat(88));
 
         for doc in documents {

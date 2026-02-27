@@ -108,6 +108,9 @@ mod tests {
             preset: None,
             strategies: None,
             initiatives: None,
+            upstream: None,
+            workspace_prefix: None,
+            team: None,
         };
         init_cmd
             .execute()
@@ -125,7 +128,7 @@ mod tests {
         );
 
         // 2. Sync the workspace to populate database
-        let sync_cmd = SyncCommand {};
+        let sync_cmd = SyncCommand { dry_run: false, quiet: false, force: false };
         sync_cmd.execute().await.expect("Failed to sync workspace");
 
         // 3. Create a strategy
@@ -185,7 +188,7 @@ mod tests {
         assert!(!adr_files.is_empty(), "ADR file should be created");
 
         // 7. Sync after creating documents
-        let sync_cmd2 = SyncCommand {};
+        let sync_cmd2 = SyncCommand { dry_run: false, quiet: false, force: false };
         sync_cmd2
             .execute()
             .await

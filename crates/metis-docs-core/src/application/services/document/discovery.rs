@@ -34,13 +34,9 @@ impl DocumentDiscoveryService {
         };
 
         // Then canonicalize to handle symlinks (e.g., /tmp vs /private/tmp)
-        let workspace_dir = absolute_path
-            .canonicalize()
-            .unwrap_or(absolute_path);
+        let workspace_dir = absolute_path.canonicalize().unwrap_or(absolute_path);
 
-        Self {
-            workspace_dir,
-        }
+        Self { workspace_dir }
     }
 
     /// Find a document by its short code across all document types

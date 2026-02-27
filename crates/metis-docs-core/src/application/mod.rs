@@ -95,7 +95,10 @@ impl Application {
                     }
                 }
                 Err(e) => {
-                    tracing::warn!("Failed to sync configuration: {}, continuing with file sync", e);
+                    tracing::warn!(
+                        "Failed to sync configuration: {}, continuing with file sync",
+                        e
+                    );
                 }
             }
         }

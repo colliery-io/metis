@@ -26,7 +26,10 @@ async fn setup_project_with_config(config: FlightLevelConfig) -> (TempDir, Strin
     let mut config_repo = db.configuration_repository().unwrap();
 
     // Get current prefix from DB
-    let prefix = config_repo.get_project_prefix().unwrap().unwrap_or_else(|| "PROJ".to_string());
+    let prefix = config_repo
+        .get_project_prefix()
+        .unwrap()
+        .unwrap_or_else(|| "PROJ".to_string());
 
     // Update DB
     config_repo.set_flight_level_config(&config).unwrap();
@@ -48,9 +51,9 @@ fn extract_text_from_result(result: &rust_mcp_sdk::schema::CallToolResult) -> Op
         }
         Some(rust_mcp_sdk::schema::ContentBlock::EmbeddedResource(embedded)) => {
             match &embedded.resource {
-                rust_mcp_sdk::schema::EmbeddedResourceResource::TextResourceContents(text_resource) => {
-                    Some(text_resource.text.clone())
-                }
+                rust_mcp_sdk::schema::EmbeddedResourceResource::TextResourceContents(
+                    text_resource,
+                ) => Some(text_resource.text.clone()),
                 _ => None,
             }
         }

@@ -4,14 +4,14 @@ level: task
 title: "Implement gitignore-aware file tree walker using ignore crate"
 short_code: "METIS-T-0069"
 created_at: 2026-02-20T14:47:08.759930+00:00
-updated_at: 2026-02-25T01:24:32.879740+00:00
+updated_at: 2026-02-25T02:00:05.284653+00:00
 parent: METIS-I-0021
 blocked_by: []
 archived: false
 
 tags:
   - "#task"
-  - "#phase/active"
+  - "#phase/completed"
 
 
 exit_criteria_met: false
@@ -27,6 +27,8 @@ initiative_id: METIS-I-0021
 ## Objective
 
 Replace the naive `std::fs::read_dir` directory walker from muninn with an `ignore::WalkBuilder`-based walker that respects `.gitignore`. Output a filtered file tree of source files and feed parsed files into the extractors.
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 

@@ -16,6 +16,6 @@ pub use document::{
     update_document,
 };
 pub use project::{get_project_config, initialize_project, load_project};
-pub use sync::sync_project;
+pub use sync::{get_sync_status, is_upstream_configured, sync_project, sync_workspace};
 pub use transition::transition_phase;
 pub use version::get_app_version;

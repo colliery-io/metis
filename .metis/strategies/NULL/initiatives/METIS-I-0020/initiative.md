@@ -4,14 +4,14 @@ level: initiative
 title: "Evolution of Metis: Multi-Layer Sync Architecture"
 short_code: "METIS-I-0020"
 created_at: 2026-01-29T20:27:41.395016+00:00
-updated_at: 2026-01-29T20:27:41.395016+00:00
+updated_at: 2026-02-26T01:56:32.691744+00:00
 parent: METIS-V-0001
 blocked_by: []
 archived: false
 
 tags:
   - "#initiative"
-  - "#phase/discovery"
+  - "#phase/active"
 
 
 exit_criteria_met: false
@@ -142,33 +142,63 @@ The filesystem tells you "these are the workspaces." Everything else - hierarchy
 
 The transport layer doesn't need to understand the file format. It serializes files for transit and hydrates them back into the correct filesystem locations on pull. YAML frontmatter with unknown fields is handled naturally by every YAML parser - old Metis versions ignore fields they don't know, new versions write fields old versions preserve. **No schema migration problem.**
 
-### Storage Layout
+### Storage Layout & Git Tracking
+
+**Critical design point**: in multi-workspace mode, the project repo and the central coordination repo coexist. The owned workspace's documents are tracked in BOTH — the project repo (for within-team collaboration) and central (for cross-team visibility). Remote workspace documents are hydrated from central and gitignored from the project repo.
 
 ```
 my-project/
   .git/                   # the project's own repo
-  .gitignore              # includes .metis/
+  .gitignore              # see tracking rules below
   src/
   .metis/
-    config.toml           # workspace config (upstream URL, team identity, credentials ref)
-    metis.db              # ephemeral cache, rebuilt on startup from files
-    api/                  # this workspace's documents (owned, read-write)
+    config.toml           # TRACKED — workspace identity, upstream URL
+    metis.db              # GITIGNORED — ephemeral cache
+    api/                  # TRACKED — owned workspace documents (read-write)
       API-V-0001.md
       API-T-0001.md
       API-T-0002.md
-    strat/                # upstream documents (hydrated from central, read-only)
+    strat/                # GITIGNORED — hydrated from central (read-only)
       STRAT-V-0001.md
       STRAT-S-0001.md
-    alpha/                # peer documents (hydrated from central, read-only)
+    alpha/                # GITIGNORED — hydrated from central (read-only)
       ALPHA-I-0001.md
 ```
 
-No `.git/` directory inside `.metis/`. Git operations happen transiently during `metis sync`.
+**What's tracked in the project repo (travels with the team):**
+- `.metis/config.toml` — workspace identity, sync configuration
+- `.metis/<owned-prefix>/*.md` — the team's own documents
+
+**What's gitignored from the project repo:**
+- `.metis/metis.db` — ephemeral cache, rebuilt on startup
+- `.metis/<remote-prefix>/` — all hydrated remote workspace folders (come from central, not from the project repo)
+- `.metis/code-index*.json` — code index caches
+
+**.gitignore pattern:**
+```gitignore
+# Metis — ignore ephemeral state and hydrated remote workspaces
+.metis/metis.db
+.metis/code-index-hashes.json
+.metis/code-index-symbols.json
+.metis/.index-dirty
+
+# Ignore all workspace folders EXCEPT the owned one
+# (managed by `metis init` — adds ignore rules for remote prefixes as they're discovered)
+```
+
+The gitignore for remote workspace folders is managed dynamically — when `metis sync` hydrates a new remote workspace, it adds that prefix to `.metis/.gitignore`. The owned workspace prefix is never added.
+
+**Why this split matters:**
+- **Within-team**: teammates see document changes via normal `git pull`. Merge conflicts on documents are resolved the same way as code conflicts — in the project repo, using standard git tools. This is the primary collaboration path for a team.
+- **Cross-team**: changes propagate via `metis sync` to/from central. The sync pushes whatever state the team has in their project repo (post-merge, post-resolution).
+- **Central is eventually consistent** with each team's project repo. The project repo is the immediate source of truth for the team. Central aggregates across teams.
+
+No `.git/` directory inside `.metis/`. Git operations for central sync happen transiently during `metis sync`.
 
 - **`*.md` files** - markdown with YAML frontmatter. One per document. The source of truth for both content and operational state. Exactly like current Metis.
 - **`metis.db`** - ephemeral cache. Rebuilt from all local markdown files on startup (own workspace + hydrated remote workspaces). Used for fast queries and cross-team visibility.
-- **Owned folder** (e.g. `api/`) - read-write. This workspace's documents. Pushed to central on sync.
-- **Remote folders** (e.g. `strat/`, `alpha/`) - read-only locally. Hydrated from central on sync. Provide cross-team visibility.
+- **Owned folder** (e.g. `api/`) - read-write, tracked in project repo. This workspace's documents. Pushed to central on sync.
+- **Remote folders** (e.g. `strat/`, `alpha/`) - read-only locally, gitignored from project repo. Hydrated from central on sync. Provide cross-team visibility.
 
 ### Sync Transport: Dumb Serialization
 
@@ -208,11 +238,99 @@ Git history serves as the change data capture (CDC) log. Each workspace tracks `
 - **Git history is dual-purpose.** CDC log for sync + audit trail for compliance/debugging.
 - **Version skew is a non-problem.** YAML frontmatter is naturally forward-compatible. No coordinated schema migrations needed across workspaces.
 
-### Conflict Resolution
+### Conflict Resolution: Scenario Walkthrough
 
-**Cross-workspace conflicts don't exist.** Each workspace folder is single-writer. The transport layer never merges files from different workspaces.
+There are two distinct conflict domains: the **project repo** (within-team, normal git) and the **central repo** (cross-team, sync). They never interact at the git level.
 
-**Within-workspace conflicts** (two people on the same team editing the same document) are handled the same way as current single-workspace Metis. In practice, within-team contention is low - planning is collaborative, not concurrent. When conflicts do occur (rare), they're meaningful - two humans wrote different things. Resolution is a conversation, not an algorithm.
+#### Scenario 1: Two devs edit the same document (WITHIN-TEAM)
+
+Dev A and Dev B both edit `API-T-0001.md` — A marks it `phase: completed`, B adds a `blocked_by` entry.
+
+**What happens:** Standard git merge conflict in the project repo. Both devs committed changes to the same file. Git reports a conflict on `.metis/api/API-T-0001.md`.
+
+**Resolution:** Normal git merge. The conflict is in a markdown file with YAML frontmatter — humans read it and pick the right state. This is the same as any code conflict. Planning is collaborative, so this is rare and meaningful when it occurs — two humans wrote different things.
+
+**Central impact:** None until resolved. The sync to central only happens after the project repo merge is complete (sync is triggered post-push). Central sees the resolved state.
+
+#### Scenario 2: Two devs edit different documents (WITHIN-TEAM)
+
+Dev A edits `API-T-0001.md`, Dev B edits `API-T-0002.md`.
+
+**What happens:** Git merges cleanly. Different files, no conflict. Next `metis sync` (post-push hook) pushes both changes to central.
+
+**Resolution:** None needed.
+
+#### Scenario 3: Feature branch document edits (WITHIN-TEAM)
+
+Dev A on branch `feature-x` transitions `API-T-0001.md` from `todo` → `active`. Dev B on branch `feature-y` also transitions `API-T-0001.md` from `todo` → `completed` (skipping active — maybe they completed it quickly).
+
+**What happens:** When both branches merge to main, git reports a conflict on `API-T-0001.md`. The YAML frontmatter has divergent `phase` values.
+
+**Resolution:** Human picks the correct phase. This IS a meaningful conflict — the team needs to agree on the task's actual status. Standard three-way merge in any git tool.
+
+**Note:** This scenario is rare in practice. Task status changes are typically sequential (one person moves it), not concurrent. When it happens, it's a genuine coordination issue, not a tooling problem.
+
+#### Scenario 4: Short code collision (WITHIN-TEAM)
+
+Dev A and Dev B both create new tasks while working offline. Both get assigned `API-T-0050` (the short code counter was at 49 for both).
+
+**What happens:** Git merge conflict — two different files with the same path (`.metis/api/API-T-0050.md`). Git sees this as a modify/modify conflict.
+
+**Resolution:** One dev renames their document to the next available short code. The short code counter in config/state needs to be updated.
+
+**Mitigation:** Short code generation should use a strategy that minimizes collision likelihood. Options:
+- Counter in `config.toml` (tracked in git, conflicts surface immediately)
+- Timestamp-based codes (collision only if created in the same second)
+- Random suffix (collision probability negligible)
+
+In practice, this is very rare — two devs creating documents simultaneously while offline. The counter approach surfaces it as a git conflict, which is the right behavior.
+
+#### Scenario 5: Cross-workspace push contention (CROSS-TEAM)
+
+API team and SRE team both sync to central at the same moment. API team's push succeeds (central moves from commit X to X+1). SRE team's push is rejected (their commit parents X, not X+1).
+
+**What happens:** Push retry logic (METIS-T-0082) kicks in. SRE's sync re-fetches X+1, rebuilds their owned tree grafted onto the new central HEAD, and re-pushes. Succeeds because the two workspaces modify different folders — no content conflict.
+
+**Resolution:** Fully automatic. The retry is mechanical (re-fetch, re-graft, re-push). Since workspaces only modify their own folder, there are never actual content conflicts in central. The only issue is the stale parent commit, which the retry resolves.
+
+**Performance:** Retries are rare (syncs are infrequent, background operations) and cheap (small markdown files, fast git operations).
+
+#### Scenario 6: Stale local state synced to central (WITHIN-TEAM → CROSS-TEAM)
+
+Dev A edits `API-T-0001.md`, pushes to the project repo, and syncs to central. Dev B hasn't pulled from the project repo yet. Dev B then runs `metis sync` manually.
+
+**What happens:** Dev B's sync dehydrates their local owned workspace state — which doesn't include Dev A's changes (because Dev B hasn't pulled). Dev B's push to central would overwrite Dev A's version of `API-T-0001.md`.
+
+**Mitigation:** Sync should check that the project repo is up to date with its remote before pushing to central. Specifically:
+1. Before dehydration, check if the project repo's main branch has unpulled commits that touch `.metis/<owned-prefix>/`
+2. If yes, warn: "Your local documents are behind the project repo. Run `git pull` first."
+3. Optionally: `metis sync --force` to override (for cases where you intentionally want to push local state)
+
+This is the same principle as "don't push stale code" — you pull before you push. The sync engine should enforce this.
+
+**Why this is primarily a within-team concern:** If the team uses git hooks (post-push triggers sync), this scenario doesn't arise — sync only runs after the project repo is pushed, which means the local state includes all merged changes. Manual sync is the risk path.
+
+#### Scenario 7: Coordination-only workspace (no code project)
+
+A strategy team or working group doesn't produce code — they only coordinate work. Their workspace is a git repo that contains `.metis/` and nothing else.
+
+**What happens:** Identical to any other workspace. The repo just doesn't have a `src/` directory. Clone it, edit documents, commit, push. Within-team conflicts are handled by git merge. Sync to central works the same way.
+
+**No special handling needed.** The architecture treats coordination-only workspaces identically to code project workspaces. A workspace is a git repo with a `.metis/` folder — what else is in the repo is irrelevant to Metis.
+
+#### Summary: Where conflicts live
+
+| Scenario | Domain | Mechanism | Resolution |
+|---|---|---|---|
+| Same document, two devs | Project repo | Git merge conflict | Human resolves (standard git) |
+| Different documents, two devs | Project repo | Clean merge | None needed |
+| Feature branch divergence | Project repo | Git merge conflict | Human resolves |
+| Short code collision | Project repo | Git add/add conflict | Rename one, update counter |
+| Cross-workspace push race | Central repo | Non-fast-forward | Automatic retry (re-fetch, re-graft) |
+| Stale local state pushed | Central → project repo | Stale overwrite | Pre-sync check: project repo up to date? |
+| Coordination-only workspace | Project repo | Same as any workspace | No special handling — it's just a git repo with only `.metis/` |
+
+**Design principle:** Within-team conflicts are handled by the project repo's git — the same way code conflicts are handled. Cross-team conflicts don't exist (single-writer per workspace folder in central). The sync engine adds one safety check: verify the project repo is up to date before dehydrating to central.
 
 ### Two-Repo Model
 
@@ -309,24 +427,19 @@ For multi-team deployments, the GUI (Tauri app) is the primary interface for mos
 - Status transitions, document editing, and relationship management are visual operations.
 - Conflict resolution is a side-by-side visual diff with highlighted changes, not terminal output.
 
-### Onboarding & Credential Management
+### Onboarding
 
 `metis init` (CLI) or the first-run wizard (GUI) handles:
 
-1. **Configure central repo URL** - provide the URL (or scan/paste an invite link). Stored in `.metis/config.toml`.
-2. **Authenticate** - OAuth device flow for GitHub/GitLab ("Sign in with GitHub"). Best UX, no tokens or SSH keys to manage. Falls back to personal access token entry for self-hosted or unsupported platforms.
-3. **Identity** - name and email pulled from OAuth profile automatically. Stored in `.metis/config.toml`. User can override if needed.
-4. **Team assignment** - select or confirm which team/layer this workspace belongs to. Determines write scope (enforced by Metis application).
-5. **Initial sync** - first pull from central to get upstream context. If this is a new team, the first push creates the team folder in central (registration = first push).
+1. **Configure central repo URL** - paste the URL. Stored in `.metis/config.toml`.
+2. **Team assignment** - select or confirm which workspace prefix this instance owns. Determines write scope (enforced by Metis application).
+3. **Initial sync** - first pull from central to get upstream context. If this is a new team, the first push creates the team folder in central (registration = first push).
 
-**Registration model:** There is no admin step to "add a team" to central. A new team configures their `.metis/config.toml` with the central URL and their team identity, then runs `metis sync`. The first push creates their team folder. The central repo is passive - it accepts pushes from any authenticated user.
+**Authentication** is entirely delegated to git. SSH keys, credential helpers, `.gitconfig` — whatever the user already has configured for the central repo's host. Metis does not manage credentials. If git can reach the remote, Metis can sync.
 
-**Credential storage:**
-- Delegate to OS-native credential stores (macOS Keychain, Windows Credential Manager, Linux secret service)
-- Credentials scoped to this workspace's central repo URL, not global git config
-- Refresh/rotation handled transparently by the OAuth flow where possible
+**Registration model:** There is no admin step to "add a team" to central. A new team configures their `.metis/config.toml` with the central URL and their workspace prefix, then runs `metis sync`. The first push creates their workspace folder. The central repo is passive.
 
-**For CLI users:** `metis init --upstream <url>` walks through the same steps interactively. Tests credentials with `git ls-remote` before proceeding. If auth fails, provides clear instructions for the platform.
+**For CLI users:** `metis init --upstream <url>` walks through the same steps interactively. Tests connectivity with `git ls-remote` before proceeding.
 
 ### GUI-Specific Considerations
 
@@ -376,11 +489,346 @@ Explored pivoting from files to SQLite as the source of truth, with git transpor
 ### Dual Source of Truth (content.md + state.json)
 Split documents into separate files for human content (markdown) and operational state (JSON per team). Designed elaborate programmatic domain merge rules for state.json via libgit2 (phase forward-only, sets union, scalars last-write-wins). Rejected because single markdown files with YAML frontmatter handle both concerns without any special merge logic. The split was solving a problem (concurrent edits to different concerns in the same file) that doesn't occur in practice - within-team contention is low and planning is collaborative.
 
-## Open Questions
-- How does the GUI discover and connect to central on first launch? Likely "someone gives you a URL to paste in." Exact UX TBD.
-- What does authentication look like in `config.toml`? Token reference? Credential store key? OAuth refresh token?
-- What is the exact serialization format for transport? Git tree of markdown files is the current assumption, but could be any format that describes files + locations. Implementation detail.
-- What YAML frontmatter fields need to be added/standardized for cross-workspace relationships (e.g. `supports`, `blocked_by` referencing remote short codes)?
+## Design: Full Sync Cycle Walkthrough
+
+This section traces one complete work cycle through all three layers — from strategy publication through delivery and status propagation back up. The goal is to validate that the architecture handles every step concretely, and to surface gaps.
+
+### Cast
+
+- **Sarah** — Strategy Lead. Owns the `strat/` workspace. Uses the GUI exclusively.
+- **Alex** — Initiative Coordinator for the "Alpha" product group. Owns the `alpha/` workspace. Uses the GUI.
+- **Dev (API team)** — Delivery team. Owns the `api/` workspace. Uses CLI + IDE. Sync piggybacks on git hooks.
+
+### Step 1: Strategy Publication
+
+Sarah creates the organizational vision and a strategy in her workspace:
+
+```
+strat/
+  STRAT-V-0001.md   # "Become the most reliable API platform in the industry"
+  STRAT-S-0001.md   # "Improve API reliability to 99.99% uptime"
+                     #   parent: STRAT-V-0001
+                     #   phase: active
+```
+
+Sarah writes the strategy content, transitions it through phases (shaping → design → ready → active), and hits **Sync** in the GUI.
+
+**What happens under the hood:**
+1. GUI calls `metis sync`
+2. libgit2 initializes an in-memory context against the central repo URL (from `config.toml`)
+3. Full fetch from central (first time — nothing to pull)
+4. Dehydrate: serialize `strat/*.md` files, commit to central's `strat/` folder
+5. Push to central. This is strat's first push — **registration happens implicitly**
+6. Record `last_synced_commit` in `config.toml`
+7. Teardown git context
+
+**Central repo state after:**
+```
+central/.metis/
+  strat/
+    STRAT-V-0001.md
+    STRAT-S-0001.md
+```
+
+### Step 2: Initiative Coordinator Discovers Strategy
+
+Alex opens the GUI. On launch, background sync fires.
+
+**What happens:**
+1. Full fetch from central → gets `strat/STRAT-V-0001.md` and `strat/STRAT-S-0001.md`
+2. Hydrate: write these files into Alex's local `.metis/strat/` folder (read-only)
+3. No owned changes to push yet (alpha/ folder is empty or doesn't exist in central)
+4. Rebuild `metis.db` — now contains both Alex's own documents and the upstream strategy docs
+
+**Alex's local state:**
+```
+my-product-docs/.metis/
+  config.toml          # upstream: central URL, workspace: alpha, team: alpha-product
+  metis.db             # rebuilt — includes strat/* documents
+  alpha/               # owned, read-write
+    ALPHA-V-0001.md    # "Alpha product group delivers reliable APIs" (Alex's own vision)
+  strat/               # hydrated from central, read-only
+    STRAT-V-0001.md
+    STRAT-S-0001.md
+```
+
+Alex sees STRAT-S-0001 ("Improve API reliability to 99.99%") in the GUI's "Upstream Context" view. Alex creates an initiative that supports this strategy:
+
+```
+alpha/
+  ALPHA-V-0001.md
+  ALPHA-I-0001.md      # "API Error Handling Overhaul"
+                        #   parent: STRAT-S-0001       ← cross-workspace reference
+                        #   phase: discovery
+```
+
+The `parent: STRAT-S-0001` field is a standard Metis frontmatter field — it just happens to reference a short code from another workspace. Since prefixes are globally unique and all documents are hydrated locally, the projection cache resolves this.
+
+Alex works through the initiative phases (discovery → design → ready → decompose). During decompose, Alex **does not create tasks for the delivery team** — Alex creates tasks within the initiative describing what *outcomes* are needed, scoped to the initiative layer:
+
+```
+alpha/
+  ALPHA-I-0001.md      # phase: decompose
+  ALPHA-T-0001.md      # "Circuit breaker pattern for external API calls"
+                        #   parent: ALPHA-I-0001
+                        #   phase: todo
+                        #   note: "API team to implement — discussed in planning"
+```
+
+Alex hits **Sync**.
+
+**Central repo state after:**
+```
+central/.metis/
+  strat/
+    STRAT-V-0001.md
+    STRAT-S-0001.md
+  alpha/
+    ALPHA-V-0001.md
+    ALPHA-I-0001.md
+    ALPHA-T-0001.md
+```
+
+### Step 3: Delivery Team Picks Up Work
+
+The API team's sync fires automatically (post-push git hook, or background sync in their IDE).
+
+**What happens:**
+1. Full fetch from central → gets all of `strat/` and `alpha/`
+2. Hydrate: write remote files into local `.metis/strat/` and `.metis/alpha/` (read-only)
+3. Rebuild `metis.db` — now has full cross-team visibility
+
+**API team's local state:**
+```
+api-service/.metis/
+  config.toml          # workspace: api, team: api-team
+  metis.db
+  api/                 # owned, read-write
+    API-V-0001.md      # "API team builds and maintains core service reliability"
+  alpha/               # hydrated, read-only
+    ALPHA-V-0001.md
+    ALPHA-I-0001.md
+    ALPHA-T-0001.md
+  strat/               # hydrated, read-only
+    STRAT-V-0001.md
+    STRAT-S-0001.md
+```
+
+The team sees ALPHA-T-0001 ("Circuit breaker pattern for external API calls") in the "Upstream Work" view. In their planning session, they create their own tasks to implement it:
+
+```
+api/
+  API-V-0001.md
+  API-T-0001.md        # "Implement circuit breaker in gateway service"
+                        #   parent: ALPHA-T-0001    ← cross-workspace reference
+                        #   phase: active
+  API-T-0002.md        # "Add circuit breaker integration tests"
+                        #   parent: ALPHA-T-0001
+                        #   phase: todo
+```
+
+The dev starts working on API-T-0001. Normal development workflow — write code, commit, push. The post-push git hook fires `metis sync` in the background.
+
+**Central repo state after:**
+```
+central/.metis/
+  strat/
+    STRAT-V-0001.md
+    STRAT-S-0001.md
+  alpha/
+    ALPHA-V-0001.md
+    ALPHA-I-0001.md
+    ALPHA-T-0001.md
+  api/
+    API-V-0001.md
+    API-T-0001.md
+    API-T-0002.md
+```
+
+### Step 4: Work Completes, Status Flows Up
+
+The dev finishes the circuit breaker implementation. They transition API-T-0001 to completed, then API-T-0002 after tests pass. Next `metis sync` pushes the updated files.
+
+**What Alex sees on next sync:**
+
+Alex's GUI syncs. The hydrated `api/` folder updates with the completed tasks. Alex's projection cache (`metis.db`) computes:
+
+- ALPHA-T-0001 has 2 child tasks across workspaces (API-T-0001, API-T-0002)
+- Both are completed
+- Aggregate: 2/2 tasks done → ALPHA-T-0001 is fully implemented
+
+Alex reviews and transitions ALPHA-T-0001 to completed. When all tasks under ALPHA-I-0001 are done, Alex transitions the initiative to completed. Sync pushes the update.
+
+**What Sarah sees on next sync:**
+
+Sarah's GUI syncs. The hydrated `alpha/` folder shows ALPHA-I-0001 is completed. Sarah's projection cache computes:
+
+- STRAT-S-0001 has 1 child initiative (ALPHA-I-0001) — completed
+- Strategy progress: 1/1 initiatives done
+
+Sarah can see the full chain: Strategy → Initiative → Tasks → Completed. The status flowed up through the system via synced files and projection cache aggregation.
+
+### Step 5: Disruption — Priority Change
+
+Sarah reprioritizes. STRAT-S-0001 gets deprioritized and a new STRAT-S-0002 ("Expand to European market") takes priority. Sarah archives STRAT-S-0001.
+
+**On next sync downstream:**
+
+Alex syncs. The hydrated `strat/STRAT-S-0001.md` now has `archived: true` in its frontmatter. Alex's local Metis detects this during hydration:
+
+- ALPHA-I-0001 (which has `parent: STRAT-S-0001`) is flagged: "upstream parent archived"
+- **Metis does NOT auto-archive downstream** — it surfaces the change to Alex
+- Alex decides what to do: archive the initiative too, or reassign it to a different strategy, or keep it as standalone work
+
+This is a **notification, not an automatic cascade**. Strategic decisions require human judgment.
+
+### Step 6: Disruption — Cross-Team Blocker
+
+The API team discovers their circuit breaker work is blocked by a networking issue that the SRE team needs to fix.
+
+```
+api/
+  API-T-0001.md        # phase: blocked
+                        #   blocked_by: SRE-T-0015   ← cross-workspace reference
+```
+
+On next sync, this is visible everywhere:
+- SRE team sees they have a blocker affecting the API team
+- Alex sees ALPHA-T-0001's downstream work is blocked
+- Sarah sees strategy progress is stalled
+
+The `blocked_by` field works exactly like `parent` — it's a short code reference resolved by the projection cache across all hydrated workspaces.
+
+### Gaps Identified by Walkthrough
+
+**1. Pull-not-push task model** (RESOLVED — explicit design choice): Delivery teams pull work by creating their own tasks referencing upstream outcomes. Initiative coordinators describe *what* is needed; delivery teams decide *how* and create their own work items. This is an explicit requirement of good team flow — autonomous teams own their execution. Coordinators define outcomes, not assignments.
+
+**2. Upstream visibility via regular sync** (RESOLVED): Teams discover upstream work through regular sync, not explicit notification. Sync runs automatically (git hooks for dev teams, background sync on GUI launch for coordinators). New upstream documents appear in the "Upstream Work" view after each sync. No separate notification mechanism needed — the sync *is* the notification channel.
+
+**3. Upstream archive handling** (RESOLVED — no special logic needed): Hydrated files are just files on disk. When sync pulls down a document with `archived: true`, it writes the file. The projection cache rebuilds from all files (owned + hydrated) and computes that any local document with `parent: ARCHIVED-DOC` has an archived parent. This is functionally identical to how single-workspace Metis already handles archived parents — no new capability needed. The GUI surfaces the relationship state from the cache.
+
+**4. Cross-workspace projection cache** (RESOLVED — implementation concern): The cache indexes ALL `.metis/**/*.md` files (owned + hydrated) and computes relationships across workspace boundaries. This is a one-time rebuild on sync — fast given the small document count. Not an architectural concern, just an expansion of the existing cache rebuild scope.
+
+**5. Sync frequency asymmetry** (ACCEPTED): Status propagation has inherent latency tied to each layer's sync cadence. Delivery teams sync frequently (every git push). Coordinators sync on GUI launch. Strategy leads sync less often. A task completed Monday may not be visible to the strategy lead until their next sync. This is acceptable — it matches the planning cadence at each layer.
+
+**6. Default scope for new teams** (RESOLVED — design choice): New teams are scoped to their own work by default. The GUI default view shows the team's owned documents plus their direct upstream context (parent chain). Teams don't see "everything and filter down" — they see "their stuff with the ability to browse out." Full fetch still happens (all data is local), but the default display is focused. Expanding scope is opt-in via the GUI.
+
+### Cross-Team Initiatives
+
+**Problem**: How does an initiative that requires work from multiple delivery teams function?
+
+**Example**: ALPHA-I-0001 ("API Error Handling Overhaul") needs work from both the API team and the SRE team.
+
+**How it works in the multi-workspace model**:
+
+The initiative coordinator (Alex) decomposes the initiative into outcome tasks, some of which are relevant to different delivery teams:
+
+```
+alpha/
+  ALPHA-I-0001.md          # "API Error Handling Overhaul" — phase: decompose
+  ALPHA-T-0001.md          # "Circuit breaker pattern for external API calls"
+  ALPHA-T-0002.md          # "Network resilience and failover at infrastructure layer"
+```
+
+Each delivery team syncs, sees the outcome tasks, and creates their own implementation work:
+
+```
+api/
+  API-T-0001.md            # "Implement circuit breaker in gateway"
+                            #   parent: ALPHA-T-0001
+  API-T-0002.md            # "Circuit breaker integration tests"
+                            #   parent: ALPHA-T-0001
+
+sre/
+  SRE-T-0001.md            # "Configure failover for US-East region"
+                            #   parent: ALPHA-T-0002
+  SRE-T-0002.md            # "Add health check endpoints for circuit breaker"
+                            #   parent: ALPHA-T-0001    ← SRE also contributes to this outcome
+```
+
+**Key observations**:
+
+1. **Multiple teams can reference the same outcome task.** ALPHA-T-0001 has children from both API and SRE. The projection cache aggregates all of them when computing progress.
+
+2. **The initiative coordinator sees everything.** Alex's projection cache shows ALPHA-T-0001 has 3 child tasks across 2 workspaces (API-T-0001, API-T-0002, SRE-T-0002), with progress computed across all of them.
+
+3. **Cross-team dependencies use `blocked_by`.** If API-T-0001 depends on SRE-T-0001 being done first, the API team marks `blocked_by: SRE-T-0001`. Both teams see this on next sync.
+
+4. **No shared ownership of documents.** Every document lives in exactly one workspace. Cross-team coordination happens through references (parent, blocked_by), not through shared editing. The initiative coordinator owns the initiative and outcome tasks; delivery teams own their implementation tasks.
+
+5. **The initiative coordinator is the integration point.** Alex monitors progress across teams, identifies when outcome tasks are fully implemented, transitions them to completed, and manages the initiative lifecycle. This is deliberate — cross-team work needs a human coordination point.
+
+**What about two initiative groups contributing to the same strategy?**
+
+This is already natural. Multiple initiatives can have `parent: STRAT-S-0001`:
+
+```
+alpha/
+  ALPHA-I-0001.md          # parent: STRAT-S-0001 — reliability from the API side
+beta/
+  BETA-I-0003.md           # parent: STRAT-S-0001 — reliability from the mobile side
+```
+
+Sarah (strategy lead) sees both initiatives under her strategy. Progress is aggregated. No special mechanism needed — this is just the parent reference working across workspaces.
+
+### Ownership Model: Any Team Can Create Initiatives
+
+**Design principle**: Document types are not locked to organizational layers. Any team can create any document type. Workspaces enforce *ownership*, not *document type restrictions*.
+
+**The realistic organizational model**:
+
+- **Strategy team** (`strat/`) — Owns strategies. The only team creating strategies in practice, but by convention, not enforcement. Strategies are the one document type that is effectively single-owner because strategic direction must come from one place.
+- **Working group(s)** (`wg-reliability/`, `wg-platform/`) — Own cross-team initiative boards. A coordination team that decomposes cross-team work into outcome tasks for delivery teams. These are the "initiative layer" from the Flight Levels model, but they're just another team with a workspace.
+- **Delivery teams** (`api/`, `sre/`, `mkt/`) — Own their implementation tasks AND their own initiatives for team-level concerns (internal refactors, tech debt campaigns, tooling improvements, process changes). A delivery team's workspace may contain a vision, multiple initiatives, and tasks — all team-internal.
+
+**Full read transparency**: Because every workspace does a full fetch, there are no shadow initiatives. A delivery team's internal initiative is visible to the strategy lead. A working group's cross-team initiative is visible to all delivery teams. This is intentional — organizational visibility is the whole point.
+
+**What this means in practice**:
+
+```
+central/.metis/
+  strat/
+    STRAT-V-0001.md                  # org vision
+    STRAT-S-0001.md                  # "Improve reliability"
+    STRAT-S-0002.md                  # "Expand to EU"
+
+  wg-reliability/                     # working group for cross-team reliability
+    WGR-V-0001.md                    # working group vision
+    WGR-I-0001.md                    # "API Error Handling Overhaul"
+                                      #   parent: STRAT-S-0001
+    WGR-T-0001.md                    # outcome task: "Circuit breaker pattern"
+                                      #   parent: WGR-I-0001
+
+  api/
+    API-V-0001.md                    # team vision
+    API-I-0001.md                    # team initiative: "Migrate to async runtime"
+                                      #   parent: API-V-0001 (team-internal)
+    API-T-0001.md                    # "Implement circuit breaker"
+                                      #   parent: WGR-T-0001 (cross-team)
+    API-T-0005.md                    # "Refactor connection pool"
+                                      #   parent: API-I-0001 (team-internal)
+
+  sre/
+    SRE-V-0001.md                    # team vision
+    SRE-I-0001.md                    # team initiative: "Observability overhaul"
+                                      #   parent: SRE-V-0001 (team-internal)
+    SRE-T-0001.md                    # "Configure failover"
+                                      #   parent: WGR-T-0001 (cross-team)
+```
+
+The hierarchy is determined by **parent references**, not by workspace location. A task in `api/` can have a parent in `wg-reliability/` (cross-team work) or in `api/` itself (team-internal work). The projection cache resolves all of this from the files on disk.
+
+## Open Questions (Resolved)
+
+All discovery-phase open questions have been resolved:
+
+1. **GUI discovery UX** — Resolved: URL paste field. `metis init --upstream <url>` for CLI, URL input in GUI first-run wizard. No magic discovery, no invite links. Teams share the central repo URL the same way they share any repo URL.
+
+2. **Authentication** — Resolved: Use git's existing auth. SSH keys, credential helpers, whatever the user already has configured. Metis delegates entirely to git for transport authentication — no custom credential management, no OAuth layer, no tokens in `config.toml`. Application-enforced write scope (only push your own folder) is a separate concern from transport auth.
+
+3. **Transport format** — Resolved: Git is the storage layer, HTTPS/SSH is the transport. Not an abstraction — git trees of markdown files, committed and pushed. No need to keep the door open to tarballs or JSON manifests.
+
+4. **Cross-workspace relationship fields** — Resolved: No new frontmatter fields needed. Existing `parent` and `blocked_by` fields already accept short codes. Since prefixes are globally unique and all data is hydrated locally after sync, the projection cache (`metis.db`) computes all cross-workspace relationships by joining on short codes across all local files. Inverse relationships (`drives`, `supports`) are derived — the cache computes them from `parent` references. No schema changes required.
 
 ## Exploration Log
 
@@ -425,3 +873,7 @@ The design evolved through multiple iterations across sessions, each shedding co
 17. **Dumb transport layer** - Transport doesn't merge, doesn't understand schemas, doesn't apply domain rules. It serializes files for transit and hydrates them into filesystem locations. All intelligence stays local. Format is an implementation detail (git tree of markdown files currently).
 
 18. **Version skew is a non-problem** - YAML frontmatter is naturally forward-compatible. Old versions ignore unknown fields, new versions write fields old versions preserve. No coordinated schema migrations needed.
+
+19. **No custom auth layer** - Metis delegates transport authentication entirely to git's existing mechanisms (SSH keys, credential helpers). No OAuth, no keychain management, no tokens in config files. Application-enforced write scope is separate from transport auth.
+
+20. **No new frontmatter schema for cross-workspace relationships** - Existing `parent` and `blocked_by` fields work with remote short codes out of the box. The projection cache computes inverse relationships (`drives`, `supports`) from `parent` references. Globally unique prefixes make short codes unambiguous across workspaces.

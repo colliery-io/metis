@@ -165,7 +165,10 @@ impl McpServerProcess {
                             text.as_str().map(|s| s.to_string())
                         } else if let Some(resource) = first_content.get("resource") {
                             // Try EmbeddedResource format (resource.text)
-                            resource.get("text").and_then(|t| t.as_str()).map(|s| s.to_string())
+                            resource
+                                .get("text")
+                                .and_then(|t| t.as_str())
+                                .map(|s| s.to_string())
                         } else {
                             None
                         };

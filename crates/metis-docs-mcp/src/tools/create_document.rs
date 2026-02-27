@@ -187,9 +187,17 @@ impl CreateDocumentTool {
                 if let Some(category) = &self.backlog_category {
                     // Creating a backlog item - add category tag
                     let category_tag = match category.to_lowercase().as_str() {
-                        "bug" => metis_core::domain::documents::types::Tag::Label("bug".to_string()),
-                        "feature" => metis_core::domain::documents::types::Tag::Label("feature".to_string()),
-                        "tech-debt" | "techdebt" | "tech_debt" => metis_core::domain::documents::types::Tag::Label("tech-debt".to_string()),
+                        "bug" => {
+                            metis_core::domain::documents::types::Tag::Label("bug".to_string())
+                        }
+                        "feature" => {
+                            metis_core::domain::documents::types::Tag::Label("feature".to_string())
+                        }
+                        "tech-debt" | "techdebt" | "tech_debt" => {
+                            metis_core::domain::documents::types::Tag::Label(
+                                "tech-debt".to_string(),
+                            )
+                        }
                         _ => {
                             return Err(CallToolError::new(std::io::Error::new(
                                 std::io::ErrorKind::InvalidInput,
@@ -251,11 +259,7 @@ impl CreateDocumentTool {
                 .map_err(|e| CallToolError::new(e))?,
         };
 
-        let parent_display = self
-            .parent_id
-            .as_ref()
-            .map(|s| s.as_str())
-            .unwrap_or("-");
+        let parent_display = self.parent_id.as_ref().map(|s| s.as_str()).unwrap_or("-");
 
         let result_output = ToolOutput::new()
             .header("Document Created")

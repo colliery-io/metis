@@ -254,13 +254,13 @@ impl PhaseTransitionService {
     /// Get the next phase in the natural sequence for a document type.
     /// Delegates to DocumentType::next_phase() - the single source of truth.
     fn get_next_phase(&self, doc_type: DocumentType, current_phase: Phase) -> Result<Phase> {
-        doc_type.next_phase(current_phase).ok_or_else(|| {
-            MetisError::InvalidPhaseTransition {
+        doc_type
+            .next_phase(current_phase)
+            .ok_or_else(|| MetisError::InvalidPhaseTransition {
                 from: current_phase.to_string(),
                 to: "none".to_string(),
                 doc_type: doc_type.to_string(),
-            }
-        })
+            })
     }
 
     /// Check if a phase transition is valid without performing it
@@ -478,10 +478,7 @@ mod tests {
         // Test task transitions - blocked can return to todo or active
         let task_blocked_transitions =
             transition_service.get_valid_transitions_for(DocumentType::Task, Phase::Blocked);
-        assert_eq!(
-            task_blocked_transitions,
-            vec![Phase::Todo, Phase::Active]
-        );
+        assert_eq!(task_blocked_transitions, vec![Phase::Todo, Phase::Active]);
     }
 
     #[tokio::test]

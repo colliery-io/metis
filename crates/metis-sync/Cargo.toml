@@ -1,0 +1,26 @@
+[package]
+name = "metis-sync"
+version.workspace = true
+edition.workspace = true
+description = "Git-based sync operations for multi-workspace Metis projects"
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[dependencies]
+git2 = "0.20"
+gray_matter = "0.2"
+tempfile = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+
+[lib]
+name = "metis_sync"
+path = "src/lib.rs"

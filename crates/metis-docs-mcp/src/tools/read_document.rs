@@ -92,7 +92,10 @@ impl ReadDocumentTool {
 
         // Build simplified output with inline metadata
         let output = ToolOutput::new()
-            .header(&format!("{}: {} ({}, {})", self.short_code, title, doc_type, phase))
+            .header(&format!(
+                "{}: {} ({}, {})",
+                self.short_code, title, doc_type, phase
+            ))
             .text(&content);
 
         Ok(output.build_result())
@@ -150,7 +153,9 @@ impl ReadDocumentTool {
                             .find(|c: char| !c.is_alphanumeric() && c != '_')
                             .map(|i| phase_start + i)
                             .unwrap_or(trimmed.len());
-                        phase = trimmed[phase_start..phase_end].trim_matches('"').to_string();
+                        phase = trimmed[phase_start..phase_end]
+                            .trim_matches('"')
+                            .to_string();
                     }
                 }
             }

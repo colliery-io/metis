@@ -65,7 +65,7 @@ impl CreateCommand {
 
         // Auto-sync after creating documents to update the database index
         println!("\nSyncing workspace...");
-        let sync_cmd = SyncCommand {};
+        let sync_cmd = SyncCommand { dry_run: false, quiet: false, force: false };
         sync_cmd.execute().await?;
 
         Ok(())

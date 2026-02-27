@@ -134,11 +134,7 @@ impl ReassignParentTool {
                         Some("Transition the initiative to 'decompose' or 'active' first."),
                     ))
                 } else if error_msg.contains("already at") {
-                    Ok(error_result(
-                        "Already assigned",
-                        &error_msg,
-                        None,
-                    ))
+                    Ok(error_result("Already assigned", &error_msg, None))
                 } else if error_msg.contains("already exists") {
                     Ok(error_result(
                         "Destination exists",

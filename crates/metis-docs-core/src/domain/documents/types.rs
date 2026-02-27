@@ -257,12 +257,9 @@ impl DocumentType {
                 Phase::Active,
                 Phase::Completed,
             ],
-            DocumentType::Task => vec![
-                Phase::Backlog,
-                Phase::Todo,
-                Phase::Active,
-                Phase::Completed,
-            ],
+            DocumentType::Task => {
+                vec![Phase::Backlog, Phase::Todo, Phase::Active, Phase::Completed]
+            }
             DocumentType::Adr => vec![
                 Phase::Draft,
                 Phase::Discussion,

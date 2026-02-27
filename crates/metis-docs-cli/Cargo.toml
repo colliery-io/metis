@@ -33,6 +33,7 @@ chrono = { workspace = true }
 metis-docs-core = { path = "../metis-docs-core", version = "1.0.9" }
 metis-docs-mcp = { path = "../metis-docs-mcp", version = "1.0.9" }
 metis-code-index = { path = "../metis-code-index" }
+metis-sync = { path = "../metis-sync" }
 
 # CLI-specific dependencies
 clap = { version = "4.0", features = ["derive", "color"] }
@@ -44,3 +45,4 @@ tabled = "0.15"
 
 [dev-dependencies]
 tempfile = "3.0"
+git2 = "0.20"

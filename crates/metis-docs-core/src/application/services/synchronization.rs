@@ -465,10 +465,9 @@ impl<'a> SyncService<'a> {
                 message: format!("Failed to compile regex: {}", e),
             })?;
 
-        let updated_content = short_code_pattern.replace(
-            &content,
-            format!("short_code: \"{}\"", new_short_code)
-        ).to_string();
+        let updated_content = short_code_pattern
+            .replace(&content, format!("short_code: \"{}\"", new_short_code))
+            .to_string();
 
         // Step 6: Update cross-references in sibling documents
         self.update_sibling_references(file_path, old_short_code, &new_short_code)
@@ -517,17 +516,19 @@ impl<'a> SyncService<'a> {
         let file_path = file_path.as_ref();
 
         // Get parent directory (sibling group)
-        let parent_dir = file_path.parent().ok_or_else(|| MetisError::ValidationFailed {
-            message: "File has no parent directory".to_string(),
-        })?;
+        let parent_dir = file_path
+            .parent()
+            .ok_or_else(|| MetisError::ValidationFailed {
+                message: "File has no parent directory".to_string(),
+            })?;
 
         // Find all markdown files in same directory
         let siblings = FilesystemService::find_markdown_files(parent_dir)?;
 
         // Create regex pattern to match short code as whole word
         let pattern_str = format!(r"\b{}\b", regex::escape(old_short_code));
-        let pattern = regex::Regex::new(&pattern_str)
-            .map_err(|e| MetisError::ValidationFailed {
+        let pattern =
+            regex::Regex::new(&pattern_str).map_err(|e| MetisError::ValidationFailed {
                 message: format!("Failed to compile regex: {}", e),
             })?;
 
@@ -542,7 +543,9 @@ impl<'a> SyncService<'a> {
                 Ok(content) => {
                     if pattern.is_match(&content) {
                         let updated_content = pattern.replace_all(&content, new_short_code);
-                        if let Err(e) = FilesystemService::write_file(&sibling_path, &updated_content) {
+                        if let Err(e) =
+                            FilesystemService::write_file(&sibling_path, &updated_content)
+                        {
                             tracing::warn!(
                                 "Failed to update references in {}: {}",
                                 sibling_path,
@@ -784,7 +787,10 @@ impl<'a> SyncService<'a> {
 
         // Guard: Ensure directory exists
         if !dir_path.exists() {
-            tracing::warn!("Counter recovery: directory does not exist: {}", dir_path.display());
+            tracing::warn!(
+                "Counter recovery: directory does not exist: {}",
+                dir_path.display()
+            );
             return Ok(counters);
         }
 
@@ -797,7 +803,11 @@ impl<'a> SyncService<'a> {
             let content = match std::fs::read_to_string(&file_path) {
                 Ok(c) => c,
                 Err(e) => {
-                    tracing::warn!("Counter recovery: skipping unreadable file {}: {}", file_path, e);
+                    tracing::warn!(
+                        "Counter recovery: skipping unreadable file {}: {}",
+                        file_path,
+                        e
+                    );
                     skipped_files += 1;
                     continue;
                 }
@@ -914,17 +924,33 @@ impl<'a> SyncService<'a> {
 /// Result of synchronizing a single document
 #[derive(Debug, Clone, PartialEq)]
 pub enum SyncResult {
-    Imported { filepath: String },
-    Updated { filepath: String },
-    Deleted { filepath: String },
-    UpToDate { filepath: String },
-    NotFound { filepath: String },
-    Error { filepath: String, error: String },
-    Moved { from: String, to: String },
+    Imported {
+        filepath: String,
+    },
+    Updated {
+        filepath: String,
+    },
+    Deleted {
+        filepath: String,
+    },
+    UpToDate {
+        filepath: String,
+    },
+    NotFound {
+        filepath: String,
+    },
+    Error {
+        filepath: String,
+        error: String,
+    },
+    Moved {
+        from: String,
+        to: String,
+    },
     Renumbered {
         filepath: String,
         old_short_code: String,
-        new_short_code: String
+        new_short_code: String,
     },
 }
 
@@ -981,8 +1007,12 @@ mod tests {
         let db_path = temp_dir.path().join("metis.db");
         let db = Database::new(db_path.to_str().unwrap()).expect("Failed to create test database");
         // Initialize configuration with test prefix
-        let mut config_repo = db.configuration_repository().expect("Failed to create config repo");
-        config_repo.set_project_prefix("TEST").expect("Failed to set prefix");
+        let mut config_repo = db
+            .configuration_repository()
+            .expect("Failed to create config repo");
+        config_repo
+            .set_project_prefix("TEST")
+            .expect("Failed to set prefix");
         let db_service = DatabaseService::new(db.into_repository());
         (temp_dir, db_service)
     }
@@ -1112,7 +1142,8 @@ mod tests {
     #[tokio::test]
     async fn test_sync_directory() {
         let (temp_dir, mut db_service) = setup_services();
-        let mut sync_service = SyncService::new(&mut db_service).with_workspace_dir(temp_dir.path());
+        let mut sync_service =
+            SyncService::new(&mut db_service).with_workspace_dir(temp_dir.path());
 
         // Create multiple files
         let files = vec![

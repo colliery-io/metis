@@ -39,15 +39,17 @@ impl ConfigurationRecoveryService {
         // Step 1: Load or create config.toml
         let config_file = if config_file_path.exists() {
             tracing::info!("Loading configuration from {}", config_file_path.display());
-            ConfigFile::load(&config_file_path)
-                .map_err(|e| MetisError::ConfigurationError(e))?
+            ConfigFile::load(&config_file_path).map_err(|e| MetisError::ConfigurationError(e))?
         } else {
             // Migration path: create config.toml from existing DB if it exists
             tracing::warn!("config.toml not found, attempting migration from database");
             report.config_file_created = true;
 
             let config_file = Self::create_config_from_database(&config_file_path, db_path)?;
-            tracing::info!("Created config.toml from database at {}", config_file_path.display());
+            tracing::info!(
+                "Created config.toml from database at {}",
+                config_file_path.display()
+            );
             config_file
         };
 
@@ -95,22 +97,22 @@ impl ConfigurationRecoveryService {
     /// Sync config.toml to database (lightweight operation, safe to call frequently)
     ///
     /// This is called on every normal sync operation to keep config in sync
-    pub fn sync_config_to_database<P: AsRef<Path>>(
-        workspace_dir: P,
-        db_path: P,
-    ) -> Result<bool> {
+    pub fn sync_config_to_database<P: AsRef<Path>>(workspace_dir: P, db_path: P) -> Result<bool> {
         let workspace_dir = workspace_dir.as_ref();
         let db_path = db_path.as_ref();
         let config_file_path = workspace_dir.join("config.toml");
 
         // Guard: config.toml must exist for normal sync
         if !config_file_path.exists() {
-            tracing::warn!("config.toml not found at {}, skipping config sync", config_file_path.display());
+            tracing::warn!(
+                "config.toml not found at {}, skipping config sync",
+                config_file_path.display()
+            );
             return Ok(false);
         }
 
-        let config_file = ConfigFile::load(&config_file_path)
-            .map_err(|e| MetisError::ConfigurationError(e))?;
+        let config_file =
+            ConfigFile::load(&config_file_path).map_err(|e| MetisError::ConfigurationError(e))?;
 
         let mut config_repo = ConfigurationRepository::new(
             SqliteConnection::establish(db_path.to_str().unwrap()).map_err(|e| {
@@ -140,10 +142,7 @@ impl ConfigurationRecoveryService {
     }
 
     /// Create config.toml from existing database (migration path)
-    fn create_config_from_database(
-        config_file_path: &Path,
-        db_path: &Path,
-    ) -> Result<ConfigFile> {
+    fn create_config_from_database(config_file_path: &Path, db_path: &Path) -> Result<ConfigFile> {
         let mut config_repo = ConfigurationRepository::new(
             SqliteConnection::establish(db_path.to_str().unwrap()).map_err(|e| {
                 MetisError::ConfigurationError(
@@ -152,7 +151,9 @@ impl ConfigurationRecoveryService {
             })?,
         );
 
-        let prefix = config_repo.get_project_prefix()?.unwrap_or_else(|| "PROJ".to_string());
+        let prefix = config_repo
+            .get_project_prefix()?
+            .unwrap_or_else(|| "PROJ".to_string());
         let flight_levels = config_repo.get_flight_level_config()?;
 
         let config_file = ConfigFile::new(prefix, flight_levels)
@@ -203,7 +204,10 @@ impl ConfigurationRecoveryService {
 
         // Check if DB exists
         if !db_path.exists() {
-            tracing::warn!("Database not found at {}, recovery needed", db_path.display());
+            tracing::warn!(
+                "Database not found at {}, recovery needed",
+                db_path.display()
+            );
             return true;
         }
 
