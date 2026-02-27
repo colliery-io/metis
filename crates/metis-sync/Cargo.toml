@@ -11,7 +11,7 @@ keywords.workspace = true
 categories.workspace = true
 
 [dependencies]
-git2 = "0.20"
+git2 = { version = "0.20", features = ["vendored-openssl"] }
 gray_matter = "0.2"
 tempfile = { workspace = true }
 anyhow = { workspace = true }
