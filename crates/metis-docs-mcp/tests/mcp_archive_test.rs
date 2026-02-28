@@ -458,9 +458,15 @@ async fn test_mcp_archive_error_handling() -> Result<()> {
         .set_flight_level_config(&full_config)
         .map_err(|e| anyhow::anyhow!("Failed to set config: {}", e))?;
 
-    // Update config.toml to match
-    let config_file = ConfigFile::new(prefix, full_config)
+    // Update config.toml to match (strategies require sync config)
+    let mut config_file = ConfigFile::new(prefix, full_config)
         .map_err(|e| anyhow::anyhow!("Failed to create config file: {}", e))?;
+    config_file
+        .set_workspace("test-ws".to_string(), None)
+        .map_err(|e| anyhow::anyhow!("Failed to set workspace: {}", e))?;
+    config_file
+        .set_sync("git@github.com:org/repo.git".to_string())
+        .map_err(|e| anyhow::anyhow!("Failed to set sync: {}", e))?;
     let config_file_path = format!("{}/config.toml", helper.metis_dir());
     config_file
         .save(&config_file_path)

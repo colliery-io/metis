@@ -51,6 +51,17 @@ pub async fn initialize_project(
 
     // Determine and set the flight level configuration based on preset
     let flight_config = determine_flight_config(preset.as_deref())?;
+
+    // Gate: strategies require upstream sync, which GUI init doesn't support
+    if flight_config.strategies_enabled {
+        return Err(
+            "Strategies require multi-workspace sync configuration. \
+             Use the CLI to initialize with upstream: \
+             metis init --upstream <url> --workspace-prefix <prefix> --preset full"
+                .to_string(),
+        );
+    }
+
     let mut config_repo = database
         .configuration_repository()
         .map_err(|e| format!("Failed to create configuration repository: {}", e))?;

@@ -443,6 +443,34 @@ impl ConfigFile {
         Ok(())
     }
 
+    /// Validate that strategies_enabled requires multi-workspace sync configuration.
+    ///
+    /// Returns Ok(()) if the configuration is valid, or Err if strategies are enabled
+    /// without sync/workspace configuration.
+    pub fn validate_strategies_require_sync(&self) -> Result<(), ConfigurationError> {
+        if self.flight_levels.strategies_enabled && !self.is_multi_workspace() {
+            return Err(ConfigurationError::InvalidConfiguration(
+                "Strategies require multi-workspace sync. Configure upstream first with: \
+                 metis init --upstream <url> --workspace-prefix <prefix>"
+                    .to_string(),
+            ));
+        }
+        Ok(())
+    }
+
+    /// Enforce the strategies-require-sync invariant by auto-downgrading if invalid.
+    ///
+    /// If strategies are enabled but sync is not configured, sets strategies_enabled = false
+    /// (preserving initiatives_enabled). Returns true if a correction was made.
+    pub fn enforce_strategies_require_sync(&mut self) -> bool {
+        if self.flight_levels.strategies_enabled && !self.is_multi_workspace() {
+            self.flight_levels.strategies_enabled = false;
+            true
+        } else {
+            false
+        }
+    }
+
     /// Update the last synced commit SHA after a successful sync
     pub fn update_last_synced_commit(
         &mut self,
@@ -1256,5 +1284,90 @@ initiatives_enabled = true
         assert!(content.contains("[workspace]"));
         assert!(content.contains("prefix = \"api\""));
         assert!(!content.contains("team"));
+    }
+
+    // ============================================================
+    // Strategies-require-sync gate tests
+    // ============================================================
+
+    #[test]
+    fn test_validate_strategies_no_sync_fails() {
+        let config = ConfigFile::new("TEST".to_string(), FlightLevelConfig::full()).unwrap();
+        assert!(!config.is_multi_workspace());
+        let result = config.validate_strategies_require_sync();
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Strategies require multi-workspace sync"));
+    }
+
+    #[test]
+    fn test_validate_strategies_with_sync_passes() {
+        let mut config =
+            ConfigFile::new("TEST".to_string(), FlightLevelConfig::full()).unwrap();
+        config
+            .set_workspace("api".to_string(), None)
+            .unwrap();
+        config
+            .set_sync("git@github.com:org/repo.git".to_string())
+            .unwrap();
+        assert!(config.is_multi_workspace());
+        assert!(config.validate_strategies_require_sync().is_ok());
+    }
+
+    #[test]
+    fn test_validate_streamlined_no_sync_ok() {
+        let config =
+            ConfigFile::new("TEST".to_string(), FlightLevelConfig::streamlined()).unwrap();
+        assert!(config.validate_strategies_require_sync().is_ok());
+    }
+
+    #[test]
+    fn test_validate_direct_no_sync_ok() {
+        let config =
+            ConfigFile::new("TEST".to_string(), FlightLevelConfig::direct()).unwrap();
+        assert!(config.validate_strategies_require_sync().is_ok());
+    }
+
+    #[test]
+    fn test_enforce_downgrade_preserves_initiatives() {
+        let mut config =
+            ConfigFile::new("TEST".to_string(), FlightLevelConfig::full()).unwrap();
+        assert!(config.flight_levels.strategies_enabled);
+        assert!(config.flight_levels.initiatives_enabled);
+
+        let corrected = config.enforce_strategies_require_sync();
+        assert!(corrected);
+        assert!(!config.flight_levels.strategies_enabled);
+        assert!(config.flight_levels.initiatives_enabled);
+        assert_eq!(config.flight_levels().preset_name(), "streamlined");
+    }
+
+    #[test]
+    fn test_enforce_no_op_when_valid() {
+        // Streamlined without sync — no correction needed
+        let mut config =
+            ConfigFile::new("TEST".to_string(), FlightLevelConfig::streamlined()).unwrap();
+        let corrected = config.enforce_strategies_require_sync();
+        assert!(!corrected);
+        assert!(!config.flight_levels.strategies_enabled);
+        assert!(config.flight_levels.initiatives_enabled);
+    }
+
+    #[test]
+    fn test_enforce_no_op_when_sync_present() {
+        // Full with sync — no correction needed
+        let mut config =
+            ConfigFile::new("TEST".to_string(), FlightLevelConfig::full()).unwrap();
+        config
+            .set_workspace("api".to_string(), None)
+            .unwrap();
+        config
+            .set_sync("git@github.com:org/repo.git".to_string())
+            .unwrap();
+        let corrected = config.enforce_strategies_require_sync();
+        assert!(!corrected);
+        assert!(config.flight_levels.strategies_enabled);
     }
 }

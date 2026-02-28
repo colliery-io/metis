@@ -177,7 +177,14 @@ async fn test_config_sync_on_normal_operations() {
 
     // Step 1: Manually change config.toml
     println!("Step 1: Manually change config.toml flight levels");
-    let new_config = ConfigFile::new("TEST".to_string(), FlightLevelConfig::full()).unwrap();
+    let mut new_config = ConfigFile::new("TEST".to_string(), FlightLevelConfig::full()).unwrap();
+    // Strategies require sync config, so add workspace + sync sections
+    new_config
+        .set_workspace("test-ws".to_string(), None)
+        .unwrap();
+    new_config
+        .set_sync("git@github.com:org/repo.git".to_string())
+        .unwrap();
     new_config.save(&config_file_path).unwrap();
     println!("✓ Config.toml updated to full configuration");
 

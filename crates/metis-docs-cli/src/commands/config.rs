@@ -1,7 +1,10 @@
 use crate::workspace;
 use anyhow::Result;
 use clap::{Args, Subcommand};
-use metis_core::{domain::configuration::FlightLevelConfig, Database};
+use metis_core::{
+    domain::configuration::{ConfigFile, FlightLevelConfig},
+    Database,
+};
 
 #[derive(Args)]
 pub struct ConfigCommand {
@@ -57,7 +60,7 @@ impl ConfigCommand {
                 strategies,
                 initiatives,
             } => {
-                self.set_config(&mut config_repo, preset, *strategies, *initiatives)
+                self.set_config(&mut config_repo, &metis_dir, preset, *strategies, *initiatives)
                     .await
             }
             ConfigAction::Get { key } => self.get_config(&mut config_repo, key).await,
@@ -93,6 +96,7 @@ impl ConfigCommand {
     async fn set_config(
         &self,
         config_repo: &mut metis_core::dal::database::configuration_repository::ConfigurationRepository,
+        metis_dir: &std::path::Path,
         preset: &Option<String>,
         strategies: Option<bool>,
         initiatives: Option<bool>,
@@ -126,6 +130,24 @@ impl ConfigCommand {
                 "Must specify either --preset or at least one of --strategies/--initiatives"
             );
         };
+
+        // Gate: strategies require upstream sync configuration
+        if new_config.strategies_enabled {
+            let config_file_path = metis_dir.join("config.toml");
+            let has_sync = if config_file_path.exists() {
+                let config_file = ConfigFile::load(&config_file_path)
+                    .map_err(|e| anyhow::anyhow!("Failed to load config.toml: {}", e))?;
+                config_file.is_multi_workspace()
+            } else {
+                false
+            };
+            if !has_sync {
+                anyhow::bail!(
+                    "Strategies require multi-workspace sync.\n\
+                     Configure upstream first with: metis init --upstream <url> --workspace-prefix <prefix>"
+                );
+            }
+        }
 
         // Save the new configuration
         config_repo
@@ -278,6 +300,87 @@ mod tests {
         assert!(result.unwrap_err().to_string().contains("Invalid preset"));
 
         // Restore original directory
+        if let Some(dir) = original_dir {
+            std::env::set_current_dir(dir).unwrap();
+        }
+    }
+
+    #[tokio::test]
+    async fn test_config_set_preset_full_without_sync_fails() {
+        let temp_dir = tempdir().unwrap();
+        let original_dir = std::env::current_dir().ok();
+
+        std::env::set_current_dir(temp_dir.path()).unwrap();
+
+        // Initialize a new project (streamlined by default, no sync)
+        let init_cmd = InitCommand {
+            name: Some("Test Project".to_string()),
+            preset: None,
+            strategies: None,
+            initiatives: None,
+            upstream: None,
+            workspace_prefix: None,
+            team: None,
+            prefix: None,
+        };
+        init_cmd.execute().await.unwrap();
+
+        // Try setting full preset without sync — should fail
+        let config_cmd = ConfigCommand {
+            action: ConfigAction::Set {
+                preset: Some("full".to_string()),
+                strategies: None,
+                initiatives: None,
+            },
+        };
+
+        let result = config_cmd.execute().await;
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Strategies require multi-workspace sync"));
+
+        if let Some(dir) = original_dir {
+            std::env::set_current_dir(dir).unwrap();
+        }
+    }
+
+    #[tokio::test]
+    async fn test_config_set_strategies_true_without_sync_fails() {
+        let temp_dir = tempdir().unwrap();
+        let original_dir = std::env::current_dir().ok();
+
+        std::env::set_current_dir(temp_dir.path()).unwrap();
+
+        let init_cmd = InitCommand {
+            name: Some("Test Project".to_string()),
+            preset: None,
+            strategies: None,
+            initiatives: None,
+            upstream: None,
+            workspace_prefix: None,
+            team: None,
+            prefix: None,
+        };
+        init_cmd.execute().await.unwrap();
+
+        // Try setting --strategies true without sync — should fail
+        let config_cmd = ConfigCommand {
+            action: ConfigAction::Set {
+                preset: None,
+                strategies: Some(true),
+                initiatives: None,
+            },
+        };
+
+        let result = config_cmd.execute().await;
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Strategies require multi-workspace sync"));
+
         if let Some(dir) = original_dir {
             std::env::set_current_dir(dir).unwrap();
         }

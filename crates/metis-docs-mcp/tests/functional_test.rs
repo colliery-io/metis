@@ -71,15 +71,21 @@ async fn test_initialize_and_create_documents() {
     assert!(result.is_ok(), "Initialize should succeed");
 
     // 2. Enable all document types by updating config.toml file
+    //    Strategies require sync config, so we include [workspace] and [sync] sections
     let config_path = format!("{}/config.toml", metis_path);
     let config_content = r#"
 [project]
-name = "Test Project"
 prefix = "PROJ"
 
 [flight_levels]
 strategies_enabled = true
 initiatives_enabled = true
+
+[workspace]
+prefix = "test-ws"
+
+[sync]
+upstream_url = "git@github.com:org/repo.git"
 "#;
     std::fs::write(&config_path, config_content).unwrap();
 
@@ -194,15 +200,21 @@ async fn test_archive_with_short_codes() {
     init_tool.call_tool().await.unwrap();
 
     // Enable full configuration to allow strategies by updating config.toml
+    //    Strategies require sync config, so we include [workspace] and [sync] sections
     let config_path = format!("{}/config.toml", metis_path);
     let config_content = r#"
 [project]
-name = "Test Project"
 prefix = "PROJ"
 
 [flight_levels]
 strategies_enabled = true
 initiatives_enabled = true
+
+[workspace]
+prefix = "test-ws"
+
+[sync]
+upstream_url = "git@github.com:org/repo.git"
 "#;
     std::fs::write(&config_path, config_content).unwrap();
 
@@ -328,15 +340,21 @@ async fn test_list_and_search_include_archived() {
     init_tool.call_tool().await.unwrap();
 
     // Enable full configuration
+    //    Strategies require sync config, so we include [workspace] and [sync] sections
     let config_path = format!("{}/config.toml", metis_path);
     let config_content = r#"
 [project]
-name = "Test Project"
 prefix = "PROJ"
 
 [flight_levels]
 strategies_enabled = true
 initiatives_enabled = true
+
+[workspace]
+prefix = "test-ws"
+
+[sync]
+upstream_url = "git@github.com:org/repo.git"
 "#;
     std::fs::write(&config_path, config_content).unwrap();
 

@@ -36,7 +36,16 @@ async fn setup_project_with_config(config: FlightLevelConfig) -> (TempDir, Strin
 
     // Update config.toml to match
     use metis_core::domain::configuration::ConfigFile;
-    let config_file = ConfigFile::new(prefix, config).unwrap();
+    let mut config_file = ConfigFile::new(prefix, config.clone()).unwrap();
+    // Strategies require sync config, so add workspace + sync sections if strategies are enabled
+    if config.strategies_enabled {
+        config_file
+            .set_workspace("test-ws".to_string(), None)
+            .unwrap();
+        config_file
+            .set_sync("git@github.com:org/repo.git".to_string())
+            .unwrap();
+    }
     let config_file_path = format!("{}/.metis/config.toml", project_path);
     config_file.save(&config_file_path).unwrap();
 

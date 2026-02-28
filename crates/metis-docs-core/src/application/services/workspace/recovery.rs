@@ -37,7 +37,7 @@ impl ConfigurationRecoveryService {
         let mut report = RecoveryReport::new();
 
         // Step 1: Load or create config.toml
-        let config_file = if config_file_path.exists() {
+        let mut config_file = if config_file_path.exists() {
             tracing::info!("Loading configuration from {}", config_file_path.display());
             ConfigFile::load(&config_file_path).map_err(|e| MetisError::ConfigurationError(e))?
         } else {
@@ -52,6 +52,16 @@ impl ConfigurationRecoveryService {
             );
             config_file
         };
+
+        // Defense-in-depth: auto-downgrade strategies if sync is not configured
+        if config_file.enforce_strategies_require_sync() {
+            tracing::warn!(
+                "Strategies enabled without sync configuration — auto-downgrading to streamlined"
+            );
+            config_file
+                .save(&config_file_path)
+                .map_err(|e| MetisError::ConfigurationError(e))?;
+        }
 
         // Step 2: Sync configuration to database
         let mut config_repo = ConfigurationRepository::new(
@@ -111,8 +121,18 @@ impl ConfigurationRecoveryService {
             return Ok(false);
         }
 
-        let config_file =
+        let mut config_file =
             ConfigFile::load(&config_file_path).map_err(|e| MetisError::ConfigurationError(e))?;
+
+        // Defense-in-depth: auto-downgrade strategies if sync is not configured
+        if config_file.enforce_strategies_require_sync() {
+            tracing::warn!(
+                "Strategies enabled without sync configuration — auto-downgrading to streamlined"
+            );
+            config_file
+                .save(&config_file_path)
+                .map_err(|e| MetisError::ConfigurationError(e))?;
+        }
 
         let mut config_repo = ConfigurationRepository::new(
             SqliteConnection::establish(db_path.to_str().unwrap()).map_err(|e| {

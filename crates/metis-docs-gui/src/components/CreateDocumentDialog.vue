@@ -244,7 +244,7 @@ const loadProjectConfig = async () => {
   } catch (err) {
     // Failed to load project config
     // Default to full configuration if we can't load it
-    projectConfig.value = { strategies_enabled: true, initiatives_enabled: true }
+    projectConfig.value = { strategies_enabled: false, initiatives_enabled: true }
   }
 }
 

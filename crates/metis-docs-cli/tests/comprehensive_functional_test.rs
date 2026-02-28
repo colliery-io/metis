@@ -144,18 +144,38 @@ async fn test_complete_full_configuration_workflow() {
     println!("\n=== Testing Complete Full Configuration Workflow ===");
 
     let temp_dir = tempfile::tempdir().unwrap();
-    let project_path = temp_dir.path().to_path_buf();
 
-    // Step 1: Initialize workspace with full config
-    println!("Step 1: Initialize workspace with full configuration");
-    cli_helpers::init_workspace(
-        &project_path,
-        Some("Full Config Test"),
-        Some("FULL"),
-        Some("full"),
-    )
-    .await
-    .unwrap();
+    // Create bare git repo as "central" for upstream
+    let central_dir = temp_dir.path().join("central");
+    git2::Repository::init_bare(&central_dir).unwrap();
+    let central_url = format!("file://{}", central_dir.display());
+
+    let project_path = temp_dir.path().join("project");
+    std::fs::create_dir_all(&project_path).unwrap();
+
+    // Step 1: Initialize workspace with full config + upstream (required for strategies)
+    println!("Step 1: Initialize workspace with full configuration and upstream");
+    {
+        use metis_docs_cli::commands::init::InitCommand;
+        let original_dir = std::env::current_dir().ok();
+        std::env::set_current_dir(&project_path).unwrap();
+
+        let cmd = InitCommand {
+            name: Some("Full Config Test".to_string()),
+            prefix: Some("FULL".to_string()),
+            preset: Some("full".to_string()),
+            strategies: None,
+            initiatives: None,
+            upstream: Some(central_url),
+            workspace_prefix: Some("test-ws".to_string()),
+            team: None,
+        };
+        cmd.execute().await.unwrap();
+
+        if let Some(original) = original_dir {
+            let _ = std::env::set_current_dir(&original);
+        }
+    }
 
     assert!(
         cli_helpers::verify_workspace(&project_path),

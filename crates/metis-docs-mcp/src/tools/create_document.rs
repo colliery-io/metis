@@ -91,7 +91,7 @@ impl CreateDocumentTool {
             return Err(CallToolError::new(std::io::Error::new(
                 std::io::ErrorKind::InvalidInput,
                 format!(
-                    "{} creation is disabled in current configuration ({} mode). Available document types: {}. To enable {}, use 'metis config set --preset full' or configure individually with 'metis config set --strategies true --initiatives true'",
+                    "{} creation is disabled in current configuration ({} mode). Available document types: {}. To enable {}, configure multi-workspace sync first with `metis init --upstream <url> --workspace-prefix <prefix> --preset full`",
                     doc_type,
                     flight_config.preset_name(),
                     available_types.join(", "),

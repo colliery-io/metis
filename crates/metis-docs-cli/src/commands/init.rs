@@ -64,6 +64,15 @@ impl InitCommand {
         );
         let flight_config = self.determine_flight_config()?;
 
+        // Gate: strategies require upstream sync configuration
+        if flight_config.strategies_enabled && self.upstream.is_none() {
+            anyhow::bail!(
+                "Strategies require multi-workspace sync.\n\
+                 Use: metis init --upstream <url> --workspace-prefix <prefix> --preset full\n\
+                 Or use --preset streamlined (default) for single-workspace mode."
+            );
+        }
+
         println!(
             "[+] Initialized Metis workspace in {}",
             current_dir.display()
@@ -179,6 +188,16 @@ impl InitCommand {
 
         // Set flight level config if specified
         let flight_config = self.determine_flight_config()?;
+
+        // Gate: strategies require upstream sync configuration
+        if flight_config.strategies_enabled && self.upstream.is_none() {
+            anyhow::bail!(
+                "Strategies require multi-workspace sync.\n\
+                 Use: metis init --upstream <url> --workspace-prefix <prefix> --preset full\n\
+                 Or use --preset streamlined (default) for single-workspace mode."
+            );
+        }
+
         let db = Database::new(result.database_path.to_str().unwrap())
             .map_err(|e| anyhow::anyhow!("Failed to open database: {}", e))?;
         let mut config_repo = db
@@ -514,7 +533,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_init_command_with_preset() {
+    async fn test_init_command_with_preset_full_without_upstream_fails() {
         let temp_dir = tempdir().unwrap();
         let original_dir = std::env::current_dir().ok();
 
@@ -527,13 +546,73 @@ mod tests {
         };
 
         let result = cmd.execute().await;
-        assert!(result.is_ok());
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Strategies require multi-workspace sync"));
+
+        // Restore original directory
+        if let Some(original) = original_dir {
+            let _ = std::env::set_current_dir(&original);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_init_command_strategies_true_without_upstream_fails() {
+        let temp_dir = tempdir().unwrap();
+        let original_dir = std::env::current_dir().ok();
+
+        std::env::set_current_dir(temp_dir.path()).unwrap();
+
+        let cmd = InitCommand {
+            strategies: Some(true),
+            initiatives: Some(true),
+            ..basic_init(Some("Test Project"))
+        };
+
+        let result = cmd.execute().await;
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Strategies require multi-workspace sync"));
+
+        if let Some(original) = original_dir {
+            let _ = std::env::set_current_dir(&original);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_init_command_with_preset_full_and_upstream_succeeds() {
+        let temp_dir = tempdir().unwrap();
+        let original_dir = std::env::current_dir().ok();
+
+        // Create bare git repo as "central"
+        let central_dir = temp_dir.path().join("central");
+        git2::Repository::init_bare(&central_dir).unwrap();
+        let central_url = format!("file://{}", central_dir.display());
+
+        let project_dir = temp_dir.path().join("project");
+        std::fs::create_dir_all(&project_dir).unwrap();
+        std::env::set_current_dir(&project_dir).unwrap();
+
+        let cmd = InitCommand {
+            preset: Some("full".to_string()),
+            upstream: Some(central_url),
+            workspace_prefix: Some("api".to_string()),
+            prefix: Some("TEST".to_string()),
+            ..basic_init(Some("Test Project"))
+        };
+
+        let result = cmd.execute().await;
+        assert!(result.is_ok(), "Init with --preset full and --upstream should succeed: {:?}", result);
 
         // Verify workspace was created
-        let metis_dir = temp_dir.path().join(".metis");
+        let metis_dir = project_dir.join(".metis");
         assert!(metis_dir.exists());
 
-        // Verify configuration was set
+        // Verify configuration was set to full
         use metis_core::Database;
         let db_path = metis_dir.join("metis.db");
         let db = Database::new(db_path.to_str().unwrap()).unwrap();

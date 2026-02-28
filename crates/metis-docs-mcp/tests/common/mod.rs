@@ -65,8 +65,19 @@ impl McpTestHelper {
             .map_err(|e| anyhow::anyhow!("Failed to load config: {}", e))?;
 
         // Create new config with updated flight levels
-        let new_config = ConfigFile::new(existing_config.prefix().to_string(), flight_config)
-            .map_err(|e| anyhow::anyhow!("Failed to create config: {}", e))?;
+        let mut new_config =
+            ConfigFile::new(existing_config.prefix().to_string(), flight_config.clone())
+                .map_err(|e| anyhow::anyhow!("Failed to create config: {}", e))?;
+
+        // Strategies require sync config — add test workspace + sync sections
+        if flight_config.strategies_enabled {
+            new_config
+                .set_workspace("test-ws".to_string(), None)
+                .map_err(|e| anyhow::anyhow!("Failed to set workspace: {}", e))?;
+            new_config
+                .set_sync("git@github.com:org/repo.git".to_string())
+                .map_err(|e| anyhow::anyhow!("Failed to set sync: {}", e))?;
+        }
 
         // Save to filesystem (database will sync on next operation)
         new_config
