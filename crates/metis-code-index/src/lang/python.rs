@@ -7,7 +7,7 @@ use std::sync::OnceLock;
 use streaming_iterator::StreamingIterator;
 use tree_sitter::{Query, Tree};
 
-use crate::symbols::{Symbol, SymbolKind, Visibility};
+use crate::symbols::{compact_signature, Symbol, SymbolKind, Visibility};
 
 /// Import statement from Python source.
 #[derive(Debug, Clone)]
@@ -210,6 +210,12 @@ impl PythonExtractor {
                                 node.end_position().row + 1,
                             );
 
+                            // Extract base classes for signature
+                            let sig = Self::build_class_signature(&node, source);
+                            if let Some(s) = sig {
+                                symbol = symbol.with_signature(s);
+                            }
+
                             if let Some(body) = node.child_by_field_name("body") {
                                 if let Some(docstring) = Self::extract_docstring(&body, source) {
                                     symbol = symbol.with_doc_comment(docstring);
@@ -268,7 +274,15 @@ impl PythonExtractor {
 
                             if let Some(params) = node.child_by_field_name("parameters") {
                                 let params_text = Self::node_text(&params, source);
-                                let sig = format!("def {}{}", name, params_text);
+                                let return_type = node
+                                    .child_by_field_name("return_type")
+                                    .map(|n| Self::node_text(&n, source));
+                                let sig = match return_type {
+                                    Some(ret) => {
+                                        format!("def {}{} -> {}", name, params_text, ret)
+                                    }
+                                    None => format!("def {}{}", name, params_text),
+                                };
                                 symbol = symbol.with_signature(sig);
                             }
 
@@ -454,6 +468,71 @@ impl PythonExtractor {
         Ok(markers)
     }
 
+    /// Build a signature for a Python class: base classes and key method names.
+    fn build_class_signature(node: &tree_sitter::Node, source: &str) -> Option<String> {
+        let mut parts = Vec::new();
+
+        // Extract superclasses from argument_list (class Foo(Base, Mixin):)
+        if let Some(superclasses) = node.child_by_field_name("superclasses") {
+            let bases_text = Self::node_text(&superclasses, source);
+            let trimmed = bases_text.trim();
+            if trimmed != "()" && !trimmed.is_empty() {
+                parts.push(trimmed.to_string());
+            }
+        }
+
+        // Extract key method names from body
+        if let Some(body) = node.child_by_field_name("body") {
+            let mut methods = Vec::new();
+            let mut cursor = body.walk();
+            if cursor.goto_first_child() {
+                loop {
+                    let child = cursor.node();
+                    if child.kind() == "function_definition" {
+                        if let Some(name_node) = child.child_by_field_name("name") {
+                            let name = Self::node_text(&name_node, source);
+                            // Skip dunder methods except __init__
+                            if name == "__init__" || !name.starts_with('_') {
+                                methods.push(name);
+                            }
+                        }
+                    } else if child.kind() == "decorated_definition" {
+                        // Walk into decorated function defs
+                        let mut inner = child.walk();
+                        if inner.goto_first_child() {
+                            loop {
+                                if inner.node().kind() == "function_definition" {
+                                    if let Some(name_node) =
+                                        inner.node().child_by_field_name("name")
+                                    {
+                                        let name = Self::node_text(&name_node, source);
+                                        if name == "__init__" || !name.starts_with('_') {
+                                            methods.push(name);
+                                        }
+                                    }
+                                }
+                                if !inner.goto_next_sibling() {
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    if !cursor.goto_next_sibling() {
+                        break;
+                    }
+                }
+            }
+            if !methods.is_empty() {
+                parts.push(format!("{{ {} }}", methods.join(", ")));
+            }
+        }
+
+        if parts.is_empty() {
+            return None;
+        }
+        Some(compact_signature(&parts.join(" "), 120))
+    }
+
     /// Get text content of a node.
     fn node_text(node: &tree_sitter::Node, source: &str) -> String {
         source[node.byte_range()].to_string()
@@ -538,6 +617,27 @@ class MyClass:
             .doc_comment
             .as_ref()
             .is_some_and(|d| d.contains("simple class")));
+        // Class should have method signature
+        assert!(class.signature.is_some(), "Class should have signature");
+        let sig = class.signature.as_ref().unwrap();
+        assert!(sig.contains("__init__"), "sig = {sig}");
+        assert!(sig.contains("get_value"), "sig = {sig}");
+    }
+
+    #[test]
+    fn test_extract_class_with_bases() {
+        let source = r#"
+class ChildClass(BaseClass, MixinA):
+    def do_thing(self):
+        pass
+"#;
+        let tree = parse_python(source);
+        let symbols = PythonExtractor::extract_symbols(&tree, source, "test.py").unwrap();
+        let class = symbols.iter().find(|s| s.kind == SymbolKind::Class).unwrap();
+        assert!(class.signature.is_some(), "Class should have signature");
+        let sig = class.signature.as_ref().unwrap();
+        assert!(sig.contains("BaseClass"), "sig = {sig}");
+        assert!(sig.contains("MixinA"), "sig = {sig}");
     }
 
     #[test]
@@ -593,6 +693,33 @@ class Calculator:
             .collect();
 
         assert!(!methods.is_empty(), "Should find at least 1 method");
+    }
+
+    #[test]
+    fn test_method_return_type() {
+        let source = r#"
+class Service:
+    def get_name(self) -> str:
+        return "service"
+
+    def process(self, data: bytes) -> bool:
+        return True
+"#;
+        let tree = parse_python(source);
+        let symbols = PythonExtractor::extract_symbols(&tree, source, "test.py").unwrap();
+
+        let methods: Vec<_> = symbols
+            .iter()
+            .filter(|s| s.kind == SymbolKind::Method)
+            .collect();
+
+        let get_name = methods.iter().find(|m| m.name == "get_name").unwrap();
+        let sig = get_name.signature.as_ref().unwrap();
+        assert!(sig.contains("-> str"), "Method should have return type: {sig}");
+
+        let process = methods.iter().find(|m| m.name == "process").unwrap();
+        let sig = process.signature.as_ref().unwrap();
+        assert!(sig.contains("-> bool"), "Method should have return type: {sig}");
     }
 
     #[test]

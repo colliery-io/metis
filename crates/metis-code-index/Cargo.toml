@@ -26,6 +26,9 @@ streaming-iterator = "0.1"
 serde = { workspace = true }
 serde_json = { workspace = true }
 
+# Content hashing for incremental indexing
+blake3 = "1"
+
 # Error handling
 thiserror = { workspace = true }
 

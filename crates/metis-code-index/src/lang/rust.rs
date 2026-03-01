@@ -7,7 +7,7 @@ use std::sync::OnceLock;
 
 use streaming_iterator::StreamingIterator;
 
-use crate::symbols::{Symbol, SymbolKind, Visibility};
+use crate::symbols::{compact_signature, Symbol, SymbolKind, Visibility};
 
 /// Represents a use/import statement.
 #[derive(Debug, Clone)]
@@ -230,11 +230,13 @@ impl RustExtractor {
 
         while let Some(match_) = matches.next() {
             let mut name = None;
+            let mut trait_name = None;
             let mut visibility = None;
             let mut signature_parts = Vec::new();
             let mut kind = None;
             let mut start_line = 0;
             let mut end_line = 0;
+            let mut outer_node = None;
 
             for capture in match_.captures {
                 let capture_name = queries.symbols.capture_names()[capture.index as usize];
@@ -244,6 +246,9 @@ impl RustExtractor {
                 match capture_name {
                     "name" | "type_name" => {
                         name = Some(text.to_string());
+                    }
+                    "trait_name" => {
+                        trait_name = Some(text.to_string());
                     }
                     "visibility" => {
                         visibility = Some(parse_visibility(text));
@@ -258,46 +263,55 @@ impl RustExtractor {
                         kind = Some(SymbolKind::Struct);
                         start_line = node.start_position().row + 1;
                         end_line = node.end_position().row + 1;
+                        outer_node = Some(node);
                     }
                     "enum" => {
                         kind = Some(SymbolKind::Enum);
                         start_line = node.start_position().row + 1;
                         end_line = node.end_position().row + 1;
+                        outer_node = Some(node);
                     }
                     "function" => {
                         kind = Some(SymbolKind::Function);
                         start_line = node.start_position().row + 1;
                         end_line = node.end_position().row + 1;
+                        outer_node = Some(node);
                     }
                     "trait" => {
                         kind = Some(SymbolKind::Interface);
                         start_line = node.start_position().row + 1;
                         end_line = node.end_position().row + 1;
+                        outer_node = Some(node);
                     }
                     "impl" => {
                         kind = Some(SymbolKind::Type);
                         start_line = node.start_position().row + 1;
                         end_line = node.end_position().row + 1;
+                        outer_node = Some(node);
                     }
                     "module" => {
                         kind = Some(SymbolKind::Module);
                         start_line = node.start_position().row + 1;
                         end_line = node.end_position().row + 1;
+                        outer_node = Some(node);
                     }
                     "constant" | "static" => {
                         kind = Some(SymbolKind::Variable);
                         start_line = node.start_position().row + 1;
                         end_line = node.end_position().row + 1;
+                        outer_node = Some(node);
                     }
                     "type_alias" => {
                         kind = Some(SymbolKind::Type);
                         start_line = node.start_position().row + 1;
                         end_line = node.end_position().row + 1;
+                        outer_node = Some(node);
                     }
                     "macro" => {
                         kind = Some(SymbolKind::Macro);
                         start_line = node.start_position().row + 1;
                         end_line = node.end_position().row + 1;
+                        outer_node = Some(node);
                     }
                     _ => {}
                 }
@@ -306,10 +320,36 @@ impl RustExtractor {
             if let (Some(name), Some(kind)) = (name, kind) {
                 let doc_comment = extract_doc_comment(tree, start_line, source);
 
-                let signature = if signature_parts.is_empty() {
-                    None
-                } else {
-                    Some(signature_parts.join(" "))
+                // Build signature based on kind
+                let signature = match kind {
+                    SymbolKind::Function => {
+                        if signature_parts.is_empty() {
+                            None
+                        } else {
+                            Some(signature_parts.join(" "))
+                        }
+                    }
+                    SymbolKind::Struct => {
+                        outer_node.and_then(|n| build_struct_signature(n, source))
+                    }
+                    SymbolKind::Enum => {
+                        outer_node.and_then(|n| build_enum_signature(n, source))
+                    }
+                    SymbolKind::Interface => {
+                        outer_node.and_then(|n| build_trait_signature(n, source))
+                    }
+                    SymbolKind::Variable => {
+                        outer_node.and_then(|n| build_const_signature(n, source))
+                    }
+                    SymbolKind::Type => {
+                        if trait_name.is_some() {
+                            // impl Trait for Type
+                            Some(format!("impl {} for {}", trait_name.unwrap(), name))
+                        } else {
+                            outer_node.and_then(|n| build_type_alias_signature(n, source))
+                        }
+                    }
+                    _ => None,
                 };
 
                 symbols.push(Symbol {
@@ -512,6 +552,108 @@ impl RustExtractor {
     }
 }
 
+/// Build a signature for a struct: `{ field: Type, field2: Type2 }`.
+fn build_struct_signature(node: tree_sitter::Node, source: &str) -> Option<String> {
+    let body = node.child_by_field_name("body")?;
+    let mut fields = Vec::new();
+    let mut cursor = body.walk();
+    if cursor.goto_first_child() {
+        loop {
+            let child = cursor.node();
+            if child.kind() == "field_declaration" {
+                let name = child
+                    .child_by_field_name("name")
+                    .map(|n| n.utf8_text(source.as_bytes()).unwrap_or(""));
+                let ty = child
+                    .child_by_field_name("type")
+                    .map(|n| n.utf8_text(source.as_bytes()).unwrap_or(""));
+                if let (Some(name), Some(ty)) = (name, ty) {
+                    fields.push(format!("{}: {}", name, ty));
+                }
+            }
+            if !cursor.goto_next_sibling() {
+                break;
+            }
+        }
+    }
+    if fields.is_empty() {
+        return None;
+    }
+    Some(compact_signature(
+        &format!("{{ {} }}", fields.join(", ")),
+        120,
+    ))
+}
+
+/// Build a signature for an enum: `Variant1 | Variant2 | Variant3`.
+fn build_enum_signature(node: tree_sitter::Node, source: &str) -> Option<String> {
+    let body = node.child_by_field_name("body")?;
+    let mut variants = Vec::new();
+    let mut cursor = body.walk();
+    if cursor.goto_first_child() {
+        loop {
+            let child = cursor.node();
+            if child.kind() == "enum_variant" {
+                if let Some(name_node) = child.child_by_field_name("name") {
+                    let name = name_node.utf8_text(source.as_bytes()).unwrap_or("");
+                    variants.push(name.to_string());
+                }
+            }
+            if !cursor.goto_next_sibling() {
+                break;
+            }
+        }
+    }
+    if variants.is_empty() {
+        return None;
+    }
+    Some(compact_signature(&variants.join(" | "), 120))
+}
+
+/// Build a signature for a trait: `{ fn method1(), fn method2() }`.
+fn build_trait_signature(node: tree_sitter::Node, source: &str) -> Option<String> {
+    let body = node.child_by_field_name("body")?;
+    let mut methods = Vec::new();
+    let mut cursor = body.walk();
+    if cursor.goto_first_child() {
+        loop {
+            let child = cursor.node();
+            if child.kind() == "function_item" || child.kind() == "function_signature_item" {
+                if let Some(name_node) = child.child_by_field_name("name") {
+                    let name = name_node.utf8_text(source.as_bytes()).unwrap_or("");
+                    methods.push(format!("fn {}()", name));
+                }
+            }
+            if !cursor.goto_next_sibling() {
+                break;
+            }
+        }
+    }
+    if methods.is_empty() {
+        return None;
+    }
+    Some(compact_signature(
+        &format!("{{ {} }}", methods.join(", ")),
+        120,
+    ))
+}
+
+/// Build a signature for a const/static: `: Type`.
+fn build_const_signature(node: tree_sitter::Node, source: &str) -> Option<String> {
+    // const_item and static_item both have a `type` field
+    let type_node = node.child_by_field_name("type")?;
+    let ty = type_node.utf8_text(source.as_bytes()).unwrap_or("");
+    Some(format!(": {}", ty))
+}
+
+/// Build a signature for a type alias: `= RHS`.
+fn build_type_alias_signature(node: tree_sitter::Node, source: &str) -> Option<String> {
+    // type_item has `type` field for the RHS
+    let type_node = node.child_by_field_name("type")?;
+    let ty = type_node.utf8_text(source.as_bytes()).unwrap_or("");
+    Some(compact_signature(&format!("= {}", ty), 120))
+}
+
 /// Parse a Rust visibility modifier into our Visibility enum.
 fn parse_visibility(vis_text: &str) -> Visibility {
     let vis = vis_text.trim();
@@ -636,6 +778,30 @@ pub struct Foo {
             .as_ref()
             .unwrap()
             .contains("documented"));
+        // Struct should have a field signature
+        assert!(
+            symbols[0].signature.is_some(),
+            "Struct should have signature"
+        );
+        let sig = symbols[0].signature.as_ref().unwrap();
+        assert!(sig.contains("bar: i32"), "Signature should contain field: {sig}");
+    }
+
+    #[test]
+    fn test_struct_multi_field_signature() {
+        let source = r#"
+pub struct Config {
+    host: String,
+    port: u16,
+    debug: bool,
+}
+"#;
+        let tree = parse_rust(source);
+        let symbols = RustExtractor::extract_symbols(&tree, source, "test.rs").unwrap();
+        let sig = symbols[0].signature.as_ref().unwrap();
+        assert!(sig.contains("host: String"), "sig = {sig}");
+        assert!(sig.contains("port: u16"), "sig = {sig}");
+        assert!(sig.contains("debug: bool"), "sig = {sig}");
     }
 
     #[test]
@@ -670,6 +836,12 @@ pub(crate) enum Status {
         assert_eq!(symbols[0].name, "Status");
         assert_eq!(symbols[0].kind, SymbolKind::Enum);
         assert_eq!(symbols[0].visibility, Visibility::Crate);
+        // Enum should have variant signature
+        assert!(symbols[0].signature.is_some(), "Enum should have signature");
+        let sig = symbols[0].signature.as_ref().unwrap();
+        assert!(sig.contains("Active"), "sig = {sig}");
+        assert!(sig.contains("Inactive"), "sig = {sig}");
+        assert!(sig.contains(" | "), "Variants should be pipe-separated: {sig}");
     }
 
     #[test]
@@ -688,6 +860,13 @@ pub trait Greet {
             .collect();
         assert_eq!(trait_symbols.len(), 1);
         assert_eq!(trait_symbols[0].name, "Greet");
+        // Trait should have method signature
+        assert!(
+            trait_symbols[0].signature.is_some(),
+            "Trait should have signature"
+        );
+        let sig = trait_symbols[0].signature.as_ref().unwrap();
+        assert!(sig.contains("fn greet()"), "sig = {sig}");
     }
 
     #[test]
@@ -802,6 +981,26 @@ pub const MAX_SIZE: usize = 100;
         assert_eq!(symbols.len(), 1);
         assert_eq!(symbols[0].name, "MAX_SIZE");
         assert_eq!(symbols[0].kind, SymbolKind::Variable);
+        // Const should have type annotation signature
+        assert!(symbols[0].signature.is_some(), "Const should have signature");
+        let sig = symbols[0].signature.as_ref().unwrap();
+        assert!(sig.contains(": usize"), "sig = {sig}");
+    }
+
+    #[test]
+    fn test_extract_type_alias() {
+        let source = r#"
+pub type Result<T> = std::result::Result<T, Error>;
+"#;
+        let tree = parse_rust(source);
+        let symbols = RustExtractor::extract_symbols(&tree, source, "test.rs").unwrap();
+
+        let types: Vec<_> = symbols.iter().filter(|s| s.kind == SymbolKind::Type).collect();
+        assert_eq!(types.len(), 1);
+        assert_eq!(types[0].name, "Result");
+        assert!(types[0].signature.is_some(), "Type alias should have signature");
+        let sig = types[0].signature.as_ref().unwrap();
+        assert!(sig.starts_with("= "), "Type alias sig should start with '= ': {sig}");
     }
 
     #[test]

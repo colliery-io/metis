@@ -10,7 +10,7 @@ use std::sync::OnceLock;
 use streaming_iterator::StreamingIterator;
 use tree_sitter::{Query, Tree};
 
-use crate::symbols::{Symbol, SymbolKind, Visibility};
+use crate::symbols::{compact_signature, Symbol, SymbolKind, Visibility};
 
 /// Import statement from Go source.
 #[derive(Debug, Clone)]
@@ -187,7 +187,7 @@ impl GoExtractor {
             if let (Some(name), Some(kind)) = (name, kind) {
                 let visibility = go_visibility(&name);
 
-                // Build signature for functions and methods
+                // Build signature for all symbol kinds
                 let signature = match kind {
                     SymbolKind::Function => {
                         let return_type = outer_node
@@ -205,6 +205,18 @@ impl GoExtractor {
                             receiver.as_deref(),
                             return_type.as_deref(),
                         )
+                    }
+                    SymbolKind::Struct => {
+                        outer_node.and_then(|n| build_go_struct_signature(n, source))
+                    }
+                    SymbolKind::Interface => {
+                        outer_node.and_then(|n| build_go_interface_signature(n, source))
+                    }
+                    SymbolKind::Type => {
+                        outer_node.and_then(|n| build_go_type_signature(n, source))
+                    }
+                    SymbolKind::Variable => {
+                        outer_node.and_then(|n| build_go_var_signature(n, source))
                     }
                     _ => None,
                 };
@@ -276,6 +288,119 @@ impl GoExtractor {
 
         Ok(imports)
     }
+}
+
+/// Build a signature for a Go struct: `{ Name string, Age int }`.
+fn build_go_struct_signature(node: tree_sitter::Node, source: &str) -> Option<String> {
+    // type_declaration > type_spec > struct_type > field_declaration_list
+    let type_spec = find_child_by_kind(node, "type_spec")?;
+    let struct_type = find_child_by_kind(type_spec, "struct_type")?;
+    let field_list = find_child_by_kind(struct_type, "field_declaration_list")?;
+
+    let mut fields = Vec::new();
+    let mut cursor = field_list.walk();
+    if cursor.goto_first_child() {
+        loop {
+            let child = cursor.node();
+            if child.kind() == "field_declaration" {
+                let name = child
+                    .child_by_field_name("name")
+                    .map(|n| node_text(&n, source));
+                let ty = child
+                    .child_by_field_name("type")
+                    .map(|n| node_text(&n, source));
+                if let (Some(name), Some(ty)) = (name, ty) {
+                    fields.push(format!("{} {}", name, ty));
+                }
+            }
+            if !cursor.goto_next_sibling() {
+                break;
+            }
+        }
+    }
+    if fields.is_empty() {
+        return None;
+    }
+    Some(compact_signature(
+        &format!("{{ {} }}", fields.join(", ")),
+        120,
+    ))
+}
+
+/// Build a signature for a Go interface: `{ Read(), Write() }`.
+fn build_go_interface_signature(node: tree_sitter::Node, source: &str) -> Option<String> {
+    let type_spec = find_child_by_kind(node, "type_spec")?;
+    let iface_type = find_child_by_kind(type_spec, "interface_type")?;
+
+    let mut methods = Vec::new();
+    let mut cursor = iface_type.walk();
+    if cursor.goto_first_child() {
+        loop {
+            let child = cursor.node();
+            if child.kind() == "method_spec" || child.kind() == "method_elem" {
+                if let Some(name_node) = child.child_by_field_name("name") {
+                    methods.push(format!("{}()", node_text(&name_node, source)));
+                }
+            } else if child.kind() == "type_identifier" || child.kind() == "type_elem" {
+                // Embedded interface
+                let text = node_text(&child, source);
+                if !text.is_empty() {
+                    methods.push(text);
+                }
+            }
+            if !cursor.goto_next_sibling() {
+                break;
+            }
+        }
+    }
+    if methods.is_empty() {
+        return None;
+    }
+    Some(compact_signature(
+        &format!("{{ {} }}", methods.join(", ")),
+        120,
+    ))
+}
+
+/// Build a signature for a Go type definition: `= underlying_type`.
+fn build_go_type_signature(node: tree_sitter::Node, source: &str) -> Option<String> {
+    let type_spec = find_child_by_kind(node, "type_spec")?;
+    let type_node = type_spec.child_by_field_name("type")?;
+    let ty = node_text(&type_node, source);
+    Some(compact_signature(&format!("= {}", ty), 120))
+}
+
+/// Build a signature for a Go const/var: `: type` if type is annotated.
+fn build_go_var_signature(node: tree_sitter::Node, source: &str) -> Option<String> {
+    // const_declaration or var_declaration > const_spec/var_spec > type field
+    let spec_kind = if node.kind() == "const_declaration" {
+        "const_spec"
+    } else {
+        "var_spec"
+    };
+    let spec = find_child_by_kind(node, spec_kind)?;
+    let type_node = spec.child_by_field_name("type")?;
+    let ty = node_text(&type_node, source);
+    Some(format!(": {}", ty))
+}
+
+/// Find a child node by kind name.
+fn find_child_by_kind<'a>(
+    node: tree_sitter::Node<'a>,
+    kind: &str,
+) -> Option<tree_sitter::Node<'a>> {
+    let mut cursor = node.walk();
+    if cursor.goto_first_child() {
+        loop {
+            if cursor.node().kind() == kind {
+                return Some(cursor.node());
+            }
+            if !cursor.goto_next_sibling() {
+                break;
+            }
+        }
+    }
+    None
 }
 
 /// Determine visibility based on Go naming convention.
@@ -476,6 +601,11 @@ type internalState struct {
         let config = structs.iter().find(|s| s.name == "Config").unwrap();
         assert_eq!(config.visibility, Visibility::Public);
         assert!(config.doc_comment.is_some());
+        // Struct should have field signature
+        assert!(config.signature.is_some(), "Struct should have signature");
+        let sig = config.signature.as_ref().unwrap();
+        assert!(sig.contains("Host string"), "sig = {sig}");
+        assert!(sig.contains("Port int"), "sig = {sig}");
 
         let internal = structs.iter().find(|s| s.name == "internalState").unwrap();
         assert_eq!(internal.visibility, Visibility::Private);
@@ -510,6 +640,19 @@ type ReadWriter interface {
         assert!(interfaces.iter().any(|i| i.name == "Reader"));
         assert!(interfaces.iter().any(|i| i.name == "Writer"));
         assert!(interfaces.iter().any(|i| i.name == "ReadWriter"));
+
+        // Reader should have method signature
+        let reader = interfaces.iter().find(|i| i.name == "Reader").unwrap();
+        assert!(reader.signature.is_some(), "Interface should have signature");
+        let sig = reader.signature.as_ref().unwrap();
+        assert!(sig.contains("Read()"), "sig = {sig}");
+
+        // ReadWriter should have embedded interfaces
+        let rw = interfaces.iter().find(|i| i.name == "ReadWriter").unwrap();
+        assert!(rw.signature.is_some(), "ReadWriter should have signature");
+        let sig = rw.signature.as_ref().unwrap();
+        assert!(sig.contains("Reader"), "sig = {sig}");
+        assert!(sig.contains("Writer"), "sig = {sig}");
     }
 
     #[test]
@@ -533,6 +676,16 @@ type StringSlice []string
         assert!(types.iter().any(|t| t.name == "UserID"));
         assert!(types.iter().any(|t| t.name == "Callback"));
         assert!(types.iter().any(|t| t.name == "StringSlice"));
+
+        // Type defs should have RHS signatures
+        let userid = types.iter().find(|t| t.name == "UserID").unwrap();
+        assert!(userid.signature.is_some(), "Type def should have signature");
+        let sig = userid.signature.as_ref().unwrap();
+        assert!(sig.contains("= string"), "sig = {sig}");
+
+        let callback = types.iter().find(|t| t.name == "Callback").unwrap();
+        let sig = callback.signature.as_ref().unwrap();
+        assert!(sig.contains("= func(int) error"), "sig = {sig}");
     }
 
     #[test]

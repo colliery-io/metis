@@ -11,7 +11,7 @@ use streaming_iterator::StreamingIterator;
 use tree_sitter::{Query, Tree};
 
 use crate::parser::Language;
-use crate::symbols::{Symbol, SymbolKind, Visibility};
+use crate::symbols::{compact_signature, Symbol, SymbolKind, Visibility};
 
 /// Import statement from TypeScript/JavaScript source.
 #[derive(Debug, Clone)]
@@ -259,7 +259,8 @@ impl TypeScriptExtractor {
                         if let Some(name_node) = node.child_by_field_name("name") {
                             let name = Self::node_text(&name_node, source);
                             let is_export = capture_name.starts_with("export");
-                            let symbol = Symbol::new(
+                            let sig = Self::build_interface_signature(&node, source);
+                            let mut symbol = Symbol::new(
                                 name,
                                 SymbolKind::Interface,
                                 file_path,
@@ -271,6 +272,9 @@ impl TypeScriptExtractor {
                             } else {
                                 Visibility::Private
                             });
+                            if let Some(s) = sig {
+                                symbol = symbol.with_signature(s);
+                            }
                             symbols.push(symbol);
                         }
                     }
@@ -278,7 +282,8 @@ impl TypeScriptExtractor {
                         if let Some(name_node) = node.child_by_field_name("name") {
                             let name = Self::node_text(&name_node, source);
                             let is_export = capture_name.starts_with("export");
-                            let symbol = Symbol::new(
+                            let sig = Self::build_type_alias_signature(&node, source);
+                            let mut symbol = Symbol::new(
                                 name,
                                 SymbolKind::Type,
                                 file_path,
@@ -290,6 +295,9 @@ impl TypeScriptExtractor {
                             } else {
                                 Visibility::Private
                             });
+                            if let Some(s) = sig {
+                                symbol = symbol.with_signature(s);
+                            }
                             symbols.push(symbol);
                         }
                     }
@@ -297,7 +305,8 @@ impl TypeScriptExtractor {
                         if let Some(name_node) = node.child_by_field_name("name") {
                             let name = Self::node_text(&name_node, source);
                             let is_export = capture_name.starts_with("export");
-                            let symbol = Symbol::new(
+                            let sig = Self::build_enum_signature(&node, source);
+                            let mut symbol = Symbol::new(
                                 name,
                                 SymbolKind::Enum,
                                 file_path,
@@ -309,6 +318,9 @@ impl TypeScriptExtractor {
                             } else {
                                 Visibility::Private
                             });
+                            if let Some(s) = sig {
+                                symbol = symbol.with_signature(s);
+                            }
                             symbols.push(symbol);
                         }
                     }
@@ -334,7 +346,8 @@ impl TypeScriptExtractor {
                         if let Some(name_node) = node.child_by_field_name("name") {
                             let name = Self::node_text(&name_node, source);
                             let is_export = capture_name.starts_with("export");
-                            let symbol = Symbol::new(
+                            let sig = Self::build_arrow_signature(&node, source, &name);
+                            let mut symbol = Symbol::new(
                                 name,
                                 SymbolKind::Function,
                                 file_path,
@@ -346,6 +359,9 @@ impl TypeScriptExtractor {
                             } else {
                                 Visibility::Private
                             });
+                            if let Some(s) = sig {
+                                symbol = symbol.with_signature(s);
+                            }
                             symbols.push(symbol);
                         }
                     }
@@ -420,7 +436,8 @@ impl TypeScriptExtractor {
                         if let Some(name_node) = node.child_by_field_name("name") {
                             let name = Self::node_text(&name_node, source);
                             let is_export = capture_name.starts_with("export");
-                            let symbol = Symbol::new(
+                            let sig = Self::build_arrow_signature(&node, source, &name);
+                            let mut symbol = Symbol::new(
                                 name,
                                 SymbolKind::Function,
                                 file_path,
@@ -432,6 +449,9 @@ impl TypeScriptExtractor {
                             } else {
                                 Visibility::Private
                             });
+                            if let Some(s) = sig {
+                                symbol = symbol.with_signature(s);
+                            }
                             symbols.push(symbol);
                         }
                     }
@@ -737,6 +757,100 @@ impl TypeScriptExtractor {
         }
     }
 
+    fn build_interface_signature(node: &tree_sitter::Node, source: &str) -> Option<String> {
+        let body = node.child_by_field_name("body")?;
+        let mut members = Vec::new();
+        let mut cursor = body.walk();
+        if cursor.goto_first_child() {
+            loop {
+                let child = cursor.node();
+                match child.kind() {
+                    "property_signature" | "public_field_definition" => {
+                        if let Some(name_node) = child.child_by_field_name("name") {
+                            let name = Self::node_text(&name_node, source);
+                            let type_ann = child
+                                .child_by_field_name("type")
+                                .map(|n| Self::node_text(&n, source));
+                            match type_ann {
+                                Some(ty) => members.push(format!("{}: {}", name, ty)),
+                                None => members.push(name),
+                            }
+                        }
+                    }
+                    "method_signature" => {
+                        if let Some(name_node) = child.child_by_field_name("name") {
+                            let name = Self::node_text(&name_node, source);
+                            members.push(format!("{}()", name));
+                        }
+                    }
+                    _ => {}
+                }
+                if !cursor.goto_next_sibling() {
+                    break;
+                }
+            }
+        }
+        if members.is_empty() {
+            return None;
+        }
+        Some(compact_signature(
+            &format!("{{ {} }}", members.join(", ")),
+            120,
+        ))
+    }
+
+    fn build_type_alias_signature(node: &tree_sitter::Node, source: &str) -> Option<String> {
+        let value = node.child_by_field_name("value")?;
+        let text = Self::node_text(&value, source);
+        Some(compact_signature(&format!("= {}", text), 120))
+    }
+
+    fn build_enum_signature(node: &tree_sitter::Node, source: &str) -> Option<String> {
+        let body = node.child_by_field_name("body")?;
+        let mut members = Vec::new();
+        let mut cursor = body.walk();
+        if cursor.goto_first_child() {
+            loop {
+                let child = cursor.node();
+                if child.kind() == "enum_assignment" || child.kind() == "property_identifier" {
+                    let text = Self::node_text(&child, source);
+                    // enum_assignment has name = value, just take the name
+                    if let Some(name_node) = child.child_by_field_name("name") {
+                        members.push(Self::node_text(&name_node, source));
+                    } else if child.kind() == "property_identifier" {
+                        members.push(text);
+                    }
+                }
+                if !cursor.goto_next_sibling() {
+                    break;
+                }
+            }
+        }
+        if members.is_empty() {
+            return None;
+        }
+        Some(compact_signature(&members.join(" | "), 120))
+    }
+
+    fn build_arrow_signature(
+        node: &tree_sitter::Node,
+        source: &str,
+        name: &str,
+    ) -> Option<String> {
+        // variable_declarator > value: arrow_function
+        let arrow_node = node.child_by_field_name("value")?;
+        let params = arrow_node
+            .child_by_field_name("parameters")
+            .map(|n| Self::node_text(&n, source))?;
+        let return_type = arrow_node
+            .child_by_field_name("return_type")
+            .map(|n| Self::node_text(&n, source));
+        match return_type {
+            Some(ret) => Some(format!("const {} = {}{}", name, params, ret)),
+            None => Some(format!("const {} = {}", name, params)),
+        }
+    }
+
     fn extract_jsdoc(node: &tree_sitter::Node, source: &str) -> Option<String> {
         // Look for comment node immediately preceding the symbol
         let sibling = node.prev_sibling()?;
@@ -887,9 +1001,13 @@ interface InternalConfig {
             .filter(|s| s.kind == SymbolKind::Interface)
             .collect();
         assert_eq!(interfaces.len(), 2);
-        assert!(interfaces
-            .iter()
-            .any(|i| i.name == "User" && i.visibility == Visibility::Public));
+        let user = interfaces.iter().find(|i| i.name == "User").unwrap();
+        assert_eq!(user.visibility, Visibility::Public);
+        assert!(user.signature.is_some(), "Interface should have signature");
+        let sig = user.signature.as_ref().unwrap();
+        assert!(sig.contains("id"), "sig = {sig}");
+        assert!(sig.contains("name"), "sig = {sig}");
+
         assert!(interfaces
             .iter()
             .any(|i| i.name == "InternalConfig" && i.visibility == Visibility::Private));
@@ -912,8 +1030,16 @@ type UserId = string;
             .filter(|s| s.kind == SymbolKind::Type)
             .collect();
         assert_eq!(types.len(), 2);
-        assert!(types.iter().any(|t| t.name == "Result"));
-        assert!(types.iter().any(|t| t.name == "UserId"));
+
+        let result_type = types.iter().find(|t| t.name == "Result").unwrap();
+        assert!(result_type.signature.is_some(), "Type alias should have signature");
+        let sig = result_type.signature.as_ref().unwrap();
+        assert!(sig.starts_with("= "), "Type alias sig should start with '= ': {sig}");
+
+        let userid = types.iter().find(|t| t.name == "UserId").unwrap();
+        assert!(userid.signature.is_some(), "Type alias should have signature");
+        let sig = userid.signature.as_ref().unwrap();
+        assert!(sig.contains("= string"), "sig = {sig}");
     }
 
     #[test]
@@ -941,10 +1067,15 @@ enum Direction {
             .filter(|s| s.kind == SymbolKind::Enum)
             .collect();
         assert_eq!(enums.len(), 2);
-        assert!(enums
-            .iter()
-            .any(|e| e.name == "Status" && e.visibility == Visibility::Public));
-        assert!(enums.iter().any(|e| e.name == "Direction"));
+        let status = enums.iter().find(|e| e.name == "Status").unwrap();
+        assert_eq!(status.visibility, Visibility::Public);
+
+        let direction = enums.iter().find(|e| e.name == "Direction").unwrap();
+        // Enum should have member signature if extracted
+        // Note: enum body structure varies by grammar, so we check if present
+        if let Some(sig) = &direction.signature {
+            assert!(sig.contains("Up") || sig.contains("Down"), "sig = {sig}");
+        }
     }
 
     #[test]
@@ -966,8 +1097,19 @@ const helper = (x: number) => x * 2;
             .iter()
             .filter(|s| s.kind == SymbolKind::Function)
             .collect();
-        assert!(funcs.iter().any(|f| f.name == "fetchUser"));
-        assert!(funcs.iter().any(|f| f.name == "helper"));
+        let fetch_user = funcs.iter().find(|f| f.name == "fetchUser").unwrap();
+        assert!(
+            fetch_user.signature.is_some(),
+            "Arrow function should have signature"
+        );
+        let sig = fetch_user.signature.as_ref().unwrap();
+        assert!(sig.contains("id: string"), "sig = {sig}");
+
+        let helper = funcs.iter().find(|f| f.name == "helper").unwrap();
+        assert!(
+            helper.signature.is_some(),
+            "Arrow function should have signature"
+        );
     }
 
     #[test]

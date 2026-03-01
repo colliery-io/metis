@@ -191,6 +191,27 @@ impl Symbol {
     }
 }
 
+/// Collapse whitespace and truncate a signature to at most `max_len` characters.
+///
+/// Replaces runs of whitespace (including newlines) with a single space,
+/// trims the result, and appends `...` if it exceeds the limit.
+pub fn compact_signature(raw: &str, max_len: usize) -> String {
+    let collapsed: String = raw.split_whitespace().collect::<Vec<_>>().join(" ");
+    if collapsed.len() <= max_len {
+        collapsed
+    } else {
+        let mut truncated = String::with_capacity(max_len + 3);
+        for (i, ch) in collapsed.char_indices() {
+            if i >= max_len {
+                break;
+            }
+            truncated.push(ch);
+        }
+        truncated.push_str("...");
+        truncated
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -280,5 +301,26 @@ mod tests {
 
         let deserialized: Visibility = serde_json::from_str(&json).expect("deserialize");
         assert_eq!(deserialized, vis);
+    }
+
+    #[test]
+    fn test_compact_signature_short() {
+        assert_eq!(compact_signature("fn foo()", 80), "fn foo()");
+    }
+
+    #[test]
+    fn test_compact_signature_collapses_whitespace() {
+        assert_eq!(
+            compact_signature("{ name:  String,\n    age: usize }", 80),
+            "{ name: String, age: usize }"
+        );
+    }
+
+    #[test]
+    fn test_compact_signature_truncates() {
+        let long = "a".repeat(100);
+        let result = compact_signature(&long, 80);
+        assert_eq!(result.len(), 83); // 80 + "..."
+        assert!(result.ends_with("..."));
     }
 }
