@@ -551,3 +551,122 @@ async fn test_configuration_switching_compatibility() -> Result<()> {
     println!("✅ Configuration switching maintains compatibility");
     Ok(())
 }
+
+/// Test full → streamlined → full round-trip with sync configured
+/// Verifies strategies can be re-enabled after being disabled, and old documents remain accessible
+#[tokio::test]
+async fn test_configuration_round_trip_full_streamlined_full() -> Result<()> {
+    let helper = McpTestHelper::new().await?;
+    helper.initialize_project().await?;
+
+    println!("=== Test Configuration Round-Trip: Full → Streamlined → Full ===");
+
+    // Phase 1: Start with full configuration (sync configured via helper)
+    println!("\nPhase 1: Full configuration — create strategy");
+    helper.set_flight_level_config(FlightLevelConfig::full())?;
+
+    let create_strategy = CreateDocumentTool {
+        project_path: helper.metis_dir().clone(),
+        document_type: "strategy".to_string(),
+        title: "Round-trip Strategy".to_string(),
+        parent_id: Some(helper.get_project_name()),
+        risk_level: Some("medium".to_string()),
+        complexity: None,
+        stakeholders: None,
+        decision_maker: None,
+        backlog_category: None,
+    };
+    let strategy_result = create_strategy
+        .call_tool()
+        .await
+        .map_err(|e| anyhow::anyhow!("Strategy creation failed: {:?}", e))?;
+
+    // Extract strategy short code for later verification
+    let strategy_text = extract_text_from_result(&strategy_result).unwrap();
+    let re = Regex::new(r"[A-Z]+-S-\d{4}").unwrap();
+    let strategy_code = re
+        .find(&strategy_text)
+        .map(|m| m.as_str().to_string())
+        .expect("Should find strategy short code in result");
+    println!("✓ Strategy created: {}", strategy_code);
+
+    // Phase 2: Switch to streamlined — strategies disabled
+    println!("\nPhase 2: Switch to streamlined — verify strategies blocked");
+    helper.set_flight_level_config(FlightLevelConfig::streamlined())?;
+
+    let create_blocked_strategy = CreateDocumentTool {
+        project_path: helper.metis_dir().clone(),
+        document_type: "strategy".to_string(),
+        title: "Should Fail".to_string(),
+        parent_id: Some(helper.get_project_name()),
+        risk_level: Some("low".to_string()),
+        complexity: None,
+        stakeholders: None,
+        decision_maker: None,
+        backlog_category: None,
+    };
+    assert!(
+        create_blocked_strategy.call_tool().await.is_err(),
+        "Strategy creation should fail in streamlined mode"
+    );
+    println!("✓ Strategy creation correctly blocked");
+
+    // Can still create initiatives in streamlined mode
+    let create_initiative = CreateDocumentTool {
+        project_path: helper.metis_dir().clone(),
+        document_type: "initiative".to_string(),
+        title: "Streamlined Initiative".to_string(),
+        parent_id: None,
+        risk_level: None,
+        complexity: Some("s".to_string()),
+        stakeholders: None,
+        decision_maker: None,
+        backlog_category: None,
+    };
+    create_initiative
+        .call_tool()
+        .await
+        .map_err(|e| anyhow::anyhow!("Initiative creation should succeed: {:?}", e))?;
+    println!("✓ Initiatives still work in streamlined mode");
+
+    // Phase 3: Switch back to full — strategies re-enabled
+    println!("\nPhase 3: Switch back to full — verify strategies work again");
+    helper.set_flight_level_config(FlightLevelConfig::full())?;
+
+    // Old strategy should still be readable
+    let read_old_strategy = ReadDocumentTool {
+        project_path: helper.metis_dir().clone(),
+        short_code: strategy_code.clone(),
+    };
+    let read_result = read_old_strategy
+        .call_tool()
+        .await
+        .map_err(|e| anyhow::anyhow!("Reading old strategy should succeed: {:?}", e))?;
+    let read_text = extract_text_from_result(&read_result).unwrap();
+    assert!(
+        read_text.contains("Round-trip Strategy"),
+        "Old strategy should still be accessible after round-trip"
+    );
+    println!("✓ Old strategy {} still accessible", strategy_code);
+
+    // Can create new strategies again
+    let create_new_strategy = CreateDocumentTool {
+        project_path: helper.metis_dir().clone(),
+        document_type: "strategy".to_string(),
+        title: "Post-roundtrip Strategy".to_string(),
+        parent_id: Some(helper.get_project_name()),
+        risk_level: Some("low".to_string()),
+        complexity: None,
+        stakeholders: None,
+        decision_maker: None,
+        backlog_category: None,
+    };
+    create_new_strategy
+        .call_tool()
+        .await
+        .map_err(|e| anyhow::anyhow!("New strategy creation should succeed: {:?}", e))?;
+    println!("✓ New strategies can be created after re-enabling full mode");
+
+    println!("\n✅ Configuration round-trip (full → streamlined → full) passed!");
+    Ok(())
+}

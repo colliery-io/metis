@@ -388,6 +388,70 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_config_set_preset_full_with_sync_succeeds() {
+        let temp_dir = tempdir().unwrap();
+        let original_dir = std::env::current_dir().ok();
+
+        std::env::set_current_dir(temp_dir.path()).unwrap();
+
+        // Initialize a streamlined workspace
+        let init_cmd = InitCommand {
+            name: Some("Test Project".to_string()),
+            preset: None,
+            strategies: None,
+            initiatives: None,
+            upstream: None,
+            workspace_prefix: None,
+            team: None,
+            prefix: None,
+        };
+        init_cmd.execute().await.unwrap();
+
+        // Manually add sync config to config.toml (simulates prior upstream setup)
+        let config_path = temp_dir.path().join(".metis/config.toml");
+        let mut config_file = ConfigFile::load(&config_path).unwrap();
+        config_file
+            .set_workspace("test-ws".to_string(), None)
+            .unwrap();
+        config_file
+            .set_sync("git@github.com:org/repo.git".to_string())
+            .unwrap();
+        config_file.save(&config_path).unwrap();
+
+        // Now config set --preset full should succeed
+        let config_cmd = ConfigCommand {
+            action: ConfigAction::Set {
+                preset: Some("full".to_string()),
+                strategies: None,
+                initiatives: None,
+            },
+        };
+
+        let result = config_cmd.execute().await;
+        assert!(
+            result.is_ok(),
+            "config set --preset full should succeed with sync configured: {:?}",
+            result
+        );
+
+        // Verify strategies are enabled in database
+        let db_path = temp_dir.path().join(".metis/metis.db");
+        let db = Database::new(db_path.to_str().unwrap()).unwrap();
+        let mut config_repo = db
+            .configuration_repository()
+            .unwrap();
+        let flight_config = config_repo.get_flight_level_config().unwrap();
+        assert!(
+            flight_config.strategies_enabled,
+            "Strategies should be enabled after config set --preset full"
+        );
+
+        if let Some(dir) = original_dir {
+            std::env::set_current_dir(dir).unwrap();
+        }
+    }
+
+    #[tokio::test]
     async fn test_config_without_workspace() {
         let temp_dir = tempdir().unwrap();
         let original_dir = std::env::current_dir().ok();

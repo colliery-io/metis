@@ -1370,4 +1370,56 @@ initiatives_enabled = true
         assert!(!corrected);
         assert!(config.flight_levels.strategies_enabled);
     }
+
+    #[test]
+    fn test_validate_workspace_without_sync_fails() {
+        // Workspace configured but sync missing — gate should trigger
+        let mut config =
+            ConfigFile::new("TEST".to_string(), FlightLevelConfig::full()).unwrap();
+        config
+            .set_workspace("api".to_string(), None)
+            .unwrap();
+        // No set_sync call
+        assert!(!config.is_multi_workspace());
+        assert!(config.validate_strategies_require_sync().is_err());
+    }
+
+    #[test]
+    fn test_validate_sync_without_workspace_fails() {
+        // Sync configured but workspace missing — gate should trigger
+        let mut config =
+            ConfigFile::new("TEST".to_string(), FlightLevelConfig::full()).unwrap();
+        config
+            .set_sync("git@github.com:org/repo.git".to_string())
+            .unwrap();
+        // No set_workspace call
+        assert!(!config.is_multi_workspace());
+        assert!(config.validate_strategies_require_sync().is_err());
+    }
+
+    #[test]
+    fn test_enforce_workspace_without_sync_downgrades() {
+        let mut config =
+            ConfigFile::new("TEST".to_string(), FlightLevelConfig::full()).unwrap();
+        config
+            .set_workspace("api".to_string(), None)
+            .unwrap();
+        let corrected = config.enforce_strategies_require_sync();
+        assert!(corrected);
+        assert!(!config.flight_levels.strategies_enabled);
+        assert!(config.flight_levels.initiatives_enabled);
+    }
+
+    #[test]
+    fn test_enforce_sync_without_workspace_downgrades() {
+        let mut config =
+            ConfigFile::new("TEST".to_string(), FlightLevelConfig::full()).unwrap();
+        config
+            .set_sync("git@github.com:org/repo.git".to_string())
+            .unwrap();
+        let corrected = config.enforce_strategies_require_sync();
+        assert!(corrected);
+        assert!(!config.flight_levels.strategies_enabled);
+        assert!(config.flight_levels.initiatives_enabled);
+    }
 }

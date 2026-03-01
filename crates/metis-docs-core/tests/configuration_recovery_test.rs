@@ -425,3 +425,72 @@ async fn test_recovery_from_corrupted_database_file() {
 
     println!("\n✅ Recovery from corrupted database successful!");
 }
+
+#[tokio::test]
+async fn test_auto_downgrade_persists_to_disk_and_database() {
+    println!("\n=== Test: Auto-downgrade Persists to Disk and Database ===");
+
+    let (_temp_dir, _project_path, metis_dir) = setup_test_workspace().await;
+    let db_path = format!("{}/metis.db", metis_dir);
+    let config_file_path = format!("{}/config.toml", metis_dir);
+
+    // Step 1: Write full config WITHOUT sync to config.toml (simulates manual edit)
+    println!("Step 1: Write strategies_enabled=true without sync config");
+    let config = ConfigFile::new("TEST".to_string(), FlightLevelConfig::full()).unwrap();
+    config.save(&config_file_path).unwrap();
+
+    // Verify file has strategies enabled
+    let loaded = ConfigFile::load(&config_file_path).unwrap();
+    assert!(
+        loaded.flight_levels().strategies_enabled,
+        "File should have strategies_enabled=true before recovery"
+    );
+    assert!(
+        !loaded.is_multi_workspace(),
+        "File should NOT have sync config"
+    );
+    println!("✓ config.toml written with invalid state (strategies without sync)");
+
+    // Step 2: Run sync — this triggers sync_config_to_database which auto-downgrades
+    println!("\nStep 2: Run sync to trigger auto-downgrade");
+    let db = Database::new(&db_path).unwrap();
+    let app = Application::new(db);
+    app.sync_directory(&metis_dir).await.unwrap();
+    println!("✓ Sync completed");
+
+    // Step 3: Verify config.toml on disk was corrected
+    println!("\nStep 3: Verify config.toml was auto-downgraded on disk");
+    let corrected = ConfigFile::load(&config_file_path).unwrap();
+    assert!(
+        !corrected.flight_levels().strategies_enabled,
+        "config.toml should have strategies_enabled=false after auto-downgrade"
+    );
+    assert!(
+        corrected.flight_levels().initiatives_enabled,
+        "config.toml should preserve initiatives_enabled=true"
+    );
+    assert_eq!(
+        corrected.flight_levels().preset_name(),
+        "streamlined",
+        "config.toml should read as streamlined after downgrade"
+    );
+    println!("✓ config.toml on disk shows streamlined configuration");
+
+    // Step 4: Verify database also has the corrected config
+    println!("\nStep 4: Verify database has downgraded config");
+    let db = Database::new(&db_path).unwrap();
+    let mut config_repo = db.configuration_repository().unwrap();
+    let db_flight_levels = config_repo.get_flight_level_config().unwrap();
+    assert!(
+        !db_flight_levels.strategies_enabled,
+        "Database should have strategies_enabled=false"
+    );
+    assert_eq!(
+        db_flight_levels.preset_name(),
+        "streamlined",
+        "Database should show streamlined preset"
+    );
+    println!("✓ Database reflects downgraded configuration");
+
+    println!("\n✅ Auto-downgrade persists to both disk and database!");
+}

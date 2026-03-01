@@ -332,3 +332,27 @@ async fn test_custom_prefix_handling() {
 
     println!("\n✅ Custom prefix handling test passed!");
 }
+
+#[tokio::test]
+async fn test_init_full_without_upstream_fails() {
+    println!("\n=== Testing Init Full Without Upstream Fails ===");
+
+    let temp_dir = tempfile::tempdir().unwrap();
+    let project_path = temp_dir.path().to_path_buf();
+
+    // Attempt to initialize with --preset full but no --upstream
+    let result =
+        cli_helpers::init_workspace(&project_path, Some("Gate Test"), Some("GATE"), Some("full"))
+            .await;
+
+    assert!(result.is_err(), "Init with --preset full and no --upstream should fail");
+    let err_msg = result.unwrap_err().to_string();
+    assert!(
+        err_msg.contains("Strategies require multi-workspace sync"),
+        "Error should mention sync requirement, got: {}",
+        err_msg
+    );
+
+    println!("✓ Init with --preset full correctly rejected without --upstream");
+    println!("\n✅ Init gate test passed!");
+}
