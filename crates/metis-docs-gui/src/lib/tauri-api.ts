@@ -138,7 +138,6 @@ export enum Phase {
   Draft = 'draft',
   Review = 'review',
   Published = 'published',
-  Shaping = 'shaping',
   Design = 'design',
   Ready = 'ready',
   Active = 'active',
@@ -177,7 +176,6 @@ export function getDocumentTypeIcon(type: string): string {
 export function getPhaseColor(phase: string): string {
   switch (phase) {
     case 'draft':
-    case 'shaping':
     case 'discovery':
     case 'todo':
     case 'discussion':

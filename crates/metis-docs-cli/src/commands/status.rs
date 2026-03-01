@@ -150,7 +150,7 @@ impl StatusCommand {
             "todo" => 1,                             // Ready to start
             "discussion" => 2,                       // Needs decision
             "active" => 3,                           // Currently being worked on
-            "discovery" | "shaping" | "design" => 4, // Needs planning/refinement
+            "discovery" | "design" => 4,              // Needs planning/refinement
             "ready" | "decompose" => 5,              // Staged for work
             "review" => 6,                           // Waiting for review
             "decided" | "published" | "completed" => 7, // Done but recent

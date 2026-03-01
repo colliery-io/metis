@@ -38,6 +38,39 @@ const visionPhases: PhaseConfig[] = [
   },
 ];
 
+const strategyPhases: PhaseConfig[] = [
+  {
+    key: 'draft',
+    title: 'Draft',
+    description: 'Strategy being shaped',
+    emptyMessage: 'No strategies in draft',
+  },
+  {
+    key: 'review',
+    title: 'Review',
+    description: 'Under stakeholder review',
+    emptyMessage: 'No strategies under review',
+  },
+  {
+    key: 'published',
+    title: 'Published',
+    description: 'Approved direction for initiative teams',
+    emptyMessage: 'No published strategies',
+  },
+  {
+    key: 'active',
+    title: 'Active',
+    description: 'Initiatives executing against this strategy',
+    emptyMessage: 'No active strategies',
+  },
+  {
+    key: 'completed',
+    title: 'Completed',
+    description: 'Strategy outcomes achieved',
+    emptyMessage: 'No completed strategies',
+  },
+];
+
 const initiativePhases: PhaseConfig[] = [
   {
     key: 'discovery',
@@ -166,6 +199,13 @@ export const boardConfigs: BoardConfig[] = [
     description: 'Strategic direction and outcomes',
     phases: visionPhases,
     documentFilter: (doc) => doc.document_type === 'vision',
+  },
+  {
+    id: 'strategy',
+    title: 'Strategy Board',
+    description: 'Strategic direction and coordination',
+    phases: strategyPhases,
+    documentFilter: (doc) => doc.document_type === 'strategy',
   },
   {
     id: 'initiative',

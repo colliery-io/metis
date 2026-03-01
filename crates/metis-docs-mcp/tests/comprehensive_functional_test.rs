@@ -137,12 +137,12 @@ async fn test_full_configuration_workflow() {
     let transition_strategy = TransitionPhaseTool {
         project_path: metis_path.clone(),
         short_code: strategy_short_code.clone(),
-        phase: Some("design".to_string()),
+        phase: Some("review".to_string()),
         force: None,
     };
     let result = transition_strategy.call_tool().await;
     assert!(result.is_ok(), "Strategy phase transition should succeed");
-    println!("✅ Strategy moved to design phase");
+    println!("✅ Strategy moved to review phase");
 
     // Step 5: Create initiative linked to strategy
     let create_initiative = CreateDocumentTool {

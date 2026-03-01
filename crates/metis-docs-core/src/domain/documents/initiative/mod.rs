@@ -598,7 +598,7 @@ archived: false
 estimated_complexity: "M"
 tags:
   - "#strategy"
-  - "#phase/shaping"
+  - "#phase/draft"
 exit_criteria_met: false
 ---
 

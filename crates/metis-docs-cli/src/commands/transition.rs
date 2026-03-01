@@ -70,7 +70,6 @@ impl TransitionCommand {
             "active" => Ok(Phase::Active),
             "blocked" => Ok(Phase::Blocked),
             "completed" => Ok(Phase::Completed),
-            "shaping" => Ok(Phase::Shaping),
             "design" => Ok(Phase::Design),
             "ready" => Ok(Phase::Ready),
             "decompose" => Ok(Phase::Decompose),
@@ -259,12 +258,12 @@ mod tests {
             .path();
         let strategy_path = strategy_dir.join("strategy.md");
 
-        // Verify initial state (Shaping)
+        // Verify initial state (Draft)
         let strategy = Strategy::from_file(&strategy_path).await.unwrap();
-        assert_eq!(strategy.phase().unwrap(), Phase::Shaping);
+        assert_eq!(strategy.phase().unwrap(), Phase::Draft);
         let short_code = strategy.metadata().short_code.clone();
 
-        // 1. Auto-transition: Shaping → Design
+        // 1. Auto-transition: Draft → Review
         let cmd = TransitionCommand {
             short_code: short_code.clone(),
             phase: None, // Auto transition
@@ -272,9 +271,9 @@ mod tests {
         cmd.execute().await.unwrap();
 
         let strategy = Strategy::from_file(&strategy_path).await.unwrap();
-        assert_eq!(strategy.phase().unwrap(), Phase::Design);
+        assert_eq!(strategy.phase().unwrap(), Phase::Review);
 
-        // 2. Auto-transition: Design → Ready
+        // 2. Auto-transition: Review → Published
         let cmd = TransitionCommand {
             short_code: short_code.clone(),
             phase: None, // Auto transition
@@ -282,9 +281,9 @@ mod tests {
         cmd.execute().await.unwrap();
 
         let strategy = Strategy::from_file(&strategy_path).await.unwrap();
-        assert_eq!(strategy.phase().unwrap(), Phase::Ready);
+        assert_eq!(strategy.phase().unwrap(), Phase::Published);
 
-        // 3. Auto-transition: Ready → Active
+        // 3. Auto-transition: Published → Active
         let cmd = TransitionCommand {
             short_code: short_code.clone(),
             phase: None, // Auto transition

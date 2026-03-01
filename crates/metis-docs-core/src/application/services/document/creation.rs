@@ -144,7 +144,7 @@ impl DocumentCreationService {
         // Create strategy with defaults
         let mut tags = vec![
             Tag::Label("strategy".to_string()),
-            Tag::Phase(config.phase.unwrap_or(Phase::Shaping)),
+            Tag::Phase(config.phase.unwrap_or(Phase::Draft)),
         ];
         tags.extend(config.tags);
 
@@ -156,6 +156,8 @@ impl DocumentCreationService {
             false,                                          // not archived
             config.risk_level.unwrap_or(RiskLevel::Medium), // use config risk_level or default to Medium
             Vec::new(),                                     // stakeholders - empty by default
+            String::new(),                                  // time_horizon - empty by default
+            String::new(),                                  // owner - empty by default
             short_code.clone(),
             &template_content,
         )

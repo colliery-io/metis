@@ -444,7 +444,7 @@ updated_at: 2025-01-01T00:00:00Z
 archived: false
 tags:
   - "#strategy"
-  - "#phase/shaping"
+  - "#phase/draft"
 exit_criteria_met: false
 ---
 

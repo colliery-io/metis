@@ -32,9 +32,9 @@ pub mod phases {
     pub const VISION_REVIEW: &str = "review";
     pub const VISION_PUBLISHED: &str = "published";
 
-    pub const STRATEGY_SHAPING: &str = "shaping";
-    pub const STRATEGY_DESIGN: &str = "design";
-    pub const STRATEGY_READY: &str = "ready";
+    pub const STRATEGY_DRAFT: &str = "draft";
+    pub const STRATEGY_REVIEW: &str = "review";
+    pub const STRATEGY_PUBLISHED: &str = "published";
     pub const STRATEGY_ACTIVE: &str = "active";
     pub const STRATEGY_COMPLETED: &str = "completed";
 

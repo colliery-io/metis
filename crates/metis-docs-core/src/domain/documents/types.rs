@@ -197,9 +197,9 @@ impl DocumentType {
                 _ => vec![],
             },
             DocumentType::Strategy => match from_phase {
-                Phase::Shaping => vec![Phase::Design],
-                Phase::Design => vec![Phase::Ready],
-                Phase::Ready => vec![Phase::Active],
+                Phase::Draft => vec![Phase::Review],
+                Phase::Review => vec![Phase::Published],
+                Phase::Published => vec![Phase::Active],
                 Phase::Active => vec![Phase::Completed],
                 _ => vec![],
             },
@@ -243,9 +243,9 @@ impl DocumentType {
         match self {
             DocumentType::Vision => vec![Phase::Draft, Phase::Review, Phase::Published],
             DocumentType::Strategy => vec![
-                Phase::Shaping,
-                Phase::Design,
-                Phase::Ready,
+                Phase::Draft,
+                Phase::Review,
+                Phase::Published,
                 Phase::Active,
                 Phase::Completed,
             ],
@@ -293,8 +293,7 @@ pub enum Phase {
     Blocked,
     Completed,
 
-    // Strategy/Initiative phases
-    Shaping,
+    // Initiative phases
     Design,
     Ready,
     Decompose,
@@ -315,7 +314,6 @@ impl fmt::Display for Phase {
             Phase::Active => write!(f, "active"),
             Phase::Blocked => write!(f, "blocked"),
             Phase::Completed => write!(f, "completed"),
-            Phase::Shaping => write!(f, "shaping"),
             Phase::Design => write!(f, "design"),
             Phase::Ready => write!(f, "ready"),
             Phase::Decompose => write!(f, "decompose"),
@@ -381,7 +379,6 @@ impl std::str::FromStr for Tag {
                 "active" => Ok(Tag::Phase(Phase::Active)),
                 "blocked" => Ok(Tag::Phase(Phase::Blocked)),
                 "completed" => Ok(Tag::Phase(Phase::Completed)),
-                "shaping" => Ok(Tag::Phase(Phase::Shaping)),
                 "design" => Ok(Tag::Phase(Phase::Design)),
                 "ready" => Ok(Tag::Phase(Phase::Ready)),
                 "decompose" => Ok(Tag::Phase(Phase::Decompose)),
@@ -536,16 +533,16 @@ mod tests {
     fn test_document_type_can_transition() {
         // Valid forward transitions
         assert!(DocumentType::Vision.can_transition(Phase::Draft, Phase::Review));
-        assert!(DocumentType::Strategy.can_transition(Phase::Shaping, Phase::Design));
+        assert!(DocumentType::Strategy.can_transition(Phase::Draft, Phase::Review));
         assert!(DocumentType::Task.can_transition(Phase::Todo, Phase::Active));
 
         // Invalid - skipping phases
         assert!(!DocumentType::Vision.can_transition(Phase::Draft, Phase::Published));
-        assert!(!DocumentType::Strategy.can_transition(Phase::Shaping, Phase::Active));
+        assert!(!DocumentType::Strategy.can_transition(Phase::Draft, Phase::Active));
 
         // Invalid - backward transitions (except blocked)
         assert!(!DocumentType::Vision.can_transition(Phase::Review, Phase::Draft));
-        assert!(!DocumentType::Strategy.can_transition(Phase::Design, Phase::Shaping));
+        assert!(!DocumentType::Strategy.can_transition(Phase::Review, Phase::Draft));
 
         // Valid - returning from blocked
         assert!(DocumentType::Task.can_transition(Phase::Blocked, Phase::Active));

@@ -18,7 +18,6 @@ fn parse_phase(phase_str: &str) -> Result<Phase, String> {
         "active" => Ok(Phase::Active),
         "blocked" => Ok(Phase::Blocked),
         "completed" => Ok(Phase::Completed),
-        "shaping" => Ok(Phase::Shaping),
         "design" => Ok(Phase::Design),
         "ready" => Ok(Phase::Ready),
         "decompose" => Ok(Phase::Decompose),

@@ -16,12 +16,12 @@ draft → review → published
 
 ### Strategy
 ```
-shaping → design → ready → active → completed
+draft → review → published → active → completed
 ```
-- **shaping**: Exploring approaches, gathering constraints
-- **design**: Defining the strategic approach
-- **ready**: Strategy validated, waiting for capacity
-- **active**: Initiatives being executed under this strategy
+- **draft**: Strategy being shaped by the strategy team
+- **review**: Shared with stakeholders for feedback and debate
+- **published**: Approved direction — initiative boards should act on it
+- **active**: Initiatives are executing against this strategy
 - **completed**: Terminal state
 
 ### Initiative

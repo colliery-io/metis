@@ -162,7 +162,7 @@ mod tests {
         // Create a test document file
         let test_strategy = temp_dir.path().join(".metis/strategies/test-strategy.md");
         fs::create_dir_all(test_strategy.parent().unwrap()).unwrap();
-        fs::write(&test_strategy, "---\nid: test-strategy\nlevel: strategy\ntitle: \"Test Strategy\"\ncreated_at: 2025-01-01T00:00:00Z\nupdated_at: 2025-01-01T00:00:00Z\nparent: test-vision\nblocked_by: []\narchived: false\ntags:\n  - \"#strategy\"\n  - \"#phase/shaping\"\nexit_criteria_met: false\nsuccess_metrics: []\nrisk_level: medium\nstakeholders: []\n---\n\n# Test Strategy\n").unwrap();
+        fs::write(&test_strategy, "---\nid: test-strategy\nlevel: strategy\ntitle: \"Test Strategy\"\ncreated_at: 2025-01-01T00:00:00Z\nupdated_at: 2025-01-01T00:00:00Z\nparent: test-vision\nblocked_by: []\narchived: false\ntags:\n  - \"#strategy\"\n  - \"#phase/draft\"\nexit_criteria_met: false\nsuccess_metrics: []\nrisk_level: medium\nstakeholders: []\n---\n\n# Test Strategy\n").unwrap();
 
         // Run sync command - expect it to run but may have errors with vision.md parsing
         let cmd = SyncCommand {};

@@ -541,7 +541,7 @@ decision_maker: "Team"
 decision_date: 2025-01-01T12:00:00Z
 tags:
   - "#strategy"
-  - "#phase/shaping"
+  - "#phase/draft"
 exit_criteria_met: false
 ---
 

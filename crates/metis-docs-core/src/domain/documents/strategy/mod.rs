@@ -51,6 +51,8 @@ pub struct Strategy {
     core: super::traits::DocumentCore,
     risk_level: RiskLevel,
     stakeholders: Vec<String>,
+    time_horizon: String,
+    owner: String,
 }
 
 impl Strategy {
@@ -64,6 +66,8 @@ impl Strategy {
         archived: bool,
         risk_level: RiskLevel,
         stakeholders: Vec<String>,
+        time_horizon: String,
+        owner: String,
         short_code: String,
     ) -> Result<Self, DocumentValidationError> {
         // Use embedded default template
@@ -76,6 +80,8 @@ impl Strategy {
             archived,
             risk_level,
             stakeholders,
+            time_horizon,
+            owner,
             short_code,
             template_content,
         )
@@ -91,6 +97,8 @@ impl Strategy {
         archived: bool,
         risk_level: RiskLevel,
         stakeholders: Vec<String>,
+        time_horizon: String,
+        owner: String,
         short_code: String,
         template_content: &str,
     ) -> Result<Self, DocumentValidationError> {
@@ -130,6 +138,8 @@ impl Strategy {
             },
             risk_level,
             stakeholders,
+            time_horizon,
+            owner,
         })
     }
 
@@ -145,6 +155,8 @@ impl Strategy {
         archived: bool,
         risk_level: RiskLevel,
         stakeholders: Vec<String>,
+        time_horizon: String,
+        owner: String,
     ) -> Self {
         // For strategies, the strategy_id is self and initiative_id is None
         let strategy_id = Some(DocumentId::from_title(&title));
@@ -163,6 +175,8 @@ impl Strategy {
             },
             risk_level,
             stakeholders,
+            time_horizon,
+            owner,
         }
     }
 
@@ -174,13 +188,21 @@ impl Strategy {
         &self.stakeholders
     }
 
+    pub fn time_horizon(&self) -> &str {
+        &self.time_horizon
+    }
+
+    pub fn owner(&self) -> &str {
+        &self.owner
+    }
+
     /// Get the next phase in the Strategy sequence
     fn next_phase_in_sequence(current: Phase) -> Option<Phase> {
         use Phase::*;
         match current {
-            Shaping => Some(Design),
-            Design => Some(Ready),
-            Ready => Some(Active),
+            Draft => Some(Review),
+            Review => Some(Published),
+            Published => Some(Active),
             Active => Some(Completed),
             Completed => None, // Final phase
             _ => None,         // Invalid phase for Strategy
@@ -263,6 +285,11 @@ impl Strategy {
 
         let stakeholders = FrontmatterParser::extract_string_array(&fm_map, "stakeholders")?;
 
+        let time_horizon = FrontmatterParser::extract_string(&fm_map, "time_horizon")
+            .unwrap_or_default();
+        let owner = FrontmatterParser::extract_string(&fm_map, "owner")
+            .unwrap_or_default();
+
         // Create metadata and content
         let short_code = FrontmatterParser::extract_string(&fm_map, "short_code")?;
         let metadata = DocumentMetadata::from_frontmatter(
@@ -283,6 +310,8 @@ impl Strategy {
             archived,
             risk_level,
             stakeholders,
+            time_horizon,
+            owner,
         ))
     }
 
@@ -330,6 +359,8 @@ impl Strategy {
         context.insert("blocked_by", &blocked_by_list);
         context.insert("risk_level", &self.risk_level.to_string());
         context.insert("stakeholders", &self.stakeholders);
+        context.insert("time_horizon", &self.time_horizon);
+        context.insert("owner", &self.owner);
 
         // Convert tags to strings
         let tag_strings: Vec<String> = self.tags().iter().map(|tag| tag.to_str()).collect();
@@ -516,11 +547,13 @@ mod tests {
             Vec::new(),
             vec![
                 Tag::Label("strategy".to_string()),
-                Tag::Phase(Phase::Shaping),
+                Tag::Phase(Phase::Draft),
             ],
             false,
             RiskLevel::Medium,
             vec!["stakeholder1".to_string(), "stakeholder2".to_string()],
+            "H2 2026".to_string(),
+            "Jane Doe".to_string(),
             "TEST-S-0201".to_string(),
         )
         .expect("Failed to create strategy");
@@ -530,6 +563,8 @@ mod tests {
         assert!(!strategy.archived());
         assert_eq!(strategy.risk_level(), RiskLevel::Medium);
         assert_eq!(strategy.stakeholders().len(), 2);
+        assert_eq!(strategy.time_horizon(), "H2 2026");
+        assert_eq!(strategy.owner(), "Jane Doe");
 
         // Round-trip test: write to file and read back
         let temp_dir = tempdir().unwrap();
@@ -540,10 +575,12 @@ mod tests {
 
         assert_eq!(loaded_strategy.title(), strategy.title());
         assert_eq!(loaded_strategy.phase().unwrap(), strategy.phase().unwrap());
-        assert_eq!(loaded_strategy.content().body, strategy.content().body);
+        assert_eq!(loaded_strategy.content().body.trim(), strategy.content().body.trim());
         assert_eq!(loaded_strategy.archived(), strategy.archived());
         assert_eq!(loaded_strategy.risk_level(), strategy.risk_level());
         assert_eq!(loaded_strategy.stakeholders(), strategy.stakeholders());
+        assert_eq!(loaded_strategy.time_horizon(), strategy.time_horizon());
+        assert_eq!(loaded_strategy.owner(), strategy.owner());
     }
 
     #[tokio::test]
@@ -561,18 +598,20 @@ short_code: TEST-S-9001
 
 tags:
   - "#strategy"
-  - "#phase/shaping"
+  - "#phase/draft"
 
 exit_criteria_met: false
 risk_level: medium
 stakeholders: ["stakeholder1", "stakeholder2"]
+time_horizon: "Q2 2026"
+owner: "Alice Smith"
 ---
 
 # Test Strategy
 
-## Vision Alignment
+## Strategic Thesis
 
-This strategy aligns with our vision.
+This strategy addresses our reliability gap.
 
 ## Current State
 
@@ -591,7 +630,9 @@ We are here.
         assert!(!strategy.archived());
         assert_eq!(strategy.risk_level(), RiskLevel::Medium);
         assert_eq!(strategy.stakeholders().len(), 2);
-        assert_eq!(strategy.phase().unwrap(), Phase::Shaping);
+        assert_eq!(strategy.phase().unwrap(), Phase::Draft);
+        assert_eq!(strategy.time_horizon(), "Q2 2026");
+        assert_eq!(strategy.owner(), "Alice Smith");
 
         // Round-trip test: write to file and read back
         let temp_dir = tempdir().unwrap();
@@ -605,6 +646,41 @@ We are here.
         assert_eq!(loaded_strategy.content().body, strategy.content().body);
         assert_eq!(loaded_strategy.risk_level(), strategy.risk_level());
         assert_eq!(loaded_strategy.stakeholders(), strategy.stakeholders());
+        assert_eq!(loaded_strategy.time_horizon(), strategy.time_horizon());
+        assert_eq!(loaded_strategy.owner(), strategy.owner());
+    }
+
+    #[tokio::test]
+    async fn test_strategy_from_content_backwards_compat() {
+        // Test loading documents without the new fields (backwards compatibility)
+        let content = r##"---
+id: old-strategy
+level: strategy
+title: "Old Strategy"
+created_at: 2025-01-01T00:00:00Z
+updated_at: 2025-01-01T00:00:00Z
+parent: parent-vision
+blocked_by: []
+archived: false
+short_code: TEST-S-9002
+
+tags:
+  - "#strategy"
+  - "#phase/draft"
+
+exit_criteria_met: false
+risk_level: low
+stakeholders: ["stakeholder1"]
+---
+
+# Old Strategy
+
+Some content.
+"##;
+
+        let strategy = Strategy::from_content(content).unwrap();
+        assert_eq!(strategy.time_horizon(), "");
+        assert_eq!(strategy.owner(), "");
     }
 
     #[tokio::test]
@@ -613,28 +689,42 @@ We are here.
             "Test Strategy".to_string(),
             None,
             Vec::new(),
-            vec![Tag::Phase(Phase::Shaping)],
+            vec![Tag::Phase(Phase::Draft)],
             false,
             RiskLevel::Medium,
             Vec::new(),
+            String::new(),
+            String::new(),
             "TEST-S-0201".to_string(),
         )
         .expect("Failed to create strategy");
 
-        assert!(strategy.can_transition_to(Phase::Design));
+        assert!(strategy.can_transition_to(Phase::Review));
         assert!(!strategy.can_transition_to(Phase::Completed));
 
-        // Auto-transition from Shaping should go to Design
+        // Auto-transition from Draft should go to Review
         let new_phase = strategy.transition_phase(None).unwrap();
-        assert_eq!(new_phase, Phase::Design);
-        assert_eq!(strategy.phase().unwrap(), Phase::Design);
+        assert_eq!(new_phase, Phase::Review);
+        assert_eq!(strategy.phase().unwrap(), Phase::Review);
+
+        // Review -> Published
+        let new_phase = strategy.transition_phase(None).unwrap();
+        assert_eq!(new_phase, Phase::Published);
+
+        // Published -> Active
+        let new_phase = strategy.transition_phase(None).unwrap();
+        assert_eq!(new_phase, Phase::Active);
+
+        // Active -> Completed
+        let new_phase = strategy.transition_phase(None).unwrap();
+        assert_eq!(new_phase, Phase::Completed);
 
         // Round-trip test after transition
         let temp_dir = tempdir().unwrap();
         let file_path = temp_dir.path().join("test-strategy.md");
         strategy.to_file(&file_path).await.unwrap();
         let loaded_strategy = Strategy::from_file(&file_path).await.unwrap();
-        assert_eq!(loaded_strategy.phase().unwrap(), Phase::Design);
+        assert_eq!(loaded_strategy.phase().unwrap(), Phase::Completed);
     }
 
     #[tokio::test]
@@ -645,11 +735,13 @@ We are here.
             Vec::new(),
             vec![
                 Tag::Label("strategy".to_string()),
-                Tag::Phase(Phase::Shaping),
+                Tag::Phase(Phase::Draft),
             ],
             false,
             RiskLevel::High,
             vec!["key-stakeholder".to_string()],
+            "FY2027".to_string(),
+            "Bob Jones".to_string(),
             "TEST-S-0201".to_string(),
         )
         .expect("Failed to create strategy");
@@ -667,6 +759,8 @@ We are here.
         assert_eq!(loaded_strategy.title(), strategy.title());
         assert_eq!(loaded_strategy.risk_level(), strategy.risk_level());
         assert_eq!(loaded_strategy.stakeholders(), strategy.stakeholders());
+        assert_eq!(loaded_strategy.time_horizon(), strategy.time_horizon());
+        assert_eq!(loaded_strategy.owner(), strategy.owner());
         assert!(loaded_strategy.validate().is_ok());
     }
 }

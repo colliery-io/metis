@@ -119,7 +119,7 @@ Each document type operates at a different timescale:
 Documents advance through phases with exit criteria:
 
 - **Visions**: draft -> review -> published
-- **Strategies**: shaping -> design -> ready -> active -> completed
+- **Strategies**: draft -> review -> published -> active -> completed
 - **Initiatives**: discovery -> design -> ready -> decompose -> active -> completed
 - **Tasks**: todo -> active -> completed (or backlog -> todo -> ...), with blocked as a side state
 

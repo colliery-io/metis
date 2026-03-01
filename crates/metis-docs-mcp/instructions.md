@@ -7,7 +7,7 @@ Metis organizes work hierarchically using Flight Levels methodology: Vision (str
 | Type | Purpose | Phases | Parent Required |
 |------|---------|--------|-----------------|
 | **Vision** | Strategic direction (6mo-2yr) | draft → review → published | No |
-| **Strategy** | Coordinated approaches (Full preset only) | shaping → design → ready → active → completed | Vision (published) |
+| **Strategy** | Coordinated approaches (Full preset only) | draft → review → published → active → completed | Vision (published) |
 | **Initiative** | Concrete projects (1-6mo) | discovery → design → ready → decompose → active → completed | Strategy or Vision (published) |
 | **Task** | Individual work (1-14 days) | todo → active → completed | Initiative (decompose/active) |
 | **Backlog** | Standalone bugs/features/debt | backlog → todo → active → completed | No (use `backlog_category`) |
@@ -26,10 +26,10 @@ Metis organizes work hierarchically using Flight Levels methodology: Vision (str
 - review → published
 - published → (terminal)
 
-**Strategy** (Full preset only): `shaping → design → ready → active → completed`
-- shaping → design
-- design → ready
-- ready → active
+**Strategy** (Full preset only): `draft → review → published → active → completed`
+- draft → review
+- review → published
+- published → active
 - active → completed
 - completed → (terminal)
 

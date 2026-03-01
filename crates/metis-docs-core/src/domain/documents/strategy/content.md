@@ -1,72 +1,56 @@
 # {{ title }} Strategy
 
-*This template includes sections for various types of strategic documents. Delete sections that don't apply to your specific use case.*
+## Strategic Thesis **[REQUIRED]**
 
-## Problem Statement **[REQUIRED]**
+{What bet are we making and why? What insight, data, or market signal drives this direction? 1-2 paragraphs.}
 
-{Describe the problem and why it matters - 1-2 paragraphs}
+## Current State **[REQUIRED]**
 
-## Requirements Summary **[CONDITIONAL: Requirements-Heavy Strategy]**
+{Where are we today? The baseline against which outcomes will be measured.}
 
-{Brief overview of key requirements this strategy addresses. Delete if covered in Problem Statement.}
+## Target Outcomes **[REQUIRED]**
 
-### User Requirements **[CONDITIONAL: User-Facing Strategy]**
-- {User characteristic or need 1}
-- {User characteristic or need 2}
+{What does success look like? Express as measurable key results.}
 
-### System Requirements **[CONDITIONAL: Technical Strategy]**
-- {System requirement 1}
-- {System requirement 2}
+- {Key result 1}
+- {Key result 2}
+- {Key result 3}
 
-## Success Metrics **[REQUIRED]**
-
-- {Measurable outcome 1}
-- {Measurable outcome 2}
-
-## Solution Approach **[REQUIRED]**
-
-{High-level approach without implementation details}
-
-## Scope **[REQUIRED]**
+## Scope & Constraints **[REQUIRED]**
 
 **In Scope:**
-- {What we will address}
+- {What this strategy addresses}
 
 **Out of Scope:**
-- {What we won't address}
+- {What this strategy does not address}
 
-## Team & Resources **[CONDITIONAL: Multi-Team Strategy]**
+**Guardrails:**
+- {Principles and constraints that initiative teams must operate within}
 
-{Delete if single person or team is obvious}
+## Risks & Assumptions **[REQUIRED]**
 
-### Team Structure
-- {Role 1}: {Responsibility}
-- {Role 2}: {Responsibility}
+{What could invalidate the thesis? What are we assuming to be true?}
 
-### Resource Requirements
-- {Resource type 1}: {Amount/Description}
-- {Resource type 2}: {Amount/Description}
+- {Risk or assumption 1}
+- {Risk or assumption 2}
 
-## Timeline & Milestones **[CONDITIONAL: Schedule-Driven Strategy]**
+## Initiative Alignment **[REQUIRED]**
 
-{Delete if using initiatives for detailed scheduling}
+{Which initiatives support this strategy? Populated as initiatives are created. Include cross-references to initiative short codes.}
 
-- **Phase 1**: {Timeline and key milestone}
-- **Phase 2**: {Timeline and key milestone}
-- **Phase 3**: {Timeline and key milestone}
+*No initiatives linked yet.*
 
-## Risks & Unknowns **[REQUIRED]**
+## Review Cadence **[REQUIRED]**
 
-- {Major risk or unknown 1}
-- {Major risk or unknown 2}
+{How often will this strategy be reviewed? What signals would trigger an early review?}
 
-## Implementation Dependencies **[REQUIRED]**
-
-{Describe the critical path and initiative dependencies}
+- **Review frequency**: {e.g., quarterly, monthly}
+- **Leading indicators**: {What early signals tell us if this is working?}
+- **Lagging indicators**: {What outcome metrics confirm success?}
 
 ## Change Log **[REQUIRED]**
 
-###  Initial Strategy
+### Initial Strategy
 - **Change**: Created initial strategy document
 - **Rationale**: {Why this strategy was needed}
 - **Impact**: Baseline established for strategic direction

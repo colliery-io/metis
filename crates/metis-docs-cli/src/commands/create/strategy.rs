@@ -32,9 +32,9 @@ pub async fn create_new_strategy(title: &str, vision_slug: Option<&str>) -> Resu
         parent_id: parent_id.clone(),
         tags: vec![
             Tag::Label("strategy".to_string()),
-            Tag::Phase(Phase::Shaping),
+            Tag::Phase(Phase::Draft),
         ],
-        phase: Some(Phase::Shaping),
+        phase: Some(Phase::Draft),
         complexity: None,
         risk_level: Some(RiskLevel::Medium),
     };
@@ -165,17 +165,17 @@ mod tests {
         assert!(content.contains("level: strategy"));
         assert!(content.contains("title: \"Test Strategy\""));
         assert!(content.contains("#strategy"));
-        assert!(content.contains("#phase/shaping"));
+        assert!(content.contains("#phase/draft"));
         assert!(content.contains("risk_level: medium"));
 
         // Verify the template was rendered
         assert!(content.contains("# Test Strategy Strategy"));
-        assert!(content.contains("## Problem Statement"));
-        assert!(content.contains("## Success Metrics"));
-        assert!(content.contains("## Solution Approach"));
-        assert!(content.contains("## Scope"));
-        assert!(content.contains("## Risks & Unknowns"));
-        assert!(content.contains("## Implementation Dependencies"));
+        assert!(content.contains("## Strategic Thesis"));
+        assert!(content.contains("## Target Outcomes"));
+        assert!(content.contains("## Scope & Constraints"));
+        assert!(content.contains("## Risks & Assumptions"));
+        assert!(content.contains("## Initiative Alignment"));
+        assert!(content.contains("## Review Cadence"));
         assert!(content.contains("## Change Log"));
 
         // Test that the created file can be read back with Strategy::from_file

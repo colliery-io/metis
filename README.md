@@ -131,7 +131,7 @@ Each document type progresses through defined phases:
 | Type | Phases |
 |------|--------|
 | **Vision** | draft > review > published |
-| **Strategy** | shaping > design > ready > active > completed |
+| **Strategy** | draft > review > published > active > completed |
 | **Initiative** | discovery > design > ready > decompose > active > completed |
 | **Task** | todo > active > completed (+ blocked) |
 | **ADR** | draft > discussion > decided > superseded |

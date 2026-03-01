@@ -15,5 +15,7 @@ tags:
 exit_criteria_met: {{ exit_criteria_met }}
 risk_level: {{ risk_level }}
 stakeholders: {{ stakeholders }}
+time_horizon: "{{ time_horizon }}"
+owner: "{{ owner }}"
 strategy_id: {{ strategy_id }}
 initiative_id: {{ initiative_id }}

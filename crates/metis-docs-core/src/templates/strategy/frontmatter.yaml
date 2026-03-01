@@ -1,20 +1,22 @@
 id: {{ slug }}
 level: strategy
-status: shaping
+status: draft
 created_at: {{ created_at }}
 updated_at: {{ updated_at }}
 parent: {{ parent_id }}
-blocked_by: 
+blocked_by:
 
 # Phase progression for strategies
 tags:
   - "#strategy"
-  - "#phase/shaping"
-  # - "#phase/design"
-  # - "#phase/ready"
+  - "#phase/draft"
+  # - "#phase/review"
+  # - "#phase/published"
   # - "#phase/active"
   # - "#phase/completed"
 
 exit_criteria_met: false
 risk_level: {{ risk_level | default(value="medium") }}
 stakeholders: {{ stakeholders | default(value=[]) }}
+time_horizon: "{{ time_horizon | default(value="") }}"
+owner: "{{ owner | default(value="") }}"

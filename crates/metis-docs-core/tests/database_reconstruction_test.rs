@@ -46,7 +46,7 @@ blocked_by: []\n\
 archived: false\n\
 tags:\n\
   - \"#strategy\"\n\
-  - \"#phase/shaping\"\n\
+  - \"#phase/draft\"\n\
 exit_criteria_met: false\n\
 success_metrics: []\n\
 risk_level: medium\n\

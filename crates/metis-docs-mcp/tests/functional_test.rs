@@ -165,11 +165,11 @@ initiatives_enabled = true
     }
     assert!(result.is_ok(), "Edit document should succeed");
 
-    // 8. Test phase transition with short code (from shaping to design)
+    // 8. Test phase transition with short code (from draft to review)
     let transition_tool = TransitionPhaseTool {
         project_path: metis_path.clone(),
         short_code: strategy_short_code,
-        phase: Some("design".to_string()),
+        phase: Some("review".to_string()),
         force: None,
     };
 

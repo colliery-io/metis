@@ -21,11 +21,11 @@ draft → review → published
 
 ### Strategy (Full preset only)
 ```
-shaping → design → ready → active → completed
+draft → review → published → active → completed
 ```
-- **shaping** → design
-- **design** → ready
-- **ready** → active
+- **draft** → review
+- **review** → published
+- **published** → active
 - **active** → completed
 - **completed**: terminal
 
@@ -67,7 +67,7 @@ draft → discussion → decided → superseded
 
 When documents are created, they start in these phases:
 - **Vision**: `draft`
-- **Strategy**: `shaping`
+- **Strategy**: `draft`
 - **Initiative**: `discovery`
 - **Task**: `todo` (or `backlog` for backlog items)
 - **ADR**: `draft`
