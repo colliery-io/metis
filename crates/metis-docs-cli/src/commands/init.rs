@@ -64,15 +64,6 @@ impl InitCommand {
         );
         let flight_config = self.determine_flight_config()?;
 
-        // Gate: strategies require upstream sync configuration
-        if flight_config.strategies_enabled && self.upstream.is_none() {
-            anyhow::bail!(
-                "Strategies require multi-workspace sync.\n\
-                 Use: metis init --upstream <url> --workspace-prefix <prefix> --preset full\n\
-                 Or use --preset streamlined (default) for single-workspace mode."
-            );
-        }
-
         println!(
             "[+] Initialized Metis workspace in {}",
             current_dir.display()

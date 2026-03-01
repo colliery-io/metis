@@ -76,8 +76,10 @@ impl WorkspaceInitializationService {
                 let config_file_path = metis_dir.join("config.toml");
                 if !config_file_path.exists() {
                     let flight_levels = config_repo.get_flight_level_config()?;
-                    let config_file = ConfigFile::new(project_prefix, flight_levels)
+                    let mut config_file = ConfigFile::new(project_prefix, flight_levels)
                         .map_err(MetisError::ConfigurationError)?;
+                    // Defense-in-depth: ensure strategies aren't written without sync config
+                    config_file.enforce_strategies_require_sync();
                     config_file
                         .save(&config_file_path)
                         .map_err(MetisError::ConfigurationError)?;

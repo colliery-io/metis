@@ -55,9 +55,10 @@ pub async fn initialize_project(
     // Gate: strategies require upstream sync, which GUI init doesn't support
     if flight_config.strategies_enabled {
         return Err(
-            "Strategies require multi-workspace sync configuration. \
+            "Strategies require multi-workspace sync.\n\
              Use the CLI to initialize with upstream: \
-             metis init --upstream <url> --workspace-prefix <prefix> --preset full"
+             metis init --upstream <url> --workspace-prefix <prefix> --preset full\n\
+             Or use --preset streamlined (default) for single-workspace mode."
                 .to_string(),
         );
     }

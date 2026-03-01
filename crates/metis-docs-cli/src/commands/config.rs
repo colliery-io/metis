@@ -144,7 +144,8 @@ impl ConfigCommand {
             if !has_sync {
                 anyhow::bail!(
                     "Strategies require multi-workspace sync.\n\
-                     Configure upstream first with: metis init --upstream <url> --workspace-prefix <prefix>"
+                     Configure upstream first with: metis init --upstream <url> --workspace-prefix <prefix> --preset full\n\
+                     Or use --preset streamlined (default) for single-workspace mode."
                 );
             }
         }

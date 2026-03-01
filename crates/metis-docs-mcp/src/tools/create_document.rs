@@ -88,14 +88,19 @@ impl CreateDocumentTool {
         if !enabled_types.contains(&doc_type) {
             let available_types: Vec<String> =
                 enabled_types.iter().map(|t| t.to_string()).collect();
+            let remediation = if doc_type.to_string() == "strategy" {
+                "Strategies require multi-workspace sync. Configure upstream first with: `metis init --upstream <url> --workspace-prefix <prefix> --preset full`".to_string()
+            } else {
+                format!("To enable {}, use `metis config set --preset streamlined` or `--preset full`", doc_type)
+            };
             return Err(CallToolError::new(std::io::Error::new(
                 std::io::ErrorKind::InvalidInput,
                 format!(
-                    "{} creation is disabled in current configuration ({} mode). Available document types: {}. To enable {}, configure multi-workspace sync first with `metis init --upstream <url> --workspace-prefix <prefix> --preset full`",
+                    "{} creation is disabled in current configuration ({} mode). Available document types: {}. {}",
                     doc_type,
                     flight_config.preset_name(),
                     available_types.join(", "),
-                    doc_type
+                    remediation
                 ),
             )));
         }
