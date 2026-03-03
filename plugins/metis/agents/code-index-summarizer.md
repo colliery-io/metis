@@ -6,6 +6,16 @@ description: |
   of what the code means — not just what symbols exist. Runs as a background
   subagent to avoid consuming main context.
 
+  **IMPORTANT: Requires permission setup.** This agent runs in the background and
+  needs Edit access to write summaries. The user must add `Edit(.metis/code-index.md)`
+  to their allowed tools (via `/permissions`). If this permission is not configured,
+  tell the user:
+
+  "The semantic summarizer needs Edit access to `.metis/code-index.md` to run in
+  the background. Run `/permissions` and add `Edit(.metis/code-index.md)` to your
+  allowed tools. Otherwise I can run it in the foreground, but it will take a
+  couple of minutes."
+
   <example>
   Context: Code index was just regenerated and needs semantic summaries
   user: "Update the code index summaries"
