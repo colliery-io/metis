@@ -50,13 +50,8 @@ if [ "$TODO_COUNT" != "0" ]; then
 fi
 STATE_SUMMARY="${STATE_SUMMARY:-No actionable items}"
 
-# Check for code index
-CODE_INDEX_PATH="$CLAUDE_PROJECT_DIR/.metis/code-index.md"
-if [ -f "$CODE_INDEX_PATH" ]; then
-    CODE_INDEX_MSG="Code index available at \`.metis/code-index.md\` — read it for codebase orientation (project structure, key symbols, module summaries)."
-else
-    CODE_INDEX_MSG="No code index found. Run \`metis index\` or use the \`index_code\` MCP tool to generate \`.metis/code-index.md\` for codebase navigation."
-fi
+# Always run code index on session start — it's fast (<1s)
+metis index --incremental 2>/dev/null
 
 # Build context message for active Metis project
 read -r -d '' CONTEXT << EOF
@@ -79,7 +74,7 @@ ${ACTIVE_WORK:-No active or ready tasks found}
 \`\`\`
 
 ## Code Index
-${CODE_INDEX_MSG}
+Code index refreshed at \`.metis/code-index.md\` — read it for codebase orientation (project structure, key symbols, module summaries).
 
 ## MCP Tools (Preferred)
 Use these MCP tools for all Metis operations:
