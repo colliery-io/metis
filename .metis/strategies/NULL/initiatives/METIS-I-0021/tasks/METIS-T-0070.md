@@ -4,14 +4,14 @@ level: task
 title: "Implement markdown output formatter for code-index.md"
 short_code: "METIS-T-0070"
 created_at: 2026-02-20T14:47:09.169842+00:00
-updated_at: 2026-02-20T14:47:09.169842+00:00
+updated_at: 2026-03-03T02:29:57.196145+00:00
 parent: METIS-I-0021
 blocked_by: []
 archived: false
 
 tags:
   - "#task"
-  - "#phase/todo"
+  - "#phase/completed"
 
 
 exit_criteria_met: false
@@ -27,6 +27,10 @@ initiative_id: METIS-I-0021
 ## Objective
 
 Write the formatter that takes the parsed symbols and file tree from the walker/extractors and outputs a flat markdown file at `.metis/code-index.md` with three sections: Project Structure (tree), Module Summaries (placeholder for Layer 2), and Key Symbols (signatures grouped by file).
+
+## Acceptance Criteria
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 

@@ -86,39 +86,3 @@ jobs:
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
-
-  publish-crates:
-    name: Publish to Crates.io
-    needs: build-desktop
-    runs-on: ubuntu-22.04
-    if: ${{ !contains(github.ref_name, '-') }} # Only publish stable releases
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Publish metis-docs-core to crates.io
-        run: |
-          cd crates/metis-docs-core
-          cargo publish --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
-        continue-on-error: true # Allow failure if already published
-
-      - name: Publish metis-docs-tui to crates.io
-        run: |
-          cd crates/metis-docs-tui
-          cargo publish --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
-        continue-on-error: true # Allow failure if already published
-
-      - name: Publish metis-docs-mcp to crates.io
-        run: |
-          cd crates/metis-docs-mcp
-          cargo publish --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
-        continue-on-error: true # Allow failure if already published
-
-      - name: Publish metis-docs-cli to crates.io
-        run: |
-          cd crates/metis-docs-cli
-          cargo publish --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
-        continue-on-error: true # Allow failure if already published
