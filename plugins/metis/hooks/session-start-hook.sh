@@ -53,6 +53,18 @@ STATE_SUMMARY="${STATE_SUMMARY:-No actionable items}"
 # Always run code index on session start — it's fast (<1s)
 metis index --incremental 2>/dev/null
 
+# Check if semantic summaries need generating
+CODE_INDEX_PATH="$CLAUDE_PROJECT_DIR/.metis/code-index.md"
+PLACEHOLDER_COUNT=0
+if [ -f "$CODE_INDEX_PATH" ]; then
+    PLACEHOLDER_COUNT=$(grep -c "Semantic summary to be generated" "$CODE_INDEX_PATH" 2>/dev/null || true)
+fi
+
+SUMMARIZER_MSG=""
+if [ "$PLACEHOLDER_COUNT" -gt 0 ]; then
+    SUMMARIZER_MSG="**${PLACEHOLDER_COUNT} modules are missing semantic summaries.** You SHOULD launch the code-index-summarizer agent in the background immediately (unless the user's request is urgent). Requires Edit(.metis/code-index.md) in allowed tools via /permissions. If not configured, inform the user and offer to run in the foreground instead."
+fi
+
 # Build context message for active Metis project
 read -r -d '' CONTEXT << EOF
 This is a **Metis project** (detected \`.metis\` directory).
@@ -75,6 +87,7 @@ ${ACTIVE_WORK:-No active or ready tasks found}
 
 ## Code Index
 Code index refreshed at \`.metis/code-index.md\` — read it for codebase orientation (project structure, key symbols, module summaries).
+${SUMMARIZER_MSG}
 
 ## MCP Tools (Preferred)
 Use these MCP tools for all Metis operations:
