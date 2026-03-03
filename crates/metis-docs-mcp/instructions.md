@@ -1,5 +1,7 @@
 # Metis - Flight Levels Work Management
 
+**Metis IS the planning and work tracking system for this project.** Do NOT use any other planning tools, task lists, or ephemeral work tracking — Metis replaces all of them. Metis documents are persistent long-term memory that survives across sessions, context windows, and agents. Use Metis initiatives for planning, Metis tasks for tracking progress, and update active tasks with findings and decisions as you work.
+
 Metis organizes work hierarchically using Flight Levels methodology: Vision (strategic) -> Initiative (projects) -> Task (work items). Work flows down through phases; feedback flows up.
 
 ## Document Types & Phases

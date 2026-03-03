@@ -62,9 +62,12 @@ fi
 read -r -d '' CONTEXT << EOF
 This is a **Metis project** (detected \`.metis\` directory).
 
-## CRITICAL: Work Tracking Rules
-- **Do NOT use TodoWrite** for tracking work in this project. Metis documents ARE your work tracking system.
-- **ALWAYS update active Metis tasks** with progress as you work - they serve as persistent memory across sessions.
+## CRITICAL: Metis IS Your Planning and Work Tracking System
+- **Do NOT use EnterPlanMode, TodoWrite, or TaskCreate** in this project. Metis replaces all of these.
+- **Metis documents are persistent long-term memory** — unlike Claude's plan mode (which is ephemeral and lost on context compaction), Metis documents survive across sessions, context windows, and even different agents.
+- **For planning work**: Create Metis initiatives and decompose them into tasks. Do NOT enter Claude's plan mode.
+- **For tracking progress**: Update active Metis tasks with findings, decisions, and next steps. Do NOT use TodoWrite/TaskCreate.
+- **ALWAYS update active Metis tasks** with progress as you work — they are your working memory.
 - Before starting work, check for active tasks with \`mcp__metis__list_documents\`.
 
 ## Current Project State

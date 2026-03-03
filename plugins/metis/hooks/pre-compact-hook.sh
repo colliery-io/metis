@@ -62,9 +62,11 @@ STATE_SUMMARY="${STATE_SUMMARY:-No actionable items}"
 read -r -d '' CONTEXT << EOF
 ## CONTEXT RESTORED: Metis Project
 
-### CRITICAL: Work Tracking Rules
-- **Do NOT use TodoWrite** for tracking work. Metis documents ARE your work tracking system.
-- **ALWAYS update active Metis tasks** with progress as you work.
+### CRITICAL: Metis IS Your Planning and Work Tracking System
+- **Do NOT use EnterPlanMode, TodoWrite, or TaskCreate.** Metis replaces all of these.
+- **Metis documents are persistent long-term memory** — unlike plan mode (ephemeral, lost on compaction), Metis survives across sessions and agents.
+- **For planning**: Use Metis initiatives and tasks. Do NOT enter Claude's plan mode.
+- **For tracking**: Update active Metis tasks with progress. Do NOT use TodoWrite/TaskCreate.
 - Check for active tasks with \`mcp__metis__list_documents\`.
 
 ### Current Project State
