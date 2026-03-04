@@ -72,12 +72,14 @@ impl DocumentRepository {
 
     /// Find all children of a document
     pub fn find_children(&mut self, parent_document_id: &str) -> Result<Vec<Document>> {
-        use schema::document_relationships::dsl::*;
+        use schema::document_relationships::dsl::{
+            child_id, document_relationships, parent_id as rel_parent_id,
+        };
         use schema::documents::dsl::*;
 
         documents
             .inner_join(document_relationships.on(id.eq(child_id)))
-            .filter(parent_id.eq(parent_document_id))
+            .filter(rel_parent_id.eq(parent_document_id))
             .select(Document::as_select())
             .load(&mut self.connection)
             .map_err(MetisError::Database)
@@ -85,11 +87,13 @@ impl DocumentRepository {
 
     /// Find the parent of a document
     pub fn find_parent(&mut self, child_document_id: &str) -> Result<Option<Document>> {
-        use schema::document_relationships::dsl::*;
+        use schema::document_relationships::dsl::{
+            child_id, document_relationships, parent_id as rel_parent_id,
+        };
         use schema::documents::dsl::*;
 
         documents
-            .inner_join(document_relationships.on(id.eq(parent_id)))
+            .inner_join(document_relationships.on(id.eq(rel_parent_id)))
             .filter(child_id.eq(child_document_id))
             .select(Document::as_select())
             .first(&mut self.connection)
@@ -331,6 +335,7 @@ mod tests {
             phase: "draft".to_string(),
             initiative_id: None,
             short_code: "TEST-V-0001".to_string(),
+            parent_id: None,
         }
     }
 
@@ -430,6 +435,7 @@ mod tests {
             phase: "discovery".to_string(),
             initiative_id: None,
             short_code: "TEST-I-0001".to_string(),
+            parent_id: None,
         };
         repo.create_document(parent_doc)
             .expect("Failed to create parent");
@@ -450,6 +456,7 @@ mod tests {
             phase: "todo".to_string(),
             initiative_id: Some("parent-1".to_string()),
             short_code: "TEST-T-0001".to_string(),
+            parent_id: None,
         };
         repo.create_document(child_doc)
             .expect("Failed to create child");
@@ -499,6 +506,7 @@ mod tests {
             phase: "draft".to_string(),
             initiative_id: None,
             short_code: "TEST-V-0002".to_string(),
+            parent_id: None,
         };
 
         let initiative_doc = NewDocument {
@@ -516,6 +524,7 @@ mod tests {
             phase: "discovery".to_string(),
             initiative_id: None,
             short_code: "TEST-I-0002".to_string(),
+            parent_id: None,
         };
 
         repo.create_document(vision_doc)

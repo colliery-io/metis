@@ -131,6 +131,33 @@ const adrPhases: PhaseConfig[] = [
   },
 ];
 
+const specificationPhases: PhaseConfig[] = [
+  {
+    key: 'discovery',
+    title: 'Discovery',
+    description: 'Understanding what to specify',
+    emptyMessage: 'No specifications in discovery',
+  },
+  {
+    key: 'drafting',
+    title: 'Drafting',
+    description: 'Writing the specification',
+    emptyMessage: 'No specifications being drafted',
+  },
+  {
+    key: 'review',
+    title: 'Review',
+    description: 'Under stakeholder review',
+    emptyMessage: 'No specifications under review',
+  },
+  {
+    key: 'published',
+    title: 'Published',
+    description: 'Finalized specifications',
+    emptyMessage: 'No published specifications',
+  },
+];
+
 const backlogPhases: PhaseConfig[] = [
   {
     key: 'general',
@@ -202,6 +229,13 @@ export const boardConfigs: BoardConfig[] = [
       // Note: initiative_id could be "NULL" string from legacy data, treat as falsy
       (!doc.initiative_id || doc.initiative_id === 'NULL') && (doc.phase === 'backlog' || !['todo', 'active', 'blocked', 'completed'].includes(doc.phase))
     ),
+  },
+  {
+    id: 'specification',
+    title: 'Specifications',
+    description: 'Technical specifications and design documents',
+    phases: specificationPhases,
+    documentFilter: (doc) => doc.document_type === 'specification',
   },
 ];
 

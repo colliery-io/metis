@@ -189,6 +189,7 @@ mod tests {
             phase: "draft".to_string(),
             initiative_id: None,
             short_code: "TEST-V-0601".to_string(),
+            parent_id: None,
         }
     }
 
@@ -223,6 +224,7 @@ mod tests {
                     _ => 799,
                 }
             ),
+            parent_id: None,
         }
     }
 

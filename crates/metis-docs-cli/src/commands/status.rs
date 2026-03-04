@@ -34,7 +34,7 @@ impl StatusCommand {
 
     /// Get all document types to query
     fn get_document_types() -> &'static [&'static str] {
-        &["vision", "initiative", "task", "adr"]
+        &["vision", "specification", "initiative", "task", "adr"]
     }
 
     /// Initialize database connection from workspace
@@ -399,6 +399,7 @@ mod tests {
             phase: "blocked".to_string(),
             initiative_id: Some("test-initiative".to_string()),
             short_code: "TEST-T-0001".to_string(),
+            parent_id: None,
         };
 
         let todo_doc = metis_core::dal::database::models::Document {

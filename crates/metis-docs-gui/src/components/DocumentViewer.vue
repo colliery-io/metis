@@ -95,8 +95,78 @@
         </div>
       </div>
 
+      <!-- Parent Document -->
+      <div
+        v-if="parentDocument"
+        class="supporting-documents-bar"
+        :style="{
+          borderBottom: `1px solid ${theme.colors.border.primary}`,
+          padding: '8px 24px',
+          backgroundColor: theme.colors.background.secondary,
+        }"
+      >
+        <span
+          :style="{ color: theme.colors.text.tertiary, fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }"
+        >
+          Parent
+        </span>
+        <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px;">
+          <span
+            class="child-doc-link"
+            :style="{
+              color: theme.colors.interactive.primary,
+              cursor: 'pointer',
+              fontSize: '12px',
+              fontFamily: 'var(--font-mono, monospace)',
+              padding: '3px 8px',
+              borderRadius: '4px',
+              backgroundColor: theme.colors.interactive.primary + '12',
+            }"
+            @click="navigateToParent"
+          >
+            {{ parentDocument.short_code }}: {{ parentDocument.title }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Supporting Documents -->
+      <div
+        v-if="childDocuments.length > 0"
+        class="supporting-documents-bar"
+        :style="{
+          borderBottom: `1px solid ${theme.colors.border.primary}`,
+          padding: '8px 24px',
+          backgroundColor: theme.colors.background.secondary,
+        }"
+      >
+        <span
+          :style="{ color: theme.colors.text.tertiary, fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }"
+        >
+          Supporting Documents
+        </span>
+        <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px;">
+          <span
+            v-for="child in childDocuments"
+            :key="child.short_code"
+            class="child-doc-link"
+            :style="{
+              color: theme.colors.interactive.primary,
+              cursor: 'pointer',
+              fontSize: '12px',
+              fontFamily: 'var(--font-mono, monospace)',
+              padding: '3px 8px',
+              borderRadius: '4px',
+              backgroundColor: theme.colors.interactive.primary + '12',
+            }"
+            @click="navigateToChild(child)"
+          >
+            {{ child.short_code }}: {{ child.title }}
+          </span>
+        </div>
+      </div>
+
       <!-- Content -->
-      <div 
+      <div
         class="flex-1 overflow-y-auto"
         style="min-height: 0;"
       >
@@ -140,15 +210,41 @@ interface Props {
   isOpen: boolean
   document: DocumentInfo | null
   initialEdit?: boolean
+  allDocuments?: DocumentInfo[]
 }
 
 interface Emits {
   (e: 'close'): void
   (e: 'document-updated'): void
+  (e: 'navigate-to-document', document: DocumentInfo): void
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  allDocuments: () => []
+})
 const emit = defineEmits<Emits>()
+
+// Resolve parent document from parent_id
+const parentDocument = computed(() => {
+  if (!props.document?.parent_id || !props.allDocuments.length) return null
+  return props.allDocuments.find(d => d.short_code === props.document!.parent_id) || null
+})
+
+const navigateToParent = () => {
+  if (parentDocument.value) {
+    emit('navigate-to-document', parentDocument.value)
+  }
+}
+
+// Resolve child documents that reference this document as parent
+const childDocuments = computed(() => {
+  if (!props.document?.short_code || !props.allDocuments.length) return []
+  return props.allDocuments.filter(d => d.parent_id === props.document!.short_code)
+})
+
+const navigateToChild = (doc: DocumentInfo) => {
+  emit('navigate-to-document', doc)
+}
 
 const { currentProject } = useProject()
 const { theme } = useTheme()
@@ -306,3 +402,10 @@ const getPhaseColor = (phase?: string) => {
 // Watch for document/isOpen changes to load document
 watch([() => props.document, () => props.isOpen, () => currentProject.value?.path], loadDocument, { immediate: true })
 </script>
+
+<style scoped>
+.child-doc-link:hover {
+  text-decoration: underline;
+  opacity: 0.85;
+}
+</style>

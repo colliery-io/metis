@@ -165,6 +165,7 @@ impl<'a> SyncService<'a> {
             phase,
             initiative_id: final_initiative_id,
             short_code: core.metadata.short_code.clone(),
+            parent_id: document_obj.parent_id().map(|id| id.to_string()),
         })
     }
 
@@ -209,6 +210,8 @@ impl<'a> SyncService<'a> {
             ["backlog", _] => None,
             // backlog/{category}/{task-id}.md (no lineage) - handles bugs, features, tech-debt subdirs
             ["backlog", _, _] => None,
+            // specifications/{spec-id}/specification.md (no lineage - attached document)
+            ["specifications", _, "specification.md"] => None,
             // adrs/{adr-id}.md (no lineage)
             ["adrs", _] => None,
             // vision.md (no lineage)
@@ -810,6 +813,7 @@ impl<'a> SyncService<'a> {
                                 "I" => "initiative",
                                 "T" => "task",
                                 "A" => "adr",
+                                "S" => "specification",
                                 _ => continue,
                             };
 
@@ -877,7 +881,7 @@ impl<'a> SyncService<'a> {
         }
 
         // Type: single letter from allowed set
-        if !matches!(type_letter, "V" | "I" | "T" | "A") {
+        if !matches!(type_letter, "V" | "I" | "T" | "A" | "S") {
             return false;
         }
 

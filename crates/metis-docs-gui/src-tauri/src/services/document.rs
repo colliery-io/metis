@@ -22,6 +22,7 @@ pub struct DocumentInfo {
     pub updated_at: f64,
     pub tags: Vec<String>,
     pub initiative_id: Option<String>,
+    pub parent_id: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -136,6 +137,7 @@ pub async fn create_document(
                 .create_initiative_with_config(config, &flight_config)
                 .await
         },
+        "specification" => creation_service.create_specification(config).await,
         _ => return Err(format!("Document type {} not supported yet", request.document_type)),
     }.map_err(|e| format!("Document creation error: {}", e))?;
 
@@ -217,7 +219,7 @@ pub async fn list_documents(
             let mut all_docs = Vec::new();
 
             // Collect all document types using string literals like TUI does
-            for doc_type in ["vision", "initiative", "task", "adr"] {
+            for doc_type in ["vision", "initiative", "task", "adr", "specification"] {
                 if let Ok(mut docs) =
                     service.find_by_type(DocumentType::from_str(doc_type).unwrap())
                 {
@@ -252,7 +254,8 @@ pub async fn list_documents(
             created_at: doc.created_at,
             updated_at: doc.updated_at,
             tags,
-            initiative_id: doc.initiative_id,
+            initiative_id: doc.initiative_id.clone(),
+            parent_id: doc.parent_id.clone(),
         });
     }
 
@@ -357,7 +360,8 @@ pub async fn search_documents(
             created_at: doc.created_at,
             updated_at: doc.updated_at,
             tags: vec![], // Search results don't need tags for board categorization
-            initiative_id: doc.initiative_id,
+            initiative_id: doc.initiative_id.clone(),
+            parent_id: doc.parent_id.clone(),
         })
         .collect();
 
@@ -483,6 +487,34 @@ pub async fn get_available_parents(
         "initiative" => {
             // Initiatives parent to visions
             "vision"
+        }
+        "specification" => {
+            // Specifications can parent to visions or initiatives
+            // Return all non-archived visions and initiatives
+            let documents = app
+                .with_database(|service| -> Result<Vec<_>, metis_core::MetisError> {
+                    let mut all_parents = Vec::new();
+                    if let Ok(visions) = service.find_by_type(DocumentType::from_str("vision").unwrap()) {
+                        all_parents.extend(visions.into_iter().filter(|d| !d.archived));
+                    }
+                    if let Ok(initiatives) = service.find_by_type(DocumentType::from_str("initiative").unwrap()) {
+                        all_parents.extend(initiatives.into_iter().filter(|d| !d.archived));
+                    }
+                    Ok(all_parents)
+                })
+                .map_err(|e| format!("Database error: {}", e))?;
+
+            let parent_options: Vec<ParentOption> = documents
+                .into_iter()
+                .map(|doc| ParentOption {
+                    short_code: doc.short_code,
+                    title: doc.title,
+                    document_type: doc.document_type,
+                    phase: doc.phase,
+                })
+                .collect();
+
+            return Ok(parent_options);
         }
         _ => return Ok(vec![]), // No parents needed for vision, adr
     };

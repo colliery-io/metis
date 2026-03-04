@@ -16,6 +16,7 @@ diesel::table! {
         phase -> Text,
         initiative_id -> Nullable<Text>,
         short_code -> Text,
+        parent_id -> Nullable<Text>,
     }
 }
 

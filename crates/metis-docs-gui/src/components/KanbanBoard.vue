@@ -66,6 +66,14 @@
       </div>
     </div>
 
+    <!-- Specification Board - Table View -->
+    <SpecificationList
+      v-else-if="currentBoard === 'specification'"
+      :documents="allDocuments.filter(d => d.document_type === 'specification')"
+      :all-documents="allDocuments"
+      @view="handleViewDocument"
+    />
+
     <!-- Other Boards - Kanban Columns -->
     <div v-else class="columns-container">
       <KanbanColumn
@@ -75,6 +83,7 @@
         :phase-key="phase.key"
         :documents="documentsByPhase[phase.key] || []"
         :board-type="currentBoard"
+        :all-documents="allDocuments"
         :highlighted-short-code="props.highlightedDocument?.short_code"
         @documents-changed="handleDocumentsChanged"
         @promote="handlePromoteToTaskBoard"
@@ -95,8 +104,10 @@
     <DocumentViewer
       :isOpen="showDocumentViewer"
       :document="selectedDocument"
+      :allDocuments="allDocuments"
       @close="handleCloseDocumentViewer"
       @document-updated="handleDocumentViewerUpdated"
+      @navigate-to-document="handleViewDocument"
     />
 
     <!-- Archive Confirmation Modal -->
@@ -154,6 +165,7 @@ import KanbanColumn from './KanbanColumn.vue'
 import VisionDisplay from './VisionDisplay.vue'
 import CreateDocumentDialog from './CreateDocumentDialog.vue'
 import DocumentViewer from './DocumentViewer.vue'
+import SpecificationList from './SpecificationList.vue'
 
 interface Props {
   onBackToProjects: () => void
@@ -165,7 +177,7 @@ const props = defineProps<Props>()
 const { currentProject } = useProject()
 
 // Multi-board support for flight levels
-const availableBoards = ref<BoardType[]>(['vision', 'initiative', 'task', 'adr', 'backlog'])
+const availableBoards = ref<BoardType[]>(['vision', 'initiative', 'task', 'adr', 'backlog', 'specification'])
 const currentBoard = ref<BoardType>('vision')
 const allDocuments = ref<DocumentInfo[]>([])
 const showCreateDialog = ref(false)
@@ -221,7 +233,7 @@ const loadProjectConfig = async () => {
       boards.push('initiative')
     }
     
-    boards.push('task', 'adr', 'backlog') // Always have these
+    boards.push('task', 'adr', 'backlog', 'specification') // Always have these
     
     availableBoards.value = boards
     
@@ -232,7 +244,7 @@ const loadProjectConfig = async () => {
   } catch (error) {
     console.error('Failed to load project config:', error)
     emit('show-toast', { message: 'Failed to load project configuration', type: 'error' })
-    availableBoards.value = ['vision', 'initiative', 'task', 'adr', 'backlog']
+    availableBoards.value = ['vision', 'initiative', 'task', 'adr', 'backlog', 'specification']
   }
 }
 
@@ -407,6 +419,8 @@ const getDocumentTypeLabel = (boardType: BoardType) => {
       return 'Backlog Item'
     case 'strategy':
       return 'Strategy'
+    case 'specification':
+      return 'Specification'
     default:
       return 'Document'
   }
@@ -437,7 +451,8 @@ watch(() => props.highlightedDocument, (doc) => {
       'strategy': 'strategy',
       'initiative': 'initiative',
       'task': 'task',
-      'adr': 'adr'
+      'adr': 'adr',
+      'specification': 'specification'
     }
     const targetBoard = boardMap[doc.document_type]
     if (targetBoard && availableBoards.value.includes(targetBoard)) {
