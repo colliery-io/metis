@@ -305,7 +305,7 @@ mod tests {
             name: Some("Index Test".to_string()),
             prefix: None,
             preset: None,
-            strategies: None,
+
             initiatives: None,
         };
         init_cmd.execute().await.unwrap();
@@ -350,7 +350,7 @@ mod tests {
             name: Some("Structure Only Test".to_string()),
             prefix: None,
             preset: None,
-            strategies: None,
+
             initiatives: None,
         };
         init_cmd.execute().await.unwrap();
@@ -394,7 +394,7 @@ mod tests {
             name: Some("Hash Test".to_string()),
             prefix: None,
             preset: None,
-            strategies: None,
+
             initiatives: None,
         };
         init_cmd.execute().await.unwrap();
@@ -432,7 +432,7 @@ mod tests {
             name: Some("Incremental Test".to_string()),
             prefix: None,
             preset: None,
-            strategies: None,
+
             initiatives: None,
         };
         init_cmd.execute().await.unwrap();
@@ -476,7 +476,7 @@ mod tests {
             name: Some("Incremental Changes Test".to_string()),
             prefix: None,
             preset: None,
-            strategies: None,
+
             initiatives: None,
         };
         init_cmd.execute().await.unwrap();

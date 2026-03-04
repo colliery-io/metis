@@ -30,8 +30,8 @@ fn extract_text_from_result(result: &rust_mcp_sdk::schema::CallToolResult) -> Op
 /// Helper to extract short code from MCP response (parses markdown format)
 fn extract_short_code(result: &rust_mcp_sdk::schema::CallToolResult) -> String {
     if let Some(text) = extract_text_from_result(result) {
-        // Match pattern like "PROJ-X-0001" (any document type: V, S, I, T, A)
-        let re = Regex::new(r"([A-Z]+-[VSITA]-\d{4})").unwrap();
+        // Match pattern like "PROJ-X-0001" (any document type: V, I, T, A)
+        let re = Regex::new(r"([A-Z]+-[VITA]-\d{4})").unwrap();
         if let Some(captures) = re.captures(&text) {
             if let Some(m) = captures.get(1) {
                 return m.as_str().to_string();
@@ -42,7 +42,7 @@ fn extract_short_code(result: &rust_mcp_sdk::schema::CallToolResult) -> String {
 }
 
 /// Test MCP server behavior with default streamlined configuration
-/// Streamlined: strategies disabled, initiatives enabled (Vision → Initiative → Task)
+/// Streamlined: initiatives enabled (Vision → Initiative → Task)
 #[tokio::test]
 async fn test_streamlined_configuration_workflows() -> Result<()> {
     let helper = McpTestHelper::new().await?;
@@ -57,55 +57,18 @@ async fn test_streamlined_configuration_workflows() -> Result<()> {
         .get_flight_level_config()
         .map_err(|e| anyhow::anyhow!("Failed to get config: {}", e))?;
     assert!(
-        !flight_config.strategies_enabled,
-        "Should be streamlined by default"
-    );
-    assert!(
         flight_config.initiatives_enabled,
         "Initiatives should be enabled in streamlined"
     );
 
     println!("=== Test Streamlined Configuration (Default) ===");
 
-    // 1. Strategy creation should fail
-    let create_strategy = CreateDocumentTool {
-        project_path: helper.metis_dir().clone(),
-        document_type: "strategy".to_string(),
-        title: "Test Strategy".to_string(),
-        parent_id: Some(helper.get_project_name()),
-        risk_level: Some("medium".to_string()),
-        complexity: None,
-        stakeholders: None,
-        decision_maker: None,
-        backlog_category: None,
-    };
-
-    let strategy_result = create_strategy.call_tool().await;
-    assert!(
-        strategy_result.is_err(),
-        "Strategy creation should fail in streamlined mode"
-    );
-    let error_msg = format!("{:?}", strategy_result.unwrap_err());
-    assert!(
-        error_msg.contains("strategy creation is disabled"),
-        "Should mention strategy is disabled"
-    );
-    assert!(
-        error_msg.contains("streamlined mode"),
-        "Should mention current mode"
-    );
-    assert!(
-        error_msg.contains("Available document types"),
-        "Should list available types"
-    );
-
-    // 2. Initiative creation should succeed WITHOUT parent_id
+    // 1. Initiative creation should succeed WITHOUT parent_id
     let create_initiative = CreateDocumentTool {
         project_path: helper.metis_dir().clone(),
         document_type: "initiative".to_string(),
         title: "Test Initiative".to_string(),
-        parent_id: None, // No parent provided - should use NULL strategy
-        risk_level: None,
+        parent_id: None, // No parent provided
         complexity: Some("m".to_string()),
         stakeholders: None,
         decision_maker: None,
@@ -120,13 +83,12 @@ async fn test_streamlined_configuration_workflows() -> Result<()> {
     );
     let initiative_short_code = extract_short_code(&initiative_result.unwrap());
 
-    // 3. Task creation with initiative parent should succeed
+    // 2. Task creation with initiative parent should succeed
     let create_task = CreateDocumentTool {
         project_path: helper.metis_dir().clone(),
         document_type: "task".to_string(),
         title: "Test Task".to_string(),
         parent_id: Some(initiative_short_code), // Reference the initiative by short code
-        risk_level: None,
         complexity: None,
         stakeholders: None,
         decision_maker: None,
@@ -140,13 +102,12 @@ async fn test_streamlined_configuration_workflows() -> Result<()> {
         task_result
     );
 
-    // 4. Task creation without parent should fail (initiatives are enabled)
+    // 3. Task creation without parent should fail (initiatives are enabled)
     let create_orphan_task = CreateDocumentTool {
         project_path: helper.metis_dir().clone(),
         document_type: "task".to_string(),
         title: "Orphan Task".to_string(),
         parent_id: None,
-        risk_level: None,
         complexity: None,
         stakeholders: None,
         decision_maker: None,
@@ -169,7 +130,7 @@ async fn test_streamlined_configuration_workflows() -> Result<()> {
 }
 
 /// Test MCP server behavior with direct configuration
-/// Direct: both strategies and initiatives disabled (Vision → Task only)
+/// Direct: initiatives disabled (Vision → Task only)
 #[tokio::test]
 async fn test_direct_configuration_workflows() -> Result<()> {
     let helper = McpTestHelper::new().await?;
@@ -180,32 +141,12 @@ async fn test_direct_configuration_workflows() -> Result<()> {
 
     println!("=== Test Direct Configuration ===");
 
-    // 1. Strategy creation should fail
-    let create_strategy = CreateDocumentTool {
-        project_path: helper.metis_dir().clone(),
-        document_type: "strategy".to_string(),
-        title: "Test Strategy".to_string(),
-        parent_id: None,
-        risk_level: Some("medium".to_string()),
-        complexity: None,
-        stakeholders: None,
-        decision_maker: None,
-        backlog_category: None,
-    };
-
-    let strategy_result = create_strategy.call_tool().await;
-    assert!(
-        strategy_result.is_err(),
-        "Strategy creation should fail in direct mode"
-    );
-
-    // 2. Initiative creation should fail
+    // 1. Initiative creation should fail
     let create_initiative = CreateDocumentTool {
         project_path: helper.metis_dir().clone(),
         document_type: "initiative".to_string(),
         title: "Test Initiative".to_string(),
         parent_id: None,
-        risk_level: None,
         complexity: Some("m".to_string()),
         stakeholders: None,
         decision_maker: None,
@@ -218,13 +159,12 @@ async fn test_direct_configuration_workflows() -> Result<()> {
         "Initiative creation should fail in direct mode"
     );
 
-    // 3. Task creation without parent should succeed (direct vision→task)
+    // 2. Task creation without parent should succeed (direct vision→task)
     let create_task = CreateDocumentTool {
         project_path: helper.metis_dir().clone(),
         document_type: "task".to_string(),
         title: "Direct Task".to_string(),
-        parent_id: None, // No parent - should use NULL for both strategy and initiative
-        risk_level: None,
+        parent_id: None, // No parent - direct mode
         complexity: None,
         stakeholders: None,
         decision_maker: None,
@@ -238,13 +178,12 @@ async fn test_direct_configuration_workflows() -> Result<()> {
         task_result
     );
 
-    // 4. Vision and ADR should always work
+    // 3. Vision and ADR should always work
     let create_adr = CreateDocumentTool {
         project_path: helper.metis_dir().clone(),
         document_type: "adr".to_string(),
         title: "Test ADR".to_string(),
         parent_id: None,
-        risk_level: None,
         complexity: None,
         stakeholders: None,
         decision_maker: Some("architect".to_string()),
@@ -262,196 +201,49 @@ async fn test_direct_configuration_workflows() -> Result<()> {
     Ok(())
 }
 
-/// Test MCP server behavior with full configuration
-/// Full: all document types enabled with proper hierarchy enforcement
-#[tokio::test]
-async fn test_full_configuration_workflows() -> Result<()> {
-    let helper = McpTestHelper::new().await?;
-    helper.initialize_project().await?;
-
-    // Set full configuration in both DB and config.toml
-    let db = helper.get_database()?;
-    let mut config_repo = db
-        .configuration_repository()
-        .map_err(|e| anyhow::anyhow!("Failed to get config repo: {}", e))?;
-
-    // Get current prefix
-    let prefix = config_repo.get_project_prefix()
-        .map_err(|e| anyhow::anyhow!("Failed to get prefix: {}", e))?
-        .unwrap_or_else(|| "PROJ".to_string());
-
-    // Set full flight level config
-    use metis_core::domain::configuration::{ConfigFile, FlightLevelConfig};
-    let full_config = FlightLevelConfig::full();
-    config_repo
-        .set_flight_level_config(&full_config)
-        .map_err(|e| anyhow::anyhow!("Failed to set config: {}", e))?;
-
-    // Update config.toml to match
-    let config_file = ConfigFile::new(prefix, full_config)
-        .map_err(|e| anyhow::anyhow!("Failed to create config file: {}", e))?;
-    let config_file_path = format!("{}/config.toml", helper.metis_dir());
-    config_file.save(&config_file_path)
-        .map_err(|e| anyhow::anyhow!("Failed to save config file: {}", e))?;
-
-    println!("=== Test Full Configuration ===");
-
-    // 1. Create strategy (should succeed)
-    let create_strategy = CreateDocumentTool {
-        project_path: helper.metis_dir().clone(),
-        document_type: "strategy".to_string(),
-        title: "Test Strategy".to_string(),
-        parent_id: Some(helper.get_project_name()),
-        risk_level: Some("medium".to_string()),
-        complexity: None,
-        stakeholders: None,
-        decision_maker: None,
-        backlog_category: None,
-    };
-
-    let strategy_result = create_strategy.call_tool().await;
-    assert!(
-        strategy_result.is_ok(),
-        "Strategy creation should succeed in full mode: {:?}",
-        strategy_result
-    );
-    let strategy_short_code = extract_short_code(&strategy_result.unwrap());
-
-    // 2. Initiative creation should require strategy parent
-    let create_initiative_no_parent = CreateDocumentTool {
-        project_path: helper.metis_dir().clone(),
-        document_type: "initiative".to_string(),
-        title: "No Parent Initiative".to_string(),
-        parent_id: None, // No parent provided
-        risk_level: None,
-        complexity: Some("m".to_string()),
-        stakeholders: None,
-        decision_maker: None,
-        backlog_category: None,
-    };
-
-    let no_parent_result = create_initiative_no_parent.call_tool().await;
-    assert!(
-        no_parent_result.is_err(),
-        "Initiative without parent should fail in full mode"
-    );
-    let error_msg = format!("{:?}", no_parent_result.unwrap_err());
-    assert!(
-        error_msg.contains("requires a parent strategy")
-            || error_msg.contains("parent strategy ID"),
-        "Should mention strategy requirement, got: {}",
-        error_msg
-    );
-
-    // 3. Initiative with strategy parent should succeed
-    let create_initiative = CreateDocumentTool {
-        project_path: helper.metis_dir().clone(),
-        document_type: "initiative".to_string(),
-        title: "Test Initiative".to_string(),
-        parent_id: Some(strategy_short_code),
-        risk_level: None,
-        complexity: Some("m".to_string()),
-        stakeholders: None,
-        decision_maker: None,
-        backlog_category: None,
-    };
-
-    let initiative_result = create_initiative.call_tool().await;
-    assert!(
-        initiative_result.is_ok(),
-        "Initiative with strategy parent should succeed: {:?}",
-        initiative_result
-    );
-    let initiative_short_code = extract_short_code(&initiative_result.unwrap());
-
-    // 4. Task creation should require initiative parent
-    let create_task_no_parent = CreateDocumentTool {
-        project_path: helper.metis_dir().clone(),
-        document_type: "task".to_string(),
-        title: "No Parent Task".to_string(),
-        parent_id: None,
-        risk_level: None,
-        complexity: None,
-        stakeholders: None,
-        decision_maker: None,
-        backlog_category: None,
-    };
-
-    let no_parent_task_result = create_task_no_parent.call_tool().await;
-    assert!(
-        no_parent_task_result.is_err(),
-        "Task without parent should fail in full mode"
-    );
-
-    // 5. Task with initiative parent should succeed
-    let create_task = CreateDocumentTool {
-        project_path: helper.metis_dir().clone(),
-        document_type: "task".to_string(),
-        title: "Test Task".to_string(),
-        parent_id: Some(initiative_short_code),
-        risk_level: None,
-        complexity: None,
-        stakeholders: None,
-        decision_maker: None,
-        backlog_category: None,
-    };
-
-    let task_result = create_task.call_tool().await;
-    assert!(
-        task_result.is_ok(),
-        "Task with initiative parent should succeed: {:?}",
-        task_result
-    );
-
-    println!("✅ Full configuration workflows validated");
-    Ok(())
-}
-
 /// Test configuration error messages provide actionable guidance
 #[tokio::test]
 async fn test_configuration_error_messages() -> Result<()> {
     let helper = McpTestHelper::new().await?;
     helper.initialize_project().await?;
 
+    // Set direct mode to test initiative-disabled error messages
+    helper.set_flight_level_config(FlightLevelConfig::direct())?;
+
     println!("=== Test Configuration Error Messages ===");
 
-    // Test streamlined mode error messages (default)
-    let create_strategy = CreateDocumentTool {
+    // Test direct mode error messages - initiative creation should fail
+    let create_initiative = CreateDocumentTool {
         project_path: helper.metis_dir().clone(),
-        document_type: "strategy".to_string(),
-        title: "Test Strategy".to_string(),
+        document_type: "initiative".to_string(),
+        title: "Test Initiative".to_string(),
         parent_id: None,
-        risk_level: Some("medium".to_string()),
         complexity: None,
         stakeholders: None,
         decision_maker: None,
         backlog_category: None,
     };
 
-    let result = create_strategy.call_tool().await;
+    let result = create_initiative.call_tool().await;
     assert!(result.is_err());
     let error_msg = format!("{:?}", result.unwrap_err());
 
-    // Verify error message contains all expected elements
+    // Verify error message contains expected elements
     assert!(
-        error_msg.contains("strategy creation is disabled"),
+        error_msg.contains("creation is disabled"),
         "Should explain what's disabled"
     );
     assert!(
-        error_msg.contains("streamlined mode"),
+        error_msg.contains("direct mode"),
         "Should identify current mode"
     );
     assert!(
-        error_msg.contains("Available document types:"),
+        error_msg.contains("Available document types"),
         "Should list available types"
     );
     assert!(
         error_msg.contains("vision"),
         "Should include vision in available types"
-    );
-    assert!(
-        error_msg.contains("initiative"),
-        "Should include initiative in available types"
     );
     assert!(
         error_msg.contains("task"),
@@ -460,14 +252,6 @@ async fn test_configuration_error_messages() -> Result<()> {
     assert!(
         error_msg.contains("adr"),
         "Should include adr in available types"
-    );
-    assert!(
-        error_msg.contains("metis config set --preset full"),
-        "Should provide remediation"
-    );
-    assert!(
-        error_msg.contains("--strategies true --initiatives true"),
-        "Should provide alternative remediation"
     );
 
     println!("✅ Error messages provide comprehensive guidance");
@@ -482,66 +266,61 @@ async fn test_configuration_switching_compatibility() -> Result<()> {
 
     println!("=== Test Configuration Switching ===");
 
-    // Start with full configuration via config.toml (filesystem is source of truth)
-    helper.set_flight_level_config(FlightLevelConfig::full())?;
-
-    // Create full hierarchy
-    let create_strategy = CreateDocumentTool {
-        project_path: helper.metis_dir().clone(),
-        document_type: "strategy".to_string(),
-        title: "Test Strategy".to_string(),
-        parent_id: Some(helper.get_project_name()),
-        risk_level: Some("medium".to_string()),
-        complexity: None,
-        stakeholders: None,
-        decision_maker: None,
-        backlog_category: None,
-    };
-    create_strategy
-        .call_tool()
-        .await
-        .map_err(|e| anyhow::anyhow!("Strategy creation failed: {:?}", e))?;
-
-    // Switch to streamlined configuration via config.toml
-    helper.set_flight_level_config(FlightLevelConfig::streamlined())?;
-
-    // Should still be able to create initiatives (now they go under NULL strategy)
+    // Start with streamlined configuration (default)
+    // Create an initiative
     let create_initiative = CreateDocumentTool {
         project_path: helper.metis_dir().clone(),
         document_type: "initiative".to_string(),
-        title: "Streamlined Initiative".to_string(),
-        parent_id: None, // No parent in streamlined mode
-        risk_level: None,
+        title: "Test Initiative".to_string(),
+        parent_id: None,
         complexity: Some("s".to_string()),
         stakeholders: None,
         decision_maker: None,
         backlog_category: None,
     };
+    create_initiative
+        .call_tool()
+        .await
+        .map_err(|e| anyhow::anyhow!("Initiative creation failed: {:?}", e))?;
 
-    let result = create_initiative.call_tool().await;
-    assert!(
-        result.is_ok(),
-        "Should be able to create initiatives after switching to streamlined: {:?}",
-        result
-    );
+    // Switch to direct configuration via config.toml
+    helper.set_flight_level_config(FlightLevelConfig::direct())?;
 
-    // Should not be able to create new strategies
-    let create_new_strategy = CreateDocumentTool {
+    // Should be able to create tasks without parents in direct mode
+    let create_task = CreateDocumentTool {
         project_path: helper.metis_dir().clone(),
-        document_type: "strategy".to_string(),
-        title: "New Strategy".to_string(),
-        parent_id: Some(helper.get_project_name()),
-        risk_level: Some("low".to_string()),
+        document_type: "task".to_string(),
+        title: "Direct Task".to_string(),
+        parent_id: None,
         complexity: None,
         stakeholders: None,
         decision_maker: None,
         backlog_category: None,
     };
 
-    let strategy_result = create_new_strategy.call_tool().await;
+    let result = create_task.call_tool().await;
     assert!(
-        strategy_result.is_err(),
-        "Should not be able to create strategies in streamlined mode"
+        result.is_ok(),
+        "Should be able to create tasks after switching to direct: {:?}",
+        result
+    );
+
+    // Should not be able to create new initiatives
+    let create_new_initiative = CreateDocumentTool {
+        project_path: helper.metis_dir().clone(),
+        document_type: "initiative".to_string(),
+        title: "New Initiative".to_string(),
+        parent_id: None,
+        complexity: Some("m".to_string()),
+        stakeholders: None,
+        decision_maker: None,
+        backlog_category: None,
+    };
+
+    let initiative_result = create_new_initiative.call_tool().await;
+    assert!(
+        initiative_result.is_err(),
+        "Should not be able to create initiatives in direct mode"
     );
 
     println!("✅ Configuration switching maintains compatibility");

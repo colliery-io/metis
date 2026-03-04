@@ -7,7 +7,7 @@ created_at: 2025-11-25T03:05:48.250241+00:00
 updated_at: 2025-11-25T03:05:48.250241+00:00
 parent: 
 blocked_by: []
-archived: false
+archived: true
 
 tags:
   - "#task"
@@ -64,6 +64,8 @@ Verify that tool output formatting works correctly in production
 - **Current Problems**: {What's difficult/slow/buggy now}
 - **Benefits of Fixing**: {What improves after refactoring}
 - **Risk Assessment**: {Risks of not addressing this}
+
+## Acceptance Criteria
 
 ## Acceptance Criteria **[REQUIRED]**
 

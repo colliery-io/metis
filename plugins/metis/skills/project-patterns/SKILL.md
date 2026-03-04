@@ -13,14 +13,13 @@ This skill guides project setup and provides patterns for different types of wor
 |-----------|--------------|-------------------|
 | Solo | None | Direct |
 | 2-5 | Informal | Streamlined |
-| 5+ | Formal | Full (or Streamlined) |
+| 5+ | Formal | Streamlined |
 
 **Preset differences:**
 - **Direct**: Vision → Task (simplest, solo work)
 - **Streamlined**: Vision → Initiative → Task (most common, **default**)
-- **Full**: Vision → Strategy → Initiative → Task (multi-team coordination)
 
-When in doubt, use the default Streamlined preset. Add Strategy layer later if needed.
+When in doubt, use the default Streamlined preset. Use Streamlined unless tasks are simple enough for Direct.
 
 ## Greenfield Projects
 

@@ -14,16 +14,6 @@ draft → review → published
 - **review**: Stakeholder feedback and refinement
 - **published**: Stable north star, ready to drive work (terminal)
 
-### Strategy
-```
-shaping → design → ready → active → completed
-```
-- **shaping**: Exploring approaches, gathering constraints
-- **design**: Defining the strategic approach
-- **ready**: Strategy validated, waiting for capacity
-- **active**: Initiatives being executed under this strategy
-- **completed**: Terminal state
-
 ### Initiative
 ```
 discovery → design → ready → decompose → active → completed

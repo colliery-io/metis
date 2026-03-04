@@ -19,7 +19,7 @@ Four focused skills provide targeted methodology guidance:
 ### document-selection
 **Triggers:** "what document type", "create a bug ticket", "should this be a task or initiative", "when to use ADR"
 
-Helps choose the right document type (vision, strategy, initiative, task, backlog, ADR) and maps user terminology to Metis documents.
+Helps choose the right document type (vision, initiative, task, backlog, ADR) and maps user terminology to Metis documents.
 
 ### decomposition
 **Triggers:** "break down this initiative", "decompose into tasks", "how to size tasks", "vertical slices"

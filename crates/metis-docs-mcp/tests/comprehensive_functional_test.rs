@@ -82,7 +82,7 @@ async fn get_vision_short_code(metis_path: &str) -> String {
 fn extract_short_code(result: &rust_mcp_sdk::schema::CallToolResult) -> String {
     if let Some(text) = extract_text_from_result(result) {
         // Match pattern like "PROJ-X-0001" (any document type)
-        let re = regex::Regex::new(r"([A-Z]+-[VSITA]-\d{4})").unwrap();
+        let re = regex::Regex::new(r"([A-Z]+-[VITA]-\d{4})").unwrap();
         if let Some(captures) = re.captures(&text) {
             if let Some(m) = captures.get(1) {
                 return m.as_str().to_string();
@@ -90,176 +90,6 @@ fn extract_short_code(result: &rust_mcp_sdk::schema::CallToolResult) -> String {
         }
     }
     panic!("Could not extract short_code from result")
-}
-
-#[tokio::test]
-async fn test_full_configuration_workflow() {
-    println!("=== Testing Full Configuration Complete Workflow ===");
-
-    let (_temp_dir, _project_path, metis_path) =
-        setup_project_with_config(FlightLevelConfig::full()).await;
-
-    // Step 1: Init (done in setup)
-    println!("✅ Init complete");
-
-    // Step 2: Get actual vision short code and edit vision doc
-    let vision_short_code = get_vision_short_code(&metis_path).await;
-    let edit_vision = EditDocumentTool {
-        project_path: metis_path.clone(),
-        short_code: vision_short_code.clone(),
-        search: "{Why this vision exists and what it aims to achieve}".to_string(),
-        replace: "Create an amazing work management system using Flight Levels methodology"
-            .to_string(),
-        replace_all: None,
-    };
-    let result = edit_vision.call_tool().await;
-    assert!(result.is_ok(), "Edit vision should succeed");
-    println!("✅ Vision doc edited");
-
-    // Step 3: Create strategy linked to vision
-    let create_strategy = CreateDocumentTool {
-        project_path: metis_path.clone(),
-        document_type: "strategy".to_string(),
-        title: "Customer Experience Strategy".to_string(),
-        parent_id: Some(vision_short_code),
-        risk_level: Some("medium".to_string()),
-        complexity: None,
-        stakeholders: Some(vec!["product_team".to_string()]),
-        decision_maker: None,
-        backlog_category: None,
-    };
-    let result = create_strategy.call_tool().await;
-    assert!(result.is_ok(), "Create strategy should succeed");
-    let strategy_short_code = extract_short_code(&result.unwrap());
-    println!("✅ Strategy created: {}", strategy_short_code);
-
-    // Step 4: Move strategy to next phase
-    let transition_strategy = TransitionPhaseTool {
-        project_path: metis_path.clone(),
-        short_code: strategy_short_code.clone(),
-        phase: Some("design".to_string()),
-        force: None,
-    };
-    let result = transition_strategy.call_tool().await;
-    assert!(result.is_ok(), "Strategy phase transition should succeed");
-    println!("✅ Strategy moved to design phase");
-
-    // Step 5: Create initiative linked to strategy
-    let create_initiative = CreateDocumentTool {
-        project_path: metis_path.clone(),
-        document_type: "initiative".to_string(),
-        title: "Redesign Onboarding Flow".to_string(),
-        parent_id: Some(strategy_short_code),
-        risk_level: None,
-        complexity: Some("l".to_string()),
-        stakeholders: Some(vec!["ux_team".to_string()]),
-        decision_maker: None,
-        backlog_category: None,
-    };
-    let result = create_initiative.call_tool().await;
-    assert!(result.is_ok(), "Create initiative should succeed");
-    let initiative_short_code = extract_short_code(&result.unwrap());
-    println!("✅ Initiative created: {}", initiative_short_code);
-
-    // Step 6: Move initiative
-    let transition_initiative = TransitionPhaseTool {
-        project_path: metis_path.clone(),
-        short_code: initiative_short_code.clone(),
-        phase: Some("design".to_string()),
-        force: None,
-    };
-    let result = transition_initiative.call_tool().await;
-    assert!(result.is_ok(), "Initiative phase transition should succeed");
-    println!("✅ Initiative moved to design phase");
-
-    // Step 7: Create task
-    let create_task = CreateDocumentTool {
-        project_path: metis_path.clone(),
-        document_type: "task".to_string(),
-        title: "Create user research plan".to_string(),
-        parent_id: Some(initiative_short_code),
-        risk_level: None,
-        complexity: None,
-        stakeholders: None,
-        decision_maker: None,
-        backlog_category: None,
-    };
-    let result = create_task.call_tool().await;
-    assert!(result.is_ok(), "Create task should succeed");
-    let task_short_code = extract_short_code(&result.unwrap());
-    println!("✅ Task created: {}", task_short_code);
-
-    // Step 8: Move task
-    let transition_task = TransitionPhaseTool {
-        project_path: metis_path.clone(),
-        short_code: task_short_code,
-        phase: None, // Auto-transition to next phase
-        force: None,
-    };
-    let result = transition_task.call_tool().await;
-    assert!(result.is_ok(), "Task phase transition should succeed");
-    println!("✅ Task moved to active phase");
-
-    // Step 9: Create ADR
-    let create_adr = CreateDocumentTool {
-        project_path: metis_path.clone(),
-        document_type: "adr".to_string(),
-        title: "Use React for frontend framework".to_string(),
-        parent_id: None,
-        risk_level: None,
-        complexity: None,
-        stakeholders: None,
-        decision_maker: Some("tech_lead".to_string()),
-        backlog_category: None,
-    };
-    let result = create_adr.call_tool().await;
-    assert!(result.is_ok(), "Create ADR should succeed");
-    let adr_short_code = extract_short_code(&result.unwrap());
-    println!("✅ ADR created: {}", adr_short_code);
-
-    // Step 10: Move ADR
-    let transition_adr = TransitionPhaseTool {
-        project_path: metis_path.clone(),
-        short_code: adr_short_code,
-        phase: Some("discussion".to_string()),
-        force: None,
-    };
-    let result = transition_adr.call_tool().await;
-    assert!(result.is_ok(), "ADR phase transition should succeed");
-    println!("✅ ADR moved to discussion phase");
-
-    // Step 11: Create backlog item(s)
-    let create_backlog = CreateDocumentTool {
-        project_path: metis_path.clone(),
-        document_type: "backlog".to_string(),
-        title: "Improve mobile responsiveness".to_string(),
-        parent_id: None,
-        risk_level: None,
-        complexity: None,
-        stakeholders: None,
-        decision_maker: None,
-        backlog_category: None,
-    };
-    let result = create_backlog.call_tool().await;
-    // Note: backlog might not be supported in all configurations
-    if result.is_ok() {
-        println!("✅ Backlog item created");
-    } else {
-        println!("ℹ️  Backlog creation skipped (not supported in this config)");
-    }
-
-    // Step 12: Move backlog (if created)
-    println!("✅ Backlog moved (or skipped)");
-
-    // Final verification - list all documents
-    let list_tool = ListDocumentsTool {
-        project_path: metis_path.clone(),
-        include_archived: None,
-    };
-    let final_list = list_tool.call_tool().await;
-    assert!(final_list.is_ok(), "Final document listing should succeed");
-
-    println!("✅ Full configuration workflow complete!");
 }
 
 #[tokio::test]
@@ -285,13 +115,12 @@ async fn test_streamlined_configuration_workflow() {
     assert!(result.is_ok(), "Edit vision should succeed");
     println!("✅ Vision doc edited");
 
-    // Step 3: Create initiative linked to vision (no strategies in streamlined)
+    // Step 3: Create initiative linked to vision
     let create_initiative = CreateDocumentTool {
         project_path: metis_path.clone(),
         document_type: "initiative".to_string(),
         title: "Mobile App Performance Improvements".to_string(),
-        parent_id: Some(vision_short_code), // Link to vision in streamlined
-        risk_level: None,
+        parent_id: Some(vision_short_code),
         complexity: Some("m".to_string()),
         stakeholders: Some(vec!["mobile_team".to_string()]),
         decision_maker: None,
@@ -319,7 +148,6 @@ async fn test_streamlined_configuration_workflow() {
         document_type: "task".to_string(),
         title: "Optimize image loading".to_string(),
         parent_id: Some(initiative_short_code),
-        risk_level: None,
         complexity: None,
         stakeholders: None,
         decision_maker: None,
@@ -347,7 +175,6 @@ async fn test_streamlined_configuration_workflow() {
         document_type: "adr".to_string(),
         title: "Use WebP format for images".to_string(),
         parent_id: None,
-        risk_level: None,
         complexity: None,
         stakeholders: None,
         decision_maker: Some("mobile_lead".to_string()),
@@ -403,13 +230,12 @@ async fn test_direct_configuration_workflow() {
     assert!(result.is_ok(), "Edit vision should succeed");
     println!("✅ Vision doc edited");
 
-    // Step 3: Create task linked to vision (in direct config)
+    // Step 3: Create task (in direct config, no initiatives needed)
     let create_task1 = CreateDocumentTool {
         project_path: metis_path.clone(),
         document_type: "task".to_string(),
         title: "Fix login bug".to_string(),
-        parent_id: Some(vision_short_code.clone()), // Link to vision in direct
-        risk_level: None,
+        parent_id: None, // No parent in direct mode
         complexity: None,
         stakeholders: None,
         decision_maker: None,
@@ -431,13 +257,12 @@ async fn test_direct_configuration_workflow() {
     assert!(result.is_ok(), "Task 1 phase transition should succeed");
     println!("✅ Task 1 moved to active phase");
 
-    // Step 5: Create another task linked to vision
+    // Step 5: Create another task
     let create_task2 = CreateDocumentTool {
         project_path: metis_path.clone(),
         document_type: "task".to_string(),
         title: "Update documentation".to_string(),
-        parent_id: Some(vision_short_code),
-        risk_level: None,
+        parent_id: None,
         complexity: None,
         stakeholders: None,
         decision_maker: None,
@@ -465,7 +290,6 @@ async fn test_direct_configuration_workflow() {
         document_type: "adr".to_string(),
         title: "Use SQLite for local storage".to_string(),
         parent_id: None,
-        risk_level: None,
         complexity: None,
         stakeholders: None,
         decision_maker: Some("developer".to_string()),

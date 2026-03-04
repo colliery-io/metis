@@ -7,7 +7,7 @@ created_at: 2026-02-20T14:47:08.759930+00:00
 updated_at: 2026-03-03T02:29:50.668718+00:00
 parent: METIS-I-0021
 blocked_by: []
-archived: false
+archived: true
 
 tags:
   - "#task"
@@ -27,6 +27,8 @@ initiative_id: METIS-I-0021
 ## Objective
 
 Replace the naive `std::fs::read_dir` directory walker from muninn with an `ignore::WalkBuilder`-based walker that respects `.gitignore`. Output a filtered file tree of source files and feed parsed files into the extractors.
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 

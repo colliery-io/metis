@@ -2,7 +2,7 @@ use crate::application::services::document::DocumentDiscoveryService;
 use crate::domain::documents::traits::Document;
 use crate::domain::documents::types::{DocumentType, Phase};
 use crate::Result;
-use crate::{Adr, Initiative, MetisError, Strategy, Task, Vision};
+use crate::{Adr, Initiative, MetisError, Task, Vision};
 use std::path::{Path, PathBuf};
 
 /// Service for managing document phase transitions
@@ -108,12 +108,6 @@ impl PhaseTransitionService {
                     .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
                 Ok(vision.phase()?)
             }
-            DocumentType::Strategy => {
-                let strategy = Strategy::from_file(file_path)
-                    .await
-                    .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
-                Ok(strategy.phase()?)
-            }
             DocumentType::Initiative => {
                 let initiative = Initiative::from_file(file_path)
                     .await
@@ -155,22 +149,6 @@ impl PhaseTransitionService {
                     }
                 })?;
                 vision
-                    .to_file(file_path)
-                    .await
-                    .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
-            }
-            DocumentType::Strategy => {
-                let mut strategy = Strategy::from_file(file_path)
-                    .await
-                    .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
-                strategy
-                    .transition_phase(Some(target_phase))
-                    .map_err(|_e| MetisError::InvalidPhaseTransition {
-                        from: strategy.phase().unwrap_or(Phase::Shaping).to_string(),
-                        to: target_phase.to_string(),
-                        doc_type: "strategy".to_string(),
-                    })?;
-                strategy
                     .to_file(file_path)
                     .await
                     .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
@@ -325,7 +303,6 @@ mod tests {
             tags: vec![],
             phase: None, // Should default to Draft
             complexity: None,
-            risk_level: None,
         };
         let creation_result = creation_service.create_vision(config).await.unwrap();
 
@@ -342,56 +319,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_transition_strategy_through_phases() {
-        let (_temp_dir, workspace_dir) = setup_test_workspace().await;
-
-        // Create a strategy document
-        let creation_service = DocumentCreationService::new(&workspace_dir);
-        let config = DocumentCreationConfig {
-            title: "Test Strategy".to_string(),
-            description: Some("A test strategy".to_string()),
-            parent_id: None,
-            tags: vec![],
-            phase: None, // Should default to Shaping
-            complexity: None,
-            risk_level: None,
-        };
-        let creation_result = creation_service.create_strategy(config).await.unwrap();
-
-        let transition_service = PhaseTransitionService::new(&workspace_dir);
-        let short_code = &creation_result.short_code;
-
-        // Transition through the strategy phases
-        let result1 = transition_service
-            .transition_to_next_phase(short_code)
-            .await
-            .unwrap();
-        assert_eq!(result1.from_phase, Phase::Shaping);
-        assert_eq!(result1.to_phase, Phase::Design);
-
-        let result2 = transition_service
-            .transition_to_next_phase(short_code)
-            .await
-            .unwrap();
-        assert_eq!(result2.from_phase, Phase::Design);
-        assert_eq!(result2.to_phase, Phase::Ready);
-
-        let result3 = transition_service
-            .transition_to_next_phase(short_code)
-            .await
-            .unwrap();
-        assert_eq!(result3.from_phase, Phase::Ready);
-        assert_eq!(result3.to_phase, Phase::Active);
-
-        let result4 = transition_service
-            .transition_to_next_phase(short_code)
-            .await
-            .unwrap();
-        assert_eq!(result4.from_phase, Phase::Active);
-        assert_eq!(result4.to_phase, Phase::Completed);
-    }
-
-    #[tokio::test]
     async fn test_transition_to_specific_phase() {
         let (_temp_dir, workspace_dir) = setup_test_workspace().await;
 
@@ -404,7 +331,6 @@ mod tests {
             tags: vec![],
             phase: None, // Should default to Draft
             complexity: None,
-            risk_level: None,
         };
         let creation_result = creation_service.create_vision(config).await.unwrap();
 
@@ -432,7 +358,6 @@ mod tests {
             tags: vec![],
             phase: None, // Should default to Draft
             complexity: None,
-            risk_level: None,
         };
         let creation_result = creation_service.create_vision(config).await.unwrap();
 
@@ -465,11 +390,6 @@ mod tests {
             transition_service.get_valid_transitions_for(DocumentType::Vision, Phase::Review);
         assert_eq!(vision_review_transitions, vec![Phase::Published]);
 
-        // Test strategy transitions (forward-only)
-        let strategy_shaping_transitions =
-            transition_service.get_valid_transitions_for(DocumentType::Strategy, Phase::Shaping);
-        assert_eq!(strategy_shaping_transitions, vec![Phase::Design]);
-
         // Test task transitions - backlog to todo
         let task_backlog_transitions =
             transition_service.get_valid_transitions_for(DocumentType::Task, Phase::Backlog);
@@ -497,11 +417,6 @@ mod tests {
             Phase::Draft,
             Phase::Review
         ));
-        assert!(transition_service.is_valid_transition(
-            DocumentType::Strategy,
-            Phase::Shaping,
-            Phase::Design
-        ));
 
         // Invalid transitions - skipping phases
         assert!(!transition_service.is_valid_transition(
@@ -509,22 +424,12 @@ mod tests {
             Phase::Draft,
             Phase::Published
         ));
-        assert!(!transition_service.is_valid_transition(
-            DocumentType::Strategy,
-            Phase::Shaping,
-            Phase::Active
-        ));
 
         // Invalid transitions - backward (not supported)
         assert!(!transition_service.is_valid_transition(
             DocumentType::Vision,
             Phase::Review,
             Phase::Draft
-        ));
-        assert!(!transition_service.is_valid_transition(
-            DocumentType::Strategy,
-            Phase::Design,
-            Phase::Shaping
         ));
     }
 }

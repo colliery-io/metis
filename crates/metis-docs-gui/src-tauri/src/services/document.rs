@@ -38,7 +38,6 @@ pub struct CreateDocumentRequest {
     pub title: String,
     pub parent_id: Option<String>,
     pub complexity: Option<String>,
-    pub risk_level: Option<String>,
     pub tags: Option<Vec<String>>,
 }
 
@@ -47,38 +46,6 @@ pub struct CreateDocumentResult {
     pub id: String,
     pub short_code: String,
     pub filepath: String,
-}
-
-fn find_strategy_short_code_for_initiative(
-    metis_dir: &Path,
-    initiative_id: &str,
-) -> Result<String, String> {
-    let db_path = metis_dir.join("metis.db");
-    let db =
-        Database::new(db_path.to_str().unwrap()).map_err(|e| format!("Database error: {}", e))?;
-
-    let mut repo = db
-        .repository()
-        .map_err(|e| format!("Repository error: {}", e))?;
-
-    // Find the initiative document in the database by short code
-    let initiative = repo
-        .find_by_short_code(initiative_id)
-        .map_err(|e| format!("Database lookup error: {}", e))?
-        .ok_or_else(|| format!("Initiative '{}' not found in database", initiative_id))?;
-
-    // Get the strategy ID from the initiative, then find the strategy's short code
-    let strategy_id = initiative
-        .strategy_id
-        .ok_or_else(|| format!("Initiative '{}' has no parent strategy", initiative_id))?;
-
-    // Find the strategy by its short code (strategy_id now contains short codes)
-    let strategy = repo
-        .find_by_short_code(&strategy_id)
-        .map_err(|e| format!("Database lookup error: {}", e))?
-        .ok_or_else(|| format!("Strategy '{}' not found in database", strategy_id))?;
-
-    Ok(strategy.short_code)
 }
 
 #[tauri::command]
@@ -119,13 +86,11 @@ pub async fn create_document(
             .collect(),
         phase: None,
         complexity: request.complexity.as_ref().and_then(|c| c.parse().ok()),
-        risk_level: request.risk_level.as_ref().and_then(|r| r.parse().ok()),
     };
 
     // Create document based on type
     let result = match request.document_type.as_str() {
         "vision" => creation_service.create_vision(config).await,
-        "strategy" => creation_service.create_strategy(config).await,
         "adr" => creation_service.create_adr(config).await,
         "task" => {
             // Check if this is a backlog item (no parent provided and request context indicates backlog)
@@ -144,18 +109,9 @@ pub async fn create_document(
 
                 if let Some(initiative_id) = request.parent_id.as_ref() {
                     // Task with parent initiative
-                    let strategy_id = if flight_config.strategies_enabled {
-                        // Full configuration: find actual strategy short code from initiative location
-                        find_strategy_short_code_for_initiative(&metis_dir, initiative_id)?
-                    } else {
-                        // Streamlined/Direct: use NULL as strategy placeholder
-                        "NULL".to_string()
-                    };
-
                     creation_service
                         .create_task_with_config(
                             config,
-                            &strategy_id,
                             initiative_id,
                             &flight_config,
                         )
@@ -176,19 +132,8 @@ pub async fn create_document(
             let flight_config = config_repo.get_flight_level_config()
                 .map_err(|e| format!("Failed to load configuration: {}", e))?;
 
-            // Determine parent strategy ID based on configuration
-            let parent_strategy_id = if flight_config.strategies_enabled {
-                // Full configuration: require explicit strategy parent
-                request.parent_id.as_ref().ok_or_else(|| {
-                    "Initiative requires a parent strategy short code in full configuration".to_string()
-                })?.clone()
-            } else {
-                // Streamlined/Direct configuration: use NULL strategy placeholder
-                "NULL".to_string()
-            };
-
             creation_service
-                .create_initiative_with_config(config, &parent_strategy_id, &flight_config)
+                .create_initiative_with_config(config, &flight_config)
                 .await
         },
         _ => return Err(format!("Document type {} not supported yet", request.document_type)),
@@ -272,7 +217,7 @@ pub async fn list_documents(
             let mut all_docs = Vec::new();
 
             // Collect all document types using string literals like TUI does
-            for doc_type in ["vision", "strategy", "initiative", "task", "adr"] {
+            for doc_type in ["vision", "initiative", "task", "adr"] {
                 if let Ok(mut docs) =
                     service.find_by_type(DocumentType::from_str(doc_type).unwrap())
                 {
@@ -536,13 +481,10 @@ pub async fn get_available_parents(
             "initiative"
         }
         "initiative" => {
-            // If strategies are disabled (streamlined/direct config), initiatives don't need parents
-            if !config.strategies_enabled {
-                return Ok(vec![]);
-            }
-            "strategy"
+            // Initiatives parent to visions
+            "vision"
         }
-        _ => return Ok(vec![]), // No parents needed for vision, strategy, adr
+        _ => return Ok(vec![]), // No parents needed for vision, adr
     };
 
     let documents = app
@@ -597,7 +539,6 @@ mod tests {
             tags: vec![],
             phase: None,
             complexity: None,
-            risk_level: None,
         };
 
         let result = creation_service.create_adr(config).await;
@@ -631,11 +572,10 @@ mod tests {
             tags: vec![],
             phase: None,
             complexity: Some("m".parse().unwrap()),
-            risk_level: None,
         };
 
         let initiative_result = creation_service
-            .create_initiative_with_config(initiative_config, "NULL", &flight_config)
+            .create_initiative_with_config(initiative_config, &flight_config)
             .await
             .unwrap();
 
@@ -651,13 +591,11 @@ mod tests {
             tags: vec![],
             phase: None,
             complexity: Some("s".parse().unwrap()),
-            risk_level: None,
         };
 
         let task_result = creation_service
             .create_task_with_config(
                 task_config,
-                "NULL",
                 &initiative_result.short_code,
                 &flight_config,
             )

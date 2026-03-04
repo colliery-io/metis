@@ -13,7 +13,6 @@ pub const JSON_EXT: &str = ".json";
 
 /// Document directories
 pub const VISION_DIR: &str = "vision";
-pub const STRATEGY_DIR: &str = "strategy";
 pub const INITIATIVE_DIR: &str = "initiative";
 pub const TASK_DIR: &str = "task";
 pub const ADR_DIR: &str = "adr";
@@ -21,7 +20,6 @@ pub const ARCHIVED_DIR: &str = "archived";
 
 /// Template names
 pub const VISION_TEMPLATE: &str = "vision";
-pub const STRATEGY_TEMPLATE: &str = "strategy";
 pub const INITIATIVE_TEMPLATE: &str = "initiative";
 pub const TASK_TEMPLATE: &str = "task";
 pub const ADR_TEMPLATE: &str = "adr";
@@ -31,12 +29,6 @@ pub mod phases {
     pub const VISION_DRAFT: &str = "draft";
     pub const VISION_REVIEW: &str = "review";
     pub const VISION_PUBLISHED: &str = "published";
-
-    pub const STRATEGY_SHAPING: &str = "shaping";
-    pub const STRATEGY_DESIGN: &str = "design";
-    pub const STRATEGY_READY: &str = "ready";
-    pub const STRATEGY_ACTIVE: &str = "active";
-    pub const STRATEGY_COMPLETED: &str = "completed";
 
     pub const INITIATIVE_DISCOVERY: &str = "discovery";
     pub const INITIATIVE_DESIGN: &str = "design";
@@ -63,13 +55,6 @@ pub mod complexity {
     pub const M: &str = "m";
     pub const L: &str = "l";
     pub const XL: &str = "xl";
-}
-
-/// Risk levels for strategies
-pub mod risk {
-    pub const LOW: &str = "low";
-    pub const MEDIUM: &str = "medium";
-    pub const HIGH: &str = "high";
 }
 
 /// Database settings

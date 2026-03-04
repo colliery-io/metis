@@ -153,28 +153,18 @@ mod tests {
         let init_cmd = InitCommand {
             name: Some("Test Project".to_string()),
             preset: None,
-            strategies: None,
+
             initiatives: None,
             prefix: None,
         };
         init_cmd.execute().await.unwrap();
 
-        // Create a test document file
-        let test_strategy = temp_dir.path().join(".metis/strategies/test-strategy.md");
-        fs::create_dir_all(test_strategy.parent().unwrap()).unwrap();
-        fs::write(&test_strategy, "---\nid: test-strategy\nlevel: strategy\ntitle: \"Test Strategy\"\ncreated_at: 2025-01-01T00:00:00Z\nupdated_at: 2025-01-01T00:00:00Z\nparent: test-vision\nblocked_by: []\narchived: false\ntags:\n  - \"#strategy\"\n  - \"#phase/shaping\"\nexit_criteria_met: false\nsuccess_metrics: []\nrisk_level: medium\nstakeholders: []\n---\n\n# Test Strategy\n").unwrap();
-
-        // Run sync command - expect it to run but may have errors with vision.md parsing
+        // Run sync command
         let cmd = SyncCommand {};
         let result = cmd.execute().await;
 
-        // The command may fail due to vision.md parsing issues, but it should attempt to sync
-        // For this test, we just verify the sync command runs and attempts to process files
-        // In a real scenario, the vision.md would be properly formatted from templates
+        // The command should succeed and sync the vision.md created by init
         println!("Sync result: {:?}", result);
-
-        // Check that the strategy file still exists (it should have been processed)
-        assert!(test_strategy.exists());
 
         // Restore original directory
         if let Some(original) = original_dir {

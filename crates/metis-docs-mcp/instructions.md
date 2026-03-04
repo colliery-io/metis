@@ -9,8 +9,7 @@ Metis organizes work hierarchically using Flight Levels methodology: Vision (str
 | Type | Purpose | Phases | Parent Required |
 |------|---------|--------|-----------------|
 | **Vision** | Strategic direction (6mo-2yr) | draft → review → published | No |
-| **Strategy** | Coordinated approaches (Full preset only) | shaping → design → ready → active → completed | Vision (published) |
-| **Initiative** | Concrete projects (1-6mo) | discovery → design → ready → decompose → active → completed | Strategy or Vision (published) |
+| **Initiative** | Concrete projects (1-6mo) | discovery → design → ready → decompose → active → completed | Vision (published) |
 | **Task** | Individual work (1-14 days) | todo → active → completed | Initiative (decompose/active) |
 | **Backlog** | Standalone bugs/features/debt | backlog → todo → active → completed | No (use `backlog_category`) |
 | **ADR** | Architecture decisions | draft → discussion → decided → superseded | No |
@@ -27,13 +26,6 @@ Metis organizes work hierarchically using Flight Levels methodology: Vision (str
 - draft → review
 - review → published
 - published → (terminal)
-
-**Strategy** (Full preset only): `shaping → design → ready → active → completed`
-- shaping → design
-- design → ready
-- ready → active
-- active → completed
-- completed → (terminal)
 
 **Initiative**: `discovery → design → ready → decompose → active → completed`
 - discovery → design
@@ -66,7 +58,7 @@ Metis organizes work hierarchically using Flight Levels methodology: Vision (str
 ## Short Codes
 
 All documents get unique IDs: `PREFIX-TYPE-NNNN` (e.g., `PROJ-V-0001`, `ACME-T-0042`)
-- **V**=Vision, **S**=Strategy, **I**=Initiative, **T**=Task, **A**=ADR
+- **V**=Vision, **I**=Initiative, **T**=Task, **A**=ADR
 - Use short codes to reference documents in all operations
 
 ## CRITICAL: project_path Format
@@ -99,7 +91,7 @@ Full-text search across documents.
 ```
 project_path: string (required) - Path to the .metis folder (e.g., "/path/to/project/.metis")
 query: string (required) - Search text
-document_type: string (optional) - Filter: vision, strategy, initiative, task, adr
+document_type: string (optional) - Filter: vision, initiative, task, adr
 limit: number (optional) - Max results
 include_archived: bool (optional) - Include archived docs (default: false)
 ```
@@ -115,10 +107,9 @@ short_code: string (required) - Document ID (e.g., PROJ-I-0001)
 Create a new document.
 ```
 project_path: string (required) - Path to the .metis folder (e.g., "/path/to/project/.metis")
-document_type: string (required) - vision, strategy, initiative, task, adr
+document_type: string (required) - vision, initiative, task, adr
 title: string (required) - Document title
-parent_id: string (optional) - Parent short code (required for strategy/initiative/task)
-risk_level: string (optional) - For strategies: low, medium, high, critical
+parent_id: string (optional) - Parent short code (required for initiative/task)
 complexity: string (optional) - For initiatives: xs, s, m, l, xl
 decision_maker: string (optional) - For ADRs
 backlog_category: string (optional) - For backlog items: bug, feature, tech-debt
@@ -148,7 +139,7 @@ force: bool (optional) - Skip exit criteria validation
 - Moving to blocked state (tasks only)
 - Returning from blocked to todo or active (tasks only)
 
-**For initiatives and strategies**: ALWAYS check in with the human before transitioning phases. Summarize current state and get explicit approval to proceed.
+**For initiatives**: ALWAYS check in with the human before transitioning phases. Summarize current state and get explicit approval to proceed.
 
 ### archive_document
 Archive a document and all its children.
@@ -216,23 +207,23 @@ reassign_parent:
 - **Read before edit**: Always `read_document` before `edit_document`
 - **Delete unused sections**: Templates contain optional sections. If a section doesn't apply to your document, delete it entirely rather than leaving it empty or with placeholder text
 - **Auto-transition**: Omit phase parameter to follow natural workflow
-- **Hierarchy matters**: Tasks need initiatives, initiatives need strategies (Full) or visions (Streamlined)
+- **Hierarchy matters**: Tasks need initiatives, initiatives need visions
 - **Short codes everywhere**: Reference documents by ID, not title
 - **Archive completed work**: Use `archive_document` to clean up finished trees
 
 ## Human-in-the-Loop for Strategic Work
 
-**CRITICAL**: Initiatives and strategies represent higher-level strategic decisions that require human oversight. Agents should guide and support, but humans must remain in control of strategic direction.
+**CRITICAL**: Initiatives represent higher-level strategic decisions that require human oversight. Agents should guide and support, but humans must remain in control of strategic direction.
 
 ### When to Check In With Humans
 
 **ALWAYS pause and consult the human before:**
-- Transitioning an initiative or strategy to a new phase
+- Transitioning an initiative to a new phase
 - Making architectural or design decisions
 - Decomposing an initiative into tasks
 - Any action that commits significant resources or direction
 
-### Required Behaviors for Initiatives/Strategies
+### Required Behaviors for Initiatives
 
 1. **Discovery Phase**: Ask clarifying questions about scope, priorities, and constraints. Do NOT assume you understand the full context.
 
@@ -244,7 +235,7 @@ reassign_parent:
 
 ### How to Check In
 
-When working on initiatives or strategies:
+When working on initiatives:
 ```
 "Here's the current state of [INITIATIVE-CODE]:
 - Completed: [summary]
@@ -258,7 +249,7 @@ Do you want me to proceed, or would you like to adjust the direction?"
 
 - Do NOT autonomously transition initiatives through multiple phases
 - Do NOT create large numbers of tasks without human review
-- Do NOT make strategic assumptions - ask instead
+- Do NOT make assumptions about scope or direction - ask instead
 - Do NOT skip the check-in because "it seems obvious"
 
 Agents are powerful assistants for strategic work, but the human must drive the decisions. When in doubt, ask.

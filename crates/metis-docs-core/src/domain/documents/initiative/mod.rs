@@ -48,7 +48,7 @@ impl std::str::FromStr for Complexity {
     }
 }
 
-/// An Initiative document represents a concrete implementation approach for a strategy
+/// An Initiative document represents a concrete implementation project
 #[derive(Debug)]
 pub struct Initiative {
     core: super::traits::DocumentCore,
@@ -60,8 +60,7 @@ impl Initiative {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         title: String,
-        parent_id: Option<DocumentId>,   // Usually a Strategy
-        strategy_id: Option<DocumentId>, // The strategy this initiative belongs to
+        parent_id: Option<DocumentId>,
         blocked_by: Vec<DocumentId>,
         tags: Vec<Tag>,
         archived: bool,
@@ -73,7 +72,6 @@ impl Initiative {
         Self::new_with_template(
             title,
             parent_id,
-            strategy_id,
             blocked_by,
             tags,
             archived,
@@ -88,7 +86,6 @@ impl Initiative {
     pub fn new_with_template(
         title: String,
         parent_id: Option<DocumentId>,
-        strategy_id: Option<DocumentId>,
         blocked_by: Vec<DocumentId>,
         tags: Vec<Tag>,
         archived: bool,
@@ -115,7 +112,6 @@ impl Initiative {
 
         let content = DocumentContent::new(&rendered_content);
 
-        // For initiatives, the initiative_id is self and strategy_id comes from parent
         let initiative_id = Some(DocumentId::from_title(&title));
 
         Ok(Self {
@@ -127,7 +123,6 @@ impl Initiative {
                 blocked_by,
                 tags,
                 archived,
-                strategy_id,
                 initiative_id,
             },
             estimated_complexity,
@@ -141,13 +136,11 @@ impl Initiative {
         metadata: DocumentMetadata,
         content: DocumentContent,
         parent_id: Option<DocumentId>,
-        strategy_id: Option<DocumentId>,
         blocked_by: Vec<DocumentId>,
         tags: Vec<Tag>,
         archived: bool,
         estimated_complexity: Complexity,
     ) -> Self {
-        // For initiatives, the initiative_id is self and strategy_id comes from parameter
         let initiative_id = Some(DocumentId::from_title(&title));
 
         Self {
@@ -159,7 +152,6 @@ impl Initiative {
                 blocked_by,
                 tags,
                 archived,
-                strategy_id,
                 initiative_id,
             },
             estimated_complexity,
@@ -269,16 +261,11 @@ impl Initiative {
         );
         let content = DocumentContent::from_markdown(&parsed.content);
 
-        // Extract lineage from frontmatter
-        let strategy_id = FrontmatterParser::extract_optional_string(&fm_map, "strategy_id")
-            .map(DocumentId::from);
-
         Ok(Self::from_parts(
             title,
             metadata,
             content,
             parent_id,
-            strategy_id,
             blocked_by,
             tags,
             archived,
@@ -336,15 +323,6 @@ impl Initiative {
         context.insert("tags", &tag_strings);
 
         // Add lineage fields
-        context.insert(
-            "strategy_id",
-            &self
-                .core
-                .strategy_id
-                .as_ref()
-                .map(|id| id.to_string())
-                .unwrap_or_else(|| "NULL".to_string()),
-        );
         context.insert(
             "initiative_id",
             &self
@@ -428,10 +406,10 @@ impl Document for Initiative {
             ));
         }
 
-        // Parent should typically be a Strategy
+        // Parent should typically be a Vision
         if self.parent_id().is_none() {
             return Err(DocumentValidationError::MissingRequiredField(
-                "Initiatives should have a parent Strategy".to_string(),
+                "Initiatives should have a parent Vision".to_string(),
             ));
         }
 
@@ -619,9 +597,8 @@ exit_criteria_met: false
     async fn test_initiative_validation() {
         let initiative = Initiative::new(
             "Test Initiative".to_string(),
-            Some(DocumentId::from("parent-strategy")), // parent_id
-            Some(DocumentId::from("parent-strategy")), // strategy_id (same as parent for initiatives)
-            vec![],                                    // blocked_by
+            Some(DocumentId::from("parent-vision")),
+            vec![],
             vec![
                 Tag::Label("initiative".to_string()),
                 Tag::Phase(Phase::Discovery),
@@ -651,9 +628,8 @@ exit_criteria_met: false
         // Test validation failure - no parent
         let initiative_no_parent = Initiative::new(
             "Test Initiative".to_string(),
-            None,   // No parent
-            None,   // No strategy
-            vec![], // blocked_by
+            None,
+            vec![],
             vec![Tag::Phase(Phase::Discovery)],
             false,
             Complexity::M,
@@ -668,9 +644,8 @@ exit_criteria_met: false
     async fn test_initiative_phase_transitions() {
         let initiative = Initiative::new(
             "Test Initiative".to_string(),
-            Some(DocumentId::from("parent-strategy")), // parent_id
-            Some(DocumentId::from("parent-strategy")), // strategy_id
-            vec![],                                    // blocked_by
+            Some(DocumentId::from("parent-vision")),
+            vec![],
             vec![Tag::Phase(Phase::Discovery)],
             false,
             Complexity::M,

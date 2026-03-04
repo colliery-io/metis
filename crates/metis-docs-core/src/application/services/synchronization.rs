@@ -131,20 +131,17 @@ impl<'a> SyncService<'a> {
             .to_string();
 
         // Extract lineage from filesystem path if workspace directory is available
-        let (fs_strategy_id, fs_initiative_id, is_backlog) =
+        let (fs_initiative_id, is_backlog) =
             if let Some(workspace_dir) = self.workspace_dir {
-                let (strat, init) = Self::extract_lineage_from_path(filepath, workspace_dir);
+                let init = Self::extract_lineage_from_path(filepath, workspace_dir);
                 let is_backlog = Self::is_backlog_path(filepath, workspace_dir);
-                (strat, init, is_backlog)
+                (init, is_backlog)
             } else {
-                (None, None, false)
+                (None, false)
             };
 
         // Use filesystem lineage if available, otherwise use document lineage
         // Exception: backlog items should NEVER have initiative_id (filesystem overrides frontmatter)
-        let final_strategy_id = fs_strategy_id
-            .or_else(|| core.strategy_id.clone())
-            .map(|id| id.to_string());
         let final_initiative_id = if is_backlog {
             None // Backlog items must not have initiative_id, regardless of frontmatter
         } else {
@@ -166,24 +163,23 @@ impl<'a> SyncService<'a> {
             frontmatter_json: serde_json::to_string(&core.metadata).map_err(MetisError::Json)?,
             content: Some(content),
             phase,
-            strategy_id: final_strategy_id,
             initiative_id: final_initiative_id,
             short_code: core.metadata.short_code.clone(),
         })
     }
 
     /// Extract lineage information from file path
-    /// Returns (strategy_id, initiative_id) based on filesystem structure
+    /// Returns initiative_id based on filesystem structure
     fn extract_lineage_from_path<P: AsRef<Path>>(
         file_path: P,
         workspace_dir: &Path,
-    ) -> (Option<DocumentId>, Option<DocumentId>) {
+    ) -> Option<DocumentId> {
         let path = file_path.as_ref();
 
         // Get relative path from workspace
         let relative_path = match path.strip_prefix(workspace_dir) {
             Ok(rel) => rel,
-            Err(_) => return (None, None),
+            Err(_) => return None,
         };
 
         let path_parts: Vec<&str> = relative_path
@@ -193,52 +189,32 @@ impl<'a> SyncService<'a> {
 
         // Match the path structure
         match path_parts.as_slice() {
-            // strategies/{strategy-id}/strategy.md
-            ["strategies", strategy_id, "strategy.md"] => {
-                if strategy_id == &"NULL" {
-                    (None, None)
+            // initiatives/{initiative-id}/initiative.md
+            ["initiatives", initiative_id, "initiative.md"] => {
+                if initiative_id == &"NULL" {
+                    None
                 } else {
-                    (Some(DocumentId::from(*strategy_id)), None)
+                    Some(DocumentId::from(*initiative_id))
                 }
             }
-            // strategies/{strategy-id}/initiatives/{initiative-id}/initiative.md
-            ["strategies", strategy_id, "initiatives", initiative_id, "initiative.md"] => {
-                let strat_id = if strategy_id == &"NULL" {
-                    None
-                } else {
-                    Some(DocumentId::from(*strategy_id))
-                };
-                let init_id = if initiative_id == &"NULL" {
+            // initiatives/{initiative-id}/tasks/{task-id}.md
+            ["initiatives", initiative_id, "tasks", _] => {
+                if initiative_id == &"NULL" {
                     None
                 } else {
                     Some(DocumentId::from(*initiative_id))
-                };
-                (strat_id, init_id)
-            }
-            // strategies/{strategy-id}/initiatives/{initiative-id}/tasks/{task-id}.md
-            ["strategies", strategy_id, "initiatives", initiative_id, "tasks", _] => {
-                let strat_id = if strategy_id == &"NULL" {
-                    None
-                } else {
-                    Some(DocumentId::from(*strategy_id))
-                };
-                let init_id = if initiative_id == &"NULL" {
-                    None
-                } else {
-                    Some(DocumentId::from(*initiative_id))
-                };
-                (strat_id, init_id)
+                }
             }
             // backlog/{task-id}.md (no lineage)
-            ["backlog", _] => (None, None),
+            ["backlog", _] => None,
             // backlog/{category}/{task-id}.md (no lineage) - handles bugs, features, tech-debt subdirs
-            ["backlog", _, _] => (None, None),
+            ["backlog", _, _] => None,
             // adrs/{adr-id}.md (no lineage)
-            ["adrs", _] => (None, None),
+            ["adrs", _] => None,
             // vision.md (no lineage)
-            ["vision.md"] => (None, None),
+            ["vision.md"] => None,
             // Default: no lineage
-            _ => (None, None),
+            _ => None,
         }
     }
 
@@ -831,7 +807,6 @@ impl<'a> SyncService<'a> {
                         if let Some((type_letter, num_str)) = type_and_num.split_once('-') {
                             let doc_type = match type_letter {
                                 "V" => "vision",
-                                "S" => "strategy",
                                 "I" => "initiative",
                                 "T" => "task",
                                 "A" => "adr",
@@ -902,7 +877,7 @@ impl<'a> SyncService<'a> {
         }
 
         // Type: single letter from allowed set
-        if !matches!(type_letter, "V" | "S" | "I" | "T" | "A") {
+        if !matches!(type_letter, "V" | "I" | "T" | "A") {
             return false;
         }
 

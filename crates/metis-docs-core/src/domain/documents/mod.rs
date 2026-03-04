@@ -9,6 +9,5 @@ pub mod types;
 // Document type implementations
 pub mod adr;
 pub mod initiative;
-pub mod strategy;
 pub mod task;
 pub mod vision;

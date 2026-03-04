@@ -4,14 +4,14 @@ level: initiative
 title: "Enhanced Search Capabilities"
 short_code: "METIS-I-0018"
 created_at: 2025-12-31T15:03:23.913810+00:00
-updated_at: 2026-01-01T21:28:03.605996+00:00
+updated_at: 2026-03-03T17:44:00.309286+00:00
 parent: METIS-V-0001
 blocked_by: []
-archived: false
+archived: true
 
 tags:
   - "#initiative"
-  - "#phase/active"
+  - "#phase/completed"
 
 
 exit_criteria_met: false

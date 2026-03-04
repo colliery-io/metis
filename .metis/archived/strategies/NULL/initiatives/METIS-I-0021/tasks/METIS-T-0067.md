@@ -7,7 +7,7 @@ created_at: 2026-02-20T14:47:06.004700+00:00
 updated_at: 2026-02-24T22:12:11.383032+00:00
 parent: METIS-I-0021
 blocked_by: []
-archived: false
+archived: true
 
 tags:
   - "#task"
@@ -27,6 +27,8 @@ initiative_id: METIS-I-0021
 ## Objective
 
 Add TypeScript and JavaScript language support to the code index crate. Following the same pattern as the vendored Rust and Python extractors, create a TS/JS extractor using `tree-sitter-typescript` and `tree-sitter-javascript`.
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 

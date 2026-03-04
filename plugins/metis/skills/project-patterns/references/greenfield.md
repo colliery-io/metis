@@ -37,7 +37,7 @@ Don't overcomplicate it. A clear paragraph beats a vague page.
 - draft -> review (get stakeholder input)
 - review -> published (when stable)
 
-Only create strategies/initiatives against a published vision.
+Only create initiatives against a published vision.
 
 ### 3. Choose Your Preset
 
@@ -47,9 +47,9 @@ For most greenfield projects:
 |-----------|-------------------|-------------------|
 | Solo | None | Direct |
 | 2-5 | Informal | Streamlined |
-| 5+ | Formal | Full (or Streamlined) |
+| 5+ | Formal | Streamlined |
 
-When in doubt, start with Streamlined. You can always add Strategy later.
+When in doubt, start with Streamlined.
 
 ### 4. Create Initial Initiatives
 

@@ -15,12 +15,9 @@ pub struct InitCommand {
     /// Project prefix for document short codes, up to 6 characters (e.g., PROJ, ACME, TEST)
     #[arg(short = 'P', long)]
     pub prefix: Option<String>,
-    /// Configuration preset (full, streamlined, direct). Default: streamlined
+    /// Configuration preset (streamlined, direct). Default: streamlined
     #[arg(short, long)]
     pub preset: Option<String>,
-    /// Enable/disable strategies (true/false)
-    #[arg(long)]
-    pub strategies: Option<bool>,
     /// Enable/disable initiatives (true/false)
     #[arg(long)]
     pub initiatives: Option<bool>,
@@ -125,25 +122,20 @@ impl InitCommand {
         if let Some(preset_name) = &self.preset {
             // Use specified preset
             match preset_name.as_str() {
-                "full" => Ok(FlightLevelConfig::full()),
                 "streamlined" => Ok(FlightLevelConfig::streamlined()),
                 "direct" => Ok(FlightLevelConfig::direct()),
                 _ => {
                     anyhow::bail!(
-                        "Invalid preset '{}'. Valid presets are: full, streamlined, direct",
+                        "Invalid preset '{}'. Valid presets are: streamlined, direct",
                         preset_name
                     );
                 }
             }
-        } else if self.strategies.is_some() || self.initiatives.is_some() {
-            // Use custom configuration, with streamlined as default base
-            let default_config = FlightLevelConfig::streamlined();
-            let strategies_enabled = self.strategies.unwrap_or(default_config.strategies_enabled);
-            let initiatives_enabled = self
-                .initiatives
-                .unwrap_or(default_config.initiatives_enabled);
+        } else if self.initiatives.is_some() {
+            // Use custom configuration
+            let initiatives_enabled = self.initiatives.unwrap();
 
-            FlightLevelConfig::new(strategies_enabled, initiatives_enabled)
+            FlightLevelConfig::new(initiatives_enabled)
                 .map_err(|e| anyhow::anyhow!("Invalid configuration: {}", e))
         } else {
             // Default to streamlined preset
@@ -170,7 +162,7 @@ mod tests {
         let cmd = InitCommand {
             name: Some("Test Project".to_string()),
             preset: None,
-            strategies: None,
+
             initiatives: None,
             prefix: None,
         };
@@ -187,11 +179,6 @@ mod tests {
         let db_path = metis_dir.join("metis.db");
         assert!(db_path.exists());
         assert!(db_path.is_file());
-
-        // Verify strategies directory was created
-        let strategies_dir = metis_dir.join("strategies");
-        assert!(strategies_dir.exists());
-        assert!(strategies_dir.is_dir());
 
         // Verify vision.md was created
         let vision_path = metis_dir.join("vision.md");
@@ -249,7 +236,7 @@ mod tests {
         let cmd = InitCommand {
             name: Some("Test Project".to_string()),
             preset: None,
-            strategies: None,
+
             initiatives: None,
             prefix: None,
         };
@@ -279,7 +266,7 @@ mod tests {
         let cmd = InitCommand {
             name: None,
             preset: None,
-            strategies: None,
+
             initiatives: None,
             prefix: None,
         };
@@ -306,11 +293,10 @@ mod tests {
         // Change to temp directory
         std::env::set_current_dir(temp_dir.path()).unwrap();
 
-        // Run init command with full preset
+        // Run init command with direct preset
         let cmd = InitCommand {
             name: Some("Test Project".to_string()),
-            preset: Some("full".to_string()),
-            strategies: None,
+            preset: Some("direct".to_string()),
             initiatives: None,
             prefix: None,
         };
@@ -331,7 +317,7 @@ mod tests {
 
         assert_eq!(
             config,
-            metis_core::domain::configuration::FlightLevelConfig::full()
+            metis_core::domain::configuration::FlightLevelConfig::direct()
         );
 
         // Restore original directory
@@ -348,12 +334,11 @@ mod tests {
         // Change to temp directory
         std::env::set_current_dir(temp_dir.path()).unwrap();
 
-        // Run init command with custom flags (strategies disabled, initiatives enabled)
+        // Run init command with initiatives disabled (direct mode)
         let cmd = InitCommand {
             name: Some("Test Project".to_string()),
             preset: None,
-            strategies: Some(false),
-            initiatives: Some(true),
+            initiatives: Some(false),
             prefix: None,
         };
 
@@ -368,8 +353,7 @@ mod tests {
         let mut config_repo = db.configuration_repository().unwrap();
         let config = config_repo.get_flight_level_config().unwrap();
 
-        assert!(!config.strategies_enabled);
-        assert!(config.initiatives_enabled);
+        assert!(!config.initiatives_enabled);
 
         // Restore original directory
         if let Some(original) = original_dir {
@@ -389,7 +373,7 @@ mod tests {
         let cmd = InitCommand {
             name: Some("Test Project".to_string()),
             preset: None,
-            strategies: None,
+
             initiatives: None,
             prefix: None,
         };
@@ -428,7 +412,7 @@ mod tests {
         let cmd = InitCommand {
             name: Some("Test Project".to_string()),
             preset: Some("invalid".to_string()),
-            strategies: None,
+
             initiatives: None,
             prefix: None,
         };

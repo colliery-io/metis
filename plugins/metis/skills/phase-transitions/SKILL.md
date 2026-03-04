@@ -19,16 +19,6 @@ draft → review → published
 - **review** → published
 - **published**: terminal
 
-### Strategy (Full preset only)
-```
-shaping → design → ready → active → completed
-```
-- **shaping** → design
-- **design** → ready
-- **ready** → active
-- **active** → completed
-- **completed**: terminal
-
 ### Initiative
 ```
 discovery → design → ready → decompose → active → completed
@@ -67,7 +57,6 @@ draft → discussion → decided → superseded
 
 When documents are created, they start in these phases:
 - **Vision**: `draft`
-- **Strategy**: `shaping`
 - **Initiative**: `discovery`
 - **Task**: `todo` (or `backlog` for backlog items)
 - **ADR**: `draft`
@@ -165,7 +154,7 @@ Handle blocked work explicitly:
 3. Address the blocker
 4. Return from blocked: `transition_phase(short_code, phase="active")` or `phase="todo"`
 
-**Note**: Only tasks can be blocked - visions, strategies, initiatives, and ADRs cannot use the blocked phase.
+**Note**: Only tasks can be blocked - visions, initiatives, and ADRs cannot use the blocked phase.
 
 Blocked is a special state that allows returning to todo or active. This is the only case where you can move "backward" - but it's really returning from a paused state, not reversing progress.
 

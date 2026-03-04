@@ -23,7 +23,6 @@ mod cli_helpers {
             name: name.map(|s| s.to_string()),
             prefix: prefix.map(|s| s.to_string()),
             preset: preset.map(|s| s.to_string()),
-            strategies: None,
             initiatives: None,
         };
 
@@ -99,10 +98,6 @@ async fn test_complete_streamlined_workflow() {
         "Should use streamlined preset"
     );
     assert!(
-        !flight_config.strategies_enabled,
-        "Strategies should be disabled"
-    );
-    assert!(
         flight_config.initiatives_enabled,
         "Initiatives should be enabled"
     );
@@ -140,19 +135,19 @@ async fn test_complete_streamlined_workflow() {
 }
 
 #[tokio::test]
-async fn test_complete_full_configuration_workflow() {
-    println!("\n=== Testing Complete Full Configuration Workflow ===");
+async fn test_complete_direct_configuration_workflow() {
+    println!("\n=== Testing Complete Direct Configuration Workflow ===");
 
     let temp_dir = tempfile::tempdir().unwrap();
     let project_path = temp_dir.path().to_path_buf();
 
-    // Step 1: Initialize workspace with full config
-    println!("Step 1: Initialize workspace with full configuration");
+    // Step 1: Initialize workspace with direct config
+    println!("Step 1: Initialize workspace with direct configuration");
     cli_helpers::init_workspace(
         &project_path,
-        Some("Full Config Test"),
-        Some("FULL"),
-        Some("full"),
+        Some("Direct Config Test"),
+        Some("DRCT"),
+        Some("direct"),
     )
     .await
     .unwrap();
@@ -161,10 +156,10 @@ async fn test_complete_full_configuration_workflow() {
         cli_helpers::verify_workspace(&project_path),
         "Workspace should be initialized"
     );
-    println!("✓ Workspace initialized with full config");
+    println!("✓ Workspace initialized with direct config");
 
-    // Step 2: Verify full configuration is active
-    println!("\nStep 2: Verify full flight level configuration");
+    // Step 2: Verify direct configuration is active
+    println!("\nStep 2: Verify direct flight level configuration");
     let db_path = project_path.join(".metis/metis.db");
     let db = Database::new(db_path.to_str().unwrap()).unwrap();
     let mut config_repo = db.configuration_repository().unwrap();
@@ -172,18 +167,14 @@ async fn test_complete_full_configuration_workflow() {
     let flight_config = config_repo.get_flight_level_config().unwrap();
     assert_eq!(
         flight_config.preset_name(),
-        "full",
-        "Should use full preset"
+        "direct",
+        "Should use direct preset"
     );
     assert!(
-        flight_config.strategies_enabled,
-        "Strategies should be enabled"
+        !flight_config.initiatives_enabled,
+        "Initiatives should be disabled in direct mode"
     );
-    assert!(
-        flight_config.initiatives_enabled,
-        "Initiatives should be enabled"
-    );
-    println!("✓ Full configuration verified");
+    println!("✓ Direct configuration verified");
 
     // Step 3: Verify workspace can be synced
     println!("\nStep 3: Test sync operation");
@@ -193,7 +184,7 @@ async fn test_complete_full_configuration_workflow() {
     assert!(sync_results.is_ok(), "Sync should succeed");
     println!("✓ Workspace sync successful");
 
-    println!("\n✅ Complete full configuration workflow test passed!");
+    println!("\n✅ Complete direct configuration workflow test passed!");
 }
 
 #[tokio::test]

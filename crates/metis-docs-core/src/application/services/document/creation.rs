@@ -2,11 +2,10 @@ use crate::application::services::template::TemplateLoader;
 use crate::dal::database::configuration_repository::ConfigurationRepository;
 use crate::domain::configuration::FlightLevelConfig;
 use crate::domain::documents::initiative::Complexity;
-use crate::domain::documents::strategy::RiskLevel;
 use crate::domain::documents::traits::Document;
 use crate::domain::documents::types::{DocumentId, DocumentType, ParentReference, Phase, Tag};
 use crate::Result;
-use crate::{Adr, Database, Initiative, MetisError, Strategy, Task, Vision};
+use crate::{Adr, Database, Initiative, MetisError, Task, Vision};
 use diesel::{sqlite::SqliteConnection, Connection};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -27,7 +26,6 @@ pub struct DocumentCreationConfig {
     pub tags: Vec<Tag>,
     pub phase: Option<Phase>,
     pub complexity: Option<Complexity>,
-    pub risk_level: Option<RiskLevel>,
 }
 
 /// Result of document creation
@@ -121,71 +119,13 @@ impl DocumentCreationService {
         })
     }
 
-    /// Create a new strategy document
-    pub async fn create_strategy(&self, config: DocumentCreationConfig) -> Result<CreationResult> {
-        // Generate short code for strategy (used for both ID and file path)
-        let short_code = self.generate_short_code("strategy")?;
-        let strategy_dir = self.workspace_dir.join("strategies").join(&short_code);
-        let file_path = strategy_dir.join("strategy.md");
-
-        // Check if strategy already exists
-        if file_path.exists() {
-            return Err(MetisError::ValidationFailed {
-                message: format!("Strategy with short code '{}' already exists", short_code),
-            });
-        }
-
-        // Load template (with fallback chain)
-        let template_content = self
-            .template_loader
-            .load_content_template("strategy")
-            .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
-
-        // Create strategy with defaults
-        let mut tags = vec![
-            Tag::Label("strategy".to_string()),
-            Tag::Phase(config.phase.unwrap_or(Phase::Shaping)),
-        ];
-        tags.extend(config.tags);
-
-        let strategy = Strategy::new_with_template(
-            config.title.clone(),
-            config.parent_id,
-            Vec::new(), // blocked_by
-            tags,
-            false,                                          // not archived
-            config.risk_level.unwrap_or(RiskLevel::Medium), // use config risk_level or default to Medium
-            Vec::new(),                                     // stakeholders - empty by default
-            short_code.clone(),
-            &template_content,
-        )
-        .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
-
-        // Create parent directory
-        fs::create_dir_all(&strategy_dir).map_err(|e| MetisError::FileSystem(e.to_string()))?;
-
-        // Write to file
-        strategy
-            .to_file(&file_path)
-            .await
-            .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
-
-        Ok(CreationResult {
-            document_id: strategy.id(),
-            document_type: DocumentType::Strategy,
-            file_path,
-            short_code,
-        })
-    }
-
     /// Create a new initiative document (legacy method)
     pub async fn create_initiative(
         &self,
         config: DocumentCreationConfig,
-        strategy_id: &str,
     ) -> Result<CreationResult> {
-        // Use full configuration for backward compatibility
-        self.create_initiative_with_config(config, strategy_id, &FlightLevelConfig::full())
+        // Use streamlined configuration for backward compatibility
+        self.create_initiative_with_config(config, &FlightLevelConfig::streamlined())
             .await
     }
 
@@ -193,7 +133,6 @@ impl DocumentCreationService {
     pub async fn create_initiative_with_config(
         &self,
         config: DocumentCreationConfig,
-        strategy_id: &str,
         flight_config: &FlightLevelConfig,
     ) -> Result<CreationResult> {
         // Validate that initiatives are enabled in this configuration
@@ -215,68 +154,9 @@ impl DocumentCreationService {
         // Generate short code for initiative (used for both ID and file path)
         let short_code = self.generate_short_code("initiative")?;
 
-        // Determine the strategy short code first (outside conditionals to avoid lifetime issues)
-        let strategy_short_code = if flight_config.strategies_enabled && strategy_id != "NULL" {
-            // Validate parent strategy exists by looking up its short code in database
-            let db_path = self.workspace_dir.join("metis.db");
-            let db = Database::new(db_path.to_str().unwrap())
-                .map_err(|e| MetisError::FileSystem(format!("Database error: {}", e)))?;
-            let mut repo = db
-                .repository()
-                .map_err(|e| MetisError::FileSystem(format!("Repository error: {}", e)))?;
-
-            // Find the strategy by short code
-            let strategy = repo
-                .find_by_short_code(strategy_id)
-                .map_err(|e| MetisError::FileSystem(format!("Database lookup error: {}", e)))?
-                .ok_or_else(|| {
-                    MetisError::NotFound(format!("Parent strategy '{}' not found", strategy_id))
-                })?;
-
-            // Use the short code to build the file path
-            let strategy_file = self
-                .workspace_dir
-                .join("strategies")
-                .join(&strategy.short_code)
-                .join("strategy.md");
-            if !strategy_file.exists() {
-                return Err(MetisError::NotFound(format!(
-                    "Parent strategy '{}' not found at expected path",
-                    strategy_id
-                )));
-            }
-
-            strategy.short_code
-        } else {
-            "NULL".to_string()
-        };
-
-        // Determine directory structure using consistent NULL-based paths
-        let (parent_ref, effective_strategy_id) = if flight_config.strategies_enabled {
-            // Full configuration: use actual strategy_id
-            if strategy_id == "NULL" {
-                return Err(MetisError::ValidationFailed {
-                    message: format!(
-                        "Cannot create initiative with NULL strategy when strategies are enabled in {} configuration. Provide a valid strategy_id",
-                        flight_config.preset_name()
-                    ),
-                });
-            }
-
-            (
-                ParentReference::Some(DocumentId::from(strategy_id)),
-                strategy_short_code.as_str(),
-            )
-        } else {
-            // Streamlined configuration: use NULL as strategy placeholder
-            (ParentReference::Null, "NULL")
-        };
-
-        // Consistent directory structure: strategies/{strategy_short_code}/initiatives/{initiative_short_code}
+        // Initiatives go under initiatives/ directory
         let initiative_dir = self
             .workspace_dir
-            .join("strategies")
-            .join(effective_strategy_id)
             .join("initiatives")
             .join(&short_code);
 
@@ -306,12 +186,11 @@ impl DocumentCreationService {
         let parent_id = config
             .parent_id
             .map(ParentReference::Some)
-            .unwrap_or(parent_ref);
+            .unwrap_or(ParentReference::Null);
 
         let initiative = Initiative::new_with_template(
             config.title.clone(),
             parent_id.parent_id().cloned(), // Extract actual parent ID for document creation
-            Some(DocumentId::from(effective_strategy_id)), // strategy_id from configuration
             Vec::new(),                     // blocked_by
             tags,
             false,                                      // not archived
@@ -342,15 +221,13 @@ impl DocumentCreationService {
     pub async fn create_task(
         &self,
         config: DocumentCreationConfig,
-        strategy_id: &str,
         initiative_id: &str,
     ) -> Result<CreationResult> {
-        // Use full configuration for backward compatibility
+        // Use streamlined configuration for backward compatibility
         self.create_task_with_config(
             config,
-            strategy_id,
             initiative_id,
-            &FlightLevelConfig::full(),
+            &FlightLevelConfig::streamlined(),
         )
         .await
     }
@@ -359,7 +236,6 @@ impl DocumentCreationService {
     pub async fn create_task_with_config(
         &self,
         config: DocumentCreationConfig,
-        strategy_id: &str,
         initiative_id: &str,
         flight_config: &FlightLevelConfig,
     ) -> Result<CreationResult> {
@@ -367,7 +243,7 @@ impl DocumentCreationService {
         let short_code = self.generate_short_code("task")?;
 
         // Resolve short codes first (outside conditionals to avoid lifetime issues)
-        let (strategy_short_code, initiative_short_code) = if flight_config.initiatives_enabled
+        let initiative_short_code = if flight_config.initiatives_enabled
             && initiative_id != "NULL"
         {
             // Validate parent initiative exists by looking up its short codes in database
@@ -386,24 +262,9 @@ impl DocumentCreationService {
                     MetisError::NotFound(format!("Parent initiative '{}' not found", initiative_id))
                 })?;
 
-            // If strategies are enabled, also get the strategy short code
-            let strategy_short_code = if flight_config.strategies_enabled && strategy_id != "NULL" {
-                let strategy = repo
-                    .find_by_short_code(strategy_id)
-                    .map_err(|e| MetisError::FileSystem(format!("Database lookup error: {}", e)))?
-                    .ok_or_else(|| {
-                        MetisError::NotFound(format!("Parent strategy '{}' not found", strategy_id))
-                    })?;
-                strategy.short_code
-            } else {
-                "NULL".to_string()
-            };
-
             // Use the short codes to build the file path
             let initiative_file = self
                 .workspace_dir
-                .join("strategies")
-                .join(&strategy_short_code)
                 .join("initiatives")
                 .join(&initiative.short_code)
                 .join("initiative.md");
@@ -415,13 +276,13 @@ impl DocumentCreationService {
                 )));
             }
 
-            (strategy_short_code, initiative.short_code)
+            initiative.short_code
         } else {
-            ("NULL".to_string(), "NULL".to_string())
+            "NULL".to_string()
         };
 
-        // Determine directory structure using consistent NULL-based paths
-        let (parent_ref, parent_title, effective_strategy_id, effective_initiative_id) =
+        // Determine directory structure
+        let (parent_ref, parent_title, effective_initiative_id) =
             if flight_config.initiatives_enabled {
                 // Initiatives are enabled, tasks go under initiatives
                 if initiative_id == "NULL" {
@@ -433,32 +294,19 @@ impl DocumentCreationService {
                 });
                 }
 
-                // Validation was done earlier, use the pre-computed short codes
-                if flight_config.strategies_enabled && strategy_id == "NULL" {
-                    return Err(MetisError::ValidationFailed {
-                    message: format!(
-                        "Cannot create task with NULL strategy when strategies are enabled in {} configuration. Provide a valid strategy_id or create the task as a backlog item",
-                        flight_config.preset_name()
-                    ),
-                });
-                }
-
                 (
                     ParentReference::Some(DocumentId::from(initiative_id)),
                     Some(initiative_id.to_string()),
-                    strategy_short_code.as_str(),
                     initiative_short_code.as_str(),
                 )
             } else {
-                // Direct configuration: use NULL placeholders for both strategy and initiative
-                (ParentReference::Null, None, "NULL", "NULL")
+                // Direct configuration: use NULL placeholder for initiative
+                (ParentReference::Null, None, "NULL")
             };
 
-        // Consistent directory structure: strategies/{strategy_short_code}/initiatives/{initiative_short_code}/tasks/{task_short_code}
+        // Directory structure: initiatives/{initiative_short_code}/tasks/{task_short_code}
         let task_dir = self
             .workspace_dir
-            .join("strategies")
-            .join(effective_strategy_id)
             .join("initiatives")
             .join(effective_initiative_id)
             .join("tasks");
@@ -495,11 +343,6 @@ impl DocumentCreationService {
             config.title.clone(),
             parent_id.parent_id().cloned(), // Extract actual parent ID for document creation
             parent_title,                   // parent title for template
-            if effective_strategy_id == "NULL" {
-                None
-            } else {
-                Some(DocumentId::from(effective_strategy_id))
-            },
             if effective_initiative_id == "NULL" {
                 None
             } else {
@@ -570,7 +413,6 @@ impl DocumentCreationService {
             config.title.clone(),
             None,       // No parent for backlog items
             None,       // No parent title for template
-            None,       // No strategy for backlog items
             None,       // No initiative for backlog items
             Vec::new(), // blocked_by
             tags,
@@ -734,7 +576,6 @@ mod tests {
             tags: vec![],
             phase: None,
             complexity: None,
-            risk_level: None,
         };
 
         let result = service.create_vision(config).await.unwrap();
@@ -745,43 +586,6 @@ mod tests {
         // Verify we can read it back
         let vision = Vision::from_file(&result.file_path).await.unwrap();
         assert_eq!(vision.title(), "Test Vision");
-    }
-
-    #[tokio::test]
-    async fn test_create_strategy_document() {
-        let temp_dir = tempdir().unwrap();
-        let workspace_dir = temp_dir.path().join(".metis");
-        fs::create_dir_all(&workspace_dir).unwrap();
-
-        // Create and initialize database with proper schema
-        let db_path = workspace_dir.join("metis.db");
-        let _db = crate::Database::new(&db_path.to_string_lossy()).unwrap();
-
-        // Set up project prefix in configuration
-        let mut config_repo = ConfigurationRepository::new(
-            SqliteConnection::establish(&db_path.to_string_lossy()).unwrap(),
-        );
-        config_repo.set_project_prefix("TEST").unwrap();
-
-        let service = DocumentCreationService::new(&workspace_dir);
-        let config = DocumentCreationConfig {
-            title: "Test Strategy".to_string(),
-            description: Some("A test strategy document".to_string()),
-            parent_id: None,
-            tags: vec![],
-            phase: None,
-            complexity: None,
-            risk_level: None,
-        };
-
-        let result = service.create_strategy(config).await.unwrap();
-
-        assert_eq!(result.document_type, DocumentType::Strategy);
-        assert!(result.file_path.exists());
-
-        // Verify we can read it back
-        let strategy = Strategy::from_file(&result.file_path).await.unwrap();
-        assert_eq!(strategy.title(), "Test Strategy");
     }
 
     #[tokio::test]
@@ -802,42 +606,18 @@ mod tests {
 
         let service = DocumentCreationService::new(&workspace_dir);
 
-        // First create a parent strategy
-        let strategy_config = DocumentCreationConfig {
-            title: "Parent Strategy".to_string(),
-            description: Some("A parent strategy".to_string()),
+        // Create an initiative
+        let initiative_config = DocumentCreationConfig {
+            title: "Test Initiative".to_string(),
+            description: Some("A test initiative document".to_string()),
             parent_id: None,
             tags: vec![],
             phase: None,
             complexity: None,
-            risk_level: None,
-        };
-        let strategy_result = service.create_strategy(strategy_config).await.unwrap();
-        let strategy_id = strategy_result.short_code.clone();
-
-        // Sync the strategy to database so it can be found by the initiative creation
-        let db = crate::Database::new(&db_path.to_string_lossy()).unwrap();
-        let mut db_service =
-            crate::application::services::DatabaseService::new(db.repository().unwrap());
-        let mut sync_service = crate::application::services::SyncService::new(&mut db_service);
-        sync_service
-            .import_from_file(&strategy_result.file_path)
-            .await
-            .unwrap();
-
-        // Now create an initiative
-        let initiative_config = DocumentCreationConfig {
-            title: "Test Initiative".to_string(),
-            description: Some("A test initiative document".to_string()),
-            parent_id: Some(strategy_result.document_id),
-            tags: vec![],
-            phase: None,
-            complexity: None,
-            risk_level: None,
         };
 
         let result = service
-            .create_initiative(initiative_config, &strategy_id)
+            .create_initiative(initiative_config)
             .await
             .unwrap();
 
@@ -893,34 +673,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_initiative_full_configuration() {
-        let (service, temp) = setup_test_service_temp();
-        let flight_config = FlightLevelConfig::full();
+        let (service, _temp) = setup_test_service_temp();
+        let flight_config = FlightLevelConfig::streamlined();
 
-        // First create a strategy
-        let strategy_config = DocumentCreationConfig {
-            title: "Test Strategy".to_string(),
-            description: None,
-            parent_id: None,
-            tags: vec![],
-            phase: None,
-            complexity: None,
-            risk_level: None,
-        };
-
-        let strategy_result = service.create_strategy(strategy_config).await.unwrap();
-
-        // Sync the strategy to database so it can be found by the initiative creation
-        let db_path = temp.path().join(".metis/metis.db");
-        let db = crate::Database::new(&db_path.to_string_lossy()).unwrap();
-        let mut db_service =
-            crate::application::services::DatabaseService::new(db.repository().unwrap());
-        let mut sync_service = crate::application::services::SyncService::new(&mut db_service);
-        sync_service
-            .import_from_file(&strategy_result.file_path)
-            .await
-            .unwrap();
-
-        // Now create an initiative under the strategy
+        // Create an initiative
         let initiative_config = DocumentCreationConfig {
             title: "Test Initiative".to_string(),
             description: None,
@@ -928,13 +684,11 @@ mod tests {
             tags: vec![],
             phase: None,
             complexity: None,
-            risk_level: None,
         };
 
         let result = service
             .create_initiative_with_config(
                 initiative_config,
-                &strategy_result.short_code,
                 &flight_config,
             )
             .await
@@ -943,8 +697,7 @@ mod tests {
         assert_eq!(result.document_type, DocumentType::Initiative);
         assert!(result.file_path.exists());
 
-        // Verify the path structure for full configuration
-        assert!(result.file_path.to_string_lossy().contains("strategies"));
+        // Verify the path structure
         assert!(result.file_path.to_string_lossy().contains("initiatives"));
     }
 
@@ -960,24 +713,18 @@ mod tests {
             tags: vec![],
             phase: None,
             complexity: None,
-            risk_level: None,
         };
 
-        // In streamlined config, we pass "NULL" as strategy_id
         let result = service
-            .create_initiative_with_config(initiative_config, "NULL", &flight_config)
+            .create_initiative_with_config(initiative_config, &flight_config)
             .await
             .unwrap();
 
         assert_eq!(result.document_type, DocumentType::Initiative);
         assert!(result.file_path.exists());
 
-        // Verify the NULL-based path structure for streamlined configuration
+        // Verify the path structure for streamlined configuration
         assert!(result.file_path.to_string_lossy().contains("initiatives"));
-        assert!(result
-            .file_path
-            .to_string_lossy()
-            .contains("strategies/NULL"));
     }
 
     #[tokio::test]
@@ -992,12 +739,11 @@ mod tests {
             tags: vec![],
             phase: None,
             complexity: None,
-            risk_level: None,
         };
 
         // In direct config, initiatives are disabled
         let result = service
-            .create_initiative_with_config(initiative_config, "NULL", &flight_config)
+            .create_initiative_with_config(initiative_config, &flight_config)
             .await;
 
         assert!(result.is_err());
@@ -1019,24 +765,19 @@ mod tests {
             tags: vec![],
             phase: None,
             complexity: None,
-            risk_level: None,
         };
 
         // In direct config, tasks go directly under workspace
         let result = service
-            .create_task_with_config(task_config, "NULL", "NULL", &flight_config)
+            .create_task_with_config(task_config, "NULL", &flight_config)
             .await
             .unwrap();
 
         assert_eq!(result.document_type, DocumentType::Task);
         assert!(result.file_path.exists());
 
-        // Verify the NULL-based path structure for direct configuration
+        // Verify the path structure for direct configuration
         assert!(result.file_path.to_string_lossy().contains("tasks"));
-        assert!(result
-            .file_path
-            .to_string_lossy()
-            .contains("strategies/NULL/initiatives/NULL"));
     }
 
     #[tokio::test]
@@ -1080,7 +821,6 @@ This is a custom template for testing.
             tags: vec![],
             phase: None,
             complexity: None,
-            risk_level: None,
         };
 
         let result = service.create_vision(config).await.unwrap();
@@ -1138,11 +878,10 @@ This is a custom template for testing.
             tags: vec![],
             phase: None,
             complexity: None,
-            risk_level: None,
         };
 
         let result = service
-            .create_task_with_config(task_config, "NULL", "NULL", &flight_config)
+            .create_task_with_config(task_config, "NULL", &flight_config)
             .await
             .unwrap();
 
@@ -1184,7 +923,6 @@ This is a custom template for testing.
             tags: vec![],
             phase: None,
             complexity: None,
-            risk_level: None,
         };
 
         let result = service.create_vision(config).await.unwrap();
@@ -1234,7 +972,6 @@ This template has a syntax error (unclosed tag above).
             tags: vec![],
             phase: None,
             complexity: None,
-            risk_level: None,
         };
 
         let result = service.create_vision(config).await;

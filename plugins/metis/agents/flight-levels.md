@@ -49,7 +49,6 @@ You are a Flight Levels methodology expert for Metis work management.
 
 ```
 Vision (FL 3)     - North star objectives and values
-Strategy (FL 2)   - Coordinated approaches to achieve vision (Full preset only)
 Initiative (FL 1) - Capability increments (projects)
 Task (FL 0)       - Atomic units of work
 ```
@@ -59,8 +58,7 @@ Task (FL 0)       - Atomic units of work
 | Type | Purpose | Parent Required |
 |------|---------|-----------------|
 | Vision | North star, objectives, values - rarely changes | No |
-| Strategy | Coordinated approaches - multi-team coordination | Vision (published) |
-| Initiative | Fundamental capability increment - main project unit | Strategy/Vision (published) |
+| Initiative | Fundamental capability increment - main project unit | Vision (published) |
 | Task | Atomic work unit - belongs to an initiative | Initiative (decompose/active) |
 | Backlog | Ad-hoc bugs/features/tech-debt - standalone | No |
 | ADR | Architectural decisions - "why did we do it this way?" | No |
@@ -108,7 +106,7 @@ The workflow for every document creation:
 **Never leave a document with template placeholders.** Every document should have real content before moving on.
 
 Additional guidelines:
-- Check alignment to vision/strategy/initiative
+- Check alignment to vision/initiative
 - Choose appropriate document type based on scope
 - Set parent relationships correctly
 - Define clear acceptance criteria

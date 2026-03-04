@@ -1,5 +1,6 @@
 use crate::constants::{DATABASE_FILE_NAME, METIS_DIR_NAME};
 use crate::{Application, Database};
+use super::migration::WorkspaceMigrationService;
 use anyhow::Result;
 use std::path::{Path, PathBuf};
 
@@ -120,6 +121,21 @@ impl WorkspaceDetectionService {
         // Validate workspace exists
         if self.validate_workspace(metis_dir)?.is_none() {
             anyhow::bail!("Not a valid Metis workspace: {}", metis_dir.display());
+        }
+
+        // Run filesystem migrations (v1→v2: flatten strategies/ layout)
+        match WorkspaceMigrationService::migrate(metis_dir) {
+            Ok(report) if report.migrated => {
+                tracing::info!(
+                    "Workspace migrated: moved {} items, deleted {} items",
+                    report.moved_items.len(),
+                    report.deleted_items.len()
+                );
+            }
+            Err(e) => {
+                tracing::warn!("Workspace migration failed: {}. Continuing anyway.", e);
+            }
+            _ => {} // No migration needed
         }
 
         // Ensure database exists (create if missing)

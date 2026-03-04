@@ -45,7 +45,7 @@ If yes, create an initiative. If no, it stays in backlog (or gets archived).
 create_document(
   type="initiative",
   title="Data Export Feature",
-  parent="VISION-ID"  # or STRATEGY-ID if using full preset
+  parent="VISION-ID"
 )
 ```
 

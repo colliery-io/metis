@@ -25,8 +25,8 @@ fn extract_text_from_result(result: &rust_mcp_sdk::schema::CallToolResult) -> Op
 /// Helper to extract short code from MCP response (parses markdown format)
 fn extract_short_code(result: &rust_mcp_sdk::schema::CallToolResult) -> String {
     if let Some(text) = extract_text_from_result(result) {
-        // Match pattern like "PROJ-X-0001" (any document type: V, S, I, T, A)
-        let re = Regex::new(r"([A-Z]+-[VSITA]-\d{4})").unwrap();
+        // Match pattern like "PROJ-X-0001" (any document type: V, I, T, A)
+        let re = Regex::new(r"([A-Z]+-[VITA]-\d{4})").unwrap();
         if let Some(captures) = re.captures(&text) {
             if let Some(m) = captures.get(1) {
                 return m.as_str().to_string();
@@ -70,48 +70,16 @@ async fn test_initialize_and_create_documents() {
     let result = init_tool.call_tool().await;
     assert!(result.is_ok(), "Initialize should succeed");
 
-    // 2. Enable all document types by updating config.toml file
-    let config_path = format!("{}/config.toml", metis_path);
-    let config_content = r#"
-[project]
-name = "Test Project"
-prefix = "PROJ"
-
-[flight_levels]
-strategies_enabled = true
-initiatives_enabled = true
-"#;
-    std::fs::write(&config_path, config_content).unwrap();
-
-    // 3. Get vision short code
+    // 2. Get vision short code
     let vision_short_code = get_vision_short_code(&metis_path).await;
     println!("Vision short code: {}", vision_short_code);
 
-    // 4. Create strategy using vision short code as parent
-    let create_strategy = CreateDocumentTool {
-        project_path: metis_path.clone(),
-        document_type: "strategy".to_string(),
-        title: "Test Strategy".to_string(),
-        parent_id: Some(vision_short_code),
-        risk_level: Some("medium".to_string()),
-        complexity: None,
-        stakeholders: Some(vec!["dev_team".to_string()]),
-        decision_maker: None,
-        backlog_category: None,
-    };
-
-    let result = create_strategy.call_tool().await;
-    assert!(result.is_ok(), "Create strategy should succeed");
-    let strategy_short_code = extract_short_code(&result.unwrap());
-    println!("Strategy short code: {}", strategy_short_code);
-
-    // 5. Create initiative using strategy short code as parent
+    // 3. Create initiative using vision short code as parent
     let create_initiative = CreateDocumentTool {
         project_path: metis_path.clone(),
         document_type: "initiative".to_string(),
         title: "Test Initiative".to_string(),
-        parent_id: Some(strategy_short_code.clone()),
-        risk_level: None,
+        parent_id: Some(vision_short_code),
         complexity: Some("m".to_string()),
         stakeholders: Some(vec!["product_team".to_string()]),
         decision_maker: None,
@@ -119,42 +87,26 @@ initiatives_enabled = true
     };
 
     let result = create_initiative.call_tool().await;
-    if let Err(ref e) = result {
-        println!("Initiative creation error: {:?}", e);
-    }
     assert!(result.is_ok(), "Create initiative should succeed");
     let initiative_short_code = extract_short_code(&result.unwrap());
     println!("Initiative short code: {}", initiative_short_code);
 
-    // 6. Test read document with short code
+    // 4. Test read document with short code
     let read_tool = ReadDocumentTool {
         project_path: metis_path.clone(),
-        short_code: strategy_short_code.clone(),
+        short_code: initiative_short_code.clone(),
     };
 
     let result = read_tool.call_tool().await;
     assert!(result.is_ok(), "Read document should succeed");
 
-    // Let's see what the strategy content looks like
-    if let Ok(ref read_result) = result {
-        if let Some(rust_mcp_sdk::schema::ContentBlock::TextContent(text_content)) =
-            read_result.content.first()
-        {
-            if let Ok(json) = serde_json::from_str::<serde_json::Value>(&text_content.text) {
-                if let Some(content) = json["content"].as_str() {
-                    println!("Strategy content:\n{}", content);
-                }
-            }
-        }
-    }
-
-    // 7. Test edit document with short code
+    // 5. Test edit document with short code
     let edit_tool = EditDocumentTool {
         project_path: metis_path.clone(),
-        short_code: strategy_short_code.clone(),
+        short_code: initiative_short_code.clone(),
         search: "{Describe the problem and why it matters - 1-2 paragraphs}".to_string(),
         replace:
-            "This strategy addresses the need for better short code interfaces in our MCP server."
+            "This initiative addresses the need for better short code interfaces in our MCP server."
                 .to_string(),
         replace_all: None,
     };
@@ -165,10 +117,10 @@ initiatives_enabled = true
     }
     assert!(result.is_ok(), "Edit document should succeed");
 
-    // 8. Test phase transition with short code (from shaping to design)
+    // 6. Test phase transition with short code (from discovery to design)
     let transition_tool = TransitionPhaseTool {
         project_path: metis_path.clone(),
-        short_code: strategy_short_code,
+        short_code: initiative_short_code,
         phase: Some("design".to_string()),
         force: None,
     };
@@ -193,41 +145,25 @@ async fn test_archive_with_short_codes() {
     };
     init_tool.call_tool().await.unwrap();
 
-    // Enable full configuration to allow strategies by updating config.toml
-    let config_path = format!("{}/config.toml", metis_path);
-    let config_content = r#"
-[project]
-name = "Test Project"
-prefix = "PROJ"
-
-[flight_levels]
-strategies_enabled = true
-initiatives_enabled = true
-"#;
-    std::fs::write(&config_path, config_content).unwrap();
-
-    let vision_short_code = get_vision_short_code(&metis_path).await;
-
-    // Create strategy
-    let create_strategy = CreateDocumentTool {
+    // Create an ADR to archive
+    let create_adr = CreateDocumentTool {
         project_path: metis_path.clone(),
-        document_type: "strategy".to_string(),
-        title: "Archive Test Strategy".to_string(),
-        parent_id: Some(vision_short_code),
-        risk_level: Some("low".to_string()),
+        document_type: "adr".to_string(),
+        title: "Archive Test ADR".to_string(),
+        parent_id: None,
         complexity: None,
         stakeholders: None,
-        decision_maker: None,
+        decision_maker: Some("architect".to_string()),
         backlog_category: None,
     };
 
-    let result = create_strategy.call_tool().await.unwrap();
-    let strategy_short_code = extract_short_code(&result);
+    let result = create_adr.call_tool().await.unwrap();
+    let adr_short_code = extract_short_code(&result);
 
     // Archive using short code
     let archive_tool = ArchiveDocumentTool {
         project_path: metis_path.clone(),
-        short_code: strategy_short_code,
+        short_code: adr_short_code,
     };
 
     let result = archive_tool.call_tool().await;
@@ -249,19 +185,6 @@ async fn test_search_with_short_code_hyphen() {
     };
     init_tool.call_tool().await.unwrap();
 
-    // Use streamlined configuration - initiative links directly to vision
-    let config_path = format!("{}/config.toml", metis_path);
-    let config_content = r#"
-[project]
-name = "Test Project"
-prefix = "PROJ"
-
-[flight_levels]
-strategies_enabled = false
-initiatives_enabled = true
-"#;
-    std::fs::write(&config_path, config_content).unwrap();
-
     // Get vision and create an initiative (streamlined: vision -> initiative)
     let vision_short_code = get_vision_short_code(&metis_path).await;
 
@@ -270,7 +193,6 @@ initiatives_enabled = true
         document_type: "initiative".to_string(),
         title: "Search Test Initiative".to_string(),
         parent_id: Some(vision_short_code),
-        risk_level: None,
         complexity: Some("m".to_string()),
         stakeholders: None,
         decision_maker: None,
@@ -321,48 +243,32 @@ async fn test_list_and_search_include_archived() {
     };
     init_tool.call_tool().await.unwrap();
 
-    // Enable full configuration
-    let config_path = format!("{}/config.toml", metis_path);
-    let config_content = r#"
-[project]
-name = "Test Project"
-prefix = "PROJ"
-
-[flight_levels]
-strategies_enabled = true
-initiatives_enabled = true
-"#;
-    std::fs::write(&config_path, config_content).unwrap();
-
-    // Get vision and create a strategy
-    let vision_short_code = get_vision_short_code(&metis_path).await;
-
-    let create_strategy = CreateDocumentTool {
+    // Create an ADR to test archive behavior
+    let create_adr = CreateDocumentTool {
         project_path: metis_path.clone(),
-        document_type: "strategy".to_string(),
-        title: "Archivable Strategy".to_string(),
-        parent_id: Some(vision_short_code),
-        risk_level: Some("low".to_string()),
+        document_type: "adr".to_string(),
+        title: "Archivable ADR".to_string(),
+        parent_id: None,
         complexity: None,
         stakeholders: None,
-        decision_maker: None,
+        decision_maker: Some("architect".to_string()),
         backlog_category: None,
     };
 
-    let result = create_strategy.call_tool().await.unwrap();
-    let strategy_short_code = extract_short_code(&result);
-    println!("Created strategy: {}", strategy_short_code);
+    let result = create_adr.call_tool().await.unwrap();
+    let adr_short_code = extract_short_code(&result);
+    println!("Created ADR: {}", adr_short_code);
 
-    // Verify strategy appears in list (default = unarchived only)
+    // Verify ADR appears in list (default = unarchived only)
     let list_tool = ListDocumentsTool {
         project_path: metis_path.clone(),
         include_archived: None,
     };
     let result = list_tool.call_tool().await.unwrap();
     let text = extract_text_from_result(&result).unwrap();
-    assert!(text.contains(&strategy_short_code), "Strategy should appear in default list");
+    assert!(text.contains(&adr_short_code), "ADR should appear in default list");
 
-    // Verify strategy appears in search
+    // Verify ADR appears in search
     let search_tool = SearchDocumentsTool {
         project_path: metis_path.clone(),
         query: "Archivable".to_string(),
@@ -372,34 +278,34 @@ initiatives_enabled = true
     };
     let result = search_tool.call_tool().await.unwrap();
     let text = extract_text_from_result(&result).unwrap();
-    assert!(text.contains(&strategy_short_code), "Strategy should appear in default search");
+    assert!(text.contains(&adr_short_code), "ADR should appear in default search");
 
-    // Archive the strategy
+    // Archive the ADR
     let archive_tool = ArchiveDocumentTool {
         project_path: metis_path.clone(),
-        short_code: strategy_short_code.clone(),
+        short_code: adr_short_code.clone(),
     };
     archive_tool.call_tool().await.unwrap();
 
-    // Verify strategy no longer appears in default list (unarchived only)
+    // Verify ADR no longer appears in default list (unarchived only)
     let list_tool = ListDocumentsTool {
         project_path: metis_path.clone(),
         include_archived: None,
     };
     let result = list_tool.call_tool().await.unwrap();
     let text = extract_text_from_result(&result).unwrap();
-    assert!(!text.contains(&strategy_short_code), "Archived strategy should NOT appear in default list");
+    assert!(!text.contains(&adr_short_code), "Archived ADR should NOT appear in default list");
 
-    // Verify strategy DOES appear when include_archived=true
+    // Verify ADR DOES appear when include_archived=true
     let list_tool = ListDocumentsTool {
         project_path: metis_path.clone(),
         include_archived: Some(true),
     };
     let result = list_tool.call_tool().await.unwrap();
     let text = extract_text_from_result(&result).unwrap();
-    assert!(text.contains(&strategy_short_code), "Archived strategy SHOULD appear when include_archived=true");
+    assert!(text.contains(&adr_short_code), "Archived ADR SHOULD appear when include_archived=true");
 
-    // Verify strategy no longer appears in default search (unarchived only)
+    // Verify ADR no longer appears in default search (unarchived only)
     let search_tool = SearchDocumentsTool {
         project_path: metis_path.clone(),
         query: "Archivable".to_string(),
@@ -409,9 +315,9 @@ initiatives_enabled = true
     };
     let result = search_tool.call_tool().await.unwrap();
     let text = extract_text_from_result(&result).unwrap();
-    assert!(!text.contains(&strategy_short_code), "Archived strategy should NOT appear in default search");
+    assert!(!text.contains(&adr_short_code), "Archived ADR should NOT appear in default search");
 
-    // Verify strategy DOES appear in search when include_archived=true
+    // Verify ADR DOES appear in search when include_archived=true
     let search_tool = SearchDocumentsTool {
         project_path: metis_path.clone(),
         query: "Archivable".to_string(),
@@ -421,7 +327,7 @@ initiatives_enabled = true
     };
     let result = search_tool.call_tool().await.unwrap();
     let text = extract_text_from_result(&result).unwrap();
-    assert!(text.contains(&strategy_short_code), "Archived strategy SHOULD appear in search when include_archived=true");
+    assert!(text.contains(&adr_short_code), "Archived ADR SHOULD appear in search when include_archived=true");
 }
 
 #[tokio::test]
@@ -438,26 +344,12 @@ async fn test_create_backlog_items() {
     };
     init_tool.call_tool().await.unwrap();
 
-    // Use streamlined configuration
-    let config_path = format!("{}/config.toml", metis_path);
-    let config_content = r#"
-[project]
-name = "Test Project"
-prefix = "PROJ"
-
-[flight_levels]
-strategies_enabled = false
-initiatives_enabled = true
-"#;
-    std::fs::write(&config_path, config_content).unwrap();
-
     // Create a bug backlog item
     let create_bug = CreateDocumentTool {
         project_path: metis_path.clone(),
         document_type: "task".to_string(),
         title: "Fix login timeout".to_string(),
         parent_id: None,
-        risk_level: None,
         complexity: None,
         stakeholders: None,
         decision_maker: None,
@@ -479,7 +371,6 @@ initiatives_enabled = true
         document_type: "task".to_string(),
         title: "Add dark mode support".to_string(),
         parent_id: None,
-        risk_level: None,
         complexity: None,
         stakeholders: None,
         decision_maker: None,
@@ -501,7 +392,6 @@ initiatives_enabled = true
         document_type: "task".to_string(),
         title: "Refactor database layer".to_string(),
         parent_id: None,
-        risk_level: None,
         complexity: None,
         stakeholders: None,
         decision_maker: None,
@@ -523,7 +413,6 @@ initiatives_enabled = true
         document_type: "task".to_string(),
         title: "Invalid category test".to_string(),
         parent_id: None,
-        risk_level: None,
         complexity: None,
         stakeholders: None,
         decision_maker: None,
@@ -539,7 +428,6 @@ initiatives_enabled = true
         document_type: "task".to_string(),
         title: "Orphan task test".to_string(),
         parent_id: None,
-        risk_level: None,
         complexity: None,
         stakeholders: None,
         decision_maker: None,

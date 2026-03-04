@@ -75,7 +75,7 @@ impl ConfigurationRepository {
     /// Get flight level configuration
     pub fn get_flight_level_config(&mut self) -> Result<FlightLevelConfig> {
         let json = self.get("flight_levels")?.unwrap_or_else(|| {
-            r#"{"strategies_enabled":false,"initiatives_enabled":true}"#.to_string()
+            r#"{"initiatives_enabled":true}"#.to_string()
         });
 
         serde_json::from_str(&json).map_err(|e| {
@@ -162,7 +162,6 @@ impl ConfigurationRepository {
 
         let type_letter = match doc_type.to_lowercase().as_str() {
             "vision" => "V",
-            "strategy" => "S",
             "initiative" => "I",
             "task" => "T",
             "adr" => "A",

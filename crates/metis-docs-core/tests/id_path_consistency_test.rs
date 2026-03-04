@@ -4,7 +4,7 @@ use metis_core::application::services::document::creation::{
 use metis_core::application::services::document::discovery::DocumentDiscoveryService;
 use metis_core::application::services::workspace::initialization::WorkspaceInitializationService;
 use metis_core::domain::documents::types::{DocumentType, Tag};
-use metis_core::{Complexity, Database, RiskLevel};
+use metis_core::{Complexity, Database};
 use std::path::PathBuf;
 use tempfile::tempdir;
 
@@ -28,48 +28,47 @@ async fn setup_test_workspace(project_name: &str) -> (tempfile::TempDir, PathBuf
 }
 
 #[tokio::test]
-async fn test_document_short_code_matches_path() {
+async fn test_initiative_short_code_matches_path() {
     let (_temp_dir, workspace_dir) = setup_test_workspace("test-project").await;
     let creation_service = DocumentCreationService::new(&workspace_dir);
     let discovery_service = DocumentDiscoveryService::new(&workspace_dir);
 
-    // Test Strategy
-    let strategy_config = DocumentCreationConfig {
-        title: "Semantic Search RAG Strategy".to_string(),
-        description: Some("A strategy for semantic search".to_string()),
+    // Test Initiative
+    let initiative_config = DocumentCreationConfig {
+        title: "Semantic Search RAG Initiative".to_string(),
+        description: Some("An initiative for semantic search".to_string()),
         parent_id: None,
         tags: vec![],
         phase: None,
         complexity: None,
-        risk_level: None,
     };
 
-    let strategy_result = creation_service
-        .create_strategy(strategy_config)
+    let initiative_result = creation_service
+        .create_initiative(initiative_config)
         .await
         .unwrap();
 
     // Verify the ID still uses kebab-case for compatibility
     assert_eq!(
-        strategy_result.document_id.to_string(),
-        "semantic-search-rag-strategy"
+        initiative_result.document_id.to_string(),
+        "semantic-search-rag-initiative"
     );
 
     // Verify the directory path uses the short code (not the document ID)
     let expected_path = workspace_dir
-        .join("strategies")
-        .join(&strategy_result.short_code);
+        .join("initiatives")
+        .join(&initiative_result.short_code);
     assert!(expected_path.exists());
-    assert!(expected_path.join("strategy.md").exists());
+    assert!(expected_path.join("initiative.md").exists());
 
     // Verify discovery service finds it with the correct ID
     let found = discovery_service
-        .find_document_by_id("semantic-search-rag-strategy")
+        .find_document_by_id("semantic-search-rag-initiative")
         .await
         .unwrap();
-    assert_eq!(found.document_type, DocumentType::Strategy);
+    assert_eq!(found.document_type, DocumentType::Initiative);
     // Canonicalize expected path to match discovery service's canonical workspace_dir
-    let expected_file_path = expected_path.join("strategy.md").canonicalize().unwrap();
+    let expected_file_path = expected_path.join("initiative.md").canonicalize().unwrap();
     assert_eq!(found.file_path, expected_file_path);
 }
 
@@ -78,45 +77,18 @@ async fn test_initiative_id_path_consistency() {
     let (_temp_dir, workspace_dir) = setup_test_workspace("test-project").await;
     let creation_service = DocumentCreationService::new(&workspace_dir);
 
-    // Create parent strategy
-    let strategy_config = DocumentCreationConfig {
-        title: "Test Strategy".to_string(),
-        description: None,
-        parent_id: None,
-        tags: vec![],
-        phase: None,
-        complexity: None,
-        risk_level: None,
-    };
-    let strategy = creation_service
-        .create_strategy(strategy_config)
-        .await
-        .unwrap();
-
-    // Sync strategy to database so it can be found by initiative creation
-    let db_path = workspace_dir.join("metis.db");
-    let db = Database::new(&db_path.to_string_lossy()).unwrap();
-    let mut db_service =
-        metis_core::application::services::DatabaseService::new(db.repository().unwrap());
-    let mut sync_service = metis_core::application::services::SyncService::new(&mut db_service);
-    sync_service
-        .import_from_file(&strategy.file_path)
-        .await
-        .unwrap();
-
     // Create initiative with complex title
     let initiative_config = DocumentCreationConfig {
         title: "Build AI-Powered Search & Retrieval System".to_string(),
         description: Some("Initiative for AI search".to_string()),
-        parent_id: Some(strategy.document_id.clone()),
+        parent_id: None,
         tags: vec![],
         phase: None,
         complexity: Some(Complexity::L),
-        risk_level: None,
     };
 
     let initiative_result = creation_service
-        .create_initiative(initiative_config, &strategy.short_code)
+        .create_initiative(initiative_config)
         .await
         .unwrap();
 
@@ -128,8 +100,6 @@ async fn test_initiative_id_path_consistency() {
 
     // Verify path now uses short codes instead of document IDs
     let expected_path = workspace_dir
-        .join("strategies")
-        .join(&strategy.short_code)
         .join("initiatives")
         .join(&initiative_result.short_code);
 
@@ -142,47 +112,26 @@ async fn test_task_id_path_consistency() {
     let (_temp_dir, workspace_dir) = setup_test_workspace("test-project").await;
     let creation_service = DocumentCreationService::new(&workspace_dir);
 
-    // Create parent strategy and initiative
-    let strategy_config = DocumentCreationConfig {
-        title: "Strategy One".to_string(),
+    // Create parent initiative
+    let initiative_config = DocumentCreationConfig {
+        title: "Initiative One".to_string(),
         description: None,
         parent_id: None,
         tags: vec![],
         phase: None,
         complexity: None,
-        risk_level: None,
     };
-    let strategy = creation_service
-        .create_strategy(strategy_config)
+    let initiative = creation_service
+        .create_initiative(initiative_config)
         .await
         .unwrap();
 
-    // Sync strategy to database
+    // Sync initiative to database for task creation
     let db_path = workspace_dir.join("metis.db");
     let db = Database::new(&db_path.to_string_lossy()).unwrap();
     let mut db_service =
         metis_core::application::services::DatabaseService::new(db.repository().unwrap());
     let mut sync_service = metis_core::application::services::SyncService::new(&mut db_service);
-    sync_service
-        .import_from_file(&strategy.file_path)
-        .await
-        .unwrap();
-
-    let initiative_config = DocumentCreationConfig {
-        title: "Initiative One".to_string(),
-        description: None,
-        parent_id: Some(strategy.document_id.clone()),
-        tags: vec![],
-        phase: None,
-        complexity: None,
-        risk_level: None,
-    };
-    let initiative = creation_service
-        .create_initiative(initiative_config, &strategy.short_code)
-        .await
-        .unwrap();
-
-    // Sync initiative to database for task creation
     sync_service
         .import_from_file(&initiative.file_path)
         .await
@@ -196,11 +145,10 @@ async fn test_task_id_path_consistency() {
         tags: vec![Tag::Label("devops".to_string())],
         phase: None,
         complexity: None,
-        risk_level: None,
     };
 
     let task_result = creation_service
-        .create_task(task_config, &strategy.short_code, &initiative.short_code)
+        .create_task(task_config, &initiative.short_code)
         .await
         .unwrap();
 
@@ -212,8 +160,6 @@ async fn test_task_id_path_consistency() {
 
     // Verify file path now uses short codes in directory structure
     let expected_file = workspace_dir
-        .join("strategies")
-        .join(&strategy.short_code)
         .join("initiatives")
         .join(&initiative.short_code)
         .join("tasks")
@@ -239,7 +185,6 @@ async fn test_adr_id_consistency() {
         ],
         phase: None,
         complexity: None,
-        risk_level: None,
     };
 
     let adr_result = creation_service.create_adr(adr_config).await.unwrap();
@@ -260,21 +205,20 @@ async fn test_long_title_id_path_consistency() {
     let (_temp_dir, workspace_dir) = setup_test_workspace("test-project").await;
     let creation_service = DocumentCreationService::new(&workspace_dir);
 
-    // Create strategy with very long title
-    let long_title = "This is an extremely long strategy title that should be truncated to ensure file paths don't exceed system limits while still maintaining readability and uniqueness in the generated identifier".to_string();
+    // Create initiative with very long title
+    let long_title = "This is an extremely long initiative title that should be truncated to ensure file paths don't exceed system limits while still maintaining readability and uniqueness in the generated identifier".to_string();
 
-    let strategy_config = DocumentCreationConfig {
+    let initiative_config = DocumentCreationConfig {
         title: long_title.clone(),
         description: None,
         parent_id: None,
         tags: vec![],
         phase: None,
         complexity: None,
-        risk_level: None,
     };
 
     let result = creation_service
-        .create_strategy(strategy_config)
+        .create_initiative(initiative_config)
         .await
         .unwrap();
 
@@ -282,9 +226,9 @@ async fn test_long_title_id_path_consistency() {
     assert!(result.document_id.to_string().len() <= 35); // MAX_ID_LENGTH
 
     // Verify path now uses short code instead of document ID
-    let strategy_dir = workspace_dir.join("strategies").join(&result.short_code);
-    assert!(strategy_dir.exists());
-    assert!(strategy_dir.join("strategy.md").exists());
+    let initiative_dir = workspace_dir.join("initiatives").join(&result.short_code);
+    assert!(initiative_dir.exists());
+    assert!(initiative_dir.join("initiative.md").exists());
 
     // Verify we can find it by ID
     let discovery_service = DocumentDiscoveryService::new(&workspace_dir);
@@ -301,11 +245,11 @@ async fn test_unicode_title_id_path_consistency() {
 
     // Test various Unicode titles
     let unicode_titles = [
-        "Café Strategy für München",
-        "日本語 テスト 戦略",
-        "Стратегия для России",
-        "🚀 Rocket Launch Strategy 🌟",
-        "Strategy with émojis and àccents",
+        "Café Initiative für München",
+        "日本語 テスト 計画",
+        "Инициатива для России",
+        "🚀 Rocket Launch Initiative 🌟",
+        "Initiative with émojis and àccents",
     ];
 
     for (i, title) in unicode_titles.iter().enumerate() {
@@ -316,10 +260,9 @@ async fn test_unicode_title_id_path_consistency() {
             tags: vec![],
             phase: None,
             complexity: None,
-            risk_level: None,
         };
 
-        let result = creation_service.create_strategy(config).await.unwrap();
+        let result = creation_service.create_initiative(config).await.unwrap();
 
         // Verify ID contains only valid slug characters (alphanumeric includes Unicode)
         let id = result.document_id.to_string();
@@ -335,13 +278,13 @@ async fn test_unicode_title_id_path_consistency() {
         );
 
         // Verify path exists using short code
-        let strategy_dir = workspace_dir.join("strategies").join(&result.short_code);
+        let initiative_dir = workspace_dir.join("initiatives").join(&result.short_code);
         assert!(
-            strategy_dir.exists(),
+            initiative_dir.exists(),
             "Directory should exist for Unicode title: {}",
             title
         );
-        assert!(strategy_dir.join("strategy.md").exists());
+        assert!(initiative_dir.join("initiative.md").exists());
     }
 }
 
@@ -354,102 +297,97 @@ async fn test_regression_id_path_mismatch_bug() {
     let creation_service = DocumentCreationService::new(&workspace_dir);
     let discovery_service = DocumentDiscoveryService::new(&workspace_dir);
 
-    // This was the problematic case: create a strategy with ID "semantic-search-rag-strategy"
-    // but the directory was created as "semantic-search"
-    let strategy_config = DocumentCreationConfig {
-        title: "Semantic Search RAG Strategy".to_string(),
-        description: Some("A strategy for implementing semantic search with RAG".to_string()),
+    // This was the problematic case: create an initiative with a long ID
+    // but the directory was created as a truncated version
+    let initiative_config = DocumentCreationConfig {
+        title: "Semantic Search RAG Initiative".to_string(),
+        description: Some("An initiative for implementing semantic search with RAG".to_string()),
         parent_id: None,
         tags: vec![
             Tag::Label("search".to_string()),
             Tag::Label("ai".to_string()),
         ],
         phase: None,
-        complexity: None,
-        risk_level: Some(RiskLevel::Medium),
+        complexity: Some(Complexity::L),
     };
 
-    let strategy_result = creation_service
-        .create_strategy(strategy_config)
+    let initiative_result = creation_service
+        .create_initiative(initiative_config)
         .await
         .unwrap();
-    let strategy_id = strategy_result.short_code.clone();
+    let initiative_id = initiative_result.short_code.clone();
 
     // The document ID should still be the full slug (for compatibility)
     assert_eq!(
-        strategy_result.document_id.to_string(),
-        "semantic-search-rag-strategy"
+        initiative_result.document_id.to_string(),
+        "semantic-search-rag-initiative"
     );
 
     // The directory path now uses short code instead of document ID
-    let strategy_dir = workspace_dir
-        .join("strategies")
-        .join(&strategy_result.short_code);
+    let initiative_dir = workspace_dir
+        .join("initiatives")
+        .join(&initiative_result.short_code);
     assert!(
-        strategy_dir.exists(),
-        "Strategy directory should exist at path using short code"
+        initiative_dir.exists(),
+        "Initiative directory should exist at path using short code"
     );
     assert!(
-        strategy_dir.join("strategy.md").exists(),
-        "Strategy file should exist"
+        initiative_dir.join("initiative.md").exists(),
+        "Initiative file should exist"
     );
 
     // Verify the frontmatter ID matches
-    let strategy_content = std::fs::read_to_string(strategy_dir.join("strategy.md")).unwrap();
+    let initiative_content =
+        std::fs::read_to_string(initiative_dir.join("initiative.md")).unwrap();
     assert!(
-        strategy_content.contains(&format!("id: {}", strategy_result.document_id)),
+        initiative_content.contains(&format!("id: {}", initiative_result.document_id)),
         "Frontmatter ID should match"
     );
 
     // Verify discovery by ID works
     let found = discovery_service
-        .find_document_by_id(&strategy_result.document_id.to_string())
+        .find_document_by_id(&initiative_result.document_id.to_string())
         .await
         .unwrap();
     // Canonicalize expected path to match discovery service's canonical workspace_dir
-    let expected_file_path = strategy_dir.join("strategy.md").canonicalize().unwrap();
+    let expected_file_path = initiative_dir.join("initiative.md").canonicalize().unwrap();
     assert_eq!(found.file_path, expected_file_path);
 
-    // Sync strategy to database before creating initiative
+    // Sync initiative to database before creating task
     let db_path = workspace_dir.join("metis.db");
     let db = Database::new(&db_path.to_string_lossy()).unwrap();
     let mut db_service =
         metis_core::application::services::DatabaseService::new(db.repository().unwrap());
     let mut sync_service = metis_core::application::services::SyncService::new(&mut db_service);
     sync_service
-        .import_from_file(&strategy_result.file_path)
+        .import_from_file(&initiative_result.file_path)
         .await
         .unwrap();
 
-    // Now create an initiative under this strategy to ensure child paths work correctly
-    let initiative_config = DocumentCreationConfig {
+    // Now create a task under this initiative to ensure child paths work correctly
+    let task_config = DocumentCreationConfig {
         title: "Implement Vector Search".to_string(),
-        description: Some("Initiative to implement vector search capabilities".to_string()),
+        description: Some("Task to implement vector search capabilities".to_string()),
         parent_id: Some(metis_core::domain::documents::types::DocumentId::from(
-            strategy_id.clone(),
+            initiative_id.clone(),
         )),
         tags: vec![],
         phase: None,
-        complexity: Some(Complexity::L),
-        risk_level: None,
+        complexity: None,
     };
 
-    let initiative_result = creation_service
-        .create_initiative(initiative_config, &strategy_id)
+    let task_result = creation_service
+        .create_task(task_config, &initiative_id)
         .await
         .unwrap();
 
-    // Verify initiative is created under the correct parent path using short code
-    let initiative_path = strategy_dir
-        .join("initiatives")
-        .join(&initiative_result.short_code);
+    // Verify task is created under the correct parent path using short code
+    let task_path = initiative_dir
+        .join("tasks")
+        .join(format!("{}.md", task_result.short_code));
 
     assert!(
-        initiative_path.exists(),
-        "Initiative should be created under correct parent strategy path"
-    );
-    assert!(
-        initiative_path.join("initiative.md").exists(),
-        "Initiative file should exist"
+        task_path.exists(),
+        "Task should be created under correct parent initiative path"
     );
 }

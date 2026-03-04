@@ -1,6 +1,6 @@
 use crate::domain::documents::types::DocumentType;
 use crate::Result;
-use crate::{Adr, Initiative, MetisError, Strategy, Task, Vision};
+use crate::{Adr, Initiative, MetisError, Task, Vision};
 use std::path::Path;
 
 /// Service for validating documents and detecting their types
@@ -53,24 +53,6 @@ impl DocumentValidationService {
                     document_type: DocumentType::Vision,
                     is_valid: false,
                     errors: vec![format!("Vision validation failed: {}", e)],
-                });
-            }
-        }
-
-        // Try Strategy
-        match Strategy::from_file(file_path).await {
-            Ok(_strategy) => {
-                validation_results.push(ValidationResult {
-                    document_type: DocumentType::Strategy,
-                    is_valid: true,
-                    errors: vec![],
-                });
-            }
-            Err(e) => {
-                validation_results.push(ValidationResult {
-                    document_type: DocumentType::Strategy,
-                    is_valid: false,
-                    errors: vec![format!("Strategy validation failed: {}", e)],
                 });
             }
         }
@@ -175,10 +157,6 @@ impl DocumentValidationService {
 
         match expected_type {
             DocumentType::Vision => match Vision::from_file(file_path).await {
-                Ok(_) => Ok(true),
-                Err(_) => Ok(false),
-            },
-            DocumentType::Strategy => match Strategy::from_file(file_path).await {
                 Ok(_) => Ok(true),
                 Err(_) => Ok(false),
             },
@@ -337,9 +315,9 @@ This is a test vision document.
             .await
             .unwrap());
 
-        // Should not be valid as strategy
+        // Should not be valid as task
         assert!(!service
-            .validate_document_as_type(&file_path, DocumentType::Strategy)
+            .validate_document_as_type(&file_path, DocumentType::Task)
             .await
             .unwrap());
     }

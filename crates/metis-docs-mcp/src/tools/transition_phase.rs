@@ -103,7 +103,6 @@ impl TransitionPhaseTool {
             "active" => Ok(Phase::Active),
             "blocked" => Ok(Phase::Blocked),
             "completed" => Ok(Phase::Completed),
-            "shaping" => Ok(Phase::Shaping),
             "design" => Ok(Phase::Design),
             "ready" => Ok(Phase::Ready),
             "decompose" => Ok(Phase::Decompose),
@@ -119,7 +118,6 @@ impl TransitionPhaseTool {
         // Use DocumentType::phase_sequence() - the single source of truth
         let doc_type = match document_type {
             "vision" => Some(DocumentType::Vision),
-            "strategy" => Some(DocumentType::Strategy),
             "initiative" => Some(DocumentType::Initiative),
             "task" => Some(DocumentType::Task),
             "adr" => Some(DocumentType::Adr),

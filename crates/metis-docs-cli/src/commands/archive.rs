@@ -8,7 +8,7 @@ pub struct ArchiveCommand {
     /// Document short code to archive (e.g., PROJ-V-0001)
     pub short_code: String,
 
-    /// Document type (vision, strategy, initiative, task, adr) - auto-detected if not provided
+    /// Document type (vision, initiative, task, adr) - auto-detected if not provided
     #[arg(short = 't', long)]
     pub document_type: Option<String>,
 }
@@ -103,7 +103,7 @@ mod tests {
             name: Some("Test Project".to_string()),
             prefix: None,
             preset: None,
-            strategies: None,
+
             initiatives: None,
         };
         init_cmd.execute().await.unwrap();
@@ -137,7 +137,7 @@ mod tests {
             name: Some("Test Project".to_string()),
             prefix: None,
             preset: None,
-            strategies: None,
+
             initiatives: None,
         };
         init_cmd.execute().await.unwrap();

@@ -106,8 +106,8 @@ When you create a document, you MUST immediately populate it with content:
 
 **A document with template placeholders is INCOMPLETE. Never leave {placeholder} text.**
 
-## CRITICAL: Human-in-the-Loop for Initiatives/Strategies
-For initiatives and strategies, you MUST check in with the human before:
+## CRITICAL: Human-in-the-Loop for Initiatives
+For initiatives, you MUST check in with the human before:
 - Transitioning to a new phase
 - Making design/architectural decisions
 - Decomposing into tasks

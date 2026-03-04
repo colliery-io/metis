@@ -6,22 +6,20 @@ Flight Levels is a thinking model for organizing work at different altitudes. Me
 
 ```
 Vision (Flight Level 3)         - THE BIG WHY: North star, objectives, values
-    └── Strategy (FL 2)         - STRATEGIC DIRECTION: Coordinated approaches to achieve the vision
-            └── Initiative (FL 1) - CONCRETE PROJECTS: Deliverable work packages
-                    └── Task (FL 0) - EXECUTION: Individual work items
+    └── Initiative (FL 1)       - CONCRETE PROJECTS: Deliverable work packages
+            └── Task (FL 0)     - EXECUTION: Individual work items
 ```
 
 Each level answers a different question:
 - **Vision**: "Why is this worth doing? What's our north star?"
-- **Strategy**: "What approaches will move us toward that vision?"
-- **Initiative**: "What projects will execute those approaches?"
+- **Initiative**: "What projects will move us toward that vision?"
 - **Task**: "What specific work needs to be done?"
 
 ## Why Hierarchy Matters: Value Alignment
 
 The hierarchy exists to enforce alignment and prevent waste.
 
-**Every piece of work should trace back to the vision.** Tasks support initiatives, initiatives support strategies, strategies support the vision. This chain of alignment ensures:
+**Every piece of work should trace back to the vision.** Tasks support initiatives, initiatives support the vision. This chain of alignment ensures:
 
 - No "shadow work" - hidden efforts that don't contribute to objectives
 - No "shadow backlogs" - secret lists of work that bypass prioritization
@@ -29,7 +27,7 @@ The hierarchy exists to enforce alignment and prevent waste.
 
 **If you can't trace work back to the vision, that's a signal.** Either:
 1. The work shouldn't be done
-2. There's a missing initiative/strategy that should exist
+2. There's a missing initiative that should exist
 3. It belongs in the backlog (see below)
 
 ### Vision: The North Star
@@ -40,24 +38,6 @@ A Vision is a statement document. It codifies:
 - **Success criteria**: How we'll know we've arrived
 
 Example: "Make X a better experience" or "Fix the problems of Y" - these are vision-level statements. They don't change often because they represent fundamental purpose.
-
-### Strategy: The Direction
-
-Strategy defines HOW you'll pursue the vision. It's where you decide:
-- Which approaches to take (and which to defer)
-- How to allocate resources across initiatives
-- What trade-offs you're willing to make
-
-A vision might have multiple strategies. "Make X a better experience" could be pursued via "Improve performance" AND "Simplify the UI" - two different strategic directions.
-
-### When Strategy is Skipped
-
-Small teams and technically-focused projects often use the **streamlined** preset which omits Strategy. This works when:
-- A single team owns the entire vision
-- Initiatives don't require cross-team coordination
-- The path from vision to execution is clear
-
-Skipping Strategy is a valid choice, not a shortcut. But recognize what you're giving up: explicit coordination logic between initiatives.
 
 ## The Backlog: Ad-Hoc Work
 
@@ -86,8 +66,7 @@ The backlog is a special area for work that doesn't fit neatly into the initiati
 Each flight level has backlogs. When a backlog runs low, that's the signal to look UP to the next level for what to pull down:
 
 - **Task backlog low?** Look to the Initiative for what to decompose next
-- **Initiative backlog low?** Look to the Strategy for what direction to pursue next
-- **Strategy backlog low?** Look to the Vision for what approach to develop next
+- **Initiative backlog low?** Look to the Vision for what to pursue next
 
 This pull-based system:
 - Prevents overloading any level
@@ -97,8 +76,7 @@ This pull-based system:
 
 **Feedback flows UP through completion:**
 - Completed tasks inform initiative progress
-- Completed initiatives validate strategy assumptions
-- Strategy outcomes inform whether the vision is achievable as stated
+- Completed initiatives inform whether the vision is achievable as stated
 
 ## Time Horizons
 
@@ -107,7 +85,6 @@ Each document type operates at a different timescale:
 | Type | Horizon | Stability |
 |------|---------|-----------|
 | Vision | 6mo - 2yr | Rarely changes - it's the north star |
-| Strategy | 3-12mo | Adjusts based on initiative outcomes |
 | Initiative | 1-6mo | Changes when blocked or scope shifts |
 | Task | 1-14 days | Changes frequently |
 | ADR | Permanent | Only superseded, never deleted |
@@ -119,7 +96,6 @@ Each document type operates at a different timescale:
 Documents advance through phases with exit criteria:
 
 - **Visions**: draft -> review -> published
-- **Strategies**: shaping -> design -> ready -> active -> completed
 - **Initiatives**: discovery -> design -> ready -> decompose -> active -> completed
 - **Tasks**: todo -> active -> completed (or backlog -> todo -> ...), with blocked as a side state
 
@@ -174,7 +150,6 @@ This means:
 Every document has a short code: `PREFIX-TYPE-NNNN` (e.g., `PROJ-V-0001`, `ACME-I-0042`)
 
 - **V** = Vision
-- **S** = Strategy
 - **I** = Initiative
 - **T** = Task
 - **A** = ADR
@@ -190,9 +165,7 @@ Parent requirements guide proper document relationships based on type and preset
 | Document Type | Parent Type | Parent Should Be | Notes |
 |---------------|-------------|------------------|-------|
 | Vision | None | - | Top-level document |
-| Strategy | Vision | `published` | Full preset only |
-| Initiative | Strategy | `active` | Full preset |
-| Initiative | Vision | `published` | Streamlined preset (no strategy) |
+| Initiative | Vision | `published` | Top of execution hierarchy |
 | Task | Initiative | `decompose` or `active` | Regular tasks |
 | Task (backlog) | None | - | Uses `backlog_category` parameter |
 | ADR | None | - | Standalone decisions |
@@ -200,8 +173,7 @@ Parent requirements guide proper document relationships based on type and preset
 ### What This Means
 
 **Recommended workflow for creating child documents:**
-- Strategy typically under a published Vision
-- Initiative typically under an active Strategy (Full) or published Vision (Streamlined)
+- Initiative typically under a published Vision
 - Task typically under an Initiative in `decompose` or `active` phase
 
 Note: The `reassign_parent` tool enforces initiative phase (must be decompose/active). Task creation does not enforce this.
@@ -220,11 +192,10 @@ Metis supports different configurations:
 
 | Preset | Hierarchy | Best For |
 |--------|-----------|----------|
-| Full | Vision -> Strategy -> Initiative -> Task | Large orgs, multiple coordinated approaches |
 | Streamlined | Vision -> Initiative -> Task | Small teams, clear vision-to-execution path |
 | Direct | Vision -> Task | Solo work, simple projects |
 
-The current project's preset is shown in MCP tool responses. Don't fight the configuration - if you need strategies but they're disabled, that's a signal to reconsider the preset.
+The current project's preset is shown in MCP tool responses. Don't fight the configuration - if you need more structure, that's a signal to reconsider the preset.
 
 ## Reference
 

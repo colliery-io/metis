@@ -7,7 +7,7 @@ created_at: 2026-02-20T14:47:13.836008+00:00
 updated_at: 2026-03-03T02:29:59.453600+00:00
 parent: METIS-I-0021
 blocked_by: []
-archived: false
+archived: true
 
 tags:
   - "#task"
@@ -27,6 +27,8 @@ initiative_id: METIS-I-0021
 ## Objective
 
 Create a plugin skill that guides Claude through generating Layer 2 module summaries. The skill teaches Claude how to read the structural index + source code, write per-directory summaries (purpose, key files, dependencies), and append them to `.metis/code-index.md`. Default model: Sonnet.
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 

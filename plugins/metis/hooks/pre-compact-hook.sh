@@ -90,7 +90,7 @@ ${ACTIVE_WORK:-No active or ready tasks found}
 After \`create_document\`, you MUST: \`read_document\` then \`edit_document\` to populate ALL content. Never leave placeholder text.
 
 ### CRITICAL: Human-in-the-Loop
-For initiatives/strategies: ALWAYS check in with the human before phase transitions, design decisions, or decomposition. Present options and get approval.
+For initiatives: ALWAYS check in with the human before phase transitions, design decisions, or decomposition. Present options and get approval.
 
 ### Task Workflow
 1. \`read_document\` - Understand the task

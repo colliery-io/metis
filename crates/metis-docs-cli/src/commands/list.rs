@@ -18,7 +18,7 @@ pub enum OutputFormat {
 
 #[derive(Args)]
 pub struct ListCommand {
-    /// Document type to filter by (vision, strategy, initiative, task, adr)
+    /// Document type to filter by (vision, initiative, task, adr)
     #[arg(short = 't', long)]
     pub document_type: Option<String>,
 
@@ -121,7 +121,7 @@ impl ListCommand {
         let mut all_docs = Vec::new();
 
         // Collect all document types in display order (matching MCP)
-        for doc_type in ["vision", "strategy", "initiative", "task", "adr"] {
+        for doc_type in ["vision", "initiative", "task", "adr"] {
             let mut docs = repo.find_by_type(doc_type)?;
             all_docs.append(&mut docs);
         }
@@ -134,11 +134,10 @@ impl ListCommand {
         // Sort by type order, then by short_code (matching MCP behavior)
         let type_order = |t: &str| match t {
             "vision" => 0,
-            "strategy" => 1,
-            "initiative" => 2,
-            "task" => 3,
-            "adr" => 4,
-            _ => 5,
+            "initiative" => 1,
+            "task" => 2,
+            "adr" => 3,
+            _ => 4,
         };
 
         all_docs.sort_by(|a, b| {
@@ -260,7 +259,7 @@ mod tests {
         let init_cmd = InitCommand {
             name: Some("Test Project".to_string()),
             preset: None,
-            strategies: None,
+
             initiatives: None,
             prefix: None,
         };

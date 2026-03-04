@@ -4,7 +4,7 @@ use tracing_subscriber::filter::LevelFilter;
 
 use crate::commands::{
     ArchiveCommand, ConfigCommand, CreateCommand, IndexCommand, InitCommand, ListCommand,
-    McpCommand, OutputFormat, SearchCommand, StatusCommand, SyncCommand, TransitionCommand,
+    McpCommand, SearchCommand, StatusCommand, SyncCommand, TransitionCommand,
     ValidateCommand,
 };
 
@@ -87,8 +87,8 @@ mod tests {
     use super::*;
     use crate::commands::create::CreateCommands;
     use crate::commands::{
-        ArchiveCommand, CreateCommand, ListCommand, SearchCommand, StatusCommand, SyncCommand,
-        TransitionCommand, ValidateCommand,
+        ArchiveCommand, CreateCommand, ListCommand, OutputFormat, SearchCommand, StatusCommand,
+        SyncCommand, TransitionCommand, ValidateCommand,
     };
     use std::fs;
     use tempfile::tempdir;
@@ -106,7 +106,6 @@ mod tests {
             name: Some("Integration Test Project".to_string()),
             prefix: None,
             preset: None,
-            strategies: None,
             initiatives: None,
         };
         init_cmd
@@ -128,23 +127,11 @@ mod tests {
         let sync_cmd = SyncCommand {};
         sync_cmd.execute().await.expect("Failed to sync workspace");
 
-        // 3. Create a strategy
-        let create_strategy_cmd = CreateCommand {
-            document_type: CreateCommands::Strategy {
-                title: "Test Strategy for Integration".to_string(),
-                vision: Some("integration-test-project".to_string()),
-            },
-        };
-        create_strategy_cmd
-            .execute()
-            .await
-            .expect("Failed to create strategy");
-
-        // 4. Create an initiative under the strategy
+        // 3. Create an initiative under the vision
         let create_initiative_cmd = CreateCommand {
             document_type: CreateCommands::Initiative {
                 title: "Test Initiative".to_string(),
-                strategy: "TEST-S-0001".to_string(),
+                vision: "TEST-V-0001".to_string(),
             },
         };
         create_initiative_cmd
@@ -152,7 +139,54 @@ mod tests {
             .await
             .expect("Failed to create initiative");
 
-        // 5. Create a task under the initiative
+        // 4. Create an ADR
+        let create_adr_cmd = CreateCommand {
+            document_type: CreateCommands::Adr {
+                title: "Test Architecture Decision".to_string(),
+            },
+        };
+        create_adr_cmd
+            .execute()
+            .await
+            .expect("Failed to create ADR");
+
+        // Find the created ADR
+        let adrs_dir = metis_dir.join("adrs");
+        let adr_files: Vec<_> = fs::read_dir(&adrs_dir)
+            .unwrap()
+            .filter_map(|entry| entry.ok())
+            .filter(|entry| entry.path().extension().is_some_and(|ext| ext == "md"))
+            .collect();
+        assert!(!adr_files.is_empty(), "ADR file should be created");
+
+        // 5. Sync after creating documents
+        let sync_cmd2 = SyncCommand {};
+        sync_cmd2
+            .execute()
+            .await
+            .expect("Failed to sync after creating documents");
+
+        // 6. Transition the vision to review phase
+        let transition_vision_cmd = TransitionCommand {
+            short_code: "TEST-V-0001".to_string(),
+            phase: Some("review".to_string()),
+        };
+        transition_vision_cmd
+            .execute()
+            .await
+            .expect("Failed to transition vision");
+
+        // 7. Transition initiative through phases to decompose
+        // Discovery → Design → Ready → Decompose
+        for _i in 0..3 {
+            let cmd = TransitionCommand {
+                short_code: "TEST-I-0001".to_string(),
+                phase: None,
+            };
+            cmd.execute().await.expect("Failed to transition initiative");
+        }
+
+        // 8. Create a task under the initiative (now in decompose phase)
         let create_task_cmd = CreateCommand {
             document_type: CreateCommands::Task {
                 title: "Test Task".to_string(),
@@ -164,72 +198,7 @@ mod tests {
             .await
             .expect("Failed to create task");
 
-        // 6. Create an ADR
-        let create_adr_cmd = CreateCommand {
-            document_type: CreateCommands::Adr {
-                title: "Test Architecture Decision".to_string(),
-            },
-        };
-        create_adr_cmd
-            .execute()
-            .await
-            .expect("Failed to create ADR");
-
-        // Find the created ADR (it will have a number prefix)
-        let adrs_dir = metis_dir.join("adrs");
-        let adr_files: Vec<_> = fs::read_dir(&adrs_dir)
-            .unwrap()
-            .filter_map(|entry| entry.ok())
-            .filter(|entry| entry.path().extension().is_some_and(|ext| ext == "md"))
-            .collect();
-        assert!(!adr_files.is_empty(), "ADR file should be created");
-
-        // 7. Sync after creating documents
-        let sync_cmd2 = SyncCommand {};
-        sync_cmd2
-            .execute()
-            .await
-            .expect("Failed to sync after creating documents");
-
-        // 8. Transition the vision to review phase
-        let transition_vision_cmd = TransitionCommand {
-            short_code: "TEST-V-0001".to_string(),
-            phase: Some("review".to_string()),
-        };
-        transition_vision_cmd
-            .execute()
-            .await
-            .expect("Failed to transition vision");
-
-        // 9. Transition the strategy through its phases: Shaping → Design → Ready → Active
-        let transition_strategy_to_design_cmd = TransitionCommand {
-            short_code: "TEST-S-0001".to_string(),
-            phase: Some("design".to_string()),
-        };
-        transition_strategy_to_design_cmd
-            .execute()
-            .await
-            .expect("Failed to transition strategy to design");
-
-        let transition_strategy_to_ready_cmd = TransitionCommand {
-            short_code: "TEST-S-0001".to_string(),
-            phase: Some("ready".to_string()),
-        };
-        transition_strategy_to_ready_cmd
-            .execute()
-            .await
-            .expect("Failed to transition strategy to ready");
-
-        let transition_strategy_to_active_cmd = TransitionCommand {
-            short_code: "TEST-S-0001".to_string(),
-            phase: Some("active".to_string()),
-        };
-        transition_strategy_to_active_cmd
-            .execute()
-            .await
-            .expect("Failed to transition strategy to active");
-
-        // 10. Transition the task through its phases: Todo → Active → Completed
+        // 9. Transition the task: Todo → Active → Completed
         let transition_task_to_active_cmd = TransitionCommand {
             short_code: "TEST-T-0001".to_string(),
             phase: Some("active".to_string()),
@@ -248,7 +217,7 @@ mod tests {
             .await
             .expect("Failed to transition task to completed");
 
-        // 11. Archive the completed task
+        // 10. Archive the completed task
         let archive_task_cmd = ArchiveCommand {
             short_code: "TEST-T-0001".to_string(),
             document_type: Some("task".to_string()),
@@ -258,7 +227,7 @@ mod tests {
             .await
             .expect("Failed to archive task");
 
-        // 12. List all documents to verify they exist
+        // 11. List all documents to verify they exist
         let list_cmd = ListCommand {
             document_type: None,
             phase: None,
@@ -268,14 +237,14 @@ mod tests {
         };
         list_cmd.execute().await.expect("Failed to list documents");
 
-        // 13. Test status command
+        // 12. Test status command
         let status_cmd = StatusCommand {
             include_archived: false,
             format: OutputFormat::Table,
         };
         status_cmd.execute().await.expect("Failed to get status");
 
-        // 14. Search for content
+        // 13. Search for content
         let search_cmd = SearchCommand {
             query: "test".to_string(),
             limit: 10,
@@ -286,7 +255,7 @@ mod tests {
             .await
             .expect("Failed to search documents");
 
-        // 15. Validate a document file
+        // 14. Validate a document file
         let validate_cmd = ValidateCommand {
             file_path: metis_dir.join("vision.md"),
         };

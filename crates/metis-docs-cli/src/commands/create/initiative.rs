@@ -3,13 +3,12 @@ use anyhow::Result;
 use dialoguer::Select;
 use metis_core::{
     application::services::document::creation::{DocumentCreationConfig, DocumentCreationService},
-    domain::documents::{initiative::Complexity, types::DocumentId},
-    Database, Document, Phase, Strategy, Tag,
+    domain::documents::initiative::Complexity,
+    Database, Document, Phase, Tag, Vision,
 };
-use std::path::Path;
 
 /// Create a new Initiative document with defaults and write to file
-pub async fn create_new_initiative(title: &str, strategy_id: &str) -> Result<()> {
+pub async fn create_new_initiative(title: &str, vision_id: &str) -> Result<()> {
     // 1. Validate we're in a metis workspace
     let (workspace_exists, metis_dir) = workspace::has_metis_vault();
     if !workspace_exists {
@@ -17,8 +16,8 @@ pub async fn create_new_initiative(title: &str, strategy_id: &str) -> Result<()>
     }
     let metis_dir = metis_dir.unwrap();
 
-    // 2. Verify the strategy exists and get its document ID and short code
-    let (strategy_doc_id, _strategy_path) = find_strategy(&metis_dir, strategy_id).await?;
+    // 2. Verify the vision exists
+    let vision_doc_id = find_vision(&metis_dir, vision_id).await?;
 
     // 3. Prompt for complexity level
     let complexity = prompt_for_complexity()?;
@@ -29,18 +28,17 @@ pub async fn create_new_initiative(title: &str, strategy_id: &str) -> Result<()>
     let config = DocumentCreationConfig {
         title: title.to_string(),
         description: None,
-        parent_id: Some(strategy_doc_id.clone()),
+        parent_id: Some(vision_doc_id.clone()),
         tags: vec![
             Tag::Label("initiative".to_string()),
             Tag::Phase(Phase::Discovery),
         ],
         phase: Some(Phase::Discovery),
         complexity: Some(complexity),
-        risk_level: None,
     };
 
     let result = creation_service
-        .create_initiative(config, strategy_id)
+        .create_initiative(config)
         .await
         .map_err(|e| anyhow::anyhow!("Failed to create initiative: {}", e))?;
 
@@ -48,35 +46,18 @@ pub async fn create_new_initiative(title: &str, strategy_id: &str) -> Result<()>
     println!("  ID: {}", result.document_id);
     println!("  Short Code: {}", result.short_code);
     println!("  Title: {}", title);
-    println!("  Parent Strategy: {}", strategy_doc_id);
+    println!("  Parent Vision: {}", vision_id);
     println!("  Complexity: {:?}", complexity);
 
     Ok(())
 }
 
-/// Find a strategy by ID and return its DocumentId and file path
-async fn find_strategy(
-    workspace_dir: &Path,
-    strategy_id: &str,
-) -> Result<(DocumentId, std::path::PathBuf)> {
-    let strategies_dir = workspace_dir.join("strategies");
-
-    if !strategies_dir.exists() {
-        anyhow::bail!("No strategies directory found. Create a strategy first.");
-    }
-
-    // First try to find strategy directory by document ID (legacy path structure)
-    let legacy_strategy_dir = strategies_dir.join(strategy_id);
-    if legacy_strategy_dir.exists() && legacy_strategy_dir.is_dir() {
-        // Found using legacy path, use it directly
-        let strategy_path = legacy_strategy_dir.join("strategy.md");
-        if strategy_path.exists() {
-            let strategy = Strategy::from_file(&strategy_path).await?;
-            return Ok((strategy.id().clone(), strategy_path));
-        }
-    }
-
-    // Legacy lookup failed, try database lookup to find short code
+/// Find a vision by short code and return its DocumentId
+async fn find_vision(
+    workspace_dir: &std::path::Path,
+    vision_id: &str,
+) -> Result<metis_core::domain::documents::types::DocumentId> {
+    // First try database lookup (works when synced)
     let db_path = workspace_dir.join("metis.db");
     if db_path.exists() {
         let db = Database::new(&db_path.to_string_lossy())
@@ -85,49 +66,35 @@ async fn find_strategy(
             .repository()
             .map_err(|e| anyhow::anyhow!("Repository error: {}", e))?;
 
-        // Try to find strategy by short code in database
-        if let Ok(Some(strategy_doc)) = repo.find_by_short_code(strategy_id) {
-            // Found in database, use its short code to find directory
-            let short_code_dir = strategies_dir.join(&strategy_doc.short_code);
-            if short_code_dir.exists() && short_code_dir.is_dir() {
-                let strategy_path = short_code_dir.join("strategy.md");
-                if strategy_path.exists() {
-                    let strategy = Strategy::from_file(&strategy_path).await?;
-                    return Ok((strategy.id().clone(), strategy_path));
-                }
+        if let Ok(Some(vision_doc)) = repo.find_by_short_code(vision_id) {
+            if vision_doc.document_type == "vision" {
+                return Ok(metis_core::domain::documents::types::DocumentId::new(
+                    &vision_doc.id,
+                ));
             }
+            anyhow::bail!(
+                "'{}' is a {} document, not a vision. Initiatives must be created under a vision.",
+                vision_id,
+                vision_doc.document_type
+            );
         }
     }
 
-    // Strategy not found, provide helpful error
-    let available = list_available_strategies(&strategies_dir)?;
-    if available.is_empty() {
-        anyhow::bail!("No strategies found. Create a strategy first.");
-    } else {
-        anyhow::bail!(
-            "Strategy '{}' not found. Available strategies: {}",
-            strategy_id,
-            available.join(", ")
-        );
-    }
-}
-
-/// List available strategy IDs
-fn list_available_strategies(strategies_dir: &Path) -> Result<Vec<String>> {
-    let mut strategies = Vec::new();
-
-    if let Ok(entries) = std::fs::read_dir(strategies_dir) {
-        for entry in entries.filter_map(|e| e.ok()) {
-            if entry.path().is_dir() {
-                if let Some(name) = entry.file_name().to_str() {
-                    strategies.push(name.to_string());
-                }
-            }
+    // Fall back to reading vision.md directly (works before first sync)
+    let vision_path = workspace_dir.join("vision.md");
+    if vision_path.exists() {
+        let vision = Vision::from_file(&vision_path)
+            .await
+            .map_err(|e| anyhow::anyhow!("Failed to read vision: {}", e))?;
+        if vision.metadata().short_code == vision_id {
+            return Ok(vision.id().clone());
         }
     }
 
-    strategies.sort();
-    Ok(strategies)
+    anyhow::bail!(
+        "Vision '{}' not found. Use 'metis list -t vision' to see available visions.",
+        vision_id,
+    );
 }
 
 /// Prompt user to select complexity level
@@ -164,17 +131,17 @@ fn prompt_for_complexity() -> Result<Complexity> {
 mod tests {
     use super::*;
     use crate::commands::InitCommand;
-    use std::fs;
-    use tempfile::tempdir;
 
     #[tokio::test]
     async fn test_create_new_initiative_no_workspace() {
-        let temp_dir = tempdir().unwrap();
-        let original_dir = std::env::current_dir().unwrap();
+        let temp_dir = tempfile::tempdir().unwrap();
+        let Ok(original_dir) = std::env::current_dir() else {
+            return; // CWD unavailable due to parallel test interference
+        };
 
         // Change to temp directory without workspace
         if std::env::set_current_dir(temp_dir.path()).is_ok() {
-            let result = create_new_initiative("Test Initiative", "some-strategy").await;
+            let result = create_new_initiative("Test Initiative", "PROJ-V-0001").await;
             assert!(result.is_err());
             assert!(result
                 .unwrap_err()
@@ -187,13 +154,15 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_find_strategy_not_found() {
-        let temp_dir = tempdir().unwrap();
-        let original_dir = std::env::current_dir().unwrap();
+    async fn test_find_vision_not_found() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let Ok(original_dir) = std::env::current_dir() else {
+            return; // CWD unavailable due to parallel test interference
+        };
 
         // Ensure we can change to temp directory
         if std::env::set_current_dir(temp_dir.path()).is_err() {
-            std::env::set_current_dir(original_dir).unwrap();
+            let _ = std::env::set_current_dir(original_dir);
             return;
         }
 
@@ -201,98 +170,55 @@ mod tests {
         let init_cmd = InitCommand {
             name: Some("Test Project".to_string()),
             preset: None,
-            strategies: None,
             initiatives: None,
             prefix: None,
         };
         if init_cmd.execute().await.is_err() {
-            std::env::set_current_dir(original_dir).unwrap();
+            let _ = std::env::set_current_dir(original_dir);
             return;
         }
 
-        // Try to find non-existent strategy
+        // Try to find non-existent vision
         let metis_dir = temp_dir.path().join(".metis");
-        let result = find_strategy(&metis_dir, "non-existent").await;
+        let result = find_vision(&metis_dir, "TEST-V-9999").await;
         assert!(result.is_err());
         assert!(result
             .unwrap_err()
             .to_string()
-            .contains("No strategies found"));
+            .contains("not found"));
 
         // Always restore original directory
-        std::env::set_current_dir(original_dir).unwrap();
+        let _ = std::env::set_current_dir(original_dir);
     }
 
     #[tokio::test]
-    async fn test_list_available_strategies() {
-        let temp_dir = tempdir().unwrap();
-        let strategies_dir = temp_dir.path().join("strategies");
-
-        // Create some strategy directories
-        fs::create_dir_all(&strategies_dir).unwrap();
-        fs::create_dir(strategies_dir.join("strategy-1")).unwrap();
-        fs::create_dir(strategies_dir.join("strategy-2")).unwrap();
-        fs::create_dir(strategies_dir.join("another-strategy")).unwrap();
-
-        let strategies = list_available_strategies(&strategies_dir).unwrap();
-        assert_eq!(strategies.len(), 3);
-        assert_eq!(strategies[0], "another-strategy");
-        assert_eq!(strategies[1], "strategy-1");
-        assert_eq!(strategies[2], "strategy-2");
-    }
-
-    // Note: This test would require mocking dialoguer's Select prompt
-    // For now, we'll test the end-to-end flow with a unit test that bypasses the prompt
-    #[tokio::test]
-    async fn test_create_initiative_flow_without_prompt() {
-        let temp_dir = tempdir().unwrap();
-        let original_dir = std::env::current_dir().unwrap();
+    async fn test_create_initiative_under_vision() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let Ok(original_dir) = std::env::current_dir() else {
+            return; // CWD unavailable due to parallel test interference
+        };
 
         // Change to temp directory
-        std::env::set_current_dir(temp_dir.path()).unwrap();
+        if std::env::set_current_dir(temp_dir.path()).is_err() {
+            return;
+        }
 
-        // Create workspace
+        // Create workspace (creates vision TEST-V-0001)
         let init_cmd = InitCommand {
             name: Some("Test Project".to_string()),
             preset: None,
-            strategies: None,
             initiatives: None,
             prefix: None,
         };
         init_cmd.execute().await.unwrap();
 
-        // Create a strategy first
-        crate::commands::create::strategy::create_new_strategy("Test Strategy", None)
-            .await
-            .unwrap();
-
-        // Test the helper functions for initiative creation
         let metis_dir = temp_dir.path().join(".metis");
 
-        // Test finding the strategy by short code
-        let (strategy_id, strategy_path) = find_strategy(&metis_dir, "TEST-S-0001").await.unwrap();
-        assert_eq!(strategy_id.to_string(), "test-strategy");
-        assert!(strategy_path.exists());
-
-        // Verify the strategy path structure
-        let expected_strategy_path = metis_dir
-            .join("strategies")
-            .join("TEST-S-0001")
-            .join("strategy.md");
-        assert_eq!(strategy_path, expected_strategy_path);
-
-        // Test that the strategy directory structure would work for initiatives
-        let initiative_dir = strategy_path
-            .parent()
-            .unwrap()
-            .join("initiatives")
-            .join("test-initiative");
-        fs::create_dir_all(&initiative_dir).unwrap();
-
-        assert!(initiative_dir.exists());
-        assert!(initiative_dir.is_dir());
+        // Vision should be findable by short code
+        let vision_id = find_vision(&metis_dir, "TEST-V-0001").await;
+        assert!(vision_id.is_ok(), "Vision should be found: {:?}", vision_id.err());
 
         // Restore original directory
-        std::env::set_current_dir(original_dir).unwrap();
+        let _ = std::env::set_current_dir(original_dir);
     }
 }

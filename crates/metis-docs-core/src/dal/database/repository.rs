@@ -202,17 +202,6 @@ impl DocumentRepository {
             .map_err(MetisError::Database)
     }
 
-    /// Get all documents belonging to a strategy
-    pub fn find_by_strategy_id(&mut self, strategy_document_id: &str) -> Result<Vec<Document>> {
-        use schema::documents::dsl::*;
-
-        documents
-            .filter(strategy_id.eq(strategy_document_id))
-            .order(updated_at.desc())
-            .load(&mut self.connection)
-            .map_err(MetisError::Database)
-    }
-
     /// Get all documents belonging to an initiative
     pub fn find_by_initiative_id(&mut self, initiative_document_id: &str) -> Result<Vec<Document>> {
         use schema::documents::dsl::*;
@@ -232,38 +221,6 @@ impl DocumentRepository {
             .filter(document_filepath.eq(doc_filepath))
             .select(tag)
             .load::<String>(&mut self.connection)
-            .map_err(MetisError::Database)
-    }
-
-    /// Get all documents in a strategy hierarchy (strategy + its initiatives + their tasks)
-    pub fn find_strategy_hierarchy(&mut self, strategy_document_id: &str) -> Result<Vec<Document>> {
-        use schema::documents::dsl::*;
-
-        documents
-            .filter(
-                id.eq(strategy_document_id)
-                    .or(strategy_id.eq(strategy_document_id)),
-            )
-            .order((document_type.asc(), updated_at.desc()))
-            .load(&mut self.connection)
-            .map_err(MetisError::Database)
-    }
-
-    /// Get all documents in a strategy hierarchy by short code (strategy + its initiatives + their tasks)
-    pub fn find_strategy_hierarchy_by_short_code(
-        &mut self,
-        strategy_short_code: &str,
-    ) -> Result<Vec<Document>> {
-        use schema::documents::dsl::*;
-
-        documents
-            .filter(
-                short_code
-                    .eq(strategy_short_code)
-                    .or(strategy_id.eq(strategy_short_code)),
-            )
-            .order((document_type.asc(), updated_at.desc()))
-            .load(&mut self.connection)
             .map_err(MetisError::Database)
     }
 
@@ -372,7 +329,6 @@ mod tests {
             frontmatter_json: "{}".to_string(),
             content: Some("Test content".to_string()),
             phase: "draft".to_string(),
-            strategy_id: None,
             initiative_id: None,
             short_code: "TEST-V-0001".to_string(),
         }
@@ -463,7 +419,7 @@ mod tests {
             filepath: "/parent.md".to_string(),
             id: "parent-1".to_string(),
             title: "Parent Document".to_string(),
-            document_type: "strategy".to_string(),
+            document_type: "initiative".to_string(),
             created_at: 1609459200.0,
             updated_at: 1609459200.0,
             archived: false,
@@ -471,10 +427,9 @@ mod tests {
             file_hash: "parent123".to_string(),
             frontmatter_json: "{}".to_string(),
             content: Some("Parent content".to_string()),
-            phase: "shaping".to_string(),
-            strategy_id: None,
+            phase: "discovery".to_string(),
             initiative_id: None,
-            short_code: "TEST-S-0001".to_string(),
+            short_code: "TEST-I-0001".to_string(),
         };
         repo.create_document(parent_doc)
             .expect("Failed to create parent");
@@ -484,7 +439,7 @@ mod tests {
             filepath: "/child.md".to_string(),
             id: "child-1".to_string(),
             title: "Child Document".to_string(),
-            document_type: "initiative".to_string(),
+            document_type: "task".to_string(),
             created_at: 1609459200.0,
             updated_at: 1609459200.0,
             archived: false,
@@ -492,10 +447,9 @@ mod tests {
             file_hash: "child123".to_string(),
             frontmatter_json: "{}".to_string(),
             content: Some("Child content".to_string()),
-            phase: "discovery".to_string(),
-            strategy_id: Some("parent-1".to_string()),
-            initiative_id: None,
-            short_code: "TEST-I-0001".to_string(),
+            phase: "todo".to_string(),
+            initiative_id: Some("parent-1".to_string()),
+            short_code: "TEST-T-0001".to_string(),
         };
         repo.create_document(child_doc)
             .expect("Failed to create child");
@@ -543,44 +497,42 @@ mod tests {
             frontmatter_json: "{}".to_string(),
             content: None,
             phase: "draft".to_string(),
-            strategy_id: None,
             initiative_id: None,
             short_code: "TEST-V-0002".to_string(),
         };
 
-        let strategy_doc = NewDocument {
-            document_type: "strategy".to_string(),
-            filepath: "/strategy.md".to_string(),
-            id: "strategy-1".to_string(),
-            title: "Strategy Doc".to_string(),
+        let initiative_doc = NewDocument {
+            document_type: "initiative".to_string(),
+            filepath: "/initiative.md".to_string(),
+            id: "initiative-1".to_string(),
+            title: "Initiative Doc".to_string(),
             created_at: 1609462800.0, // Later timestamp
             updated_at: 1609462800.0,
             archived: false,
             exit_criteria_met: false,
-            file_hash: "strategy123".to_string(),
+            file_hash: "initiative123".to_string(),
             frontmatter_json: "{}".to_string(),
             content: None,
-            phase: "shaping".to_string(),
-            strategy_id: None,
+            phase: "discovery".to_string(),
             initiative_id: None,
-            short_code: "TEST-S-0002".to_string(),
+            short_code: "TEST-I-0002".to_string(),
         };
 
         repo.create_document(vision_doc)
             .expect("Failed to create vision");
-        repo.create_document(strategy_doc)
-            .expect("Failed to create strategy");
+        repo.create_document(initiative_doc)
+            .expect("Failed to create initiative");
 
         // Test find by type
         let visions = repo.find_by_type("vision").expect("Failed to find visions");
         assert_eq!(visions.len(), 1);
         assert_eq!(visions[0].document_type, "vision");
 
-        let strategies = repo
-            .find_by_type("strategy")
-            .expect("Failed to find strategies");
-        assert_eq!(strategies.len(), 1);
-        assert_eq!(strategies[0].document_type, "strategy");
+        let initiatives = repo
+            .find_by_type("initiative")
+            .expect("Failed to find initiatives");
+        assert_eq!(initiatives.len(), 1);
+        assert_eq!(initiatives[0].document_type, "initiative");
 
         // Verify ordering (newest first)
         let _all_docs = repo.find_by_type("vision").expect("Failed to find docs");

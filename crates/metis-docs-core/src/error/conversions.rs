@@ -69,7 +69,7 @@ impl UserFriendlyError for MetisError {
                 )
             }
             MetisError::InvalidDocumentType { document_type } => {
-                format!("'{}' is not a valid document type. Valid types are: vision, strategy, initiative, task, adr.", document_type)
+                format!("'{}' is not a valid document type. Valid types are: vision, initiative, task, adr.", document_type)
             }
             MetisError::InvalidPhaseTransition { from, to, doc_type } => {
                 format!("Cannot transition {} from '{}' to '{}'. Please check the valid phase transitions for this document type.", doc_type, from, to)

@@ -34,7 +34,7 @@ impl StatusCommand {
 
     /// Get all document types to query
     fn get_document_types() -> &'static [&'static str] {
-        &["vision", "strategy", "initiative", "task", "adr"]
+        &["vision", "initiative", "task", "adr"]
     }
 
     /// Initialize database connection from workspace
@@ -354,7 +354,7 @@ mod tests {
         let init_cmd = InitCommand {
             name: Some("Test Project".to_string()),
             preset: None,
-            strategies: None,
+
             initiatives: None,
             prefix: None,
         };
@@ -397,7 +397,6 @@ mod tests {
             frontmatter_json: "{}".to_string(),
             content: None,
             phase: "blocked".to_string(),
-            strategy_id: Some("test-strategy".to_string()),
             initiative_id: Some("test-initiative".to_string()),
             short_code: "TEST-T-0001".to_string(),
         };

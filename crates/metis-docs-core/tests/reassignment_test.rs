@@ -21,8 +21,8 @@ async fn setup_test_workspace() -> (tempfile::TempDir, std::path::PathBuf) {
     // The vision gets short code TEST-V-0001 from initialization
     let vision_short_code = "TEST-V-0001";
 
-    // Create an initiative directory and file
-    let init_dir = metis_dir.join("strategies/NULL/initiatives/test-initiative");
+    // Create an initiative directory and file (v2 flat layout)
+    let init_dir = metis_dir.join("initiatives/test-initiative");
     fs::create_dir_all(&init_dir).expect("Failed to create initiative dir");
     fs::create_dir_all(init_dir.join("tasks")).expect("Failed to create tasks dir");
 
@@ -45,7 +45,6 @@ tags:\n\
 \n\
 exit_criteria_met: false\n\
 estimated_complexity: M\n\
-strategy_id: NULL\n\
 initiative_id: test-initiative\n\
 ---\n\
 \n\
@@ -116,7 +115,7 @@ async fn test_reassign_backlog_to_initiative() {
     assert_eq!(result.short_code, "TEST-T-0001");
     assert!(!source_path.exists(), "Task should no longer be in backlog");
 
-    let dest_path = metis_dir.join("strategies/NULL/initiatives/test-initiative/tasks/TEST-T-0001.md");
+    let dest_path = metis_dir.join("initiatives/test-initiative/tasks/TEST-T-0001.md");
     assert!(dest_path.exists(), "Task should be in initiative tasks folder");
 }
 
@@ -127,7 +126,7 @@ async fn test_reassign_task_to_backlog() {
 
     // First move the task into an initiative
     let source_path = metis_dir.join("backlog/features/TEST-T-0001.md");
-    let init_task_path = metis_dir.join("strategies/NULL/initiatives/test-initiative/tasks/TEST-T-0001.md");
+    let init_task_path = metis_dir.join("initiatives/test-initiative/tasks/TEST-T-0001.md");
 
     // Manually move the file for this test
     fs::rename(&source_path, &init_task_path).expect("Failed to move task");
@@ -162,8 +161,8 @@ async fn test_reassign_task_to_backlog() {
 async fn test_reassign_between_initiatives() {
     let (_temp_dir, metis_dir) = setup_test_workspace().await;
 
-    // Create a second initiative
-    let init2_dir = metis_dir.join("strategies/NULL/initiatives/second-initiative");
+    // Create a second initiative (v2 flat layout)
+    let init2_dir = metis_dir.join("initiatives/second-initiative");
     fs::create_dir_all(&init2_dir).expect("Failed to create second initiative dir");
     fs::create_dir_all(init2_dir.join("tasks")).expect("Failed to create tasks dir");
 
@@ -185,7 +184,6 @@ tags:\n\
 \n\
 exit_criteria_met: false\n\
 estimated_complexity: M\n\
-strategy_id: NULL\n\
 initiative_id: second-initiative\n\
 ---\n\
 \n\
@@ -194,7 +192,7 @@ initiative_id: second-initiative\n\
 
     // Move task from backlog to first initiative
     let source_path = metis_dir.join("backlog/features/TEST-T-0001.md");
-    let init1_task_path = metis_dir.join("strategies/NULL/initiatives/test-initiative/tasks/TEST-T-0001.md");
+    let init1_task_path = metis_dir.join("initiatives/test-initiative/tasks/TEST-T-0001.md");
     fs::rename(&source_path, &init1_task_path).expect("Failed to move task to init1");
 
     // Sync workspace
@@ -218,58 +216,29 @@ initiative_id: second-initiative\n\
     assert_eq!(result.short_code, "TEST-T-0001");
     assert!(!init1_task_path.exists(), "Task should no longer be in first initiative");
 
-    let init2_task_path = metis_dir.join("strategies/NULL/initiatives/second-initiative/tasks/TEST-T-0001.md");
+    let init2_task_path = metis_dir.join("initiatives/second-initiative/tasks/TEST-T-0001.md");
     assert!(init2_task_path.exists(), "Task should be in second initiative");
 }
 
-/// Test reassigning a task between initiatives under different strategies
+/// Test reassigning a task between initiatives under different parents
 #[tokio::test]
-async fn test_reassign_across_strategies() {
+async fn test_reassign_across_initiatives() {
     let (_temp_dir, metis_dir) = setup_test_workspace().await;
 
-    // Create a strategy directory structure
-    let strategy_dir = metis_dir.join("strategies/test-strategy");
-    fs::create_dir_all(&strategy_dir).expect("Failed to create strategy dir");
+    // Create a second initiative with different parent
+    let init2_dir = metis_dir.join("initiatives/other-initiative");
+    fs::create_dir_all(&init2_dir).expect("Failed to create initiative dir");
+    fs::create_dir_all(init2_dir.join("tasks")).expect("Failed to create tasks dir");
 
-    let strategy_file = strategy_dir.join("strategy.md");
-    let strategy_content = "---\n\
-id: test-strategy\n\
-level: strategy\n\
-title: \"Test Strategy\"\n\
-short_code: \"TEST-S-0001\"\n\
-created_at: 2025-01-01T00:00:00Z\n\
-updated_at: 2025-01-01T00:00:00Z\n\
-parent: TEST-V-0001\n\
-blocked_by: []\n\
-archived: false\n\
-\n\
-tags:\n\
-  - \"#strategy\"\n\
-  - \"#phase/active\"\n\
-\n\
-exit_criteria_met: false\n\
-success_metrics: []\n\
-risk_level: medium\n\
-stakeholders: []\n\
----\n\
-\n\
-# Test Strategy\n";
-    fs::write(&strategy_file, strategy_content).expect("Failed to write strategy");
-
-    // Create initiative under the strategy
-    let init_under_strategy_dir = strategy_dir.join("initiatives/strategy-initiative");
-    fs::create_dir_all(&init_under_strategy_dir).expect("Failed to create initiative dir");
-    fs::create_dir_all(init_under_strategy_dir.join("tasks")).expect("Failed to create tasks dir");
-
-    let init_file = init_under_strategy_dir.join("initiative.md");
+    let init_file = init2_dir.join("initiative.md");
     let init_content = "---\n\
-id: strategy-initiative\n\
+id: other-initiative\n\
 level: initiative\n\
-title: \"Strategy Initiative\"\n\
+title: \"Other Initiative\"\n\
 short_code: \"TEST-I-0003\"\n\
 created_at: 2025-01-01T00:00:00Z\n\
 updated_at: 2025-01-01T00:00:00Z\n\
-parent: TEST-S-0001\n\
+parent: TEST-V-0001\n\
 blocked_by: []\n\
 archived: false\n\
 \n\
@@ -279,16 +248,15 @@ tags:\n\
 \n\
 exit_criteria_met: false\n\
 estimated_complexity: M\n\
-strategy_id: TEST-S-0001\n\
-initiative_id: strategy-initiative\n\
+initiative_id: other-initiative\n\
 ---\n\
 \n\
-# Strategy Initiative\n";
+# Other Initiative\n";
     fs::write(&init_file, init_content).expect("Failed to write initiative");
 
-    // Move task from backlog to first initiative (under NULL strategy)
+    // Move task from backlog to first initiative
     let source_path = metis_dir.join("backlog/features/TEST-T-0001.md");
-    let init1_task_path = metis_dir.join("strategies/NULL/initiatives/test-initiative/tasks/TEST-T-0001.md");
+    let init1_task_path = metis_dir.join("initiatives/test-initiative/tasks/TEST-T-0001.md");
     fs::rename(&source_path, &init1_task_path).expect("Failed to move task to init1");
 
     // Sync workspace
@@ -302,18 +270,18 @@ initiative_id: strategy-initiative\n\
     let mut db_service = DatabaseService::new(synced_db.into_repository());
     let reassignment_service = ReassignmentService::new(&metis_dir);
 
-    // Reassign from NULL strategy initiative to test-strategy initiative
+    // Reassign from first initiative to other initiative
     let result = reassignment_service
         .reassign_to_initiative("TEST-T-0001", "TEST-I-0003", &mut db_service)
         .await
-        .expect("Failed to reassign task across strategies");
+        .expect("Failed to reassign task across initiatives");
 
     // Verify the move
     assert_eq!(result.short_code, "TEST-T-0001");
-    assert!(!init1_task_path.exists(), "Task should no longer be in NULL strategy initiative");
+    assert!(!init1_task_path.exists(), "Task should no longer be in first initiative");
 
-    let strategy_task_path = metis_dir.join("strategies/test-strategy/initiatives/strategy-initiative/tasks/TEST-T-0001.md");
-    assert!(strategy_task_path.exists(), "Task should be in strategy initiative");
+    let other_task_path = metis_dir.join("initiatives/other-initiative/tasks/TEST-T-0001.md");
+    assert!(other_task_path.exists(), "Task should be in other initiative");
 }
 
 /// Test that reassignment fails for non-task documents
@@ -384,7 +352,7 @@ async fn test_reassign_to_wrong_phase_initiative_fails() {
     let (_temp_dir, metis_dir) = setup_test_workspace().await;
 
     // Modify initiative to be in discovery phase
-    let init_file = metis_dir.join("strategies/NULL/initiatives/test-initiative/initiative.md");
+    let init_file = metis_dir.join("initiatives/test-initiative/initiative.md");
     let content = fs::read_to_string(&init_file).expect("Failed to read initiative");
     let updated = content.replace("#phase/decompose", "#phase/discovery");
     fs::write(&init_file, updated).expect("Failed to update initiative");

@@ -1,6 +1,5 @@
 mod adr;
 mod initiative;
-mod strategy;
 mod task;
 
 use crate::commands::SyncCommand;
@@ -15,21 +14,13 @@ pub struct CreateCommand {
 
 #[derive(Subcommand)]
 pub enum CreateCommands {
-    /// Create a new strategy document
-    Strategy {
-        /// Strategy title
-        title: String,
-        /// Parent vision ID
-        #[arg(short, long)]
-        vision: Option<String>,
-    },
-    /// Create a new initiative document  
+    /// Create a new initiative document
     Initiative {
         /// Initiative title
         title: String,
-        /// Parent strategy ID
+        /// Parent vision short code (e.g., PROJ-V-0001)
         #[arg(short, long)]
-        strategy: String,
+        vision: String,
     },
     /// Create a new task document
     Task {
@@ -49,11 +40,8 @@ pub enum CreateCommands {
 impl CreateCommand {
     pub async fn execute(&self) -> Result<()> {
         match &self.document_type {
-            CreateCommands::Strategy { title, vision } => {
-                strategy::create_new_strategy(title, vision.as_deref()).await?;
-            }
-            CreateCommands::Initiative { title, strategy } => {
-                initiative::create_new_initiative(title, strategy).await?;
+            CreateCommands::Initiative { title, vision } => {
+                initiative::create_new_initiative(title, vision).await?;
             }
             CreateCommands::Task { title, initiative } => {
                 task::create_new_task(title, initiative).await?;

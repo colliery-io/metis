@@ -87,7 +87,6 @@ impl Adr {
                 blocked_by: Vec::new(), // ADRs cannot be blocked
                 tags,
                 archived,
-                strategy_id: None,   // ADRs are not part of strategies
                 initiative_id: None, // ADRs are not part of initiatives
             },
             number,
@@ -118,7 +117,6 @@ impl Adr {
                 blocked_by: Vec::new(), // ADRs cannot be blocked
                 tags,
                 archived,
-                strategy_id: None,   // ADRs are not part of strategies
                 initiative_id: None, // ADRs are not part of initiatives
             },
             number,
@@ -297,7 +295,6 @@ impl Adr {
         context.insert("tags", &tag_strings);
 
         // Add lineage fields (NULL for ADR documents)
-        context.insert("strategy_id", "NULL");
         context.insert("initiative_id", "NULL");
 
         // Render frontmatter

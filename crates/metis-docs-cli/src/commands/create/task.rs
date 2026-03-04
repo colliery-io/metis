@@ -2,7 +2,6 @@ use crate::workspace;
 use anyhow::Result;
 use metis_core::{
     application::services::document::creation::{DocumentCreationConfig, DocumentCreationService},
-    domain::documents::types::DocumentId,
     Database, Document, Initiative, Phase, Tag,
 };
 use std::path::Path;
@@ -16,7 +15,7 @@ pub async fn create_new_task(title: &str, initiative_id: &str) -> Result<()> {
     }
     let metis_dir = metis_dir.unwrap();
 
-    // 2. Verify the initiative exists and get its document ID and file path
+    // 2. Verify the initiative exists and get its document ID
     let (initiative_doc_id, _initiative_path) = find_initiative(&metis_dir, initiative_id).await?;
 
     // 3. Use DocumentCreationService to create the task
@@ -29,15 +28,10 @@ pub async fn create_new_task(title: &str, initiative_id: &str) -> Result<()> {
         tags: vec![Tag::Label("task".to_string()), Tag::Phase(Phase::Todo)],
         phase: Some(Phase::Todo),
         complexity: None,
-        risk_level: None,
     };
 
-    // 4. Find the strategy short code for the initiative
-    let strategy_short_code = find_strategy_for_initiative(&metis_dir, initiative_id).await?;
-
-    // 5. Create the task using the DocumentCreationService with short codes
     let result = creation_service
-        .create_task(config, &strategy_short_code, initiative_id)
+        .create_task(config, initiative_id)
         .await
         .map_err(|e| anyhow::anyhow!("Failed to create task: {}", e))?;
 
@@ -53,7 +47,7 @@ pub async fn create_new_task(title: &str, initiative_id: &str) -> Result<()> {
 async fn find_initiative(
     workspace_dir: &Path,
     initiative_id: &str,
-) -> Result<(DocumentId, std::path::PathBuf)> {
+) -> Result<(metis_core::domain::documents::types::DocumentId, std::path::PathBuf)> {
     let db_path = workspace_dir.join("metis.db");
     if !db_path.exists() {
         anyhow::bail!("Database not found. Run 'metis sync' first.");
@@ -67,61 +61,29 @@ async fn find_initiative(
 
     // Find initiative by short code in database
     if let Ok(Some(initiative_doc)) = repo.find_by_short_code(initiative_id) {
-        // Found in database, now find its strategy to build the correct path
-        if let Some(strategy_id) = &initiative_doc.strategy_id {
-            if let Ok(Some(strategy_doc)) = repo.find_by_short_code(strategy_id) {
-                // Build path using short codes
-                let strategies_dir = workspace_dir.join("strategies");
-                let initiative_path = strategies_dir
-                    .join(&strategy_doc.short_code)
-                    .join("initiatives")
-                    .join(&initiative_doc.short_code)
-                    .join("initiative.md");
+        // Build path using flat layout: initiatives/{short_code}/initiative.md
+        let initiative_path = workspace_dir
+            .join("initiatives")
+            .join(&initiative_doc.short_code)
+            .join("initiative.md");
 
-                if initiative_path.exists() {
-                    let initiative = Initiative::from_file(&initiative_path).await?;
-                    return Ok((initiative.id().clone(), initiative_path));
-                }
-            }
+        if initiative_path.exists() {
+            let initiative = Initiative::from_file(&initiative_path).await?;
+            return Ok((initiative.id().clone(), initiative_path));
         }
     }
 
     anyhow::bail!("Initiative '{}' not found", initiative_id);
 }
 
-/// Find the strategy ID that contains the given initiative
-async fn find_strategy_for_initiative(workspace_dir: &Path, initiative_id: &str) -> Result<String> {
-    let db_path = workspace_dir.join("metis.db");
-    if !db_path.exists() {
-        anyhow::bail!("Database not found. Run 'metis sync' first.");
-    }
-
-    let db = Database::new(&db_path.to_string_lossy())
-        .map_err(|e| anyhow::anyhow!("Database error: {}", e))?;
-    let mut repo = db
-        .repository()
-        .map_err(|e| anyhow::anyhow!("Repository error: {}", e))?;
-
-    // Find initiative by short code and get its strategy short code
-    if let Ok(Some(initiative_doc)) = repo.find_by_short_code(initiative_id) {
-        if let Some(strategy_id) = &initiative_doc.strategy_id {
-            return Ok(strategy_id.clone());
-        }
-    }
-
-    anyhow::bail!("Could not find strategy for initiative '{}'", initiative_id);
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::commands::InitCommand;
-    use std::fs;
-    use tempfile::tempdir;
 
     #[tokio::test]
     async fn test_create_new_task_no_workspace() {
-        let temp_dir = tempdir().unwrap();
+        let temp_dir = tempfile::tempdir().unwrap();
         let original_dir = std::env::current_dir().ok();
 
         // Change to temp directory without workspace
@@ -142,7 +104,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_find_initiative_not_found() {
-        let temp_dir = tempdir().unwrap();
+        let temp_dir = tempfile::tempdir().unwrap();
         let original_dir = std::env::current_dir().ok();
 
         // Ensure we can change to temp directory
@@ -157,7 +119,7 @@ mod tests {
         let init_cmd = InitCommand {
             name: Some("Test Project".to_string()),
             preset: None,
-            strategies: None,
+
             initiatives: None,
             prefix: None,
         };
@@ -170,9 +132,6 @@ mod tests {
 
         // Try to find non-existent initiative
         let metis_dir = temp_dir.path().join(".metis");
-
-        // Create strategies directory but no actual strategies
-        fs::create_dir_all(metis_dir.join("strategies")).unwrap();
 
         let result = find_initiative(&metis_dir, "non-existent").await;
         assert!(result.is_err());

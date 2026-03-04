@@ -7,7 +7,7 @@ created_at: 2026-02-20T14:47:10.286707+00:00
 updated_at: 2026-03-03T02:29:57.806380+00:00
 parent: METIS-I-0021
 blocked_by: []
-archived: false
+archived: true
 
 tags:
   - "#task"
@@ -27,6 +27,8 @@ initiative_id: METIS-I-0021
 ## Objective
 
 Add `metis index` subcommand to `metis-docs-cli` that orchestrates the full indexing pipeline: walk files, parse with tree-sitter, extract symbols, write `.metis/code-index.md`. Support `--structure-only` and `--incremental` flags.
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 

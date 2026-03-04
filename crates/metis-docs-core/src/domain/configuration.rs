@@ -5,43 +5,21 @@ use std::fmt;
 /// Flight level configuration defining which levels are enabled
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FlightLevelConfig {
-    /// Whether strategy level is enabled
-    pub strategies_enabled: bool,
     /// Whether initiative level is enabled
     pub initiatives_enabled: bool,
 }
 
 impl FlightLevelConfig {
-    /// Create a new configuration
-    pub fn new(
-        strategies_enabled: bool,
-        initiatives_enabled: bool,
-    ) -> Result<Self, ConfigurationError> {
-        // Validation: If initiatives are disabled, strategies must also be disabled
-        if !initiatives_enabled && strategies_enabled {
-            return Err(ConfigurationError::InvalidConfiguration(
-                "Cannot enable strategies without initiatives - this would create a gap in the hierarchy".to_string()
-            ));
-        }
-
+    /// Create a new configuration with the given initiative setting
+    pub fn new(initiatives_enabled: bool) -> Result<Self, ConfigurationError> {
         Ok(Self {
-            strategies_enabled,
             initiatives_enabled,
         })
-    }
-
-    /// Full flight levels: Vision → Strategy → Initiative → Task
-    pub fn full() -> Self {
-        Self {
-            strategies_enabled: true,
-            initiatives_enabled: true,
-        }
     }
 
     /// Streamlined flight levels: Vision → Initiative → Task
     pub fn streamlined() -> Self {
         Self {
-            strategies_enabled: false,
             initiatives_enabled: true,
         }
     }
@@ -49,9 +27,14 @@ impl FlightLevelConfig {
     /// Direct flight levels: Vision → Task
     pub fn direct() -> Self {
         Self {
-            strategies_enabled: false,
             initiatives_enabled: false,
         }
+    }
+
+    /// Alias for streamlined() — kept for backward compatibility
+    #[deprecated(note = "Use streamlined() instead. The full preset is identical to streamlined now that strategies are removed.")]
+    pub fn full() -> Self {
+        Self::streamlined()
     }
 
     /// Check if a document type is allowed in this configuration
@@ -59,7 +42,6 @@ impl FlightLevelConfig {
         match doc_type {
             DocumentType::Vision | DocumentType::Adr => true, // Always allowed
             DocumentType::Task => true,                       // Always allowed
-            DocumentType::Strategy => self.strategies_enabled,
             DocumentType::Initiative => self.initiatives_enabled,
         }
     }
@@ -68,14 +50,7 @@ impl FlightLevelConfig {
     pub fn get_parent_type(&self, doc_type: DocumentType) -> Option<DocumentType> {
         match doc_type {
             DocumentType::Vision | DocumentType::Adr => None, // Top level documents
-            DocumentType::Strategy => Some(DocumentType::Vision),
-            DocumentType::Initiative => {
-                if self.strategies_enabled {
-                    Some(DocumentType::Strategy)
-                } else {
-                    Some(DocumentType::Vision)
-                }
-            }
+            DocumentType::Initiative => Some(DocumentType::Vision),
             DocumentType::Task => {
                 if self.initiatives_enabled {
                     Some(DocumentType::Initiative)
@@ -88,21 +63,16 @@ impl FlightLevelConfig {
 
     /// Get the configuration name/preset
     pub fn preset_name(&self) -> &'static str {
-        match (self.strategies_enabled, self.initiatives_enabled) {
-            (true, true) => "full",
-            (false, true) => "streamlined",
-            (false, false) => "direct",
-            (true, false) => "invalid", // This shouldn't happen due to validation
+        if self.initiatives_enabled {
+            "streamlined"
+        } else {
+            "direct"
         }
     }
 
     /// Get enabled document types in hierarchical order
     pub fn enabled_document_types(&self) -> Vec<DocumentType> {
         let mut types = vec![DocumentType::Vision];
-
-        if self.strategies_enabled {
-            types.push(DocumentType::Strategy);
-        }
 
         if self.initiatives_enabled {
             types.push(DocumentType::Initiative);
@@ -118,10 +88,6 @@ impl FlightLevelConfig {
     pub fn hierarchy_display(&self) -> String {
         let mut hierarchy = vec!["Vision"];
 
-        if self.strategies_enabled {
-            hierarchy.push("Strategy");
-        }
-
         if self.initiatives_enabled {
             hierarchy.push("Initiative");
         }
@@ -134,7 +100,7 @@ impl FlightLevelConfig {
 
 impl Default for FlightLevelConfig {
     fn default() -> Self {
-        Self::full()
+        Self::streamlined()
     }
 }
 
@@ -257,52 +223,31 @@ mod tests {
 
     #[test]
     fn test_preset_configurations() {
-        let full = FlightLevelConfig::full();
-        assert!(full.strategies_enabled);
-        assert!(full.initiatives_enabled);
-        assert_eq!(full.preset_name(), "full");
-
         let streamlined = FlightLevelConfig::streamlined();
-        assert!(!streamlined.strategies_enabled);
         assert!(streamlined.initiatives_enabled);
         assert_eq!(streamlined.preset_name(), "streamlined");
 
         let direct = FlightLevelConfig::direct();
-        assert!(!direct.strategies_enabled);
         assert!(!direct.initiatives_enabled);
         assert_eq!(direct.preset_name(), "direct");
     }
 
     #[test]
     fn test_configuration_validation() {
-        // Valid configurations
-        assert!(FlightLevelConfig::new(true, true).is_ok());
-        assert!(FlightLevelConfig::new(false, true).is_ok());
-        assert!(FlightLevelConfig::new(false, false).is_ok());
-
-        // Invalid configuration: strategies enabled but initiatives disabled
-        assert!(FlightLevelConfig::new(true, false).is_err());
+        assert!(FlightLevelConfig::new(true).is_ok());
+        assert!(FlightLevelConfig::new(false).is_ok());
     }
 
     #[test]
     fn test_document_type_allowed() {
-        let full = FlightLevelConfig::full();
-        assert!(full.is_document_type_allowed(DocumentType::Vision));
-        assert!(full.is_document_type_allowed(DocumentType::Strategy));
-        assert!(full.is_document_type_allowed(DocumentType::Initiative));
-        assert!(full.is_document_type_allowed(DocumentType::Task));
-        assert!(full.is_document_type_allowed(DocumentType::Adr));
-
         let streamlined = FlightLevelConfig::streamlined();
         assert!(streamlined.is_document_type_allowed(DocumentType::Vision));
-        assert!(!streamlined.is_document_type_allowed(DocumentType::Strategy));
         assert!(streamlined.is_document_type_allowed(DocumentType::Initiative));
         assert!(streamlined.is_document_type_allowed(DocumentType::Task));
         assert!(streamlined.is_document_type_allowed(DocumentType::Adr));
 
         let direct = FlightLevelConfig::direct();
         assert!(direct.is_document_type_allowed(DocumentType::Vision));
-        assert!(!direct.is_document_type_allowed(DocumentType::Strategy));
         assert!(!direct.is_document_type_allowed(DocumentType::Initiative));
         assert!(direct.is_document_type_allowed(DocumentType::Task));
         assert!(direct.is_document_type_allowed(DocumentType::Adr));
@@ -310,23 +255,8 @@ mod tests {
 
     #[test]
     fn test_parent_type_resolution() {
-        let full = FlightLevelConfig::full();
-        assert_eq!(full.get_parent_type(DocumentType::Vision), None);
-        assert_eq!(
-            full.get_parent_type(DocumentType::Strategy),
-            Some(DocumentType::Vision)
-        );
-        assert_eq!(
-            full.get_parent_type(DocumentType::Initiative),
-            Some(DocumentType::Strategy)
-        );
-        assert_eq!(
-            full.get_parent_type(DocumentType::Task),
-            Some(DocumentType::Initiative)
-        );
-        assert_eq!(full.get_parent_type(DocumentType::Adr), None);
-
         let streamlined = FlightLevelConfig::streamlined();
+        assert_eq!(streamlined.get_parent_type(DocumentType::Vision), None);
         assert_eq!(
             streamlined.get_parent_type(DocumentType::Initiative),
             Some(DocumentType::Vision)
@@ -335,6 +265,7 @@ mod tests {
             streamlined.get_parent_type(DocumentType::Task),
             Some(DocumentType::Initiative)
         );
+        assert_eq!(streamlined.get_parent_type(DocumentType::Adr), None);
 
         let direct = FlightLevelConfig::direct();
         assert_eq!(
@@ -345,23 +276,10 @@ mod tests {
 
     #[test]
     fn test_enabled_document_types() {
-        let full = FlightLevelConfig::full();
-        let full_types = full.enabled_document_types();
-        assert_eq!(
-            full_types,
-            vec![
-                DocumentType::Vision,
-                DocumentType::Strategy,
-                DocumentType::Initiative,
-                DocumentType::Task,
-                DocumentType::Adr
-            ]
-        );
-
         let streamlined = FlightLevelConfig::streamlined();
-        let streamlined_types = streamlined.enabled_document_types();
+        let types = streamlined.enabled_document_types();
         assert_eq!(
-            streamlined_types,
+            types,
             vec![
                 DocumentType::Vision,
                 DocumentType::Initiative,
@@ -381,10 +299,6 @@ mod tests {
     #[test]
     fn test_hierarchy_display() {
         assert_eq!(
-            FlightLevelConfig::full().hierarchy_display(),
-            "Vision → Strategy → Initiative → Task"
-        );
-        assert_eq!(
             FlightLevelConfig::streamlined().hierarchy_display(),
             "Vision → Initiative → Task"
         );
@@ -400,6 +314,40 @@ mod tests {
         let json = serde_json::to_string(&config).unwrap();
         let deserialized: FlightLevelConfig = serde_json::from_str(&json).unwrap();
         assert_eq!(config, deserialized);
+    }
+
+    #[test]
+    fn test_backward_compat_old_config_with_strategies_enabled() {
+        // Old config.toml files may have strategies_enabled field — should parse without error
+        let old_json = r#"{"strategies_enabled":false,"initiatives_enabled":true}"#;
+        let config: FlightLevelConfig = serde_json::from_str(old_json).unwrap();
+        assert!(config.initiatives_enabled);
+
+        // Also test with strategies_enabled=true (should just be ignored)
+        let old_json_true = r#"{"strategies_enabled":true,"initiatives_enabled":true}"#;
+        let config2: FlightLevelConfig = serde_json::from_str(old_json_true).unwrap();
+        assert!(config2.initiatives_enabled);
+    }
+
+    #[test]
+    fn test_backward_compat_old_toml_with_strategies_enabled() {
+        use tempfile::NamedTempFile;
+
+        // Simulate an old config.toml file with strategies_enabled
+        let old_toml = r#"
+[project]
+prefix = "TEST"
+
+[flight_levels]
+strategies_enabled = false
+initiatives_enabled = true
+"#;
+        let temp_file = NamedTempFile::new().unwrap();
+        std::fs::write(temp_file.path(), old_toml).unwrap();
+
+        let config = ConfigFile::load(temp_file.path()).unwrap();
+        assert_eq!(config.prefix(), "TEST");
+        assert!(config.flight_levels().initiatives_enabled);
     }
 
     #[test]
@@ -428,7 +376,7 @@ mod tests {
     fn test_config_file_save_and_load() {
         use tempfile::NamedTempFile;
 
-        let original_config = ConfigFile::new("METIS".to_string(), FlightLevelConfig::full()).unwrap();
+        let original_config = ConfigFile::new("METIS".to_string(), FlightLevelConfig::streamlined()).unwrap();
 
         // Create a temporary file
         let temp_file = NamedTempFile::new().unwrap();
@@ -443,7 +391,7 @@ mod tests {
         // Verify they match
         assert_eq!(original_config, loaded_config);
         assert_eq!(loaded_config.prefix(), "METIS");
-        assert_eq!(loaded_config.flight_levels(), &FlightLevelConfig::full());
+        assert_eq!(loaded_config.flight_levels(), &FlightLevelConfig::streamlined());
     }
 
     #[test]
@@ -466,8 +414,9 @@ mod tests {
         assert!(content.contains("[project]"));
         assert!(content.contains("prefix = \"METIS\""));
         assert!(content.contains("[flight_levels]"));
-        assert!(content.contains("strategies_enabled = false"));
         assert!(content.contains("initiatives_enabled = true"));
+        // strategies_enabled should NOT be present in new config files
+        assert!(!content.contains("strategies_enabled"));
     }
 
     #[test]

@@ -14,7 +14,6 @@ diesel::table! {
         frontmatter_json -> Text,
         content -> Nullable<Text>,
         phase -> Text,
-        strategy_id -> Nullable<Text>,
         initiative_id -> Nullable<Text>,
         short_code -> Text,
     }

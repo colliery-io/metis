@@ -78,8 +78,8 @@ fn generate_dynamic_instructions() -> String {
 {}
 
 ### Configuration Notes
-- To change configuration: Use `metis config set --preset <preset>` where preset is one of: full, streamlined, direct
-- To enable/disable specific levels: Use `metis config set --strategies <true/false> --initiatives <true/false>`
+- To change configuration: Use `metis config set --preset <preset>` where preset is one of: streamlined, direct
+- To enable/disable specific levels: Use `metis config set --initiatives <true/false>`
 
 "#,
             config.preset_name(),
@@ -110,20 +110,12 @@ fn generate_dynamic_instructions() -> String {
 fn generate_operation_notes(config: &FlightLevelConfig) -> String {
     let mut notes = Vec::new();
 
-    if !config.strategies_enabled {
-        notes.push("- Strategy creation is disabled in this configuration");
-    }
-
     if !config.initiatives_enabled {
         notes.push("- Initiative creation is disabled in this configuration");
     }
 
-    if config.strategies_enabled && config.initiatives_enabled {
-        notes.push("- All document types are available for creation");
-    } else if !config.strategies_enabled && config.initiatives_enabled {
+    if config.initiatives_enabled {
         notes.push("- Direct creation: Vision → Initiative → Task workflow");
-    } else if config.strategies_enabled && !config.initiatives_enabled {
-        notes.push("- Streamlined workflow: Vision → Strategy → Task");
     } else {
         notes.push("- Minimal workflow: Vision → Task (direct mode)");
     }

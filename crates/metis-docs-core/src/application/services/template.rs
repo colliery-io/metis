@@ -16,12 +16,6 @@ mod defaults {
             include_str!("../../domain/documents/vision/acceptance_criteria.md");
     }
 
-    pub mod strategy {
-        pub const CONTENT: &str = include_str!("../../domain/documents/strategy/content.md");
-        pub const EXIT_CRITERIA: &str =
-            include_str!("../../domain/documents/strategy/acceptance_criteria.md");
-    }
-
     pub mod initiative {
         pub const CONTENT: &str = include_str!("../../domain/documents/initiative/content.md");
         pub const EXIT_CRITERIA: &str =
@@ -181,8 +175,6 @@ impl TemplateLoader {
         let template = match (doc_type, template_type) {
             ("vision", TemplateType::Content) => defaults::vision::CONTENT,
             ("vision", TemplateType::ExitCriteria) => defaults::vision::EXIT_CRITERIA,
-            ("strategy", TemplateType::Content) => defaults::strategy::CONTENT,
-            ("strategy", TemplateType::ExitCriteria) => defaults::strategy::EXIT_CRITERIA,
             ("initiative", TemplateType::Content) => defaults::initiative::CONTENT,
             ("initiative", TemplateType::ExitCriteria) => defaults::initiative::EXIT_CRITERIA,
             ("task", TemplateType::Content) => defaults::task::CONTENT,
@@ -237,17 +229,11 @@ impl TemplateLoader {
             "vision" => {
                 // Vision has no additional required variables
             }
-            "strategy" => {
-                context.insert("risk_level", "Medium");
-                context.insert("stakeholders", &Vec::<String>::new());
-            }
             "initiative" => {
                 context.insert("estimated_complexity", "M");
-                context.insert("strategy_id", "NULL");
                 context.insert("initiative_id", "sample-initiative");
             }
             "task" => {
-                context.insert("strategy_id", "NULL");
                 context.insert("initiative_id", "NULL");
                 context.insert("parent_title", "Sample Parent Initiative");
             }
@@ -336,7 +322,6 @@ impl std::fmt::Display for TemplateSource {
 fn doc_type_letter(doc_type: &str) -> char {
     match doc_type {
         "vision" => 'V',
-        "strategy" => 'S',
         "initiative" => 'I',
         "task" => 'T',
         "adr" => 'A',
@@ -354,7 +339,7 @@ mod tests {
         let loader = TemplateLoader::new(None);
 
         // All document types should have embedded templates
-        for doc_type in &["vision", "strategy", "initiative", "task", "adr"] {
+        for doc_type in &["vision", "initiative", "task", "adr"] {
             let content = loader.load_content_template(doc_type);
             assert!(content.is_ok(), "Failed to load content for {}", doc_type);
             assert!(!content.unwrap().is_empty());
@@ -437,7 +422,7 @@ mod tests {
     fn test_sample_context_generation() {
         let loader = TemplateLoader::new(None);
 
-        for doc_type in &["vision", "strategy", "initiative", "task", "adr"] {
+        for doc_type in &["vision", "initiative", "task", "adr"] {
             let context = loader.sample_context_for_type(doc_type);
 
             // All types should have common variables
@@ -450,8 +435,6 @@ mod tests {
         let initiative_ctx = loader.sample_context_for_type("initiative");
         assert!(initiative_ctx.get("estimated_complexity").is_some());
 
-        let strategy_ctx = loader.sample_context_for_type("strategy");
-        assert!(strategy_ctx.get("risk_level").is_some());
     }
 
     #[test]

@@ -7,7 +7,7 @@ created_at: 2026-02-20T14:47:14.905539+00:00
 updated_at: 2026-03-03T02:30:45.708645+00:00
 parent: METIS-I-0021
 blocked_by: []
-archived: false
+archived: true
 
 tags:
   - "#task"
@@ -27,6 +27,8 @@ initiative_id: METIS-I-0021
 ## Objective
 
 Add content hash tracking so `metis index --incremental` only re-parses changed files. Store hashes in `.metis/code-index-hashes.json`. On re-index, compare hashes, skip unchanged files, regenerate symbols for changed files, and trigger summary regeneration only for affected directories.
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 

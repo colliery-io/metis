@@ -30,32 +30,31 @@ async fn test_database_auto_reconstruction() {
     assert!(db_path.exists());
 
     // Step 2: Add some documents by creating markdown files
-    let strategies_dir = metis_dir.join("strategies");
-    fs::create_dir_all(&strategies_dir).expect("Failed to create strategies dir");
+    let initiatives_dir = metis_dir.join("initiatives").join("TEST-I-0001");
+    fs::create_dir_all(&initiatives_dir).expect("Failed to create initiatives dir");
 
-    let test_doc = strategies_dir.join("test-strategy.md");
+    let test_doc = initiatives_dir.join("initiative.md");
     let test_content = "---\n\
-id: test-strategy\n\
-level: strategy\n\
-title: \"Test Strategy\"\n\
-short_code: \"TEST-S-0001\"\n\
+id: test-initiative\n\
+level: initiative\n\
+title: \"Test Initiative\"\n\
+short_code: \"TEST-I-0001\"\n\
 created_at: 2025-01-01T00:00:00Z\n\
 updated_at: 2025-01-01T00:00:00Z\n\
 parent: TEST-V-0001\n\
 blocked_by: []\n\
 archived: false\n\
 tags:\n\
-  - \"#strategy\"\n\
-  - \"#phase/shaping\"\n\
+  - \"#initiative\"\n\
+  - \"#phase/decompose\"\n\
 exit_criteria_met: false\n\
-success_metrics: []\n\
-risk_level: medium\n\
-stakeholders: []\n\
+estimated_complexity: M\n\
+initiative_id: test-initiative\n\
 ---\n\
 \n\
-# Test Strategy\n\
+# Test Initiative\n\
 \n\
-This is a test strategy document.";
+This is a test initiative document.";
 
     fs::write(&test_doc, test_content).expect("Failed to write test document");
 
@@ -86,18 +85,18 @@ This is a test strategy document.";
         "Vision should have correct title"
     );
 
-    // Check for strategy document (created manually)
-    let strategies = repo
-        .find_by_type("strategy")
-        .expect("Failed to query strategies");
-    assert_eq!(strategies.len(), 1, "Should have 1 strategy document");
+    // Check for initiative document (created manually)
+    let initiatives = repo
+        .find_by_type("initiative")
+        .expect("Failed to query initiatives");
+    assert_eq!(initiatives.len(), 1, "Should have 1 initiative document");
     assert_eq!(
-        strategies[0].title, "Test Strategy",
-        "Strategy should have correct title"
+        initiatives[0].title, "Test Initiative",
+        "Initiative should have correct title"
     );
     assert_eq!(
-        strategies[0].short_code, "TEST-S-0001",
-        "Strategy should have correct short code"
+        initiatives[0].short_code, "TEST-I-0001",
+        "Initiative should have correct short code"
     );
 }
 

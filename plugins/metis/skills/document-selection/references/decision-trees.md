@@ -7,8 +7,7 @@ A decision framework for choosing the right document type.
 | Document Type | Use When | Parent Required |
 |--------------|----------|-----------------|
 | Vision | Defining north star objectives | No |
-| Strategy | Coordinating approaches to vision | Vision |
-| Initiative | Delivering a capability increment | Strategy/Vision |
+| Initiative | Delivering a capability increment | Vision |
 | Task | Atomic unit of work | Initiative |
 | Backlog Item | Ad-hoc work (bug/feature/debt) | No |
 | ADR | Recording architectural decisions | No |
@@ -25,10 +24,6 @@ A decision framework for choosing the right document type.
 
 **Does this define WHY the project exists?**
 - Yes → **Vision**
-- No → Continue
-
-**Does this coordinate multiple capability increments?**
-- Yes → **Strategy** (if enabled) or just organize initiatives
 - No → Continue
 
 **Does this create a fundamental capability increment?**
@@ -52,20 +47,7 @@ Create a vision when:
 **Not a vision:**
 - "Build feature X" (that's an initiative)
 - "Fix bugs" (that's operational work)
-- "Q1 goals" (that's potentially a strategy or just initiatives)
-
-### When to Create a Strategy
-
-Create a strategy when (Full preset only):
-- Multiple teams need coordination
-- There are competing approaches to pursue
-- Resource allocation needs explicit decisions
-- Strategic trade-offs should be documented
-
-**Not a strategy:**
-- A single project (that's an initiative)
-- A decision (that's an ADR)
-- A wish list (that's a backlog)
+- "Q1 goals" (that's just initiatives)
 
 ### When to Create an Initiative
 
@@ -127,10 +109,6 @@ Create an ADR when:
 ### Initiative vs Backlog
 **Wrong**: Creating initiatives for every idea
 **Right**: Backlog items can be promoted to initiatives when committed
-
-### Strategy vs Initiative
-**Wrong**: Using strategy for a single project
-**Right**: Strategy coordinates multiple initiatives toward vision
 
 ### ADR vs Task
 **Wrong**: "Implement decision X" as an ADR

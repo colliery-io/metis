@@ -5,7 +5,7 @@ use std::path::Path;
 ///
 /// Handles the complete deletion of a document and all its children:
 /// 1. Identifies document type from path
-/// 2. For strategies/initiatives: rm -r the folder
+/// 2. For initiatives: rm -r the folder
 /// 3. For tasks: delete the file
 /// 4. Caller can sync to update database
 pub struct DeletionService {}
@@ -40,10 +40,9 @@ impl DeletionService {
         if let Some(parent_dir) = file_path.parent() {
             // Check if parent is not the workspace root and is a directory
             if parent_dir != Path::new(".") && parent_dir != Path::new("") && parent_dir.is_dir() {
-                // For strategy/initiative documents, delete the entire parent directory
-                // This handles cases like "strategy-id/strategy.md" -> delete "strategy-id/"
-                if file_path.file_name() == Some(std::ffi::OsStr::new("strategy.md"))
-                    || file_path.file_name() == Some(std::ffi::OsStr::new("initiative.md"))
+                // For initiative documents, delete the entire parent directory
+                // This handles cases like "initiative-id/initiative.md" -> delete "initiative-id/"
+                if file_path.file_name() == Some(std::ffi::OsStr::new("initiative.md"))
                 {
                     Self::remove_directory_recursive(
                         parent_dir,
@@ -176,7 +175,6 @@ mod tests {
             tags: vec![],
             phase: None,
             complexity: None,
-            risk_level: None,
         };
         creation_service.create_vision(vision_config).await.unwrap();
 
@@ -207,147 +205,30 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_delete_strategy_with_folder() {
-        let (_temp_dir, workspace_dir) = setup_test_workspace().await;
-
-        // Create strategy using creation service
-        let creation_service = DocumentCreationService::new(&workspace_dir);
-        let strategy_config = DocumentCreationConfig {
-            title: "Test Strategy".to_string(),
-            description: Some("Test strategy description".to_string()),
-            parent_id: None,
-            tags: vec![],
-            phase: None,
-            complexity: None,
-            risk_level: None,
-        };
-        let strategy_result = creation_service
-            .create_strategy(strategy_config)
-            .await
-            .unwrap();
-
-        // Sync the strategy to database so it can be found by the initiative creation
-        let db_path = workspace_dir.join("metis.db");
-        let db = crate::Database::new(&db_path.to_string_lossy()).unwrap();
-        let mut db_service =
-            crate::application::services::DatabaseService::new(db.repository().unwrap());
-        let mut sync_service = crate::application::services::SyncService::new(&mut db_service);
-        sync_service
-            .import_from_file(&strategy_result.file_path)
-            .await
-            .unwrap();
-
-        // Create initiative under strategy
-        let initiative_config = DocumentCreationConfig {
-            title: "Test Initiative".to_string(),
-            description: Some("Test initiative description".to_string()),
-            parent_id: Some(strategy_result.document_id.clone()),
-            tags: vec![],
-            phase: None,
-            complexity: None,
-            risk_level: None,
-        };
-        let initiative_result = creation_service
-            .create_initiative(initiative_config, &strategy_result.short_code)
-            .await
-            .unwrap();
-
-        // Sync the initiative to database so it can be found by the task creation
-        sync_service
-            .import_from_file(&initiative_result.file_path)
-            .await
-            .unwrap();
-
-        // Create task under initiative
-        let task_config = DocumentCreationConfig {
-            title: "Test Task".to_string(),
-            description: Some("Test task description".to_string()),
-            parent_id: Some(initiative_result.document_id.clone()),
-            tags: vec![],
-            phase: None,
-            complexity: None,
-            risk_level: None,
-        };
-        let task_result = creation_service
-            .create_task(
-                task_config,
-                &strategy_result.short_code,
-                &initiative_result.short_code,
-            )
-            .await
-            .unwrap();
-
-        // Verify files exist before deletion
-        assert!(strategy_result.file_path.exists());
-        assert!(initiative_result.file_path.exists());
-        assert!(task_result.file_path.exists());
-
-        // Delete the strategy
-        let deletion_service = DeletionService::new();
-        let result = deletion_service
-            .delete_document_recursive(&strategy_result.file_path.to_string_lossy())
-            .await
-            .unwrap();
-
-        // Verify entire strategy folder was deleted
-        let strategy_path = &strategy_result.file_path;
-        let strategy_folder = strategy_path.parent().unwrap();
-        assert!(!strategy_folder.exists());
-        assert!(!initiative_result.file_path.exists());
-        assert!(!task_result.file_path.exists());
-
-        // Should have deleted all files and directories
-        assert!(result.deleted_files.len() >= 3); // at least strategy.md + initiative.md + task.md
-        assert!(!result.cleaned_directories.is_empty()); // at least the strategy folder
-    }
-
-    #[tokio::test]
     async fn test_delete_initiative_with_folder() {
         let (_temp_dir, workspace_dir) = setup_test_workspace().await;
 
-        // Create strategy first (required parent)
+        // Create initiative (parent is vision)
         let creation_service = DocumentCreationService::new(&workspace_dir);
-        let strategy_config = DocumentCreationConfig {
-            title: "Parent Strategy".to_string(),
-            description: Some("Parent strategy".to_string()),
+        let initiative_config = DocumentCreationConfig {
+            title: "Test Initiative".to_string(),
+            description: Some("Test initiative description".to_string()),
             parent_id: None,
             tags: vec![],
             phase: None,
             complexity: None,
-            risk_level: None,
         };
-        let strategy_result = creation_service
-            .create_strategy(strategy_config)
+        let initiative_result = creation_service
+            .create_initiative(initiative_config)
             .await
             .unwrap();
 
-        // Sync the strategy to database so it can be found by the initiative creation
+        // Sync the initiative to database so it can be found by the task creation
         let db_path = workspace_dir.join("metis.db");
         let db = crate::Database::new(&db_path.to_string_lossy()).unwrap();
         let mut db_service =
             crate::application::services::DatabaseService::new(db.repository().unwrap());
         let mut sync_service = crate::application::services::SyncService::new(&mut db_service);
-        sync_service
-            .import_from_file(&strategy_result.file_path)
-            .await
-            .unwrap();
-
-        // Create initiative
-        let initiative_config = DocumentCreationConfig {
-            title: "Test Initiative".to_string(),
-            description: Some("Test initiative".to_string()),
-            parent_id: Some(strategy_result.document_id.clone()),
-            tags: vec![],
-            phase: None,
-            complexity: None,
-            risk_level: None,
-        };
-        let initiative_result = creation_service
-            .create_initiative(initiative_config, &strategy_result.short_code)
-            .await
-            .unwrap();
-
-        // Sync the initiative to database so it can be found by the task creation
         sync_service
             .import_from_file(&initiative_result.file_path)
             .await
@@ -361,14 +242,9 @@ mod tests {
             tags: vec![],
             phase: None,
             complexity: None,
-            risk_level: None,
         };
         let task1_result = creation_service
-            .create_task(
-                task1_config,
-                &strategy_result.short_code,
-                &initiative_result.short_code,
-            )
+            .create_task(task1_config, &initiative_result.short_code)
             .await
             .unwrap();
 
@@ -379,16 +255,16 @@ mod tests {
             tags: vec![],
             phase: None,
             complexity: None,
-            risk_level: None,
         };
         let task2_result = creation_service
-            .create_task(
-                task2_config,
-                &strategy_result.short_code,
-                &initiative_result.short_code,
-            )
+            .create_task(task2_config, &initiative_result.short_code)
             .await
             .unwrap();
+
+        // Verify files exist before deletion
+        assert!(initiative_result.file_path.exists());
+        assert!(task1_result.file_path.exists());
+        assert!(task2_result.file_path.exists());
 
         // Delete the initiative
         let deletion_service = DeletionService::new();
@@ -403,9 +279,6 @@ mod tests {
         assert!(!initiative_folder.exists());
         assert!(!task1_result.file_path.exists());
         assert!(!task2_result.file_path.exists());
-
-        // Verify strategy still exists
-        assert!(strategy_result.file_path.exists());
 
         // Should have deleted all files in the initiative folder
         assert!(result.deleted_files.len() >= 3); // at least initiative.md + task1.md + task2.md
@@ -433,48 +306,27 @@ mod tests {
     async fn test_delete_task_file_only() {
         let (_temp_dir, workspace_dir) = setup_test_workspace().await;
 
-        // Create full hierarchy up to task
+        // Create initiative first (required parent for tasks)
         let creation_service = DocumentCreationService::new(&workspace_dir);
-        let strategy_config = DocumentCreationConfig {
-            title: "Test Strategy".to_string(),
-            description: Some("Test strategy".to_string()),
+        let initiative_config = DocumentCreationConfig {
+            title: "Test Initiative".to_string(),
+            description: Some("Test initiative".to_string()),
             parent_id: None,
             tags: vec![],
             phase: None,
             complexity: None,
-            risk_level: None,
         };
-        let strategy_result = creation_service
-            .create_strategy(strategy_config)
+        let initiative_result = creation_service
+            .create_initiative(initiative_config)
             .await
             .unwrap();
 
-        // Sync the strategy to database so it can be found by the initiative creation
+        // Sync the initiative to database so it can be found by the task creation
         let db_path = workspace_dir.join("metis.db");
         let db = crate::Database::new(&db_path.to_string_lossy()).unwrap();
         let mut db_service =
             crate::application::services::DatabaseService::new(db.repository().unwrap());
         let mut sync_service = crate::application::services::SyncService::new(&mut db_service);
-        sync_service
-            .import_from_file(&strategy_result.file_path)
-            .await
-            .unwrap();
-
-        let initiative_config = DocumentCreationConfig {
-            title: "Test Initiative".to_string(),
-            description: Some("Test initiative".to_string()),
-            parent_id: Some(strategy_result.document_id.clone()),
-            tags: vec![],
-            phase: None,
-            complexity: None,
-            risk_level: None,
-        };
-        let initiative_result = creation_service
-            .create_initiative(initiative_config, &strategy_result.short_code)
-            .await
-            .unwrap();
-
-        // Sync the initiative to database so it can be found by the task creation
         sync_service
             .import_from_file(&initiative_result.file_path)
             .await
@@ -487,14 +339,9 @@ mod tests {
             tags: vec![],
             phase: None,
             complexity: None,
-            risk_level: None,
         };
         let task_result = creation_service
-            .create_task(
-                task_config,
-                &strategy_result.short_code,
-                &initiative_result.short_code,
-            )
+            .create_task(task_config, &initiative_result.short_code)
             .await
             .unwrap();
 
@@ -508,9 +355,8 @@ mod tests {
         // Task should be deleted
         assert!(!task_result.file_path.exists());
 
-        // Parent documents should still exist
+        // Parent initiative should still exist
         assert!(initiative_result.file_path.exists());
-        assert!(strategy_result.file_path.exists());
 
         // Should only delete the task file
         assert_eq!(result.deleted_files.len(), 1);

@@ -15,12 +15,9 @@ pub enum ConfigAction {
     Show,
     /// Set configuration using preset or custom values
     Set {
-        /// Configuration preset (full, streamlined, direct)
+        /// Configuration preset (streamlined, direct)
         #[arg(short, long)]
         preset: Option<String>,
-        /// Enable/disable strategies (true/false)
-        #[arg(long)]
-        strategies: Option<bool>,
         /// Enable/disable initiatives (true/false)
         #[arg(long)]
         initiatives: Option<bool>,
@@ -54,10 +51,9 @@ impl ConfigCommand {
             ConfigAction::Show => self.show_config(&mut config_repo).await,
             ConfigAction::Set {
                 preset,
-                strategies,
                 initiatives,
             } => {
-                self.set_config(&mut config_repo, preset, *strategies, *initiatives)
+                self.set_config(&mut config_repo, preset, *initiatives)
                     .await
             }
             ConfigAction::Get { key } => self.get_config(&mut config_repo, key).await,
@@ -74,7 +70,6 @@ impl ConfigCommand {
 
         println!("Current Flight Level Configuration:");
         println!("  Preset: {}", flight_config.preset_name());
-        println!("  Strategies enabled: {}", flight_config.strategies_enabled);
         println!(
             "  Initiatives enabled: {}",
             flight_config.initiatives_enabled
@@ -94,36 +89,29 @@ impl ConfigCommand {
         &self,
         config_repo: &mut metis_core::dal::database::configuration_repository::ConfigurationRepository,
         preset: &Option<String>,
-        strategies: Option<bool>,
         initiatives: Option<bool>,
     ) -> Result<()> {
         let new_config = if let Some(preset_name) = preset {
             // Use preset configuration
             match preset_name.as_str() {
-                "full" => FlightLevelConfig::full(),
                 "streamlined" => FlightLevelConfig::streamlined(),
                 "direct" => FlightLevelConfig::direct(),
                 _ => {
                     anyhow::bail!(
-                        "Invalid preset '{}'. Valid presets are: full, streamlined, direct",
+                        "Invalid preset '{}'. Valid presets are: streamlined, direct",
                         preset_name
                     );
                 }
             }
-        } else if strategies.is_some() || initiatives.is_some() {
+        } else if initiatives.is_some() {
             // Use custom configuration
-            let current_config = config_repo
-                .get_flight_level_config()
-                .map_err(|e| anyhow::anyhow!("Failed to get current configuration: {}", e))?;
+            let initiatives_enabled = initiatives.unwrap();
 
-            let strategies_enabled = strategies.unwrap_or(current_config.strategies_enabled);
-            let initiatives_enabled = initiatives.unwrap_or(current_config.initiatives_enabled);
-
-            FlightLevelConfig::new(strategies_enabled, initiatives_enabled)
+            FlightLevelConfig::new(initiatives_enabled)
                 .map_err(|e| anyhow::anyhow!("Invalid configuration: {}", e))?
         } else {
             anyhow::bail!(
-                "Must specify either --preset or at least one of --strategies/--initiatives"
+                "Must specify either --preset or --initiatives"
             );
         };
 
@@ -135,7 +123,6 @@ impl ConfigCommand {
         println!("Configuration updated successfully!");
         println!("New configuration:");
         println!("  Preset: {}", new_config.preset_name());
-        println!("  Strategies enabled: {}", new_config.strategies_enabled);
         println!("  Initiatives enabled: {}", new_config.initiatives_enabled);
         println!("  Hierarchy: {}", new_config.hierarchy_display());
 
@@ -181,7 +168,7 @@ mod tests {
         let init_cmd = InitCommand {
             name: Some("Test Project".to_string()),
             preset: None,
-            strategies: None,
+
             initiatives: None,
             prefix: None,
         };
@@ -213,7 +200,7 @@ mod tests {
         let init_cmd = InitCommand {
             name: Some("Test Project".to_string()),
             preset: None,
-            strategies: None,
+
             initiatives: None,
             prefix: None,
         };
@@ -223,7 +210,6 @@ mod tests {
         let config_cmd = ConfigCommand {
             action: ConfigAction::Set {
                 preset: Some("streamlined".to_string()),
-                strategies: None,
                 initiatives: None,
             },
         };
@@ -249,7 +235,7 @@ mod tests {
         let init_cmd = InitCommand {
             name: Some("Test Project".to_string()),
             preset: None,
-            strategies: None,
+
             initiatives: None,
             prefix: None,
         };
@@ -259,7 +245,6 @@ mod tests {
         let config_cmd = ConfigCommand {
             action: ConfigAction::Set {
                 preset: Some("invalid".to_string()),
-                strategies: None,
                 initiatives: None,
             },
         };

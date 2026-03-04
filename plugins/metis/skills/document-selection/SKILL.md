@@ -1,6 +1,6 @@
 ---
 name: document-selection
-description: This skill should be used when the user asks "what document type should I create", "create a bug ticket", "create a feature request", "should this be a task or initiative", "when to use an ADR", "track this bug", "log this tech debt", or needs help choosing between vision, strategy, initiative, task, backlog item, or ADR document types.
+description: This skill should be used when the user asks "what document type should I create", "create a bug ticket", "create a feature request", "should this be a task or initiative", "when to use an ADR", "track this bug", "log this tech debt", or needs help choosing between vision, initiative, task, backlog item, or ADR document types.
 ---
 
 # Document Type Selection
@@ -16,9 +16,6 @@ This skill helps choose the right Metis document type for different kinds of wor
 **Does this define WHY the project exists?**
 - Yes → **Vision**
 
-**Does this coordinate multiple capability increments?**
-- Yes → **Strategy** (if Full preset enabled)
-
 **Does this create a fundamental capability increment?**
 - Yes → **Initiative**
 
@@ -31,8 +28,7 @@ This skill helps choose the right Metis document type for different kinds of wor
 | Type | Purpose | Parent Required |
 |------|---------|-----------------|
 | Vision | North star objectives | No |
-| Strategy | Coordinated approaches | Vision (published) |
-| Initiative | Capability increments | Strategy/Vision (published) |
+| Initiative | Capability increments | Vision (published) |
 | Task | Atomic work units | Initiative (decompose/active phase) |
 | Backlog Item | Ad-hoc bugs/features/debt | No |
 | ADR | Architectural decisions | No |
@@ -62,20 +58,7 @@ Create when:
 - Redefining project direction
 - Current vision no longer represents objectives
 
-**Not a vision**: "Build feature X" (initiative), "Fix bugs" (operational), "Q1 goals" (strategy or initiatives)
-
-### Strategy
-Create when (Full preset only):
-- Multiple teams need coordination
-- Competing approaches to pursue
-- Resource allocation needs decisions
-- Strategic trade-offs should be documented
-
-**Fields**:
-- `stakeholders` - List of stakeholders involved
-- `risk_level` - One of: `low`, `medium`, `high`, `critical` (defaults to medium)
-
-**Not a strategy**: Single project (initiative), a decision (ADR), a wish list (backlog)
+**Not a vision**: "Build feature X" (initiative), "Fix bugs" (operational), "Q1 goals" (initiatives)
 
 ### Initiative
 Create when:
@@ -121,7 +104,6 @@ Create when:
 |---------|---------|-----|
 | Task that takes months | Wrong granularity | If it has subtasks, make it an initiative |
 | Initiative for every idea | Overhead | Use backlog items, promote when committed |
-| Strategy for single project | Wrong level | Strategy coordinates multiple initiatives |
 | ADR for implementation | Confusion | ADR records decision; tasks implement it |
 
 ## Edge Cases

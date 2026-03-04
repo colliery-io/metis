@@ -1,7 +1,6 @@
 use super::{
     adr::Adr,
     initiative::Initiative,
-    strategy::Strategy,
     task::Task,
     traits::{Document, DocumentValidationError},
     types::DocumentType,
@@ -33,10 +32,6 @@ impl DocumentFactory {
                 let vision = Vision::from_file(path).await?;
                 Ok(Box::new(vision))
             }
-            DocumentType::Strategy => {
-                let strategy = Strategy::from_file(path).await?;
-                Ok(Box::new(strategy))
-            }
             DocumentType::Initiative => {
                 let initiative = Initiative::from_file(path).await?;
                 Ok(Box::new(initiative))
@@ -63,10 +58,6 @@ impl DocumentFactory {
             DocumentType::Vision => {
                 let vision = Vision::from_content(raw_content)?;
                 Ok(Box::new(vision))
-            }
-            DocumentType::Strategy => {
-                let strategy = Strategy::from_content(raw_content)?;
-                Ok(Box::new(strategy))
             }
             DocumentType::Initiative => {
                 let initiative = Initiative::from_content(raw_content)?;
@@ -141,17 +132,17 @@ title: Test Vision
         assert_eq!(doc_type, DocumentType::Vision);
 
         // Test with "level" field (legacy)
-        let strategy_content = r#"---
-level: strategy
-title: Test Strategy
+        let initiative_content = r#"---
+level: initiative
+title: Test Initiative
 ---
 
-# Test Strategy
+# Test Initiative
 "#;
 
-        let doc_type = DocumentFactory::extract_document_type(strategy_content)
+        let doc_type = DocumentFactory::extract_document_type(initiative_content)
             .expect("Failed to extract document type");
-        assert_eq!(doc_type, DocumentType::Strategy);
+        assert_eq!(doc_type, DocumentType::Initiative);
     }
 
     #[test]

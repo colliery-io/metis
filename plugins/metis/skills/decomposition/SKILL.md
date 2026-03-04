@@ -12,8 +12,6 @@ This skill guides the process of breaking higher-level work into actionable lowe
 ```
 Vision: "Make X a better experience"
     ↓
-Strategy: "Focus on performance first"
-    ↓
 Initiative: "Reduce page load time by 50%"
     ↓
 Tasks: "Profile slow queries", "Add caching layer", "Optimize images"

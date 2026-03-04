@@ -7,7 +7,7 @@ created_at: 2026-02-20T14:47:11.391775+00:00
 updated_at: 2026-03-03T02:29:58.357195+00:00
 parent: METIS-I-0021
 blocked_by: []
-archived: false
+archived: true
 
 tags:
   - "#task"
@@ -27,6 +27,8 @@ initiative_id: METIS-I-0021
 ## Objective
 
 Expose code indexing as an MCP tool so AI agents can trigger index generation programmatically. Parameters: `project_path`, `structure_only` (bool), `incremental` (bool). Calls the same pipeline as `metis index`.
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 

@@ -5,7 +5,6 @@ use metis_core::{
         workspace::WorkspaceDetectionService,
     },
     domain::documents::types::DocumentType,
-    Database,
 };
 use rust_mcp_sdk::{
     macros::{mcp_tool, JsonSchema},
@@ -17,7 +16,7 @@ use std::str::FromStr;
 
 #[mcp_tool(
     name = "create_document",
-    description = "Create a new Metis document (vision, strategy, initiative, task, adr). Each document gets a unique short code in format PREFIX-TYPE-NNNN (e.g., PROJ-V-0001). Parent documents should be referenced by their short code (e.g., PROJ-V-0001). Document type availability depends on current flight level configuration. For standalone work items not tied to initiatives, use document_type='task' with backlog_category to create a backlog item.",
+    description = "Create a new Metis document (vision, initiative, task, adr). Each document gets a unique short code in format PREFIX-TYPE-NNNN (e.g., PROJ-V-0001). Parent documents should be referenced by their short code (e.g., PROJ-V-0001). Document type availability depends on current flight level configuration. For standalone work items not tied to initiatives, use document_type='task' with backlog_category to create a backlog item.",
     idempotent_hint = false,
     destructive_hint = false,
     open_world_hint = false,
@@ -27,14 +26,12 @@ use std::str::FromStr;
 pub struct CreateDocumentTool {
     /// Path to the .metis folder (e.g., "/Users/me/my-project/.metis"). Must end with .metis
     pub project_path: String,
-    /// Document type: vision, strategy, initiative, task, adr
+    /// Document type: vision, initiative, task, adr
     pub document_type: String,
     /// Title of the document
     pub title: String,
-    /// Parent document short code (required for strategy, initiative, task). Omit for backlog items.
+    /// Parent document short code (required for initiative, task). Omit for backlog items.
     pub parent_id: Option<String>,
-    /// Risk level for strategies (low, medium, high)
-    pub risk_level: Option<String>,
     /// Complexity for initiatives (xs, s, m, l, xl)
     pub complexity: Option<String>,
     /// Stakeholders involved
@@ -91,11 +88,10 @@ impl CreateDocumentTool {
             return Err(CallToolError::new(std::io::Error::new(
                 std::io::ErrorKind::InvalidInput,
                 format!(
-                    "{} creation is disabled in current configuration ({} mode). Available document types: {}. To enable {}, use 'metis config set --preset full' or configure individually with 'metis config set --strategies true --initiatives true'",
+                    "{} creation is disabled in current configuration ({} mode). Available document types: {}.",
                     doc_type,
                     flight_config.preset_name(),
                     available_types.join(", "),
-                    doc_type
                 ),
             )));
         }
@@ -116,19 +112,6 @@ impl CreateDocumentTool {
                 ))
             })?;
 
-        // Parse risk level if provided
-        let risk_level = self
-            .risk_level
-            .as_ref()
-            .map(|r| r.parse())
-            .transpose()
-            .map_err(|e| {
-                CallToolError::new(std::io::Error::new(
-                    std::io::ErrorKind::InvalidInput,
-                    format!("Invalid risk level: {}", e),
-                ))
-            })?;
-
         // Pass parent_id as-is (short codes are now handled directly by core services)
         let resolved_parent_id = self.parent_id.clone();
 
@@ -141,7 +124,6 @@ impl CreateDocumentTool {
             tags: vec![],
             phase: None, // Will use defaults
             complexity,
-            risk_level,
         };
 
         // Create the document based on type
@@ -158,27 +140,9 @@ impl CreateDocumentTool {
                     .await
                     .map_err(|e| CallToolError::new(e))?
             }
-            DocumentType::Strategy => creation_service
-                .create_strategy(config)
-                .await
-                .map_err(|e| CallToolError::new(e))?,
             DocumentType::Initiative => {
-                // Determine parent strategy ID based on configuration
-                let parent_strategy_id = if flight_config.strategies_enabled {
-                    // Full configuration: require explicit strategy parent
-                    resolved_parent_id.as_ref().ok_or_else(|| {
-                        CallToolError::new(std::io::Error::new(
-                            std::io::ErrorKind::InvalidInput,
-                            "Initiative requires a parent strategy short code in full configuration",
-                        ))
-                    })?.clone()
-                } else {
-                    // Streamlined/Direct configuration: use NULL strategy placeholder
-                    "NULL".to_string()
-                };
-
                 creation_service
-                    .create_initiative_with_config(config, &parent_strategy_id, &flight_config)
+                    .create_initiative_with_config(config, &flight_config)
                     .await
                     .map_err(|e| CallToolError::new(e))?
             }
@@ -205,7 +169,6 @@ impl CreateDocumentTool {
                         tags: vec![category_tag],
                         phase: None,
                         complexity: None,
-                        risk_level: None,
                     };
 
                     creation_service
@@ -214,18 +177,9 @@ impl CreateDocumentTool {
                         .map_err(|e| CallToolError::new(e))?
                 } else if let Some(initiative_id) = resolved_parent_id.as_ref() {
                     // Task with parent initiative
-                    let strategy_id = if flight_config.strategies_enabled {
-                        // Full configuration: use actual strategy short code from initiative location
-                        self.find_strategy_short_code_for_initiative(&database, initiative_id)?
-                    } else {
-                        // Streamlined/Direct: use NULL as strategy placeholder
-                        "NULL".to_string()
-                    };
-
                     creation_service
                         .create_task_with_config(
                             config,
-                            &strategy_id,
                             initiative_id,
                             &flight_config,
                         )
@@ -238,9 +192,9 @@ impl CreateDocumentTool {
                         format!("Task requires a parent initiative ID in {} configuration. Either provide parent_id with an initiative short code, or use backlog_category (bug, feature, tech-debt) to create a standalone backlog item.", flight_config.preset_name()),
                     )));
                 } else {
-                    // Direct configuration: create task without parents (use NULL for both)
+                    // Direct configuration: create task without parents (use NULL)
                     creation_service
-                        .create_task_with_config(config, "NULL", "NULL", &flight_config)
+                        .create_task_with_config(config, "NULL", &flight_config)
                         .await
                         .map_err(|e| CallToolError::new(e))?
                 }
@@ -273,60 +227,5 @@ impl CreateDocumentTool {
             .build_result();
 
         Ok(result_output)
-    }
-
-    fn find_strategy_short_code_for_initiative(
-        &self,
-        database: &Database,
-        initiative_id: &str,
-    ) -> Result<String, CallToolError> {
-        let mut repo = database.repository().map_err(|e| {
-            CallToolError::new(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("Repository error: {}", e),
-            ))
-        })?;
-
-        // Find the initiative document in the database by short code
-        let initiative = repo
-            .find_by_short_code(initiative_id)
-            .map_err(|e| {
-                CallToolError::new(std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    format!("Database lookup error: {}", e),
-                ))
-            })?
-            .ok_or_else(|| {
-                CallToolError::new(std::io::Error::new(
-                    std::io::ErrorKind::NotFound,
-                    format!("Initiative '{}' not found in database", initiative_id),
-                ))
-            })?;
-
-        // Get the strategy ID from the initiative, then find the strategy's short code
-        let strategy_id = initiative.strategy_id.ok_or_else(|| {
-            CallToolError::new(std::io::Error::new(
-                std::io::ErrorKind::InvalidData,
-                format!("Initiative '{}' has no parent strategy", initiative_id),
-            ))
-        })?;
-
-        // Find the strategy by its short code (strategy_id now contains short codes)
-        let strategy = repo
-            .find_by_short_code(&strategy_id)
-            .map_err(|e| {
-                CallToolError::new(std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    format!("Database lookup error: {}", e),
-                ))
-            })?
-            .ok_or_else(|| {
-                CallToolError::new(std::io::Error::new(
-                    std::io::ErrorKind::NotFound,
-                    format!("Strategy '{}' not found in database", strategy_id),
-                ))
-            })?;
-
-        Ok(strategy.short_code)
     }
 }

@@ -24,7 +24,6 @@ pub async fn create_new_adr(title: &str) -> Result<()> {
         tags: vec![Tag::Label("adr".to_string()), Tag::Phase(Phase::Draft)],
         phase: Some(Phase::Draft),
         complexity: None,
-        risk_level: None,
     };
 
     let result = creation_service
@@ -79,7 +78,7 @@ mod tests {
         let init_cmd = InitCommand {
             name: Some("Test Project".to_string()),
             preset: None,
-            strategies: None,
+
             initiatives: None,
             prefix: None,
         };

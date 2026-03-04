@@ -79,7 +79,7 @@ Common mistakes when using Metis, how to recognize them, and how to recover.
 
 **How to recognize**:
 - Tasks without parent initiatives
-- Initiatives without parent strategies/visions (unless streamlined preset)
+- Initiatives without a parent vision
 - Work that nobody can explain the purpose of
 
 **How to fix**:

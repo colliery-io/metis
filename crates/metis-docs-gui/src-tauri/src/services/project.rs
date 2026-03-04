@@ -25,7 +25,6 @@ pub struct InitializationResult {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ProjectConfig {
-    pub strategies_enabled: bool,
     pub initiatives_enabled: bool,
     pub preset_name: String,
 }
@@ -127,7 +126,6 @@ pub async fn get_project_config(
         .map_err(|e| format!("Failed to get config: {}", e))?;
 
     Ok(ProjectConfig {
-        strategies_enabled: config.strategies_enabled,
         initiatives_enabled: config.initiatives_enabled,
         preset_name: config.preset_name().to_string(),
     })
@@ -136,12 +134,11 @@ pub async fn get_project_config(
 /// Determine the flight level configuration based on preset name
 fn determine_flight_config(preset_name: Option<&str>) -> Result<FlightLevelConfig, String> {
     match preset_name {
-        Some("full") => Ok(FlightLevelConfig::full()),
         Some("streamlined") => Ok(FlightLevelConfig::streamlined()),
         Some("direct") => Ok(FlightLevelConfig::direct()),
         None => Ok(FlightLevelConfig::streamlined()), // Default to streamlined
         Some(invalid) => Err(format!(
-            "Invalid preset '{}'. Valid presets are: full, streamlined, direct",
+            "Invalid preset '{}'. Valid presets are: streamlined, direct",
             invalid
         )),
     }

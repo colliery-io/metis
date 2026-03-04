@@ -175,13 +175,13 @@ async fn test_config_sync_on_normal_operations() {
     let db_path = format!("{}/metis.db", metis_dir);
     let config_file_path = format!("{}/config.toml", metis_dir);
 
-    // Step 1: Manually change config.toml
-    println!("Step 1: Manually change config.toml flight levels");
-    let new_config = ConfigFile::new("TEST".to_string(), FlightLevelConfig::full()).unwrap();
+    // Step 1: Manually change config.toml to direct
+    println!("Step 1: Manually change config.toml flight levels to direct");
+    let new_config = ConfigFile::new("TEST".to_string(), FlightLevelConfig::direct()).unwrap();
     new_config.save(&config_file_path).unwrap();
-    println!("✓ Config.toml updated to full configuration");
+    println!("✓ Config.toml updated to direct configuration");
 
-    // Step 2: Verify DB still has old config
+    // Step 2: Verify DB still has old config (streamlined)
     let db = Database::new(&db_path).unwrap();
     let mut config_repo = db.configuration_repository().unwrap();
     let old_flight_levels = config_repo.get_flight_level_config().unwrap();
@@ -206,10 +206,10 @@ async fn test_config_sync_on_normal_operations() {
     let updated_flight_levels = config_repo.get_flight_level_config().unwrap();
     assert_eq!(
         updated_flight_levels,
-        FlightLevelConfig::full(),
-        "DB should now have full config from config.toml"
+        FlightLevelConfig::direct(),
+        "DB should now have direct config from config.toml"
     );
-    println!("✓ DB updated to full configuration");
+    println!("✓ DB updated to direct configuration");
 
     println!("\n✅ Config.toml syncs to DB on normal sync operations!");
 }

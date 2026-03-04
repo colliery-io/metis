@@ -3,7 +3,7 @@ use crate::application::services::DatabaseService;
 use crate::domain::documents::traits::Document;
 use crate::domain::documents::types::DocumentType;
 use crate::Result;
-use crate::{Adr, Initiative, MetisError, Strategy, Task, Vision};
+use crate::{Adr, Initiative, MetisError, Task, Vision};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
@@ -46,16 +46,6 @@ impl ArchiveService {
                     .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
                 vision.core_mut().archived = true;
                 vision
-                    .to_file(file_path)
-                    .await
-                    .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
-            }
-            DocumentType::Strategy => {
-                let mut strategy = Strategy::from_file(file_path)
-                    .await
-                    .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
-                strategy.core_mut().archived = true;
-                strategy
                     .to_file(file_path)
                     .await
                     .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
@@ -147,30 +137,6 @@ impl ArchiveService {
                 let archived_doc = self
                     .archive_single_file(&absolute_path, doc_type)
                     .await?;
-                archived_documents.push(archived_doc);
-            }
-
-            DocumentType::Strategy => {
-                // Use database query to find all documents in strategy hierarchy
-                let hierarchy_docs = db_service.find_strategy_hierarchy(document_id)?;
-
-                // Mark all documents as archived first
-                for db_doc in &hierarchy_docs {
-                    // Convert relative path from DB to absolute path for filesystem operations
-                    let absolute_path = self.workspace_dir.join(&db_doc.filepath);
-                    let dt = DocumentType::from_str(&db_doc.document_type).map_err(|e| {
-                        MetisError::ValidationFailed {
-                            message: format!("Invalid document type: {}", e),
-                        }
-                    })?;
-                    self.mark_as_archived_helper(&absolute_path, dt).await?;
-                }
-
-                // Archive the strategy directory (which moves everything intact)
-                // Convert relative path from DB to absolute path for filesystem operations
-                let absolute_strategy_path = self.workspace_dir.join(&doc.filepath);
-                let strategy_dir = absolute_strategy_path.parent().unwrap();
-                let archived_doc = self.archive_directory(strategy_dir, doc_type).await?;
                 archived_documents.push(archived_doc);
             }
 
@@ -276,7 +242,6 @@ impl ArchiveService {
 
         // Get document ID before moving
         let main_file = match doc_type {
-            DocumentType::Strategy => dir_path.join("strategy.md"),
             DocumentType::Initiative => dir_path.join("initiative.md"),
             _ => {
                 return Err(MetisError::InvalidDocument(
@@ -360,12 +325,6 @@ impl ArchiveService {
                     .await
                     .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
                 Ok(vision.id().to_string())
-            }
-            DocumentType::Strategy => {
-                let strategy = Strategy::from_file(file_path)
-                    .await
-                    .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
-                Ok(strategy.id().to_string())
             }
             DocumentType::Initiative => {
                 let initiative = Initiative::from_file(file_path)
@@ -469,9 +428,6 @@ impl ArchiveService {
         if Vision::from_file(file_path).await.is_ok() {
             return Ok(DocumentType::Vision);
         }
-        if Strategy::from_file(file_path).await.is_ok() {
-            return Ok(DocumentType::Strategy);
-        }
         if Initiative::from_file(file_path).await.is_ok() {
             return Ok(DocumentType::Initiative);
         }
@@ -515,31 +471,6 @@ impl ArchiveService {
                 let archived_doc = self
                     .archive_single_file(&absolute_path, doc_type)
                     .await?;
-                archived_documents.push(archived_doc);
-            }
-
-            DocumentType::Strategy => {
-                // Use database query to find all documents in strategy hierarchy by short code
-                let hierarchy_docs =
-                    db_service.find_strategy_hierarchy_by_short_code(short_code)?;
-
-                // Mark all documents as archived first
-                for db_doc in &hierarchy_docs {
-                    // Convert relative path from DB to absolute path for filesystem operations
-                    let absolute_path = self.workspace_dir.join(&db_doc.filepath);
-                    let dt = DocumentType::from_str(&db_doc.document_type).map_err(|e| {
-                        MetisError::ValidationFailed {
-                            message: format!("Invalid document type: {}", e),
-                        }
-                    })?;
-                    self.mark_as_archived_helper(&absolute_path, dt).await?;
-                }
-
-                // Archive the strategy directory (which moves everything intact)
-                // Convert relative path from DB to absolute path for filesystem operations
-                let absolute_strategy_path = self.workspace_dir.join(&doc.filepath);
-                let strategy_dir = absolute_strategy_path.parent().unwrap();
-                let archived_doc = self.archive_directory(strategy_dir, doc_type).await?;
                 archived_documents.push(archived_doc);
             }
 
@@ -631,7 +562,6 @@ mod tests {
             tags: vec![],
             phase: None,
             complexity: None,
-            risk_level: None,
         };
         let creation_result = creation_service.create_vision(config).await.unwrap();
 
@@ -658,86 +588,6 @@ mod tests {
         );
         assert!(archive_result.archived_documents[0].archived_path.exists());
         assert!(!creation_result.file_path.exists());
-    }
-
-    #[tokio::test]
-    async fn test_archive_strategy_with_initiatives() {
-        let temp_dir = tempdir().unwrap();
-        let workspace_dir = temp_dir.path().join(".metis");
-        fs::create_dir_all(&workspace_dir).unwrap();
-
-        // Create and initialize database with proper schema
-        let db_path = workspace_dir.join("metis.db");
-        let _db = crate::Database::new(&db_path.to_string_lossy()).unwrap();
-
-        // Set up project prefix in configuration
-        let mut config_repo =
-            crate::dal::database::configuration_repository::ConfigurationRepository::new(
-                SqliteConnection::establish(&db_path.to_string_lossy()).unwrap(),
-            );
-        config_repo.set_project_prefix("TEST").unwrap();
-
-        let creation_service = DocumentCreationService::new(&workspace_dir);
-
-        // Create a strategy
-        let strategy_config = DocumentCreationConfig {
-            title: "Test Strategy".to_string(),
-            description: Some("A test strategy".to_string()),
-            parent_id: None,
-            tags: vec![],
-            phase: None,
-            complexity: None,
-            risk_level: None,
-        };
-        let strategy_result = creation_service
-            .create_strategy(strategy_config)
-            .await
-            .unwrap();
-
-        // Sync the strategy to database so it can be found by the initiative creation
-        let db = crate::Database::new(&db_path.to_string_lossy()).unwrap();
-        let mut db_service =
-            crate::application::services::DatabaseService::new(db.repository().unwrap());
-        let mut sync_service = crate::application::services::SyncService::new(&mut db_service);
-        sync_service
-            .import_from_file(&strategy_result.file_path)
-            .await
-            .unwrap();
-
-        // Create an initiative under the strategy
-        let initiative_config = DocumentCreationConfig {
-            title: "Test Initiative".to_string(),
-            description: Some("A test initiative".to_string()),
-            parent_id: Some(strategy_result.document_id.clone()),
-            tags: vec![],
-            phase: None,
-            complexity: None,
-            risk_level: None,
-        };
-        let _initiative_result = creation_service
-            .create_initiative(initiative_config, &strategy_result.short_code)
-            .await
-            .unwrap();
-
-        // Archive the strategy (should archive the initiative too)
-        let archive_service = ArchiveService::new(&workspace_dir);
-        let db = Database::new(":memory:").unwrap();
-        let mut db_service =
-            crate::application::services::DatabaseService::new(db.into_repository());
-
-        // Sync documents to the database first
-        let mut sync_service = crate::application::services::SyncService::new(&mut db_service)
-            .with_workspace_dir(&workspace_dir);
-        sync_service.sync_directory(&workspace_dir).await.unwrap();
-
-        let archive_result = archive_service
-            .archive_document(&strategy_result.document_id.to_string(), &mut db_service)
-            .await
-            .unwrap();
-
-        // Should have archived the strategy directory (which contains initiative and tasks)
-        assert_eq!(archive_result.total_archived, 1);
-        assert!(!strategy_result.file_path.exists());
     }
 
     #[tokio::test]
@@ -768,7 +618,6 @@ mod tests {
             tags: vec![],
             phase: None,
             complexity: None,
-            risk_level: None,
         };
         let creation_result = creation_service.create_vision(config).await.unwrap();
         let db = Database::new(":memory:").unwrap();
@@ -819,7 +668,6 @@ mod tests {
             tags: vec![],
             phase: None,
             complexity: None,
-            risk_level: None,
         };
         let creation_result = creation_service.create_vision(config).await.unwrap();
         let document_id = creation_result.document_id.to_string();

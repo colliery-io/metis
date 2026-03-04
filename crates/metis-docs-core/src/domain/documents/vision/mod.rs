@@ -62,7 +62,6 @@ impl Vision {
                 blocked_by: Vec::new(), // Visions cannot be blocked
                 tags,
                 archived,
-                strategy_id: None,   // Visions are not part of strategies
                 initiative_id: None, // Visions are not part of initiatives
             },
         })
@@ -85,7 +84,6 @@ impl Vision {
                 blocked_by: Vec::new(), // Visions cannot be blocked
                 tags,
                 archived,
-                strategy_id: None,   // Visions are not part of strategies
                 initiative_id: None, // Visions are not part of initiatives
             },
         }
@@ -212,7 +210,6 @@ impl Vision {
         context.insert("tags", &tag_strings);
 
         // Add lineage fields (NULL for Vision documents)
-        context.insert("strategy_id", "NULL");
         context.insert("initiative_id", "NULL");
 
         // Render frontmatter

@@ -7,7 +7,7 @@ created_at: 2026-02-20T14:47:04.951006+00:00
 updated_at: 2026-02-24T22:12:10.770531+00:00
 parent: METIS-I-0021
 blocked_by: []
-archived: false
+archived: true
 
 tags:
   - "#task"
@@ -27,6 +27,8 @@ initiative_id: METIS-I-0021
 ## Objective
 
 Create a new `metis-code-index` crate in the workspace by vendoring the parsing infrastructure from `colliery-io/muninn/crates/muninn-graph`. This establishes the foundation for all code indexing work.
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 

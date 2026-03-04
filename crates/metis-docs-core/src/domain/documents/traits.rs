@@ -187,7 +187,6 @@ pub struct DocumentCore {
     pub blocked_by: Vec<DocumentId>,
     pub tags: Vec<Tag>,
     pub archived: bool,
-    pub strategy_id: Option<DocumentId>,
     pub initiative_id: Option<DocumentId>,
 }
 

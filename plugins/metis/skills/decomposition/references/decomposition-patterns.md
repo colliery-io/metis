@@ -7,8 +7,6 @@ Decomposition is the process of breaking higher-level work into lower-level work
 ```
 Vision: "Make X a better experience"
     ↓ decomposes into
-Strategy: "Focus on performance first"
-    ↓ decomposes into
 Initiative: "Reduce page load time by 50%"
     ↓ decomposes into
 Tasks: "Profile slow queries", "Add caching layer", "Optimize images"
@@ -69,12 +67,6 @@ Implementation time varies dramatically based on tooling, team, and automation. 
 The "system" here can be software (technical projects) or people/processes (operational projects). An initiative delivers a capability increment to that system.
 
 **If an initiative doesn't change what the system can do**, it might just be a task. **If it changes multiple unrelated capabilities**, it might be multiple initiatives.
-
-### Strategies: Coherent Approaches
-- **Scope**: A direction that coordinates multiple capability increments
-- **Impact**: Shapes which initiatives get pursued and how
-- **Coherence**: Initiatives within it share a common approach or trade-off
-- **Examples**: "Performance-first approach", "Mobile expansion", "Enterprise readiness"
 
 ## The Decompose Phase
 

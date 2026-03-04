@@ -70,7 +70,6 @@ impl TransitionCommand {
             "active" => Ok(Phase::Active),
             "blocked" => Ok(Phase::Blocked),
             "completed" => Ok(Phase::Completed),
-            "shaping" => Ok(Phase::Shaping),
             "design" => Ok(Phase::Design),
             "ready" => Ok(Phase::Ready),
             "decompose" => Ok(Phase::Decompose),
@@ -84,7 +83,7 @@ impl TransitionCommand {
 mod tests {
     use super::*;
     use crate::commands::InitCommand;
-    use metis_core::{Adr, Document, Initiative, Strategy, Task, Vision};
+    use metis_core::{Adr, Document, Initiative, Task, Vision};
     use tempfile::tempdir;
 
     #[test]
@@ -141,7 +140,7 @@ mod tests {
         let init_cmd = InitCommand {
             name: Some("Test Project".to_string()),
             preset: None,
-            strategies: None,
+
             initiatives: None,
             prefix: None,
         };
@@ -175,7 +174,7 @@ mod tests {
         let init_cmd = InitCommand {
             name: Some("Test Project".to_string()),
             preset: None,
-            strategies: None,
+
             initiatives: None,
             prefix: None,
         };
@@ -223,94 +222,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_strategy_full_transition_sequence() {
-        let temp_dir = tempdir().unwrap();
-        let original_dir = std::env::current_dir().ok();
-
-        // Change to temp directory
-        std::env::set_current_dir(temp_dir.path()).unwrap();
-
-        // Create workspace
-        let init_cmd = InitCommand {
-            name: Some("Test Project".to_string()),
-            preset: None,
-            strategies: None,
-            initiatives: None,
-            prefix: None,
-        };
-        init_cmd.execute().await.unwrap();
-
-        // Create strategy using create command
-        let create_cmd = crate::commands::CreateCommand {
-            document_type: crate::commands::create::CreateCommands::Strategy {
-                title: "Test Strategy".to_string(),
-                vision: None,
-            },
-        };
-        create_cmd.execute().await.unwrap();
-
-        // Find strategy file path
-        let strategies_dir = temp_dir.path().join(".metis").join("strategies");
-        let strategy_dir = std::fs::read_dir(&strategies_dir)
-            .unwrap()
-            .find(|entry| entry.as_ref().unwrap().path().is_dir())
-            .unwrap()
-            .unwrap()
-            .path();
-        let strategy_path = strategy_dir.join("strategy.md");
-
-        // Verify initial state (Shaping)
-        let strategy = Strategy::from_file(&strategy_path).await.unwrap();
-        assert_eq!(strategy.phase().unwrap(), Phase::Shaping);
-        let short_code = strategy.metadata().short_code.clone();
-
-        // 1. Auto-transition: Shaping → Design
-        let cmd = TransitionCommand {
-            short_code: short_code.clone(),
-            phase: None, // Auto transition
-        };
-        cmd.execute().await.unwrap();
-
-        let strategy = Strategy::from_file(&strategy_path).await.unwrap();
-        assert_eq!(strategy.phase().unwrap(), Phase::Design);
-
-        // 2. Auto-transition: Design → Ready
-        let cmd = TransitionCommand {
-            short_code: short_code.clone(),
-            phase: None, // Auto transition
-        };
-        cmd.execute().await.unwrap();
-
-        let strategy = Strategy::from_file(&strategy_path).await.unwrap();
-        assert_eq!(strategy.phase().unwrap(), Phase::Ready);
-
-        // 3. Auto-transition: Ready → Active
-        let cmd = TransitionCommand {
-            short_code: short_code.clone(),
-            phase: None, // Auto transition
-        };
-        cmd.execute().await.unwrap();
-
-        let strategy = Strategy::from_file(&strategy_path).await.unwrap();
-        assert_eq!(strategy.phase().unwrap(), Phase::Active);
-
-        // 4. Auto-transition: Active → Completed
-        let cmd = TransitionCommand {
-            short_code: short_code.clone(),
-            phase: None, // Auto transition
-        };
-        cmd.execute().await.unwrap();
-
-        let strategy = Strategy::from_file(&strategy_path).await.unwrap();
-        assert_eq!(strategy.phase().unwrap(), Phase::Completed);
-
-        // Always restore original directory
-        if let Some(original) = original_dir {
-            let _ = std::env::set_current_dir(&original);
-        }
-    }
-
-    #[tokio::test]
     async fn test_initiative_full_transition_sequence() {
         let temp_dir = tempdir().unwrap();
         let original_dir = std::env::current_dir().ok();
@@ -322,26 +233,17 @@ mod tests {
         let init_cmd = InitCommand {
             name: Some("Test Project".to_string()),
             preset: None,
-            strategies: None,
+
             initiatives: None,
             prefix: None,
         };
         init_cmd.execute().await.unwrap();
 
-        // Create strategy first
-        let create_strategy_cmd = crate::commands::CreateCommand {
-            document_type: crate::commands::create::CreateCommands::Strategy {
-                title: "Parent Strategy".to_string(),
-                vision: None,
-            },
-        };
-        create_strategy_cmd.execute().await.unwrap();
-
-        // Create initiative
+        // Create initiative under vision
         let create_initiative_cmd = crate::commands::CreateCommand {
             document_type: crate::commands::create::CreateCommands::Initiative {
                 title: "Test Initiative".to_string(),
-                strategy: "TEST-S-0001".to_string(),
+                vision: "TEST-V-0001".to_string(),
             },
         };
         create_initiative_cmd.execute().await.unwrap();
@@ -349,38 +251,19 @@ mod tests {
         // Check what phase the initiative actually starts with
         let initiative_path = temp_dir
             .path()
-            .join(".metis/strategies/TEST-S-0001/initiatives/TEST-I-0001/initiative.md");
+            .join(".metis/initiatives/TEST-I-0001/initiative.md");
         let initiative = Initiative::from_file(&initiative_path).await.unwrap();
         println!("Initiative starts with phase: {:?}", initiative.phase());
         let short_code = initiative.metadata().short_code.clone();
 
-        // 1. Auto-transition: Discovery → Shaping
-        let cmd = TransitionCommand {
-            short_code: short_code.clone(),
-            phase: None, // Auto transition
-        };
-        cmd.execute().await.unwrap();
-
-        // 2. Auto-transition: Shaping → Decompose
-        let cmd = TransitionCommand {
-            short_code: short_code.clone(),
-            phase: None, // Auto transition
-        };
-        cmd.execute().await.unwrap();
-
-        // 3. Auto-transition: Decompose → Active
-        let cmd = TransitionCommand {
-            short_code: short_code.clone(),
-            phase: None, // Auto transition
-        };
-        cmd.execute().await.unwrap();
-
-        // 4. Auto-transition: Active → Completed
-        let cmd = TransitionCommand {
-            short_code: short_code.clone(),
-            phase: None, // Auto transition
-        };
-        cmd.execute().await.unwrap();
+        // Auto-transition through all phases: Discovery → Design → Ready → Decompose → Active → Completed
+        for _i in 0..5 {
+            let cmd = TransitionCommand {
+                short_code: short_code.clone(),
+                phase: None, // Auto transition
+            };
+            cmd.execute().await.unwrap();
+        }
 
         // Always restore original directory
         if let Some(original) = original_dir {
@@ -400,29 +283,30 @@ mod tests {
         let init_cmd = InitCommand {
             name: Some("Test Project".to_string()),
             preset: None,
-            strategies: None,
+
             initiatives: None,
             prefix: None,
         };
         init_cmd.execute().await.unwrap();
 
-        // Create strategy
-        let create_strategy_cmd = crate::commands::CreateCommand {
-            document_type: crate::commands::create::CreateCommands::Strategy {
-                title: "Parent Strategy".to_string(),
-                vision: None,
-            },
-        };
-        create_strategy_cmd.execute().await.unwrap();
-
-        // Create initiative
+        // Create initiative under vision
         let create_initiative_cmd = crate::commands::CreateCommand {
             document_type: crate::commands::create::CreateCommands::Initiative {
                 title: "Parent Initiative".to_string(),
-                strategy: "TEST-S-0001".to_string(),
+                vision: "TEST-V-0001".to_string(),
             },
         };
         create_initiative_cmd.execute().await.unwrap();
+
+        // Transition initiative to decompose phase so tasks can be created
+        // Discovery → Design → Ready → Decompose
+        for _i in 0..3 {
+            let cmd = TransitionCommand {
+                short_code: "TEST-I-0001".to_string(),
+                phase: None,
+            };
+            cmd.execute().await.unwrap();
+        }
 
         // Create task
         let create_task_cmd = crate::commands::CreateCommand {
@@ -436,7 +320,7 @@ mod tests {
         // Load the task to get its short code
         let task_path = temp_dir
             .path()
-            .join(".metis/strategies/TEST-S-0001/initiatives/TEST-I-0001/tasks/TEST-T-0001.md");
+            .join(".metis/initiatives/TEST-I-0001/tasks/TEST-T-0001.md");
         let task = Task::from_file(&task_path).await.unwrap();
         let short_code = task.metadata().short_code.clone();
 
@@ -498,7 +382,7 @@ mod tests {
         let init_cmd = InitCommand {
             name: Some("Test Project".to_string()),
             preset: None,
-            strategies: None,
+
             initiatives: None,
             prefix: None,
         };
@@ -564,7 +448,7 @@ mod tests {
         let init_cmd = InitCommand {
             name: Some("Test Project".to_string()),
             preset: None,
-            strategies: None,
+
             initiatives: None,
             prefix: None,
         };
@@ -614,7 +498,7 @@ mod tests {
         let init_cmd = InitCommand {
             name: Some("Test Project".to_string()),
             preset: None,
-            strategies: None,
+
             initiatives: None,
             prefix: None,
         };

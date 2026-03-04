@@ -152,7 +152,6 @@ impl fmt::Display for ParentReference {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum DocumentType {
     Vision,
-    Strategy,
     Initiative,
     Task,
     Adr,
@@ -162,7 +161,6 @@ impl fmt::Display for DocumentType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             DocumentType::Vision => write!(f, "vision"),
-            DocumentType::Strategy => write!(f, "strategy"),
             DocumentType::Initiative => write!(f, "initiative"),
             DocumentType::Task => write!(f, "task"),
             DocumentType::Adr => write!(f, "adr"),
@@ -176,7 +174,6 @@ impl FromStr for DocumentType {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
             "vision" => Ok(DocumentType::Vision),
-            "strategy" => Ok(DocumentType::Strategy),
             "initiative" => Ok(DocumentType::Initiative),
             "task" => Ok(DocumentType::Task),
             "adr" => Ok(DocumentType::Adr),
@@ -194,13 +191,6 @@ impl DocumentType {
             DocumentType::Vision => match from_phase {
                 Phase::Draft => vec![Phase::Review],
                 Phase::Review => vec![Phase::Published],
-                _ => vec![],
-            },
-            DocumentType::Strategy => match from_phase {
-                Phase::Shaping => vec![Phase::Design],
-                Phase::Design => vec![Phase::Ready],
-                Phase::Ready => vec![Phase::Active],
-                Phase::Active => vec![Phase::Completed],
                 _ => vec![],
             },
             DocumentType::Initiative => match from_phase {
@@ -242,13 +232,6 @@ impl DocumentType {
     pub fn phase_sequence(&self) -> Vec<Phase> {
         match self {
             DocumentType::Vision => vec![Phase::Draft, Phase::Review, Phase::Published],
-            DocumentType::Strategy => vec![
-                Phase::Shaping,
-                Phase::Design,
-                Phase::Ready,
-                Phase::Active,
-                Phase::Completed,
-            ],
             DocumentType::Initiative => vec![
                 Phase::Discovery,
                 Phase::Design,
@@ -293,8 +276,7 @@ pub enum Phase {
     Blocked,
     Completed,
 
-    // Strategy/Initiative phases
-    Shaping,
+    // Initiative phases
     Design,
     Ready,
     Decompose,
@@ -315,7 +297,6 @@ impl fmt::Display for Phase {
             Phase::Active => write!(f, "active"),
             Phase::Blocked => write!(f, "blocked"),
             Phase::Completed => write!(f, "completed"),
-            Phase::Shaping => write!(f, "shaping"),
             Phase::Design => write!(f, "design"),
             Phase::Ready => write!(f, "ready"),
             Phase::Decompose => write!(f, "decompose"),
@@ -381,7 +362,6 @@ impl std::str::FromStr for Tag {
                 "active" => Ok(Tag::Phase(Phase::Active)),
                 "blocked" => Ok(Tag::Phase(Phase::Blocked)),
                 "completed" => Ok(Tag::Phase(Phase::Completed)),
-                "shaping" => Ok(Tag::Phase(Phase::Shaping)),
                 "design" => Ok(Tag::Phase(Phase::Design)),
                 "ready" => Ok(Tag::Phase(Phase::Ready)),
                 "decompose" => Ok(Tag::Phase(Phase::Decompose)),
@@ -536,16 +516,15 @@ mod tests {
     fn test_document_type_can_transition() {
         // Valid forward transitions
         assert!(DocumentType::Vision.can_transition(Phase::Draft, Phase::Review));
-        assert!(DocumentType::Strategy.can_transition(Phase::Shaping, Phase::Design));
         assert!(DocumentType::Task.can_transition(Phase::Todo, Phase::Active));
 
         // Invalid - skipping phases
         assert!(!DocumentType::Vision.can_transition(Phase::Draft, Phase::Published));
-        assert!(!DocumentType::Strategy.can_transition(Phase::Shaping, Phase::Active));
+        assert!(!DocumentType::Initiative.can_transition(Phase::Discovery, Phase::Active));
 
         // Invalid - backward transitions (except blocked)
         assert!(!DocumentType::Vision.can_transition(Phase::Review, Phase::Draft));
-        assert!(!DocumentType::Strategy.can_transition(Phase::Design, Phase::Shaping));
+        assert!(!DocumentType::Initiative.can_transition(Phase::Design, Phase::Discovery));
 
         // Valid - returning from blocked
         assert!(DocumentType::Task.can_transition(Phase::Blocked, Phase::Active));

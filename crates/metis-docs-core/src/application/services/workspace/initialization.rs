@@ -16,7 +16,7 @@ pub struct WorkspaceInitializationResult {
 
 impl WorkspaceInitializationService {
     /// Initialize a new Metis workspace at the given base path
-    /// Creates a .metis directory with database, strategies directory, and default vision
+    /// Creates a .metis directory with database, config, and default vision
     pub async fn initialize_workspace<P: AsRef<Path>>(
         base_path: P,
         project_name: &str,
@@ -100,10 +100,6 @@ impl WorkspaceInitializationService {
                 }
             }
         }
-
-        // Create strategies directory
-        let strategies_dir = metis_dir.join("strategies");
-        std::fs::create_dir_all(&strategies_dir)?;
 
         // Create default vision document only if it doesn't exist
         let vision_path = metis_dir.join("vision.md");
@@ -190,10 +186,9 @@ mod tests {
         assert!(db_path.is_file());
         assert_eq!(result.database_path, db_path);
 
-        // Verify strategies directory was created
+        // Verify strategies directory is NOT created (removed in v2)
         let strategies_dir = metis_dir.join("strategies");
-        assert!(strategies_dir.exists());
-        assert!(strategies_dir.is_dir());
+        assert!(!strategies_dir.exists());
 
         // Verify vision.md was created
         let vision_path = metis_dir.join("vision.md");
