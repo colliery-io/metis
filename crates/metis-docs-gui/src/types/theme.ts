@@ -53,6 +53,7 @@ export interface ThemeColors {
     task: string;
     adr: string;
     backlog: string;
+    specification: string;
   };
 }
 

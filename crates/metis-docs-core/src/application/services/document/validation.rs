@@ -1,6 +1,6 @@
 use crate::domain::documents::types::DocumentType;
 use crate::Result;
-use crate::{Adr, Initiative, MetisError, Task, Vision};
+use crate::{Adr, Initiative, MetisError, Specification, Task, Vision};
 use std::path::Path;
 
 /// Service for validating documents and detecting their types
@@ -169,6 +169,10 @@ impl DocumentValidationService {
                 Err(_) => Ok(false),
             },
             DocumentType::Adr => match Adr::from_file(file_path).await {
+                Ok(_) => Ok(true),
+                Err(_) => Ok(false),
+            },
+            DocumentType::Specification => match Specification::from_file(file_path).await {
                 Ok(_) => Ok(true),
                 Err(_) => Ok(false),
             },

@@ -155,6 +155,7 @@ pub enum DocumentType {
     Initiative,
     Task,
     Adr,
+    Specification,
 }
 
 impl fmt::Display for DocumentType {
@@ -164,6 +165,7 @@ impl fmt::Display for DocumentType {
             DocumentType::Initiative => write!(f, "initiative"),
             DocumentType::Task => write!(f, "task"),
             DocumentType::Adr => write!(f, "adr"),
+            DocumentType::Specification => write!(f, "specification"),
         }
     }
 }
@@ -177,6 +179,7 @@ impl FromStr for DocumentType {
             "initiative" => Ok(DocumentType::Initiative),
             "task" => Ok(DocumentType::Task),
             "adr" => Ok(DocumentType::Adr),
+            "specification" => Ok(DocumentType::Specification),
             _ => Err(format!("Unknown document type: {}", s)),
         }
     }
@@ -212,6 +215,12 @@ impl DocumentType {
                 Phase::Draft => vec![Phase::Discussion],
                 Phase::Discussion => vec![Phase::Decided],
                 Phase::Decided => vec![Phase::Superseded],
+                _ => vec![],
+            },
+            DocumentType::Specification => match from_phase {
+                Phase::Discovery => vec![Phase::Drafting],
+                Phase::Drafting => vec![Phase::Review],
+                Phase::Review => vec![Phase::Published],
                 _ => vec![],
             },
         }
@@ -252,6 +261,12 @@ impl DocumentType {
                 Phase::Decided,
                 Phase::Superseded,
             ],
+            DocumentType::Specification => vec![
+                Phase::Discovery,
+                Phase::Drafting,
+                Phase::Review,
+                Phase::Published,
+            ],
         }
     }
 }
@@ -281,6 +296,9 @@ pub enum Phase {
     Ready,
     Decompose,
     Discovery,
+
+    // Specification phases
+    Drafting,
 }
 
 impl fmt::Display for Phase {
@@ -301,6 +319,7 @@ impl fmt::Display for Phase {
             Phase::Ready => write!(f, "ready"),
             Phase::Decompose => write!(f, "decompose"),
             Phase::Discovery => write!(f, "discovery"),
+            Phase::Drafting => write!(f, "drafting"),
         }
     }
 }
@@ -367,6 +386,7 @@ impl std::str::FromStr for Tag {
                 "decompose" => Ok(Tag::Phase(Phase::Decompose)),
                 "discovery" => Ok(Tag::Phase(Phase::Discovery)),
                 "backlog" => Ok(Tag::Phase(Phase::Backlog)),
+                "drafting" => Ok(Tag::Phase(Phase::Drafting)),
                 _ => Err(()), // Unknown phase
             }
         } else if let Some(stripped) = s.strip_prefix("#") {

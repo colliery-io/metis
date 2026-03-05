@@ -21,7 +21,7 @@ pub struct SearchDocumentsTool {
     pub project_path: String,
     /// Search query to match against document content
     pub query: String,
-    /// Filter by document type (vision, initiative, task, adr)
+    /// Filter by document type (vision, initiative, task, adr, specification)
     pub document_type: Option<String>,
     /// Maximum number of results to return
     pub limit: Option<u32>,

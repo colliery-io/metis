@@ -80,7 +80,7 @@ Cancels an active Ralph loop.
 
 The plugin provides methodology guidance through skills:
 
-- **document-selection**: Helps choose the right document type (vision, initiative, task, ADR)
+- **document-selection**: Helps choose the right document type (vision, initiative, task, ADR, specification)
 - **decomposition**: Patterns for breaking down work into tasks
 - **phase-transitions**: Guidance on advancing documents through their lifecycle
 - **project-patterns**: Common patterns for greenfield projects, tech debt, incident response

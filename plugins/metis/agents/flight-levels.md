@@ -62,10 +62,12 @@ Task (FL 0)       - Atomic units of work
 | Task | Atomic work unit - belongs to an initiative | Initiative (decompose/active) |
 | Backlog | Ad-hoc bugs/features/tech-debt - standalone | No |
 | ADR | Architectural decisions - "why did we do it this way?" | No |
+| Specification | System/feature specs - living documents | Vision or Initiative |
 
 **Parent phase guidance:**
 - Initiatives are typically created under a published vision
 - Tasks are typically created under an initiative in decompose or active phase
+- Specifications are attached to a published vision or non-terminal initiative
 - reassign_parent enforces initiative phase (must be decompose/active)
 
 ## Terminology Mapping
@@ -77,8 +79,9 @@ When users request work items using common terms, map to Metis:
 | "bug ticket", "bug", "defect" | `create_document(type="task", backlog_category="bug", ...)` |
 | "feature ticket", "feature request" | `create_document(type="task", backlog_category="feature", ...)` |
 | "tech debt ticket", "tech debt", "debt" | `create_document(type="task", backlog_category="tech-debt", ...)` |
+| "spec", "specification", "design doc" | `create_document(type="specification", title="...", parent_id="PROJ-V-0001")` |
 
-These are standalone tasks not tied to an initiative. They live in the backlog until prioritized.
+Backlog items are standalone tasks not tied to an initiative. They live in the backlog until prioritized.
 
 To move a backlog item into an initiative later:
 ```

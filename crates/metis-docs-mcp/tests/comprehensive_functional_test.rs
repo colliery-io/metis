@@ -82,7 +82,7 @@ async fn get_vision_short_code(metis_path: &str) -> String {
 fn extract_short_code(result: &rust_mcp_sdk::schema::CallToolResult) -> String {
     if let Some(text) = extract_text_from_result(result) {
         // Match pattern like "PROJ-X-0001" (any document type)
-        let re = regex::Regex::new(r"([A-Z]+-[VITA]-\d{4})").unwrap();
+        let re = regex::Regex::new(r"([A-Z]+-[VITAS]-\d{4})").unwrap();
         if let Some(captures) = re.captures(&text) {
             if let Some(m) = captures.get(1) {
                 return m.as_str().to_string();
@@ -320,4 +320,117 @@ async fn test_direct_configuration_workflow() {
     assert!(final_list.is_ok(), "Final document listing should succeed");
 
     println!("✅ Direct configuration workflow complete!");
+}
+
+#[tokio::test]
+async fn test_specification_workflow() {
+    println!("=== Testing Specification Workflow ===");
+
+    let (_temp_dir, _project_path, metis_path) =
+        setup_project_with_config(FlightLevelConfig::streamlined()).await;
+
+    // Step 1: Get vision short code
+    let vision_short_code = get_vision_short_code(&metis_path).await;
+    println!("✅ Vision found: {}", vision_short_code);
+
+    // Step 2: Create specification with vision as parent
+    let create_spec = CreateDocumentTool {
+        project_path: metis_path.clone(),
+        document_type: "specification".to_string(),
+        title: "System Architecture Spec".to_string(),
+        parent_id: Some(vision_short_code.clone()),
+        complexity: None,
+        stakeholders: None,
+        decision_maker: None,
+        backlog_category: None,
+    };
+    let result = create_spec.call_tool().await;
+    assert!(result.is_ok(), "Create specification should succeed: {:?}", result.err());
+    let spec_short_code = extract_short_code(&result.unwrap());
+    println!("✅ Specification created: {}", spec_short_code);
+
+    // Step 3: Verify specification appears in list
+    let list_tool = ListDocumentsTool {
+        project_path: metis_path.clone(),
+        include_archived: None,
+    };
+    let list_result = list_tool.call_tool().await.unwrap();
+    let list_text = extract_text_from_result(&list_result).unwrap();
+    assert!(
+        list_text.contains("specification"),
+        "Specification should appear in list output"
+    );
+    assert!(
+        list_text.contains(&spec_short_code),
+        "Specification short code should appear in list"
+    );
+    println!("✅ Specification appears in list");
+
+    // Step 4: Transition specification through all phases: discovery -> drafting -> review -> published
+    for expected_phase in ["drafting", "review", "published"] {
+        let transition = TransitionPhaseTool {
+            project_path: metis_path.clone(),
+            short_code: spec_short_code.clone(),
+            phase: None, // Auto-advance
+            force: None,
+        };
+        let result = transition.call_tool().await;
+        assert!(
+            result.is_ok(),
+            "Transition to {} should succeed: {:?}",
+            expected_phase,
+            result.err()
+        );
+        let text = extract_text_from_result(&result.unwrap()).unwrap();
+        assert!(
+            text.contains(expected_phase),
+            "Should show transition to {}: {}",
+            expected_phase,
+            text
+        );
+        println!("✅ Specification transitioned to {}", expected_phase);
+    }
+
+    // Step 5: Create specification without parent should fail
+    let create_no_parent = CreateDocumentTool {
+        project_path: metis_path.clone(),
+        document_type: "specification".to_string(),
+        title: "No Parent Spec".to_string(),
+        parent_id: None,
+        complexity: None,
+        stakeholders: None,
+        decision_maker: None,
+        backlog_category: None,
+    };
+    let result = create_no_parent.call_tool().await;
+    assert!(result.is_err(), "Specification without parent should fail");
+    println!("✅ Specification without parent correctly rejected");
+
+    // Step 6: Search for specification
+    let search_tool = SearchDocumentsTool {
+        project_path: metis_path.clone(),
+        query: "Architecture".to_string(),
+        document_type: Some("specification".to_string()),
+        limit: None,
+        include_archived: None,
+    };
+    let search_result = search_tool.call_tool().await;
+    assert!(search_result.is_ok(), "Search should succeed");
+    let search_text = extract_text_from_result(&search_result.unwrap()).unwrap();
+    assert!(
+        search_text.contains(&spec_short_code),
+        "Search should find the specification"
+    );
+    println!("✅ Specification found via search");
+
+    // Step 7: Archive specification
+    let archive_tool = ArchiveDocumentTool {
+        project_path: metis_path.clone(),
+        short_code: spec_short_code.clone(),
+    };
+    let result = archive_tool.call_tool().await;
+    assert!(result.is_ok(), "Archive specification should succeed");
+    println!("✅ Specification archived");
+
+    println!("✅ Specification workflow complete!");
 }

@@ -64,6 +64,28 @@
         {{ document.title }}
       </h4>
 
+      <!-- Supporting Specifications -->
+      <details
+        v-if="supportingSpecs.length > 0"
+        class="supporting-docs"
+        @click.stop
+      >
+        <summary class="supporting-docs-summary">
+          {{ supportingSpecs.length }} spec{{ supportingSpecs.length > 1 ? 's' : '' }}
+        </summary>
+        <ul class="supporting-docs-list">
+          <li
+            v-for="spec in supportingSpecs"
+            :key="spec.short_code"
+            class="supporting-doc-item"
+            @click.stop="$emit('view', spec)"
+          >
+            <span class="supporting-doc-code">{{ spec.short_code }}</span>
+            <span class="supporting-doc-title">{{ spec.title }}</span>
+          </li>
+        </ul>
+      </details>
+
       <!-- Footer with Phase and Date -->
       <div class="card-footer">
         <!-- Phase -->
@@ -96,6 +118,7 @@ interface Props {
   document: DocumentInfo
   draggingEnabled?: boolean
   boardType?: string
+  allDocuments?: DocumentInfo[]
   highlighted?: boolean
 }
 
@@ -107,6 +130,7 @@ interface Emits {
 
 const props = withDefaults(defineProps<Props>(), {
   draggingEnabled: true,
+  allDocuments: () => [],
   highlighted: false
 })
 
@@ -129,8 +153,21 @@ const accentColor = computed(() => {
     case 'initiative': return colors.initiative
     case 'task': return colors.task
     case 'adr': return colors.adr
+    case 'specification': return colors.specification
     default: return colors.backlog
   }
+})
+
+// Supporting specifications linked to this document
+const supportingSpecs = computed(() => {
+  if (!props.allDocuments.length) return []
+  const docType = props.document.document_type
+  if (docType !== 'initiative' && docType !== 'task') return []
+
+  const docCode = props.document.short_code
+  return props.allDocuments.filter(d =>
+    d.document_type === 'specification' && d.parent_id === docCode
+  )
 })
 
 const getPhaseColor = (phase?: string) => {
@@ -325,6 +362,73 @@ const handleMouseLeave = (e: Event) => {
   font-size: 10px;
   font-weight: 400;
   letter-spacing: 0.02em;
+}
+
+/* Supporting Documents */
+.supporting-docs {
+  margin-bottom: 10px;
+}
+
+.supporting-docs-summary {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  padding: 2px 0;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.supporting-docs-summary::before {
+  content: '📑';
+  font-size: 10px;
+}
+
+.supporting-docs-summary:hover {
+  color: var(--color-text-secondary);
+}
+
+.supporting-docs[open] .supporting-docs-summary {
+  margin-bottom: 4px;
+}
+
+.supporting-docs-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.supporting-doc-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.supporting-doc-item:hover {
+  background-color: var(--color-background-tertiary);
+}
+
+.supporting-doc-code {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--color-documentType-specification, var(--color-text-secondary));
+  flex-shrink: 0;
+}
+
+.supporting-doc-title {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Highlighted state from search */

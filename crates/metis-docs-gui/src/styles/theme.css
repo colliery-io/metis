@@ -41,6 +41,7 @@
 .text-doc-task { color: var(--color-documentType-task); }
 .text-doc-adr { color: var(--color-documentType-adr); }
 .text-doc-backlog { color: var(--color-documentType-backlog); }
+.text-doc-specification { color: var(--color-documentType-specification); }
 
 .bg-doc-vision { background-color: var(--color-documentType-vision); }
 .bg-doc-strategy { background-color: var(--color-documentType-strategy); }
@@ -48,6 +49,7 @@
 .bg-doc-task { background-color: var(--color-documentType-task); }
 .bg-doc-adr { background-color: var(--color-documentType-adr); }
 .bg-doc-backlog { background-color: var(--color-documentType-backlog); }
+.bg-doc-specification { background-color: var(--color-documentType-specification); }
 
 /* Hover states */
 .hover\:bg-interactive-primary-hover:hover { background-color: var(--color-interactive-primaryHover); }

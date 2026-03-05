@@ -19,6 +19,7 @@ export interface DocumentInfo {
   updated_at: number;
   tags: string[];
   initiative_id: string | null;
+  parent_id: string | null;
 }
 
 export interface DocumentContent {
@@ -132,6 +133,7 @@ export enum DocumentType {
   Initiative = 'initiative',
   Task = 'task',
   ADR = 'adr',
+  Specification = 'specification',
 }
 
 export enum Phase {
@@ -150,6 +152,7 @@ export enum Phase {
   Discussion = 'discussion',
   Decided = 'decided',
   Superseded = 'superseded',
+  Drafting = 'drafting',
 }
 
 // Utility functions
@@ -169,6 +172,8 @@ export function getDocumentTypeIcon(type: string): string {
       return '✅';
     case 'adr':
       return '📋';
+    case 'specification':
+      return '📑';
     default:
       return '📄';
   }
@@ -186,6 +191,7 @@ export function getPhaseColor(phase: string): string {
     case 'design':
     case 'decompose':
     case 'doing':
+    case 'drafting':
       return 'blue';
     case 'published':
     case 'ready':

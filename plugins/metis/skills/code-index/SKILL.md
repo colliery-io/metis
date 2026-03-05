@@ -13,7 +13,7 @@ The code index file (`.metis/code-index.md`) is a **regular file**, NOT a Metis 
 
 - Use the **Read** tool to read `.metis/code-index.md`
 - Use the **Edit** tool to modify `.metis/code-index.md`
-- **NEVER** use `mcp__metis__edit_document` or `mcp__metis__read_document` for this file — those are for Metis documents (visions, initiatives, tasks, ADRs), not the code index
+- **NEVER** use `mcp__metis__edit_document` or `mcp__metis__read_document` for this file — those are for Metis documents (visions, initiatives, tasks, ADRs, specifications), not the code index
 
 ## Overview
 

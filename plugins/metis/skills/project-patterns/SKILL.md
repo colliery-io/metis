@@ -64,6 +64,7 @@ For each initiative: discovery → design → decompose → execute
 - **Foundation first**: But don't gold-plate it
 - **Expect pivots**: Early initiatives may invalidate later plans
 - **ADRs from day one**: Capture decisions while context fresh
+- **Specifications for key systems**: Create specifications for core system components as living design documents
 
 ## Tech Debt Campaigns
 
@@ -147,7 +148,7 @@ create_document(type="initiative", title="User Dashboard", parent_id="PROJ-V-000
 
 **2. Discovery:** Understand requirements, constraints, users
 
-**3. Design:** Define solution approach, create ADRs for decisions
+**3. Design:** Define solution approach, create ADRs for decisions, create specifications for system design
 
 **4. Decompose:** Break into tasks (prefer vertical slices)
 

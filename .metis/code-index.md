@@ -1,6 +1,6 @@
 # Code Index
 
-> Generated: 2026-03-03T02:48:29Z | 142 files | JavaScript, Rust, TypeScript
+> Generated: 2026-03-04T19:38:52Z | 144 files | JavaScript, Rust, TypeScript
 
 ## Project Structure
 
@@ -30,7 +30,7 @@
 │   │   │   │   │   ├── adr.rs
 │   │   │   │   │   ├── initiative.rs
 │   │   │   │   │   ├── mod.rs
-│   │   │   │   │   ├── strategy.rs
+│   │   │   │   │   ├── specification.rs
 │   │   │   │   │   └── task.rs
 │   │   │   │   ├── index.rs
 │   │   │   │   ├── init.rs
@@ -68,6 +68,7 @@
 │   │   │   │           ├── archive.rs
 │   │   │   │           ├── detection.rs
 │   │   │   │           ├── initialization.rs
+│   │   │   │           ├── migration.rs
 │   │   │   │           ├── mod.rs
 │   │   │   │           ├── reassignment.rs
 │   │   │   │           ├── recovery.rs
@@ -95,7 +96,7 @@
 │   │   │   │   │   │   └── mod.rs
 │   │   │   │   │   ├── metadata.rs
 │   │   │   │   │   ├── mod.rs
-│   │   │   │   │   ├── strategy/
+│   │   │   │   │   ├── specification/
 │   │   │   │   │   │   └── mod.rs
 │   │   │   │   │   ├── task/
 │   │   │   │   │   │   └── mod.rs
@@ -117,7 +118,8 @@
 │   │       ├── configuration_recovery_test.rs
 │   │       ├── database_reconstruction_test.rs
 │   │       ├── id_path_consistency_test.rs
-│   │       └── reassignment_test.rs
+│   │       ├── reassignment_test.rs
+│   │       └── specification_test.rs
 │   ├── metis-docs-gui/
 │   │   ├── postcss.config.js
 │   │   ├── src/
@@ -609,8 +611,8 @@
 - pub `init_logging` function L53-65 — `(&self)`
 - pub `execute` function L67-82 — `(&self) -> Result<()>`
 -  `Cli` type L52-83 — `= Cli`
--  `tests` module L86-305 — `-`
--  `test_comprehensive_cli_workflow` function L97-304 — `()`
+-  `tests` module L86-274 — `-`
+-  `test_comprehensive_cli_workflow` function L97-273 — `()`
 
 #### crates/metis-docs-cli/src/lib.rs
 
@@ -663,17 +665,17 @@
 #### crates/metis-docs-cli/src/commands/config.rs
 
 - pub `ConfigCommand` struct L7-10 — `{ action: ConfigAction }`
-- pub `ConfigAction` enum L13-33 — `Show | Set | Get`
-- pub `execute` function L36-65 — `(&self) -> Result<()>`
--  `ConfigCommand` type L35-164 — `= ConfigCommand`
--  `show_config` function L67-91 — `( &self, config_repo: &mut metis_core::dal::database::configuration_repository::...`
--  `set_config` function L93-143 — `( &self, config_repo: &mut metis_core::dal::database::configuration_repository::...`
--  `get_config` function L145-163 — `( &self, config_repo: &mut metis_core::dal::database::configuration_repository::...`
--  `tests` module L167-302 — `-`
--  `test_config_show_default` function L173-202 — `()`
--  `test_config_set_streamlined_preset` function L205-238 — `()`
--  `test_config_set_invalid_preset` function L241-275 — `()`
--  `test_config_without_workspace` function L278-301 — `()`
+- pub `ConfigAction` enum L13-30 — `Show | Set | Get`
+- pub `execute` function L33-61 — `(&self) -> Result<()>`
+-  `ConfigCommand` type L32-151 — `= ConfigCommand`
+-  `show_config` function L63-86 — `( &self, config_repo: &mut metis_core::dal::database::configuration_repository::...`
+-  `set_config` function L88-130 — `( &self, config_repo: &mut metis_core::dal::database::configuration_repository::...`
+-  `get_config` function L132-150 — `( &self, config_repo: &mut metis_core::dal::database::configuration_repository::...`
+-  `tests` module L154-287 — `-`
+-  `test_config_show_default` function L160-189 — `()`
+-  `test_config_set_streamlined_preset` function L192-224 — `()`
+-  `test_config_set_invalid_preset` function L227-260 — `()`
+-  `test_config_without_workspace` function L263-286 — `()`
 
 #### crates/metis-docs-cli/src/commands/index.rs
 
@@ -693,19 +695,19 @@
 
 #### crates/metis-docs-cli/src/commands/init.rs
 
-- pub `InitCommand` struct L11-27 — `{ name: Option<String>, prefix: Option<String>, preset: Option<String>, strategi...`
-- pub `execute` function L30-95 — `(&self) -> Result<()>`
--  `InitCommand` type L29-153 — `= InitCommand`
--  `determine_project_prefix` function L98-121 — `(&self, project_name: &str) -> String` — Determine the project prefix from command arguments or project name
--  `determine_flight_config` function L124-152 — `(&self) -> Result<FlightLevelConfig>` — Determine the flight level configuration based on command arguments
--  `tests` module L156-445 — `-`
--  `test_init_command_creates_workspace` function L162-232 — `()`
--  `test_init_command_workspace_already_exists` function L235-268 — `()`
--  `test_init_command_default_name` function L271-299 — `()`
--  `test_init_command_with_preset` function L302-341 — `()`
--  `test_init_command_with_custom_flags` function L344-378 — `()`
--  `test_init_command_default_streamlined` function L381-417 — `()`
--  `test_init_command_invalid_preset` function L420-444 — `()`
+- pub `InitCommand` struct L11-24 — `{ name: Option<String>, prefix: Option<String>, preset: Option<String>, initiati...`
+- pub `execute` function L27-92 — `(&self) -> Result<()>`
+-  `InitCommand` type L26-145 — `= InitCommand`
+-  `determine_project_prefix` function L95-118 — `(&self, project_name: &str) -> String` — Determine the project prefix from command arguments or project name
+-  `determine_flight_config` function L121-144 — `(&self) -> Result<FlightLevelConfig>` — Determine the flight level configuration based on command arguments
+-  `tests` module L148-429 — `-`
+-  `test_init_command_creates_workspace` function L154-219 — `()`
+-  `test_init_command_workspace_already_exists` function L222-255 — `()`
+-  `test_init_command_default_name` function L258-286 — `()`
+-  `test_init_command_with_preset` function L289-327 — `()`
+-  `test_init_command_with_custom_flags` function L330-362 — `()`
+-  `test_init_command_default_streamlined` function L365-401 — `()`
+-  `test_init_command_invalid_preset` function L404-428 — `()`
 
 #### crates/metis-docs-cli/src/commands/list.rs
 
@@ -787,27 +789,26 @@
 - pub `SyncCommand` struct L7 — `-`
 - pub `execute` function L10-111 — `(&self) -> Result<()>`
 -  `SyncCommand` type L9-112 — `= SyncCommand`
--  `tests` module L115-184 — `-`
+-  `tests` module L115-174 — `-`
 -  `test_sync_command_no_workspace` function L122-142 — `()`
--  `test_sync_command_with_workspace` function L145-183 — `()`
+-  `test_sync_command_with_workspace` function L145-173 — `()`
 
 #### crates/metis-docs-cli/src/commands/transition.rs
 
 - pub `TransitionCommand` struct L10-16 — `{ short_code: String, phase: Option<String> }`
 - pub `execute` function L19-58 — `(&self) -> Result<()>`
--  `TransitionCommand` type L18-81 — `= TransitionCommand`
--  `parse_phase` function L60-80 — `(&self, phase_str: &str) -> Result<Phase>`
--  `tests` module L84-654 — `-`
--  `test_parse_phase` function L91-101 — `()`
--  `test_transition_command_no_workspace` function L104-130 — `()`
--  `test_find_document_not_found` function L133-164 — `()`
--  `test_vision_full_transition_sequence` function L167-223 — `()`
--  `test_strategy_full_transition_sequence` function L226-311 — `()`
--  `test_initiative_full_transition_sequence` function L314-389 — `()`
--  `test_task_full_transition_sequence` function L392-487 — `()`
--  `test_adr_full_transition_sequence` function L490-553 — `()`
--  `test_invalid_transitions` function L556-603 — `()`
--  `test_auto_transitions` function L606-653 — `()`
+-  `TransitionCommand` type L18-80 — `= TransitionCommand`
+-  `parse_phase` function L60-79 — `(&self, phase_str: &str) -> Result<Phase>`
+-  `tests` module L83-538 — `-`
+-  `test_parse_phase` function L90-100 — `()`
+-  `test_transition_command_no_workspace` function L103-129 — `()`
+-  `test_find_document_not_found` function L132-163 — `()`
+-  `test_vision_full_transition_sequence` function L166-222 — `()`
+-  `test_initiative_full_transition_sequence` function L225-272 — `()`
+-  `test_task_full_transition_sequence` function L275-371 — `()`
+-  `test_adr_full_transition_sequence` function L374-437 — `()`
+-  `test_invalid_transitions` function L440-487 — `()`
+-  `test_auto_transitions` function L490-537 — `()`
 
 #### crates/metis-docs-cli/src/commands/validate.rs
 
@@ -835,50 +836,46 @@
 
 #### crates/metis-docs-cli/src/commands/create/adr.rs
 
-- pub `create_new_adr` function L9-41 — `(title: &str) -> Result<()>` — Create a new ADR document with defaults and write to file
--  `tests` module L44-143 — `-`
--  `test_create_new_adr_no_workspace` function L52-68 — `()`
--  `test_create_new_adr_with_workspace` function L71-142 — `()`
+- pub `create_new_adr` function L9-40 — `(title: &str) -> Result<()>` — Create a new ADR document with defaults and write to file
+-  `tests` module L43-142 — `-`
+-  `test_create_new_adr_no_workspace` function L51-67 — `()`
+-  `test_create_new_adr_with_workspace` function L70-141 — `()`
 
 #### crates/metis-docs-cli/src/commands/create/initiative.rs
 
-- pub `create_new_initiative` function L12-55 — `(title: &str, strategy_id: &str) -> Result<()>` — Create a new Initiative document with defaults and write to file
--  `find_strategy` function L58-113 — `( workspace_dir: &Path, strategy_id: &str, ) -> Result<(DocumentId, std::path::P...` — Find a strategy by ID and return its DocumentId and file path
--  `list_available_strategies` function L116-131 — `(strategies_dir: &Path) -> Result<Vec<String>>` — List available strategy IDs
--  `prompt_for_complexity` function L134-161 — `() -> Result<Complexity>` — Prompt user to select complexity level
--  `tests` module L164-298 — `-`
--  `test_create_new_initiative_no_workspace` function L171-187 — `()`
--  `test_find_strategy_not_found` function L190-224 — `()`
--  `test_list_available_strategies` function L227-242 — `()`
--  `test_create_initiative_flow_without_prompt` function L247-297 — `()`
+- pub `create_new_initiative` function L11-53 — `(title: &str, vision_id: &str) -> Result<()>` — Create a new Initiative document with defaults and write to file
+-  `find_vision` function L56-98 — `( workspace_dir: &std::path::Path, vision_id: &str, ) -> Result<metis_core::doma...` — Find a vision by short code and return its DocumentId
+-  `prompt_for_complexity` function L101-128 — `() -> Result<Complexity>` — Prompt user to select complexity level
+-  `tests` module L131-224 — `-`
+-  `test_create_new_initiative_no_workspace` function L136-154 — `()`
+-  `test_find_vision_not_found` function L157-192 — `()`
+-  `test_create_initiative_under_vision` function L195-223 — `()`
 
 #### crates/metis-docs-cli/src/commands/create/mod.rs
 
 - pub `CreateCommand` struct L11-14 — `{ document_type: CreateCommands }`
-- pub `CreateCommands` enum L17-47 — `Strategy | Initiative | Task | Adr`
+- pub `CreateCommands` enum L17-47 — `Initiative | Task | Adr | Specification`
 - pub `execute` function L50-72 — `(&self) -> Result<()>`
 -  `adr` module L1 — `-`
 -  `initiative` module L2 — `-`
--  `strategy` module L3 — `-`
+-  `specification` module L3 — `-`
 -  `task` module L4 — `-`
 -  `CreateCommand` type L49-73 — `= CreateCommand`
 
-#### crates/metis-docs-cli/src/commands/create/strategy.rs
+#### crates/metis-docs-cli/src/commands/create/specification.rs
 
-- pub `create_new_strategy` function L11-56 — `(title: &str, vision_slug: Option<&str>) -> Result<()>` — Create a new Strategy document with defaults and write to file
--  `get_vision_document_id` function L59-87 — `(workspace_dir: &Path, vision_slug: &str) -> Result<DocumentId>` — Get the actual DocumentId by parsing the vision document
--  `tests` module L90-198 — `-`
--  `test_create_new_strategy_no_workspace` function L98-114 — `()`
--  `test_create_new_strategy_with_workspace` function L117-197 — `()`
+- pub `create_new_specification` function L9-44 — `(title: &str, parent: &str) -> Result<()>` — Create a new Specification document with defaults and write to file
+-  `tests` module L47-138 — `-`
+-  `test_create_new_specification_no_workspace` function L55-69 — `()`
+-  `test_create_new_specification_with_workspace` function L72-137 — `()`
 
 #### crates/metis-docs-cli/src/commands/create/task.rs
 
-- pub `create_new_task` function L11-50 — `(title: &str, initiative_id: &str) -> Result<()>` — Create a new Task document with defaults and write to file
--  `find_initiative` function L53-90 — `( workspace_dir: &Path, initiative_id: &str, ) -> Result<(DocumentId, std::path:...` — Find an initiative by short code and return its DocumentId and file path
--  `find_strategy_for_initiative` function L93-113 — `(workspace_dir: &Path, initiative_id: &str) -> Result<String>` — Find the strategy ID that contains the given initiative
--  `tests` module L116-189 — `-`
--  `test_create_new_task_no_workspace` function L123-141 — `()`
--  `test_find_initiative_not_found` function L144-188 — `()`
+- pub `create_new_task` function L10-44 — `(title: &str, initiative_id: &str) -> Result<()>` — Create a new Task document with defaults and write to file
+-  `find_initiative` function L47-77 — `( workspace_dir: &Path, initiative_id: &str, ) -> Result<(metis_core::domain::do...` — Find an initiative by short code and return its DocumentId and file path
+-  `tests` module L80-148 — `-`
+-  `test_create_new_task_no_workspace` function L85-103 — `()`
+-  `test_find_initiative_not_found` function L106-147 — `()`
 
 ### crates/metis-docs-cli/tests
 
@@ -892,14 +889,14 @@
 
 #### crates/metis-docs-cli/tests/comprehensive_functional_test.rs
 
-- pub `init_workspace` function L13-37 — `( path: &PathBuf, name: Option<&str>, prefix: Option<&str>, preset: Option<&str>...` — These tests simulate real user command sequences through the CLI
-- pub `verify_workspace` function L39-49 — `(path: &PathBuf) -> bool` — These tests simulate real user command sequences through the CLI
-- pub `verify_config_toml` function L51-60 — `(path: &PathBuf, expected_prefix: &str) -> bool` — These tests simulate real user command sequences through the CLI
--  `cli_helpers` module L9-61 — `-` — Helper to run CLI commands programmatically
--  `test_complete_streamlined_workflow` function L64-140 — `()` — These tests simulate real user command sequences through the CLI
--  `test_complete_full_configuration_workflow` function L143-197 — `()` — These tests simulate real user command sequences through the CLI
--  `test_config_toml_persistence` function L200-269 — `()` — These tests simulate real user command sequences through the CLI
--  `test_custom_prefix_handling` function L272-314 — `()` — These tests simulate real user command sequences through the CLI
+- pub `init_workspace` function L13-36 — `( path: &PathBuf, name: Option<&str>, prefix: Option<&str>, preset: Option<&str>...` — These tests simulate real user command sequences through the CLI
+- pub `verify_workspace` function L38-48 — `(path: &PathBuf) -> bool` — These tests simulate real user command sequences through the CLI
+- pub `verify_config_toml` function L50-59 — `(path: &PathBuf, expected_prefix: &str) -> bool` — These tests simulate real user command sequences through the CLI
+-  `cli_helpers` module L9-60 — `-` — Helper to run CLI commands programmatically
+-  `test_complete_streamlined_workflow` function L63-135 — `()` — These tests simulate real user command sequences through the CLI
+-  `test_complete_direct_configuration_workflow` function L138-188 — `()` — These tests simulate real user command sequences through the CLI
+-  `test_config_toml_persistence` function L191-260 — `()` — These tests simulate real user command sequences through the CLI
+-  `test_custom_prefix_handling` function L263-305 — `()` — These tests simulate real user command sequences through the CLI
 
 ### crates/metis-docs-core/src/application
 
@@ -958,23 +955,20 @@
 - pub `create_relationship` function L82-96 — `( &mut self, parent_id: &str, child_id: &str, parent_filepath: &str, child_filep...` — Create a parent-child relationship
 - pub `document_exists` function L99-101 — `(&mut self, filepath: &str) -> Result<bool>` — Check if a document exists by filepath
 - pub `count_by_type` function L104-107 — `(&mut self, doc_type: DocumentType) -> Result<usize>` — Get document count by type
-- pub `get_all_id_filepath_pairs` function L110-129 — `(&mut self) -> Result<Vec<(String, String)>>` — Get all document IDs and their filepaths (useful for validation)
-- pub `find_by_strategy_id` function L132-134 — `(&mut self, strategy_id: &str) -> Result<Vec<Document>>` — Get all documents belonging to a strategy
-- pub `find_by_initiative_id` function L137-139 — `(&mut self, initiative_id: &str) -> Result<Vec<Document>>` — Get all documents belonging to an initiative
-- pub `find_strategy_hierarchy` function L142-144 — `(&mut self, strategy_id: &str) -> Result<Vec<Document>>` — Get all documents in a strategy hierarchy (strategy + its initiatives + their tasks)
-- pub `find_strategy_hierarchy_by_short_code` function L147-153 — `( &mut self, strategy_short_code: &str, ) -> Result<Vec<Document>>` — Get all documents in a strategy hierarchy by short code (strategy + its initiatives + their tasks)
-- pub `find_initiative_hierarchy` function L156-158 — `(&mut self, initiative_id: &str) -> Result<Vec<Document>>` — Get all documents in an initiative hierarchy (initiative + its tasks)
-- pub `find_initiative_hierarchy_by_short_code` function L161-167 — `( &mut self, initiative_short_code: &str, ) -> Result<Vec<Document>>` — Get all documents in an initiative hierarchy by short code (initiative + its tasks)
-- pub `generate_short_code` function L170-175 — `(&mut self, doc_type: &str) -> Result<String>` — Generate a short code for a document type (requires db_path)
-- pub `set_counter_if_lower` function L179-183 — `(&mut self, _doc_type: &str, _min_value: u32) -> Result<bool>` — Set counter if the current value is lower than the provided value
--  `DatabaseService` type L10-184 — `= DatabaseService`
--  `tests` module L187-423 — `-`
--  `setup_service` function L191-194 — `() -> DatabaseService`
--  `create_test_document` function L196-214 — `() -> NewDocument`
--  `create_test_document_with_lineage` function L216-251 — `( id: &str, doc_type: &str, filepath: &str, strategy_id: Option<String>, initiat...`
--  `test_database_service_crud` function L254-287 — `()`
--  `test_database_service_relationships` function L290-335 — `()`
--  `test_lineage_queries` function L338-422 — `()`
+- pub `get_all_id_filepath_pairs` function L110-128 — `(&mut self) -> Result<Vec<(String, String)>>` — Get all document IDs and their filepaths (useful for validation)
+- pub `find_by_initiative_id` function L131-133 — `(&mut self, initiative_id: &str) -> Result<Vec<Document>>` — Get all documents belonging to an initiative
+- pub `find_initiative_hierarchy` function L136-138 — `(&mut self, initiative_id: &str) -> Result<Vec<Document>>` — Get all documents in an initiative hierarchy (initiative + its tasks)
+- pub `find_initiative_hierarchy_by_short_code` function L141-147 — `( &mut self, initiative_short_code: &str, ) -> Result<Vec<Document>>` — Get all documents in an initiative hierarchy by short code (initiative + its tasks)
+- pub `generate_short_code` function L150-155 — `(&mut self, doc_type: &str) -> Result<String>` — Generate a short code for a document type (requires db_path)
+- pub `set_counter_if_lower` function L159-163 — `(&mut self, _doc_type: &str, _min_value: u32) -> Result<bool>` — Set counter if the current value is lower than the provided value
+-  `DatabaseService` type L10-164 — `= DatabaseService`
+-  `tests` module L167-365 — `-`
+-  `setup_service` function L171-174 — `() -> DatabaseService`
+-  `create_test_document` function L176-194 — `() -> NewDocument`
+-  `create_test_document_with_lineage` function L196-229 — `( id: &str, doc_type: &str, filepath: &str, initiative_id: Option<String>, ) -> ...`
+-  `test_database_service_crud` function L232-265 — `()`
+-  `test_database_service_relationships` function L268-313 — `()`
+-  `test_lineage_queries` function L316-364 — `()`
 
 #### crates/metis-docs-core/src/application/services/filesystem.rs
 
@@ -1010,85 +1004,85 @@
 - pub `with_workspace_dir` function L31-36 — `(mut self, workspace_dir: &'a Path) -> Self` — Set the workspace directory for lineage extraction
 - pub `import_from_file` function L63-90 — `(&mut self, file_path: P) -> Result<Document>` — Direction 1: File → DocumentObject → Database
 - pub `export_to_file` function L94-114 — `(&mut self, filepath: &str) -> Result<()>` — Direction 2: Database → DocumentObject → File
-- pub `sync_file` function L571-637 — `(&mut self, file_path: P) -> Result<SyncResult>` — Synchronize a single file between filesystem and database using directional methods
-- pub `sync_directory` function L640-686 — `(&mut self, dir_path: P) -> Result<Vec<SyncResult>>` — Sync all markdown files in a directory
-- pub `verify_sync` function L689-729 — `(&mut self, dir_path: P) -> Result<Vec<SyncIssue>>` — Verify database and filesystem are in sync
-- pub `recover_counters_from_filesystem` function L772-886 — `( &self, dir_path: P, ) -> Result<std::collections::HashMap<String, u32>>` — Recover short code counters from filesystem by scanning all documents
-- pub `SyncResult` enum L916-929 — `Imported | Updated | Deleted | UpToDate | NotFound | Error | Moved | Renumbered` — Result of synchronizing a single document
-- pub `filepath` function L933-944 — `(&self) -> &str` — Get the filepath for this result
-- pub `is_change` function L947-956 — `(&self) -> bool` — Check if this result represents a change
-- pub `is_error` function L959-961 — `(&self) -> bool` — Check if this result represents an error
-- pub `SyncIssue` enum L966-970 — `MissingFromDatabase | MissingFromFilesystem | OutOfSync` — Issues found during sync verification
+- pub `sync_file` function L550-616 — `(&mut self, file_path: P) -> Result<SyncResult>` — Synchronize a single file between filesystem and database using directional methods
+- pub `sync_directory` function L619-665 — `(&mut self, dir_path: P) -> Result<Vec<SyncResult>>` — Sync all markdown files in a directory
+- pub `verify_sync` function L668-708 — `(&mut self, dir_path: P) -> Result<Vec<SyncIssue>>` — Verify database and filesystem are in sync
+- pub `recover_counters_from_filesystem` function L751-865 — `( &self, dir_path: P, ) -> Result<std::collections::HashMap<String, u32>>` — Recover short code counters from filesystem by scanning all documents
+- pub `SyncResult` enum L895-908 — `Imported | Updated | Deleted | UpToDate | NotFound | Error | Moved | Renumbered` — Result of synchronizing a single document
+- pub `filepath` function L912-923 — `(&self) -> &str` — Get the filepath for this result
+- pub `is_change` function L926-935 — `(&self) -> bool` — Check if this result represents a change
+- pub `is_error` function L938-940 — `(&self) -> bool` — Check if this result represents an error
+- pub `SyncIssue` enum L945-949 — `MissingFromDatabase | MissingFromFilesystem | OutOfSync` — Issues found during sync verification
 -  `to_relative_path` function L40-48 — `(&self, absolute_path: P) -> String` — Convert absolute path to relative path (relative to workspace directory)
 -  `to_absolute_path` function L52-59 — `(&self, relative_path: &str) -> std::path::PathBuf` — Convert relative path to absolute path (prepends workspace directory)
--  `domain_to_database_model` function L117-173 — `( &self, document_obj: &dyn DocumentTrait, filepath: &str, file_hash: String, up...` — Convert domain object to database model
--  `extract_lineage_from_path` function L177-243 — `( file_path: P, workspace_dir: &Path, ) -> (Option<DocumentId>, Option<DocumentI...` — Extract lineage information from file path
--  `is_backlog_path` function L247-264 — `(file_path: P, workspace_dir: &Path) -> bool` — Check if a file path is within the backlog directory
--  `extract_document_short_code` function L267-299 — `(file_path: P) -> Result<String>` — Extract document short code from file without keeping the document object around
--  `update_moved_document` function L302-314 — `( &mut self, existing_doc: &Document, new_file_path: P, ) -> Result<()>` — Update a document that has been moved to a new path
--  `resolve_short_code_collisions` function L318-398 — `( &mut self, dir_path: P, ) -> Result<Vec<SyncResult>>` — Detect and resolve short code collisions across all markdown files
--  `renumber_document` function L402-508 — `( &mut self, file_path: P, old_short_code: &str, ) -> Result<String>` — Renumber a single document to resolve short code collision
--  `update_sibling_references` function L511-568 — `( &mut self, file_path: P, old_short_code: &str, new_short_code: &str, ) -> Resu...` — Update cross-references in sibling documents (same directory)
--  `update_counters_from_filesystem` function L733-763 — `(&mut self, dir_path: P) -> Result<()>` — Update counters in database based on max values seen in filesystem
--  `is_valid_short_code_format` function L889-911 — `(short_code: &str) -> bool` — Validate short code format: PREFIX-TYPE-NNNN
--  `SyncResult` type L931-962 — `= SyncResult`
--  `tests` module L973-1215 — `-`
--  `setup_services` function L978-988 — `() -> (tempfile::TempDir, DatabaseService)`
--  `create_test_document_content` function L990-1005 — `() -> String`
--  `test_import_from_file` function L1008-1027 — `()`
--  `test_sync_file_operations` function L1030-1110 — `()`
--  `test_sync_directory` function L1113-1167 — `()`
--  `test_is_backlog_path` function L1170-1214 — `()`
+-  `domain_to_database_model` function L117-170 — `( &self, document_obj: &dyn DocumentTrait, filepath: &str, file_hash: String, up...` — Convert domain object to database model
+-  `extract_lineage_from_path` function L174-222 — `( file_path: P, workspace_dir: &Path, ) -> Option<DocumentId>` — Extract lineage information from file path
+-  `is_backlog_path` function L226-243 — `(file_path: P, workspace_dir: &Path) -> bool` — Check if a file path is within the backlog directory
+-  `extract_document_short_code` function L246-278 — `(file_path: P) -> Result<String>` — Extract document short code from file without keeping the document object around
+-  `update_moved_document` function L281-293 — `( &mut self, existing_doc: &Document, new_file_path: P, ) -> Result<()>` — Update a document that has been moved to a new path
+-  `resolve_short_code_collisions` function L297-377 — `( &mut self, dir_path: P, ) -> Result<Vec<SyncResult>>` — Detect and resolve short code collisions across all markdown files
+-  `renumber_document` function L381-487 — `( &mut self, file_path: P, old_short_code: &str, ) -> Result<String>` — Renumber a single document to resolve short code collision
+-  `update_sibling_references` function L490-547 — `( &mut self, file_path: P, old_short_code: &str, new_short_code: &str, ) -> Resu...` — Update cross-references in sibling documents (same directory)
+-  `update_counters_from_filesystem` function L712-742 — `(&mut self, dir_path: P) -> Result<()>` — Update counters in database based on max values seen in filesystem
+-  `is_valid_short_code_format` function L868-890 — `(short_code: &str) -> bool` — Validate short code format: PREFIX-TYPE-NNNN
+-  `SyncResult` type L910-941 — `= SyncResult`
+-  `tests` module L952-1194 — `-`
+-  `setup_services` function L957-967 — `() -> (tempfile::TempDir, DatabaseService)`
+-  `create_test_document_content` function L969-984 — `() -> String`
+-  `test_import_from_file` function L987-1006 — `()`
+-  `test_sync_file_operations` function L1009-1089 — `()`
+-  `test_sync_directory` function L1092-1146 — `()`
+-  `test_is_backlog_path` function L1149-1193 — `()`
 
 #### crates/metis-docs-core/src/application/services/template.rs
 
 - pub `vision` module L13-17 — `-` — 3.
 - pub `CONTENT` variable L14 — `: &str` — 3.
 - pub `EXIT_CRITERIA` variable L15-16 — `: &str` — 3.
-- pub `strategy` module L19-23 — `-` — 3.
+- pub `initiative` module L19-23 — `-` — 3.
 - pub `CONTENT` variable L20 — `: &str` — 3.
 - pub `EXIT_CRITERIA` variable L21-22 — `: &str` — 3.
-- pub `initiative` module L25-29 — `-` — 3.
+- pub `task` module L25-29 — `-` — 3.
 - pub `CONTENT` variable L26 — `: &str` — 3.
 - pub `EXIT_CRITERIA` variable L27-28 — `: &str` — 3.
-- pub `task` module L31-35 — `-` — 3.
+- pub `adr` module L31-35 — `-` — 3.
 - pub `CONTENT` variable L32 — `: &str` — 3.
 - pub `EXIT_CRITERIA` variable L33-34 — `: &str` — 3.
-- pub `adr` module L37-41 — `-` — 3.
-- pub `CONTENT` variable L38 — `: &str` — 3.
-- pub `EXIT_CRITERIA` variable L39-40 — `: &str` — 3.
-- pub `TemplateError` enum L46-55 — `IoError | ParseError | ValidationError | UnknownDocumentType` — Error type for template loading operations
-- pub `TemplateType` enum L72-75 — `Content | ExitCriteria` — Template types that can be loaded
-- pub `TemplateLoader` struct L92-97 — `{ project_path: Option<PathBuf>, global_path: PathBuf }` — Service for loading templates with fallback chain support.
-- pub `new` function L103-112 — `(project_path: Option<PathBuf>) -> Self` — Create a new TemplateLoader with the given project workspace path.
-- pub `for_workspace` function L115-117 — `(workspace_dir: P) -> Self` — Create a TemplateLoader for a specific workspace directory.
-- pub `load_content_template` function L123-125 — `(&self, doc_type: &str) -> Result<String, TemplateError>` — Load a content template for the given document type.
-- pub `load_exit_criteria_template` function L128-130 — `(&self, doc_type: &str) -> Result<String, TemplateError>` — Load an exit criteria template for the given document type.
-- pub `validate_template` function L201-214 — `(&self, template: &str, doc_type: &str) -> Result<(), TemplateError>` — Validate a template by rendering it with sample data.
-- pub `sample_context_for_type` function L219-263 — `(&self, doc_type: &str) -> Context` — Generate sample context values for validating templates.
-- pub `has_custom_template` function L266-285 — `(&self, doc_type: &str, template_type: TemplateType) -> bool` — Check if custom templates exist for a document type.
-- pub `template_source` function L288-311 — `(&self, doc_type: &str, template_type: TemplateType) -> TemplateSource` — Get the source of a template (for debugging/info).
-- pub `TemplateSource` enum L316-323 — `Project | Global | Embedded` — Indicates where a template was loaded from.
--  `defaults` module L12-42 — `-` — Embedded default templates for each document type
--  `TemplateError` type L57-66 — `= TemplateError` — 3.
--  `fmt` function L58-65 — `(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result` — 3.
--  `TemplateError` type L68 — `= TemplateError` — 3.
--  `TemplateType` type L77-84 — `= TemplateType` — 3.
--  `filename` function L78-83 — `(&self) -> &'static str` — 3.
--  `TemplateLoader` type L99-312 — `= TemplateLoader` — 3.
--  `load_template` function L133-173 — `( &self, doc_type: &str, template_type: TemplateType, ) -> Result<String, Templa...` — Load a template with the fallback chain.
--  `get_embedded_template` function L176-196 — `( &self, doc_type: &str, template_type: TemplateType, ) -> Result<String, Templa...` — Get the embedded default template for a document type.
--  `TemplateSource` type L325-333 — `= TemplateSource` — 3.
--  `fmt` function L326-332 — `(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result` — 3.
--  `doc_type_letter` function L336-345 — `(doc_type: &str) -> char` — Helper to get the type letter for short codes
--  `tests` module L348-475 — `-` — 3.
--  `test_load_embedded_templates` function L353-369 — `()` — 3.
--  `test_unknown_document_type` function L372-376 — `()` — 3.
--  `test_project_template_override` function L379-398 — `()` — 3.
--  `test_template_validation_error` function L401-416 — `()` — 3.
--  `test_template_validation_missing_variable` function L419-434 — `()` — 3.
--  `test_sample_context_generation` function L437-455 — `()` — 3.
--  `test_has_custom_template` function L458-474 — `()` — 3.
+- pub `specification` module L37-42 — `-` — 3.
+- pub `CONTENT` variable L38-39 — `: &str` — 3.
+- pub `EXIT_CRITERIA` variable L40-41 — `: &str` — 3.
+- pub `TemplateError` enum L47-56 — `IoError | ParseError | ValidationError | UnknownDocumentType` — Error type for template loading operations
+- pub `TemplateType` enum L73-76 — `Content | ExitCriteria` — Template types that can be loaded
+- pub `TemplateLoader` struct L93-98 — `{ project_path: Option<PathBuf>, global_path: PathBuf }` — Service for loading templates with fallback chain support.
+- pub `new` function L104-113 — `(project_path: Option<PathBuf>) -> Self` — Create a new TemplateLoader with the given project workspace path.
+- pub `for_workspace` function L116-118 — `(workspace_dir: P) -> Self` — Create a TemplateLoader for a specific workspace directory.
+- pub `load_content_template` function L124-126 — `(&self, doc_type: &str) -> Result<String, TemplateError>` — Load a content template for the given document type.
+- pub `load_exit_criteria_template` function L129-131 — `(&self, doc_type: &str) -> Result<String, TemplateError>` — Load an exit criteria template for the given document type.
+- pub `validate_template` function L202-215 — `(&self, template: &str, doc_type: &str) -> Result<(), TemplateError>` — Validate a template by rendering it with sample data.
+- pub `sample_context_for_type` function L220-261 — `(&self, doc_type: &str) -> Context` — Generate sample context values for validating templates.
+- pub `has_custom_template` function L264-283 — `(&self, doc_type: &str, template_type: TemplateType) -> bool` — Check if custom templates exist for a document type.
+- pub `template_source` function L286-309 — `(&self, doc_type: &str, template_type: TemplateType) -> TemplateSource` — Get the source of a template (for debugging/info).
+- pub `TemplateSource` enum L314-321 — `Project | Global | Embedded` — Indicates where a template was loaded from.
+-  `defaults` module L12-43 — `-` — Embedded default templates for each document type
+-  `TemplateError` type L58-67 — `= TemplateError` — 3.
+-  `fmt` function L59-66 — `(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result` — 3.
+-  `TemplateError` type L69 — `= TemplateError` — 3.
+-  `TemplateType` type L78-85 — `= TemplateType` — 3.
+-  `filename` function L79-84 — `(&self) -> &'static str` — 3.
+-  `TemplateLoader` type L100-310 — `= TemplateLoader` — 3.
+-  `load_template` function L134-174 — `( &self, doc_type: &str, template_type: TemplateType, ) -> Result<String, Templa...` — Load a template with the fallback chain.
+-  `get_embedded_template` function L177-197 — `( &self, doc_type: &str, template_type: TemplateType, ) -> Result<String, Templa...` — Get the embedded default template for a document type.
+-  `TemplateSource` type L323-331 — `= TemplateSource` — 3.
+-  `fmt` function L324-330 — `(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result` — 3.
+-  `doc_type_letter` function L334-343 — `(doc_type: &str) -> char` — Helper to get the type letter for short codes
+-  `tests` module L346-471 — `-` — 3.
+-  `test_load_embedded_templates` function L351-367 — `()` — 3.
+-  `test_unknown_document_type` function L370-374 — `()` — 3.
+-  `test_project_template_override` function L377-396 — `()` — 3.
+-  `test_template_validation_error` function L399-414 — `()` — 3.
+-  `test_template_validation_missing_variable` function L417-432 — `()` — 3.
+-  `test_sample_context_generation` function L435-451 — `()` — 3.
+-  `test_has_custom_template` function L454-470 — `()` — 3.
 
 ### crates/metis-docs-core/src/application/services/document
 
@@ -1104,55 +1098,53 @@
 
 #### crates/metis-docs-core/src/application/services/document/creation.rs
 
-- pub `DocumentCreationService` struct L15-19 — `{ workspace_dir: PathBuf, db_path: PathBuf, template_loader: TemplateLoader }` — Service for creating new documents with proper defaults and validation
-- pub `DocumentCreationConfig` struct L23-31 — `{ title: String, description: Option<String>, parent_id: Option<DocumentId>, tag...` — Configuration for creating a new document
-- pub `CreationResult` struct L35-40 — `{ document_id: DocumentId, document_type: DocumentType, file_path: PathBuf, shor...` — Result of document creation
-- pub `new` function L44-53 — `(workspace_dir: P) -> Self` — Create a new document creation service for a workspace
-- pub `create_vision` function L69-122 — `(&self, config: DocumentCreationConfig) -> Result<CreationResult>` — Create a new vision document
-- pub `create_strategy` function L125-179 — `(&self, config: DocumentCreationConfig) -> Result<CreationResult>` — Create a new strategy document
-- pub `create_initiative` function L182-190 — `( &self, config: DocumentCreationConfig, strategy_id: &str, ) -> Result<Creation...` — Create a new initiative document (legacy method)
-- pub `create_initiative_with_config` function L193-339 — `( &self, config: DocumentCreationConfig, strategy_id: &str, flight_config: &Flig...` — Create a new initiative document with flight level configuration
-- pub `create_task` function L342-356 — `( &self, config: DocumentCreationConfig, strategy_id: &str, initiative_id: &str,...` — Create a new task document (legacy method)
-- pub `create_task_with_config` function L359-532 — `( &self, config: DocumentCreationConfig, strategy_id: &str, initiative_id: &str,...` — Create a new task document with flight level configuration
-- pub `create_backlog_item` function L535-599 — `( &self, config: DocumentCreationConfig, ) -> Result<CreationResult>` — Create a new backlog item (task without parent)
-- pub `create_adr` function L622-679 — `(&self, config: DocumentCreationConfig) -> Result<CreationResult>` — Create a new ADR document
--  `DocumentCreationService` type L42-706 — `= DocumentCreationService`
--  `generate_short_code` function L56-66 — `(&self, doc_type: &str) -> Result<String>` — Generate a short code for a document type
--  `determine_backlog_directory` function L602-619 — `(&self, tags: &[Tag]) -> PathBuf` — Determine the backlog directory based on tags
--  `get_next_adr_number` function L682-705 — `(&self) -> Result<u32>` — Get the next ADR number by examining existing ADRs
--  `tests` module L709-1245 — `-`
--  `test_create_vision_document` function L714-748 — `()`
--  `test_create_strategy_document` function L751-785 — `()`
--  `test_create_initiative_document` function L788-850 — `()`
--  `test_get_next_adr_number` function L854-871 — `()`
--  `setup_test_service_temp` function L875-892 — `() -> (DocumentCreationService, tempfile::TempDir)`
--  `test_create_initiative_full_configuration` function L895-949 — `()`
--  `test_create_initiative_streamlined_configuration` function L952-981 — `()`
--  `test_create_initiative_disabled_in_direct_configuration` function L984-1008 — `()`
--  `test_create_task_direct_configuration` function L1011-1040 — `()`
--  `test_create_vision_with_custom_template` function L1043-1098 — `()`
--  `test_create_task_with_custom_template` function L1101-1159 — `()`
--  `test_create_document_falls_back_to_embedded_template` function L1162-1201 — `()`
--  `test_invalid_custom_template_fails_gracefully` function L1204-1244 — `()`
+- pub `DocumentCreationService` struct L14-18 — `{ workspace_dir: PathBuf, db_path: PathBuf, template_loader: TemplateLoader }` — Service for creating new documents with proper defaults and validation
+- pub `DocumentCreationConfig` struct L22-29 — `{ title: String, description: Option<String>, parent_id: Option<DocumentId>, tag...` — Configuration for creating a new document
+- pub `CreationResult` struct L33-38 — `{ document_id: DocumentId, document_type: DocumentType, file_path: PathBuf, shor...` — Result of document creation
+- pub `new` function L42-51 — `(workspace_dir: P) -> Self` — Create a new document creation service for a workspace
+- pub `create_vision` function L67-120 — `(&self, config: DocumentCreationConfig) -> Result<CreationResult>` — Create a new vision document
+- pub `create_initiative` function L123-130 — `( &self, config: DocumentCreationConfig, ) -> Result<CreationResult>` — Create a new initiative document (legacy method)
+- pub `create_initiative_with_config` function L133-218 — `( &self, config: DocumentCreationConfig, flight_config: &FlightLevelConfig, ) ->...` — Create a new initiative document with flight level configuration
+- pub `create_task` function L221-233 — `( &self, config: DocumentCreationConfig, initiative_id: &str, ) -> Result<Creati...` — Create a new task document (legacy method)
+- pub `create_task_with_config` function L236-375 — `( &self, config: DocumentCreationConfig, initiative_id: &str, flight_config: &Fl...` — Create a new task document with flight level configuration
+- pub `create_backlog_item` function L378-441 — `( &self, config: DocumentCreationConfig, ) -> Result<CreationResult>` — Create a new backlog item (task without parent)
+- pub `create_adr` function L464-521 — `(&self, config: DocumentCreationConfig) -> Result<CreationResult>` — Create a new ADR document
+- pub `create_specification` function L524-583 — `( &self, config: DocumentCreationConfig, ) -> Result<CreationResult>` — Create a new specification document
+-  `DocumentCreationService` type L40-610 — `= DocumentCreationService`
+-  `generate_short_code` function L54-64 — `(&self, doc_type: &str) -> Result<String>` — Generate a short code for a document type
+-  `determine_backlog_directory` function L444-461 — `(&self, tags: &[Tag]) -> PathBuf` — Determine the backlog directory based on tags
+-  `get_next_adr_number` function L586-609 — `(&self) -> Result<u32>` — Get the next ADR number by examining existing ADRs
+-  `tests` module L613-1044 — `-`
+-  `test_create_vision_document` function L618-651 — `()`
+-  `test_create_initiative_document` function L654-692 — `()`
+-  `test_get_next_adr_number` function L696-713 — `()`
+-  `setup_test_service_temp` function L717-734 — `() -> (DocumentCreationService, tempfile::TempDir)`
+-  `test_create_initiative_full_configuration` function L737-764 — `()`
+-  `test_create_initiative_streamlined_configuration` function L767-790 — `()`
+-  `test_create_initiative_disabled_in_direct_configuration` function L793-816 — `()`
+-  `test_create_task_direct_configuration` function L819-843 — `()`
+-  `test_create_vision_with_custom_template` function L846-900 — `()`
+-  `test_create_task_with_custom_template` function L903-960 — `()`
+-  `test_create_document_falls_back_to_embedded_template` function L963-1001 — `()`
+-  `test_invalid_custom_template_fails_gracefully` function L1004-1043 — `()`
 
 #### crates/metis-docs-core/src/application/services/document/deletion.rs
 
 - pub `DeletionService` struct L11 — `-` — Service for recursive document deletion
 - pub `new` function L20-22 — `() -> Self`
-- pub `delete_document_recursive` function L25-78 — `(&self, filepath: &str) -> Result<DeletionResult>` — Delete a document and all its children recursively
-- pub `DeletionResult` struct L133-136 — `{ deleted_files: Vec<String>, cleaned_directories: Vec<String> }` — Result of a document deletion operation
+- pub `delete_document_recursive` function L25-77 — `(&self, filepath: &str) -> Result<DeletionResult>` — Delete a document and all its children recursively
+- pub `DeletionResult` struct L132-135 — `{ deleted_files: Vec<String>, cleaned_directories: Vec<String> }` — Result of a document deletion operation
 -  `DeletionService` type L13-17 — `impl Default for DeletionService`
 -  `default` function L14-16 — `() -> Self`
--  `DeletionService` type L19-129 — `= DeletionService`
--  `remove_directory_recursive` function L81-128 — `( dir_path: &Path, deleted_files: &mut Vec<String>, cleaned_directories: &mut Ve...` — Recursively remove a directory and all its contents
--  `tests` module L139-540 — `-`
--  `setup_test_workspace` function L152-187 — `() -> (tempfile::TempDir, PathBuf)`
--  `test_delete_single_document_no_children` function L190-207 — `()`
--  `test_delete_strategy_with_folder` function L210-302 — `()`
--  `test_delete_initiative_with_folder` function L305-413 — `()`
--  `test_delete_nonexistent_document` function L416-430 — `()`
--  `test_delete_task_file_only` function L433-518 — `()`
--  `test_delete_document_no_folder` function L521-539 — `()`
+-  `DeletionService` type L19-128 — `= DeletionService`
+-  `remove_directory_recursive` function L80-127 — `( dir_path: &Path, deleted_files: &mut Vec<String>, cleaned_directories: &mut Ve...` — Recursively remove a directory and all its contents
+-  `tests` module L138-386 — `-`
+-  `setup_test_workspace` function L151-185 — `() -> (tempfile::TempDir, PathBuf)`
+-  `test_delete_single_document_no_children` function L188-205 — `()`
+-  `test_delete_initiative_with_folder` function L208-286 — `()`
+-  `test_delete_nonexistent_document` function L289-303 — `()`
+-  `test_delete_task_file_only` function L306-364 — `()`
+-  `test_delete_document_no_folder` function L367-385 — `()`
 
 #### crates/metis-docs-core/src/application/services/document/discovery.rs
 
@@ -1160,25 +1152,23 @@
 - pub `DocumentDiscoveryResult` struct L17-20 — `{ document_type: DocumentType, file_path: PathBuf }` — Result of document discovery
 - pub `new` function L24-44 — `(workspace_dir: P) -> Self` — Create a new document discovery service for a workspace
 - pub `find_document_by_short_code` function L47-67 — `( &self, short_code: &str, ) -> Result<DocumentDiscoveryResult>` — Find a document by its short code across all document types
-- pub `find_document_by_id` function L70-91 — `(&self, document_id: &str) -> Result<DocumentDiscoveryResult>` — Find a document by its ID across all document types (legacy method)
-- pub `find_document_of_type` function L94-328 — `( &self, document_id: &str, doc_type: DocumentType, ) -> Result<PathBuf>` — Find a document by its ID within a specific document type
-- pub `find_document_by_id_and_type` function L331-337 — `( &self, document_id: &str, doc_type: DocumentType, ) -> Result<PathBuf>` — Find a document by its ID with a specific document type constraint
-- pub `document_exists` function L340-342 — `(&self, document_id: &str) -> bool` — Check if a document with the given ID exists
-- pub `find_all_documents_of_type` function L345-476 — `(&self, doc_type: DocumentType) -> Result<Vec<PathBuf>>` — Get all documents of a specific type
-- pub `find_strategy_hierarchy_with_database` function L480-500 — `( &self, strategy_id: &str, db_service: &mut DatabaseService, ) -> Result<Vec<Do...` — Find all documents in a strategy hierarchy using database lineage queries
-- pub `find_initiative_hierarchy_with_database` function L504-524 — `( &self, initiative_id: &str, db_service: &mut DatabaseService, ) -> Result<Vec<...` — Find all documents in an initiative hierarchy using database lineage queries
-- pub `find_documents_by_strategy_with_database` function L527-547 — `( &self, strategy_id: &str, db_service: &mut DatabaseService, ) -> Result<Vec<Do...` — Find all documents belonging to a strategy using database lineage queries
-- pub `find_documents_by_initiative_with_database` function L550-570 — `( &self, initiative_id: &str, db_service: &mut DatabaseService, ) -> Result<Vec<...` — Find all documents belonging to an initiative using database lineage queries
-- pub `find_document_by_id_with_database` function L574-596 — `( &self, document_id: &str, db_service: &mut DatabaseService, ) -> Result<Docume...` — Fast document lookup using database instead of filesystem scanning
--  `DocumentDiscoveryService` type L22-783 — `= DocumentDiscoveryService`
--  `document_type_from_short_code` function L599-623 — `(&self, short_code: &str) -> Result<DocumentType>` — Extract document type from short code format (e.g., PROJ-V-0001 -> Vision)
--  `construct_path_from_short_code` function L626-653 — `( &self, short_code: &str, doc_type: DocumentType, ) -> Result<PathBuf>` — Construct file path from short code and document type
--  `find_initiative_path_by_short_code` function L656-713 — `(&self, short_code: &str) -> Result<PathBuf>` — Find initiative path by short code using database lookup
--  `find_task_path_by_short_code` function L716-782 — `(&self, short_code: &str) -> Result<PathBuf>` — Find task path by short code using database lookup
--  `tests` module L786-882 — `-`
--  `test_find_vision_document` function L792-825 — `()`
--  `test_document_not_found` function L828-838 — `()`
--  `test_find_all_documents_of_type` function L841-881 — `()`
+- pub `find_document_by_id` function L70-90 — `(&self, document_id: &str) -> Result<DocumentDiscoveryResult>` — Find a document by its ID across all document types (legacy method)
+- pub `find_document_of_type` function L93-265 — `( &self, document_id: &str, doc_type: DocumentType, ) -> Result<PathBuf>` — Find a document by its ID within a specific document type
+- pub `find_document_by_id_and_type` function L268-274 — `( &self, document_id: &str, doc_type: DocumentType, ) -> Result<PathBuf>` — Find a document by its ID with a specific document type constraint
+- pub `document_exists` function L277-279 — `(&self, document_id: &str) -> bool` — Check if a document with the given ID exists
+- pub `find_all_documents_of_type` function L282-385 — `(&self, doc_type: DocumentType) -> Result<Vec<PathBuf>>` — Get all documents of a specific type
+- pub `find_initiative_hierarchy_with_database` function L389-409 — `( &self, initiative_id: &str, db_service: &mut DatabaseService, ) -> Result<Vec<...` — Find all documents in an initiative hierarchy using database lineage queries
+- pub `find_documents_by_initiative_with_database` function L412-432 — `( &self, initiative_id: &str, db_service: &mut DatabaseService, ) -> Result<Vec<...` — Find all documents belonging to an initiative using database lineage queries
+- pub `find_document_by_id_with_database` function L436-458 — `( &self, document_id: &str, db_service: &mut DatabaseService, ) -> Result<Docume...` — Fast document lookup using database instead of filesystem scanning
+-  `DocumentDiscoveryService` type L22-607 — `= DocumentDiscoveryService`
+-  `document_type_from_short_code` function L461-485 — `(&self, short_code: &str) -> Result<DocumentType>` — Extract document type from short code format (e.g., PROJ-V-0001 -> Vision)
+-  `construct_path_from_short_code` function L488-515 — `( &self, short_code: &str, doc_type: DocumentType, ) -> Result<PathBuf>` — Construct file path from short code and document type
+-  `find_initiative_path_by_short_code` function L518-553 — `(&self, short_code: &str) -> Result<PathBuf>` — Find initiative path by short code using database lookup
+-  `find_task_path_by_short_code` function L556-606 — `(&self, short_code: &str) -> Result<PathBuf>` — Find task path by short code using database lookup
+-  `tests` module L610-706 — `-`
+-  `test_find_vision_document` function L616-649 — `()`
+-  `test_document_not_found` function L652-662 — `()`
+-  `test_find_all_documents_of_type` function L665-705 — `()`
 
 #### crates/metis-docs-core/src/application/services/document/mod.rs
 
@@ -1192,19 +1182,19 @@
 - pub `DocumentValidationService` struct L7 — `-` — Service for validating documents and detecting their types
 - pub `ValidationResult` struct L11-15 — `{ document_type: DocumentType, is_valid: bool, errors: Vec<String> }` — Result of document validation
 - pub `new` function L19-21 — `() -> Self` — Create a new document validation service
-- pub `validate_document` function L24-152 — `( &self, file_path: P, ) -> Result<ValidationResult>` — Validate a document file and detect its type
-- pub `detect_document_type` function L155-166 — `(&self, file_path: P) -> Result<DocumentType>` — Validate a document and return just the document type (simpler interface)
-- pub `validate_document_as_type` function L169-198 — `( &self, file_path: P, expected_type: DocumentType, ) -> Result<bool>` — Validate a document of a specific expected type
-- pub `is_valid_document` function L201-206 — `(&self, file_path: P) -> bool` — Check if a document is valid without loading the full document
--  `DocumentValidationService` type L17-207 — `= DocumentValidationService`
--  `DocumentValidationService` type L209-213 — `impl Default for DocumentValidationService`
--  `default` function L210-212 — `() -> Self`
--  `tests` module L216-355 — `-`
--  `test_validate_valid_vision_document` function L222-253 — `()`
--  `test_validate_invalid_document` function L256-272 — `()`
--  `test_detect_document_type` function L275-304 — `()`
--  `test_validate_document_as_type` function L307-345 — `()`
--  `test_validate_nonexistent_file` function L348-354 — `()`
+- pub `validate_document` function L24-134 — `( &self, file_path: P, ) -> Result<ValidationResult>` — Validate a document file and detect its type
+- pub `detect_document_type` function L137-148 — `(&self, file_path: P) -> Result<DocumentType>` — Validate a document and return just the document type (simpler interface)
+- pub `validate_document_as_type` function L151-180 — `( &self, file_path: P, expected_type: DocumentType, ) -> Result<bool>` — Validate a document of a specific expected type
+- pub `is_valid_document` function L183-188 — `(&self, file_path: P) -> bool` — Check if a document is valid without loading the full document
+-  `DocumentValidationService` type L17-189 — `= DocumentValidationService`
+-  `DocumentValidationService` type L191-195 — `impl Default for DocumentValidationService`
+-  `default` function L192-194 — `() -> Self`
+-  `tests` module L198-337 — `-`
+-  `test_validate_valid_vision_document` function L204-235 — `()`
+-  `test_validate_invalid_document` function L238-254 — `()`
+-  `test_detect_document_type` function L257-286 — `()`
+-  `test_validate_document_as_type` function L289-327 — `()`
+-  `test_validate_nonexistent_file` function L330-336 — `()`
 
 ### crates/metis-docs-core/src/application/services/workspace
 
@@ -1227,73 +1217,90 @@
 - pub `ArchiveService` struct L12-15 — `{ workspace_dir: PathBuf, discovery_service: DocumentDiscoveryService }` — Service for archiving documents and managing the archived folder structure
 - pub `ArchiveResult` struct L19-22 — `{ archived_documents: Vec<ArchivedDocument>, total_archived: usize }` — Result of archive operation
 - pub `ArchivedDocument` struct L26-31 — `{ document_id: String, document_type: DocumentType, original_path: PathBuf, arch...` — Information about an archived document
-- pub `new` function L96-119 — `(workspace_dir: P) -> Self` — Create a new archive service for a workspace
-- pub `archive_document` function L122-206 — `( &self, document_id: &str, db_service: &mut DatabaseService, ) -> Result<Archiv...` — Archive a document and all its children using database lineage queries
-- pub `is_document_archived` function L392-416 — `(&self, document_id: &str) -> Result<bool>` — Check if a document is already archived
-- pub `get_archived_documents` function L419-429 — `(&self) -> Result<Vec<ArchivedDocument>>` — Get all archived documents
-- pub `archive_document_by_short_code` function L491-580 — `( &self, short_code: &str, db_service: &mut DatabaseService, ) -> Result<Archive...` — Archive a document by its short code
-- pub `is_document_archived_by_short_code` function L583-596 — `(&self, short_code: &str) -> Result<bool>` — Check if a document is archived by its short code
--  `ArchiveService` type L33-597 — `= ArchiveService`
--  `mark_as_archived_helper` function L37-93 — `( &self, file_path: &Path, doc_type: DocumentType, ) -> Result<()>` — Common helper for loading and marking a document as archived
--  `archive_single_file` function L209-249 — `( &self, file_path: &Path, doc_type: DocumentType, ) -> Result<ArchivedDocument>` — Archive a single file
--  `archive_directory` function L252-314 — `( &self, dir_path: &Path, doc_type: DocumentType, ) -> Result<ArchivedDocument>` — Archive a directory (for strategies and initiatives)
--  `merge_directory_contents` function L318-353 — `(&self, source_dir: &Path, target_dir: &Path) -> Result<()>` — Merge directory contents by moving files/subdirs from source to target
--  `get_document_id` function L356-389 — `(&self, file_path: &Path, doc_type: DocumentType) -> Result<String>` — Get document ID from a file
--  `scan_archived_directory` function L432-464 — `( &self, dir: &Path, results: &mut Vec<ArchivedDocument>, ) -> Result<()>` — Recursively scan archived directory for documents
--  `determine_document_type` function L467-488 — `(&self, file_path: &Path) -> Result<DocumentType>` — Determine document type from file path and content
--  `tests` module L600-854 — `-`
--  `test_archive_vision_document` function L609-661 — `()`
--  `test_archive_strategy_with_initiatives` function L664-741 — `()`
--  `test_get_archived_documents` function L744-792 — `()`
--  `test_is_document_archived` function L795-853 — `()`
+- pub `new` function L95-118 — `(workspace_dir: P) -> Self` — Create a new archive service for a workspace
+- pub `archive_document` function L121-181 — `( &self, document_id: &str, db_service: &mut DatabaseService, ) -> Result<Archiv...` — Archive a document and all its children using database lineage queries
+- pub `is_document_archived` function L366-390 — `(&self, document_id: &str) -> Result<bool>` — Check if a document is already archived
+- pub `get_archived_documents` function L393-403 — `(&self) -> Result<Vec<ArchivedDocument>>` — Get all archived documents
+- pub `archive_document_by_short_code` function L465-529 — `( &self, short_code: &str, db_service: &mut DatabaseService, ) -> Result<Archive...` — Archive a document by its short code
+- pub `is_document_archived_by_short_code` function L532-545 — `(&self, short_code: &str) -> Result<bool>` — Check if a document is archived by its short code
+-  `ArchiveService` type L33-546 — `= ArchiveService`
+-  `mark_as_archived_helper` function L37-92 — `( &self, file_path: &Path, doc_type: DocumentType, ) -> Result<()>` — Common helper for loading and marking a document as archived
+-  `archive_single_file` function L184-224 — `( &self, file_path: &Path, doc_type: DocumentType, ) -> Result<ArchivedDocument>` — Archive a single file
+-  `archive_directory` function L227-288 — `( &self, dir_path: &Path, doc_type: DocumentType, ) -> Result<ArchivedDocument>` — Archive a directory (for strategies and initiatives)
+-  `merge_directory_contents` function L292-327 — `(&self, source_dir: &Path, target_dir: &Path) -> Result<()>` — Merge directory contents by moving files/subdirs from source to target
+-  `get_document_id` function L330-363 — `(&self, file_path: &Path, doc_type: DocumentType) -> Result<String>` — Get document ID from a file
+-  `scan_archived_directory` function L406-438 — `( &self, dir: &Path, results: &mut Vec<ArchivedDocument>, ) -> Result<()>` — Recursively scan archived directory for documents
+-  `determine_document_type` function L441-462 — `(&self, file_path: &Path) -> Result<DocumentType>` — Determine document type from file path and content
+-  `tests` module L549-720 — `-`
+-  `test_archive_vision_document` function L558-609 — `()`
+-  `test_get_archived_documents` function L612-659 — `()`
+-  `test_is_document_archived` function L662-719 — `()`
 
 #### crates/metis-docs-core/src/application/services/workspace/detection.rs
 
-- pub `WorkspaceDetectionService` struct L7 — `-` — Service for detecting and validating Metis workspaces
-- pub `new` function L10-12 — `() -> Self`
-- pub `find_workspace` function L15-33 — `(&self) -> Result<Option<PathBuf>>` — Find the nearest Metis workspace by traversing up the directory tree
-- pub `find_workspace_from` function L36-54 — `(&self, start_path: &Path) -> Result<Option<PathBuf>>` — Find workspace starting from a specific directory
-- pub `validate_workspace` function L58-64 — `(&self, metis_dir: &Path) -> Result<Option<PathBuf>>` — Validate that a directory is a proper Metis workspace
-- pub `is_in_workspace` function L67-69 — `(&self, path: &Path) -> Result<bool>` — Check if a path is within a Metis workspace
-- pub `get_workspace_root` function L72-80 — `(&self, path: &Path) -> Result<Option<PathBuf>>` — Get the workspace root for a given path
-- pub `resolve_metis_dir` function L87-106 — `(&self, path: &Path) -> PathBuf` — Resolve a path to the `.metis` directory.
-- pub `prepare_workspace` function L115-139 — `(&self, metis_dir: &Path) -> Result<Database>` — Prepare a workspace for use by ensuring database exists and is synced
-- pub `find_and_prepare_workspace` function L143-150 — `(&self) -> Result<Option<(PathBuf, Database)>>` — Find workspace from current directory and prepare it for use
--  `WorkspaceDetectionService` type L9-151 — `= WorkspaceDetectionService`
--  `WorkspaceDetectionService` type L153-157 — `impl Default for WorkspaceDetectionService`
--  `default` function L154-156 — `() -> Self`
--  `tests` module L160-271 — `-`
--  `test_validate_workspace_missing_directory` function L166-173 — `()`
--  `test_validate_workspace_with_metis_directory` function L176-186 — `()`
--  `test_find_workspace_traversal` function L189-202 — `()`
--  `test_resolve_metis_dir_already_metis` function L205-214 — `()`
--  `test_resolve_metis_dir_from_project_root` function L217-229 — `()`
--  `test_resolve_metis_dir_no_config_toml` function L232-242 — `()`
--  `test_resolve_metis_dir_no_metis_subdir` function L245-254 — `()`
--  `test_get_workspace_root` function L257-270 — `()`
+- pub `WorkspaceDetectionService` struct L8 — `-` — Service for detecting and validating Metis workspaces
+- pub `new` function L11-13 — `() -> Self`
+- pub `find_workspace` function L16-34 — `(&self) -> Result<Option<PathBuf>>` — Find the nearest Metis workspace by traversing up the directory tree
+- pub `find_workspace_from` function L37-55 — `(&self, start_path: &Path) -> Result<Option<PathBuf>>` — Find workspace starting from a specific directory
+- pub `validate_workspace` function L59-65 — `(&self, metis_dir: &Path) -> Result<Option<PathBuf>>` — Validate that a directory is a proper Metis workspace
+- pub `is_in_workspace` function L68-70 — `(&self, path: &Path) -> Result<bool>` — Check if a path is within a Metis workspace
+- pub `get_workspace_root` function L73-81 — `(&self, path: &Path) -> Result<Option<PathBuf>>` — Get the workspace root for a given path
+- pub `resolve_metis_dir` function L88-107 — `(&self, path: &Path) -> PathBuf` — Resolve a path to the `.metis` directory.
+- pub `prepare_workspace` function L116-155 — `(&self, metis_dir: &Path) -> Result<Database>` — Prepare a workspace for use by ensuring database exists and is synced
+- pub `find_and_prepare_workspace` function L159-166 — `(&self) -> Result<Option<(PathBuf, Database)>>` — Find workspace from current directory and prepare it for use
+-  `WorkspaceDetectionService` type L10-167 — `= WorkspaceDetectionService`
+-  `WorkspaceDetectionService` type L169-173 — `impl Default for WorkspaceDetectionService`
+-  `default` function L170-172 — `() -> Self`
+-  `tests` module L176-287 — `-`
+-  `test_validate_workspace_missing_directory` function L182-189 — `()`
+-  `test_validate_workspace_with_metis_directory` function L192-202 — `()`
+-  `test_find_workspace_traversal` function L205-218 — `()`
+-  `test_resolve_metis_dir_already_metis` function L221-230 — `()`
+-  `test_resolve_metis_dir_from_project_root` function L233-245 — `()`
+-  `test_resolve_metis_dir_no_config_toml` function L248-258 — `()`
+-  `test_resolve_metis_dir_no_metis_subdir` function L261-270 — `()`
+-  `test_get_workspace_root` function L273-286 — `()`
 
 #### crates/metis-docs-core/src/application/services/workspace/initialization.rs
 
 - pub `WorkspaceInitializationService` struct L8 — `-` — Service for initializing new Metis workspaces
 - pub `WorkspaceInitializationResult` struct L11-15 — `{ metis_dir: PathBuf, database_path: PathBuf, vision_path: PathBuf }` — Result of workspace initialization
 - pub `initialize_workspace` function L20-25 — `( base_path: P, project_name: &str, ) -> Result<WorkspaceInitializationResult>` — Initialize a new Metis workspace at the given base path
-- pub `initialize_workspace_with_prefix` function L28-124 — `( base_path: P, project_name: &str, prefix: Option<&str>, ) -> Result<WorkspaceI...` — Initialize a new Metis workspace with an optional custom prefix
-- pub `is_workspace` function L158-161 — `(path: &Path) -> bool` — Check if a directory contains a valid Metis workspace
--  `WorkspaceInitializationService` type L17-162 — `= WorkspaceInitializationService`
--  `create_default_vision` function L127-154 — `(workspace_dir: &Path, title: &str) -> Result<PathBuf>` — Create a new Vision document with defaults and write to file
--  `tests` module L165-262 — `-`
--  `test_initialize_workspace` function L171-220 — `()`
--  `test_initialize_workspace_already_exists` function L223-247 — `()`
--  `test_is_workspace` function L250-261 — `()`
+- pub `initialize_workspace_with_prefix` function L28-120 — `( base_path: P, project_name: &str, prefix: Option<&str>, ) -> Result<WorkspaceI...` — Initialize a new Metis workspace with an optional custom prefix
+- pub `is_workspace` function L154-157 — `(path: &Path) -> bool` — Check if a directory contains a valid Metis workspace
+-  `WorkspaceInitializationService` type L17-158 — `= WorkspaceInitializationService`
+-  `create_default_vision` function L123-150 — `(workspace_dir: &Path, title: &str) -> Result<PathBuf>` — Create a new Vision document with defaults and write to file
+-  `tests` module L161-257 — `-`
+-  `test_initialize_workspace` function L167-215 — `()`
+-  `test_initialize_workspace_already_exists` function L218-242 — `()`
+-  `test_is_workspace` function L245-256 — `()`
+
+#### crates/metis-docs-core/src/application/services/workspace/migration.rs
+
+- pub `MigrationReport` struct L10-17 — `{ migrated: bool, moved_items: Vec<MigrationAction>, deleted_items: Vec<PathBuf>...` — Result of a workspace migration
+- pub `MigrationAction` struct L21-24 — `{ from: PathBuf, to: PathBuf }` — A single migration action (move or delete)
+- pub `WorkspaceMigrationService` struct L27 — `-` — Service for migrating workspace filesystem layouts between versions.
+- pub `migrate` function L34-148 — `(metis_dir: &Path) -> std::io::Result<MigrationReport>` — Run all pending migrations on a workspace.
+-  `WorkspaceMigrationService` type L29-149 — `= WorkspaceMigrationService` — Currently supports v1→v2 migration (removing the `strategies/` nesting layer).
+-  `tests` module L152-374 — `-` — Currently supports v1→v2 migration (removing the `strategies/` nesting layer).
+-  `test_migration_noop_on_v2_workspace` function L158-168 — `()` — Currently supports v1→v2 migration (removing the `strategies/` nesting layer).
+-  `test_migration_idempotent` function L171-183 — `()` — Currently supports v1→v2 migration (removing the `strategies/` nesting layer).
+-  `test_migration_null_strategy_pattern` function L186-214 — `()` — Currently supports v1→v2 migration (removing the `strategies/` nesting layer).
+-  `test_migration_named_strategy_pattern` function L217-243 — `()` — Currently supports v1→v2 migration (removing the `strategies/` nesting layer).
+-  `test_migration_multiple_strategies` function L246-292 — `()` — Currently supports v1→v2 migration (removing the `strategies/` nesting layer).
+-  `test_migration_empty_strategies_dir` function L295-308 — `()` — Currently supports v1→v2 migration (removing the `strategies/` nesting layer).
+-  `test_migration_preserves_existing_initiatives` function L311-350 — `()` — Currently supports v1→v2 migration (removing the `strategies/` nesting layer).
+-  `test_migration_logs_actions` function L353-373 — `()` — Currently supports v1→v2 migration (removing the `strategies/` nesting layer).
 
 #### crates/metis-docs-core/src/application/services/workspace/mod.rs
 
 - pub `archive` module L1 — `-`
 - pub `detection` module L2 — `-`
 - pub `initialization` module L3 — `-`
-- pub `reassignment` module L4 — `-`
-- pub `recovery` module L5 — `-`
-- pub `transition` module L6 — `-`
+- pub `migration` module L4 — `-`
+- pub `reassignment` module L5 — `-`
+- pub `recovery` module L6 — `-`
+- pub `transition` module L7 — `-`
 
 #### crates/metis-docs-core/src/application/services/workspace/reassignment.rs
 
@@ -1336,22 +1343,21 @@
 - pub `new` function L25-30 — `(workspace_dir: P) -> Self` — Create a new phase transition service for a workspace
 - pub `transition_document` function L33-67 — `( &self, short_code: &str, target_phase: Phase, ) -> Result<TransitionResult>` — Transition a document to a specific phase
 - pub `transition_to_next_phase` function L70-100 — `(&self, short_code: &str) -> Result<TransitionResult>` — Transition a document to the next phase in its natural sequence
-- pub `is_valid_transition` function L267-275 — `( &self, doc_type: DocumentType, from_phase: Phase, to_phase: Phase, ) -> bool` — Check if a phase transition is valid without performing it
-- pub `get_valid_transitions_for` function L278-284 — `( &self, doc_type: DocumentType, from_phase: Phase, ) -> Vec<Phase>` — Get all valid transitions for a document type and phase
--  `PhaseTransitionService` type L23-285 — `= PhaseTransitionService`
+- pub `is_valid_transition` function L266-274 — `( &self, doc_type: DocumentType, from_phase: Phase, to_phase: Phase, ) -> bool` — Check if a phase transition is valid without performing it
+- pub `get_valid_transitions_for` function L277-283 — `( &self, doc_type: DocumentType, from_phase: Phase, ) -> Vec<Phase>` — Get all valid transitions for a document type and phase
+-  `PhaseTransitionService` type L23-284 — `= PhaseTransitionService`
 -  `get_current_phase` function L103-136 — `(&self, file_path: &Path, doc_type: DocumentType) -> Result<Phase>` — Get the current phase of a document
--  `perform_transition` function L139-226 — `( &self, file_path: &Path, doc_type: DocumentType, target_phase: Phase, ) -> Res...` — Perform the actual phase transition
--  `validate_transition` function L229-246 — `( &self, doc_type: DocumentType, from_phase: Phase, to_phase: Phase, ) -> Result...` — Validate that a phase transition is allowed
--  `get_valid_transitions` function L250-252 — `(&self, doc_type: DocumentType, from_phase: Phase) -> Vec<Phase>` — Get valid transitions from a given phase for a document type.
--  `get_next_phase` function L256-264 — `(&self, doc_type: DocumentType, current_phase: Phase) -> Result<Phase>` — Get the next phase in the natural sequence for a document type.
--  `tests` module L288-530 — `-`
--  `setup_test_workspace` function L298-313 — `() -> (tempfile::TempDir, PathBuf)`
--  `test_transition_vision_to_next_phase` function L316-342 — `()`
--  `test_transition_strategy_through_phases` function L345-392 — `()`
--  `test_transition_to_specific_phase` function L395-420 — `()`
--  `test_invalid_transition` function L423-450 — `()`
--  `test_get_valid_transitions` function L453-485 — `()`
--  `test_is_valid_transition` function L488-529 — `()`
+-  `perform_transition` function L139-225 — `( &self, file_path: &Path, doc_type: DocumentType, target_phase: Phase, ) -> Res...` — Perform the actual phase transition
+-  `validate_transition` function L228-245 — `( &self, doc_type: DocumentType, from_phase: Phase, to_phase: Phase, ) -> Result...` — Validate that a phase transition is allowed
+-  `get_valid_transitions` function L249-251 — `(&self, doc_type: DocumentType, from_phase: Phase) -> Vec<Phase>` — Get valid transitions from a given phase for a document type.
+-  `get_next_phase` function L255-263 — `(&self, doc_type: DocumentType, current_phase: Phase) -> Result<Phase>` — Get the next phase in the natural sequence for a document type.
+-  `tests` module L287-456 — `-`
+-  `setup_test_workspace` function L297-312 — `() -> (tempfile::TempDir, PathBuf)`
+-  `test_transition_vision_to_next_phase` function L315-340 — `()`
+-  `test_transition_to_specific_phase` function L343-367 — `()`
+-  `test_invalid_transition` function L370-396 — `()`
+-  `test_get_valid_transitions` function L399-426 — `()`
+-  `test_is_valid_transition` function L429-455 — `()`
 
 ### crates/metis-docs-core/src
 
@@ -1374,55 +1380,50 @@
 - pub `YAML_EXT` variable L11 — `: &str`
 - pub `JSON_EXT` variable L12 — `: &str`
 - pub `VISION_DIR` variable L15 — `: &str` — Document directories
-- pub `STRATEGY_DIR` variable L16 — `: &str`
-- pub `INITIATIVE_DIR` variable L17 — `: &str`
-- pub `TASK_DIR` variable L18 — `: &str`
-- pub `ADR_DIR` variable L19 — `: &str`
+- pub `INITIATIVE_DIR` variable L16 — `: &str`
+- pub `TASK_DIR` variable L17 — `: &str`
+- pub `ADR_DIR` variable L18 — `: &str`
+- pub `SPECIFICATION_DIR` variable L19 — `: &str`
 - pub `ARCHIVED_DIR` variable L20 — `: &str`
 - pub `VISION_TEMPLATE` variable L23 — `: &str` — Template names
-- pub `STRATEGY_TEMPLATE` variable L24 — `: &str`
-- pub `INITIATIVE_TEMPLATE` variable L25 — `: &str`
-- pub `TASK_TEMPLATE` variable L26 — `: &str`
-- pub `ADR_TEMPLATE` variable L27 — `: &str`
-- pub `phases` module L30-57 — `-` — Document phases
+- pub `INITIATIVE_TEMPLATE` variable L24 — `: &str`
+- pub `TASK_TEMPLATE` variable L25 — `: &str`
+- pub `ADR_TEMPLATE` variable L26 — `: &str`
+- pub `SPECIFICATION_TEMPLATE` variable L27 — `: &str`
+- pub `phases` module L30-56 — `-` — Document phases
 - pub `VISION_DRAFT` variable L31 — `: &str`
 - pub `VISION_REVIEW` variable L32 — `: &str`
 - pub `VISION_PUBLISHED` variable L33 — `: &str`
-- pub `STRATEGY_SHAPING` variable L35 — `: &str`
-- pub `STRATEGY_DESIGN` variable L36 — `: &str`
-- pub `STRATEGY_READY` variable L37 — `: &str`
-- pub `STRATEGY_ACTIVE` variable L38 — `: &str`
-- pub `STRATEGY_COMPLETED` variable L39 — `: &str`
-- pub `INITIATIVE_DISCOVERY` variable L41 — `: &str`
-- pub `INITIATIVE_DESIGN` variable L42 — `: &str`
-- pub `INITIATIVE_READY` variable L43 — `: &str`
-- pub `INITIATIVE_DECOMPOSE` variable L44 — `: &str`
-- pub `INITIATIVE_ACTIVE` variable L45 — `: &str`
-- pub `INITIATIVE_COMPLETED` variable L46 — `: &str`
-- pub `TASK_TODO` variable L48 — `: &str`
-- pub `TASK_ACTIVE` variable L49 — `: &str`
-- pub `TASK_BLOCKED` variable L50 — `: &str`
-- pub `TASK_COMPLETED` variable L51 — `: &str`
-- pub `ADR_DRAFT` variable L53 — `: &str`
-- pub `ADR_DISCUSSION` variable L54 — `: &str`
-- pub `ADR_DECIDED` variable L55 — `: &str`
-- pub `ADR_SUPERSEDED` variable L56 — `: &str`
-- pub `complexity` module L60-66 — `-` — Complexity levels for initiatives
-- pub `XS` variable L61 — `: &str`
-- pub `S` variable L62 — `: &str`
-- pub `M` variable L63 — `: &str`
-- pub `L` variable L64 — `: &str`
-- pub `XL` variable L65 — `: &str`
-- pub `risk` module L69-73 — `-` — Risk levels for strategies
-- pub `LOW` variable L70 — `: &str`
-- pub `MEDIUM` variable L71 — `: &str`
-- pub `HIGH` variable L72 — `: &str`
-- pub `database` module L76-79 — `-` — Database settings
-- pub `CONNECTION_TIMEOUT_SECS` variable L77 — `: u64`
-- pub `MAX_RETRIES` variable L78 — `: u32`
-- pub `filesystem` module L82-85 — `-` — File system settings
-- pub `MAX_FILE_SIZE_BYTES` variable L83 — `: u64`
-- pub `BACKUP_RETENTION_DAYS` variable L84 — `: u32`
+- pub `INITIATIVE_DISCOVERY` variable L35 — `: &str`
+- pub `INITIATIVE_DESIGN` variable L36 — `: &str`
+- pub `INITIATIVE_READY` variable L37 — `: &str`
+- pub `INITIATIVE_DECOMPOSE` variable L38 — `: &str`
+- pub `INITIATIVE_ACTIVE` variable L39 — `: &str`
+- pub `INITIATIVE_COMPLETED` variable L40 — `: &str`
+- pub `TASK_TODO` variable L42 — `: &str`
+- pub `TASK_ACTIVE` variable L43 — `: &str`
+- pub `TASK_BLOCKED` variable L44 — `: &str`
+- pub `TASK_COMPLETED` variable L45 — `: &str`
+- pub `ADR_DRAFT` variable L47 — `: &str`
+- pub `ADR_DISCUSSION` variable L48 — `: &str`
+- pub `ADR_DECIDED` variable L49 — `: &str`
+- pub `ADR_SUPERSEDED` variable L50 — `: &str`
+- pub `SPECIFICATION_DISCOVERY` variable L52 — `: &str`
+- pub `SPECIFICATION_DRAFTING` variable L53 — `: &str`
+- pub `SPECIFICATION_REVIEW` variable L54 — `: &str`
+- pub `SPECIFICATION_PUBLISHED` variable L55 — `: &str`
+- pub `complexity` module L59-65 — `-` — Complexity levels for initiatives
+- pub `XS` variable L60 — `: &str`
+- pub `S` variable L61 — `: &str`
+- pub `M` variable L62 — `: &str`
+- pub `L` variable L63 — `: &str`
+- pub `XL` variable L64 — `: &str`
+- pub `database` module L68-71 — `-` — Database settings
+- pub `CONNECTION_TIMEOUT_SECS` variable L69 — `: u64`
+- pub `MAX_RETRIES` variable L70 — `: u32`
+- pub `filesystem` module L74-77 — `-` — File system settings
+- pub `MAX_FILE_SIZE_BYTES` variable L75 — `: u64`
+- pub `BACKUP_RETENTION_DAYS` variable L76 — `: u32`
 
 #### crates/metis-docs-core/src/error.rs
 
@@ -1519,37 +1520,34 @@
 - pub `find_by_id` function L41-49 — `(&mut self, document_id: &str) -> Result<Option<Document>>` — Find a document by its ID
 - pub `update_document` function L52-60 — `(&mut self, file_path: &str, doc: &Document) -> Result<Document>` — Update an existing document
 - pub `delete_document` function L63-71 — `(&mut self, file_path: &str) -> Result<bool>` — Delete a document and all its relationships
-- pub `find_children` function L74-84 — `(&mut self, parent_document_id: &str) -> Result<Vec<Document>>` — Find all children of a document
-- pub `find_parent` function L87-98 — `(&mut self, child_document_id: &str) -> Result<Option<Document>>` — Find the parent of a document
-- pub `create_relationship` function L101-110 — `(&mut self, relationship: DocumentRelationship) -> Result<()>` — Create a parent-child relationship
-- pub `search_documents` function L113-125 — `(&mut self, query: &str) -> Result<Vec<Document>>` — Search documents using FTS
-- pub `search_documents_unarchived` function L128-140 — `(&mut self, query: &str) -> Result<Vec<Document>>` — Search non-archived documents using FTS
-- pub `find_by_type` function L143-151 — `(&mut self, doc_type: &str) -> Result<Vec<Document>>` — Get all documents of a specific type
-- pub `find_by_type_unarchived` function L154-163 — `(&mut self, doc_type: &str) -> Result<Vec<Document>>` — Get all non-archived documents of a specific type
-- pub `find_by_tag` function L166-176 — `(&mut self, tag_name: &str) -> Result<Vec<Document>>` — Get documents with specific tags
-- pub `find_by_phase` function L179-187 — `(&mut self, phase_name: &str) -> Result<Vec<Document>>` — Get documents in a specific phase
-- pub `find_by_type_and_phase` function L190-203 — `( &mut self, doc_type: &str, phase_name: &str, ) -> Result<Vec<Document>>` — Get documents by type and phase
-- pub `find_by_strategy_id` function L206-214 — `(&mut self, strategy_document_id: &str) -> Result<Vec<Document>>` — Get all documents belonging to a strategy
-- pub `find_by_initiative_id` function L217-225 — `(&mut self, initiative_document_id: &str) -> Result<Vec<Document>>` — Get all documents belonging to an initiative
-- pub `get_tags_for_document` function L228-236 — `(&mut self, doc_filepath: &str) -> Result<Vec<String>>` — Get all tags for a specific document by filepath
-- pub `find_strategy_hierarchy` function L239-250 — `(&mut self, strategy_document_id: &str) -> Result<Vec<Document>>` — Get all documents in a strategy hierarchy (strategy + its initiatives + their tasks)
-- pub `find_strategy_hierarchy_by_short_code` function L253-268 — `( &mut self, strategy_short_code: &str, ) -> Result<Vec<Document>>` — Get all documents in a strategy hierarchy by short code (strategy + its initiatives + their tasks)
-- pub `find_initiative_hierarchy` function L271-285 — `( &mut self, initiative_document_id: &str, ) -> Result<Vec<Document>>` — Get all documents in an initiative hierarchy (initiative + its tasks)
-- pub `find_initiative_hierarchy_by_short_code` function L288-303 — `( &mut self, initiative_short_code: &str, ) -> Result<Vec<Document>>` — Get all documents in an initiative hierarchy by short code (initiative + its tasks)
-- pub `generate_short_code` function L306-315 — `(&mut self, doc_type: &str, db_path: &str) -> Result<String>` — Generate a short code for a document type using the database configuration
-- pub `find_by_short_code` function L318-326 — `(&mut self, code: &str) -> Result<Option<Document>>` — Find a document by its short code
-- pub `resolve_short_code_to_document_id` function L329-337 — `(&mut self, code: &str) -> Result<String>` — Resolve short code to document ID for parent relationships
-- pub `resolve_short_code_to_filepath` function L340-348 — `(&mut self, code: &str) -> Result<String>` — Resolve short code to file path for file operations
--  `DocumentRepository` type L13-349 — `= DocumentRepository`
--  `tests` module L352-605 — `-`
--  `setup_test_repository` function L356-359 — `() -> DocumentRepository`
--  `create_test_document` function L361-379 — `() -> NewDocument`
--  `test_create_and_find_document` function L382-407 — `()`
--  `test_update_document` function L410-428 — `()`
--  `test_delete_document` function L431-455 — `()`
--  `test_document_relationships` function L458-526 — `()`
--  `test_find_by_type` function L529-589 — `()`
--  `test_document_not_found` function L592-604 — `()`
+- pub `find_children` function L74-86 — `(&mut self, parent_document_id: &str) -> Result<Vec<Document>>` — Find all children of a document
+- pub `find_parent` function L89-102 — `(&mut self, child_document_id: &str) -> Result<Option<Document>>` — Find the parent of a document
+- pub `create_relationship` function L105-114 — `(&mut self, relationship: DocumentRelationship) -> Result<()>` — Create a parent-child relationship
+- pub `search_documents` function L117-129 — `(&mut self, query: &str) -> Result<Vec<Document>>` — Search documents using FTS
+- pub `search_documents_unarchived` function L132-144 — `(&mut self, query: &str) -> Result<Vec<Document>>` — Search non-archived documents using FTS
+- pub `find_by_type` function L147-155 — `(&mut self, doc_type: &str) -> Result<Vec<Document>>` — Get all documents of a specific type
+- pub `find_by_type_unarchived` function L158-167 — `(&mut self, doc_type: &str) -> Result<Vec<Document>>` — Get all non-archived documents of a specific type
+- pub `find_by_tag` function L170-180 — `(&mut self, tag_name: &str) -> Result<Vec<Document>>` — Get documents with specific tags
+- pub `find_by_phase` function L183-191 — `(&mut self, phase_name: &str) -> Result<Vec<Document>>` — Get documents in a specific phase
+- pub `find_by_type_and_phase` function L194-207 — `( &mut self, doc_type: &str, phase_name: &str, ) -> Result<Vec<Document>>` — Get documents by type and phase
+- pub `find_by_initiative_id` function L210-218 — `(&mut self, initiative_document_id: &str) -> Result<Vec<Document>>` — Get all documents belonging to an initiative
+- pub `get_tags_for_document` function L221-229 — `(&mut self, doc_filepath: &str) -> Result<Vec<String>>` — Get all tags for a specific document by filepath
+- pub `find_initiative_hierarchy` function L232-246 — `( &mut self, initiative_document_id: &str, ) -> Result<Vec<Document>>` — Get all documents in an initiative hierarchy (initiative + its tasks)
+- pub `find_initiative_hierarchy_by_short_code` function L249-264 — `( &mut self, initiative_short_code: &str, ) -> Result<Vec<Document>>` — Get all documents in an initiative hierarchy by short code (initiative + its tasks)
+- pub `generate_short_code` function L267-276 — `(&mut self, doc_type: &str, db_path: &str) -> Result<String>` — Generate a short code for a document type using the database configuration
+- pub `find_by_short_code` function L279-287 — `(&mut self, code: &str) -> Result<Option<Document>>` — Find a document by its short code
+- pub `resolve_short_code_to_document_id` function L290-298 — `(&mut self, code: &str) -> Result<String>` — Resolve short code to document ID for parent relationships
+- pub `resolve_short_code_to_filepath` function L301-309 — `(&mut self, code: &str) -> Result<String>` — Resolve short code to file path for file operations
+-  `DocumentRepository` type L13-310 — `= DocumentRepository`
+-  `tests` module L313-566 — `-`
+-  `setup_test_repository` function L317-320 — `() -> DocumentRepository`
+-  `create_test_document` function L322-340 — `() -> NewDocument`
+-  `test_create_and_find_document` function L343-368 — `()`
+-  `test_update_document` function L371-389 — `()`
+-  `test_delete_document` function L392-416 — `()`
+-  `test_document_relationships` function L419-487 — `()`
+-  `test_find_by_type` function L490-550 — `()`
+-  `test_document_not_found` function L553-565 — `()`
 
 ### crates/metis-docs-core/src/dal
 
@@ -1579,50 +1577,52 @@
 
 #### crates/metis-docs-core/src/domain/configuration.rs
 
-- pub `FlightLevelConfig` struct L7-12 — `{ strategies_enabled: bool, initiatives_enabled: bool }` — Flight level configuration defining which levels are enabled
-- pub `new` function L16-31 — `( strategies_enabled: bool, initiatives_enabled: bool, ) -> Result<Self, Configu...` — Create a new configuration
-- pub `full` function L34-39 — `() -> Self` — Full flight levels: Vision → Strategy → Initiative → Task
-- pub `streamlined` function L42-47 — `() -> Self` — Streamlined flight levels: Vision → Initiative → Task
-- pub `direct` function L50-55 — `() -> Self` — Direct flight levels: Vision → Task
-- pub `is_document_type_allowed` function L58-65 — `(&self, doc_type: DocumentType) -> bool` — Check if a document type is allowed in this configuration
-- pub `get_parent_type` function L68-87 — `(&self, doc_type: DocumentType) -> Option<DocumentType>` — Get the parent document type for a given document type in this configuration
-- pub `preset_name` function L90-97 — `(&self) -> &'static str` — Get the configuration name/preset
-- pub `enabled_document_types` function L100-115 — `(&self) -> Vec<DocumentType>` — Get enabled document types in hierarchical order
-- pub `hierarchy_display` function L118-132 — `(&self) -> String` — Get the hierarchy display string
-- pub `ConfigurationError` enum L149-154 — `InvalidConfiguration | SerializationError | InvalidValue | MissingConfiguration` — Configuration validation errors
-- pub `ConfigFile` struct L177-180 — `{ project: ProjectConfig, flight_levels: FlightLevelConfig }` — Configuration file structure that persists to .metis/config.toml
-- pub `ProjectConfig` struct L183-185 — `{ prefix: String }`
-- pub `new` function L189-201 — `(prefix: String, flight_levels: FlightLevelConfig) -> Result<Self, Configuration...` — Create a new configuration with defaults
-- pub `load` function L204-212 — `(path: P) -> Result<Self, ConfigurationError>` — Load configuration from a TOML file
-- pub `save` function L215-225 — `(&self, path: P) -> Result<(), ConfigurationError>` — Save configuration to a TOML file
-- pub `default_with_prefix` function L228-230 — `(prefix: String) -> Result<Self, ConfigurationError>` — Create default configuration with given prefix
-- pub `prefix` function L233-235 — `(&self) -> &str` — Get the project prefix
-- pub `flight_levels` function L238-240 — `(&self) -> &FlightLevelConfig` — Get the flight level configuration
--  `FlightLevelConfig` type L14-133 — `= FlightLevelConfig`
--  `FlightLevelConfig` type L135-139 — `impl Default for FlightLevelConfig`
--  `default` function L136-138 — `() -> Self`
--  `FlightLevelConfig` type L141-145 — `= FlightLevelConfig`
--  `fmt` function L142-144 — `(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result`
--  `ConfigurationError` type L156-171 — `= ConfigurationError`
--  `fmt` function L157-170 — `(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result`
--  `ConfigurationError` type L173 — `= ConfigurationError`
--  `ConfigFile` type L187-241 — `= ConfigFile`
--  `ConfigFile` type L243-252 — `impl Default for ConfigFile`
--  `default` function L244-251 — `() -> Self`
--  `tests` module L255-486 — `-`
--  `test_preset_configurations` function L259-274 — `()`
--  `test_configuration_validation` function L277-285 — `()`
--  `test_document_type_allowed` function L288-309 — `()`
--  `test_parent_type_resolution` function L312-344 — `()`
--  `test_enabled_document_types` function L347-379 — `()`
--  `test_hierarchy_display` function L382-395 — `()`
--  `test_serialization` function L398-403 — `()`
--  `test_config_file_creation` function L406-410 — `()`
--  `test_config_file_validation` function L413-425 — `()`
--  `test_config_file_save_and_load` function L428-447 — `()`
--  `test_config_file_toml_format` function L450-471 — `()`
--  `test_config_file_default` function L474-478 — `()`
--  `test_config_file_default_with_prefix` function L481-485 — `()`
+- pub `FlightLevelConfig` struct L7-10 — `{ initiatives_enabled: bool }` — Flight level configuration defining which levels are enabled
+- pub `new` function L14-18 — `(initiatives_enabled: bool) -> Result<Self, ConfigurationError>` — Create a new configuration with the given initiative setting
+- pub `streamlined` function L21-25 — `() -> Self` — Streamlined flight levels: Vision → Initiative → Task
+- pub `direct` function L28-32 — `() -> Self` — Direct flight levels: Vision → Task
+- pub `full` function L36-38 — `() -> Self` — Alias for streamlined() — kept for backward compatibility
+- pub `is_document_type_allowed` function L41-47 — `(&self, doc_type: DocumentType) -> bool` — Check if a document type is allowed in this configuration
+- pub `get_parent_type` function L50-63 — `(&self, doc_type: DocumentType) -> Option<DocumentType>` — Get the parent document type for a given document type in this configuration
+- pub `preset_name` function L66-72 — `(&self) -> &'static str` — Get the configuration name/preset
+- pub `enabled_document_types` function L75-87 — `(&self) -> Vec<DocumentType>` — Get enabled document types in hierarchical order
+- pub `hierarchy_display` function L90-100 — `(&self) -> String` — Get the hierarchy display string
+- pub `ConfigurationError` enum L117-122 — `InvalidConfiguration | SerializationError | InvalidValue | MissingConfiguration` — Configuration validation errors
+- pub `ConfigFile` struct L145-148 — `{ project: ProjectConfig, flight_levels: FlightLevelConfig }` — Configuration file structure that persists to .metis/config.toml
+- pub `ProjectConfig` struct L151-153 — `{ prefix: String }`
+- pub `new` function L157-169 — `(prefix: String, flight_levels: FlightLevelConfig) -> Result<Self, Configuration...` — Create a new configuration with defaults
+- pub `load` function L172-180 — `(path: P) -> Result<Self, ConfigurationError>` — Load configuration from a TOML file
+- pub `save` function L183-193 — `(&self, path: P) -> Result<(), ConfigurationError>` — Save configuration to a TOML file
+- pub `default_with_prefix` function L196-198 — `(prefix: String) -> Result<Self, ConfigurationError>` — Create default configuration with given prefix
+- pub `prefix` function L201-203 — `(&self) -> &str` — Get the project prefix
+- pub `flight_levels` function L206-208 — `(&self) -> &FlightLevelConfig` — Get the flight level configuration
+-  `FlightLevelConfig` type L12-101 — `= FlightLevelConfig`
+-  `FlightLevelConfig` type L103-107 — `impl Default for FlightLevelConfig`
+-  `default` function L104-106 — `() -> Self`
+-  `FlightLevelConfig` type L109-113 — `= FlightLevelConfig`
+-  `fmt` function L110-112 — `(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result`
+-  `ConfigurationError` type L124-139 — `= ConfigurationError`
+-  `fmt` function L125-138 — `(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result`
+-  `ConfigurationError` type L141 — `= ConfigurationError`
+-  `ConfigFile` type L155-209 — `= ConfigFile`
+-  `ConfigFile` type L211-220 — `impl Default for ConfigFile`
+-  `default` function L212-219 — `() -> Self`
+-  `tests` module L223-443 — `-`
+-  `test_preset_configurations` function L227-235 — `()`
+-  `test_configuration_validation` function L238-241 — `()`
+-  `test_document_type_allowed` function L244-256 — `()`
+-  `test_parent_type_resolution` function L259-277 — `()`
+-  `test_enabled_document_types` function L280-305 — `()`
+-  `test_hierarchy_display` function L308-317 — `()`
+-  `test_serialization` function L320-325 — `()`
+-  `test_backward_compat_old_config_with_strategies_enabled` function L328-338 — `()`
+-  `test_backward_compat_old_toml_with_strategies_enabled` function L341-359 — `()`
+-  `test_config_file_creation` function L362-366 — `()`
+-  `test_config_file_validation` function L369-381 — `()`
+-  `test_config_file_save_and_load` function L384-403 — `()`
+-  `test_config_file_toml_format` function L406-428 — `()`
+-  `test_config_file_default` function L431-435 — `()`
+-  `test_config_file_default_with_prefix` function L438-442 — `()`
 
 #### crates/metis-docs-core/src/domain/mod.rs
 
@@ -1644,48 +1644,48 @@
 
 - pub `Adr` struct L13-18 — `{ core: super::traits::DocumentCore, number: u32, decision_maker: String, decisi...` — An ADR (Architecture Decision Record) documents architectural decisions
 - pub `new` function L23-46 — `( number: u32, title: String, decision_maker: String, decision_date: Option<chro...` — Create a new ADR document with content rendered from template
-- pub `new_with_template` function L50-97 — `( number: u32, title: String, decision_maker: String, decision_date: Option<chro...` — Create a new ADR document with a custom template
-- pub `from_parts` function L101-128 — `( number: u32, title: String, decision_maker: String, decision_date: Option<chro...` — Create an ADR document from existing data (used when loading from file)
-- pub `number` function L130-132 — `(&self) -> u32`
-- pub `decision_maker` function L134-136 — `(&self) -> &str`
-- pub `decision_date` function L138-140 — `(&self) -> Option<chrono::DateTime<Utc>>`
-- pub `from_file` function L143-149 — `(path: P) -> Result<Self, DocumentValidationError>` — Create an ADR document by reading and parsing a file
-- pub `from_content` function L152-223 — `(raw_content: &str) -> Result<Self, DocumentValidationError>` — Create an ADR document from raw file content string
-- pub `to_file` function L248-253 — `(&self, path: P) -> Result<(), DocumentValidationError>` — Write the ADR document to a file
-- pub `to_content` function L256-325 — `(&self) -> Result<String, DocumentValidationError>` — Convert the ADR document to its markdown string representation using templates
--  `Adr` type L20-326 — `= Adr`
--  `next_phase_in_sequence` function L226-235 — `(current: Phase) -> Option<Phase>` — Get the next phase in the ADR sequence
--  `update_phase_tag` function L238-245 — `(&mut self, new_phase: Phase)` — Update the phase tag in the document's tags
--  `Adr` type L328-456 — `impl Document for Adr`
--  `id` function L330-333 — `(&self) -> DocumentId` — ADRs have special ID format: number-slug
--  `document_type` function L335-337 — `(&self) -> DocumentType`
--  `title` function L339-341 — `(&self) -> &str`
--  `metadata` function L343-345 — `(&self) -> &DocumentMetadata`
--  `content` function L347-349 — `(&self) -> &DocumentContent`
--  `core` function L351-353 — `(&self) -> &super::traits::DocumentCore`
--  `can_transition_to` function L355-362 — `(&self, phase: Phase) -> bool`
--  `parent_id` function L364-366 — `(&self) -> Option<&DocumentId>`
--  `blocked_by` function L368-370 — `(&self) -> &[DocumentId]`
--  `validate` function L372-393 — `(&self) -> Result<(), DocumentValidationError>`
--  `exit_criteria_met` function L395-400 — `(&self) -> bool`
--  `template` function L402-409 — `(&self) -> DocumentTemplate`
--  `frontmatter_template` function L411-413 — `(&self) -> &'static str`
--  `content_template` function L415-417 — `(&self) -> &'static str`
--  `acceptance_criteria_template` function L419-421 — `(&self) -> &'static str`
--  `transition_phase` function L423-451 — `( &mut self, target_phase: Option<Phase>, ) -> Result<Phase, DocumentValidationE...`
--  `core_mut` function L453-455 — `(&mut self) -> &mut super::traits::DocumentCore`
--  `tests` module L459-817 — `-`
--  `test_adr_from_content` function L464-510 — `()`
--  `test_adr_special_id_format` function L513-528 — `()`
--  `test_adr_invalid_level` function L531-559 — `()`
--  `test_adr_validation` function L562-591 — `()`
--  `test_adr_cannot_be_blocked` function L594-609 — `()`
--  `test_adr_phase_transitions` function L612-643 — `()`
--  `test_adr_number_formatting` function L646-686 — `()`
--  `test_adr_transition_phase_auto` function L689-721 — `()`
--  `test_adr_transition_phase_explicit` function L724-746 — `()`
--  `test_adr_transition_phase_invalid` function L749-775 — `()`
--  `test_adr_update_section` function L778-816 — `()`
+- pub `new_with_template` function L50-96 — `( number: u32, title: String, decision_maker: String, decision_date: Option<chro...` — Create a new ADR document with a custom template
+- pub `from_parts` function L100-126 — `( number: u32, title: String, decision_maker: String, decision_date: Option<chro...` — Create an ADR document from existing data (used when loading from file)
+- pub `number` function L128-130 — `(&self) -> u32`
+- pub `decision_maker` function L132-134 — `(&self) -> &str`
+- pub `decision_date` function L136-138 — `(&self) -> Option<chrono::DateTime<Utc>>`
+- pub `from_file` function L141-147 — `(path: P) -> Result<Self, DocumentValidationError>` — Create an ADR document by reading and parsing a file
+- pub `from_content` function L150-221 — `(raw_content: &str) -> Result<Self, DocumentValidationError>` — Create an ADR document from raw file content string
+- pub `to_file` function L246-251 — `(&self, path: P) -> Result<(), DocumentValidationError>` — Write the ADR document to a file
+- pub `to_content` function L254-322 — `(&self) -> Result<String, DocumentValidationError>` — Convert the ADR document to its markdown string representation using templates
+-  `Adr` type L20-323 — `= Adr`
+-  `next_phase_in_sequence` function L224-233 — `(current: Phase) -> Option<Phase>` — Get the next phase in the ADR sequence
+-  `update_phase_tag` function L236-243 — `(&mut self, new_phase: Phase)` — Update the phase tag in the document's tags
+-  `Adr` type L325-453 — `impl Document for Adr`
+-  `id` function L327-330 — `(&self) -> DocumentId` — ADRs have special ID format: number-slug
+-  `document_type` function L332-334 — `(&self) -> DocumentType`
+-  `title` function L336-338 — `(&self) -> &str`
+-  `metadata` function L340-342 — `(&self) -> &DocumentMetadata`
+-  `content` function L344-346 — `(&self) -> &DocumentContent`
+-  `core` function L348-350 — `(&self) -> &super::traits::DocumentCore`
+-  `can_transition_to` function L352-359 — `(&self, phase: Phase) -> bool`
+-  `parent_id` function L361-363 — `(&self) -> Option<&DocumentId>`
+-  `blocked_by` function L365-367 — `(&self) -> &[DocumentId]`
+-  `validate` function L369-390 — `(&self) -> Result<(), DocumentValidationError>`
+-  `exit_criteria_met` function L392-397 — `(&self) -> bool`
+-  `template` function L399-406 — `(&self) -> DocumentTemplate`
+-  `frontmatter_template` function L408-410 — `(&self) -> &'static str`
+-  `content_template` function L412-414 — `(&self) -> &'static str`
+-  `acceptance_criteria_template` function L416-418 — `(&self) -> &'static str`
+-  `transition_phase` function L420-448 — `( &mut self, target_phase: Option<Phase>, ) -> Result<Phase, DocumentValidationE...`
+-  `core_mut` function L450-452 — `(&mut self) -> &mut super::traits::DocumentCore`
+-  `tests` module L456-814 — `-`
+-  `test_adr_from_content` function L461-507 — `()`
+-  `test_adr_special_id_format` function L510-525 — `()`
+-  `test_adr_invalid_level` function L528-556 — `()`
+-  `test_adr_validation` function L559-588 — `()`
+-  `test_adr_cannot_be_blocked` function L591-606 — `()`
+-  `test_adr_phase_transitions` function L609-640 — `()`
+-  `test_adr_number_formatting` function L643-683 — `()`
+-  `test_adr_transition_phase_auto` function L686-718 — `()`
+-  `test_adr_transition_phase_explicit` function L721-743 — `()`
+-  `test_adr_transition_phase_invalid` function L746-772 — `()`
+-  `test_adr_update_section` function L775-813 — `()`
 
 ### crates/metis-docs-core/src/domain/documents
 
@@ -1761,7 +1761,7 @@
 - pub `types` module L7 — `-`
 - pub `adr` module L10 — `-`
 - pub `initiative` module L11 — `-`
-- pub `strategy` module L12 — `-`
+- pub `specification` module L12 — `-`
 - pub `task` module L13 — `-`
 - pub `vision` module L14 — `-`
 
@@ -1769,8 +1769,8 @@
 
 - pub `Document` interface L7-170 — `{ fn id(), fn document_type(), fn title(), fn metadata(), fn content(), fn core(...` — Core document trait that all document types must implement
 - pub `DocumentTemplate` struct L173-178 — `{ frontmatter: &'static str, content: &'static str, acceptance_criteria: &'stati...` — Template information for a document
-- pub `DocumentCore` struct L182-192 — `{ title: String, metadata: DocumentMetadata, content: DocumentContent, parent_id...` — Common document data that all document types share
-- pub `DocumentValidationError` enum L196-214 — `InvalidTitle | InvalidParent | InvalidPhaseTransition | MissingRequiredField | I...` — Validation errors for documents
+- pub `DocumentCore` struct L182-191 — `{ title: String, metadata: DocumentMetadata, content: DocumentContent, parent_id...` — Common document data that all document types share
+- pub `DocumentValidationError` enum L195-213 — `InvalidTitle | InvalidParent | InvalidPhaseTransition | MissingRequiredField | I...` — Validation errors for documents
 -  `id` function L9-11 — `(&self) -> DocumentId` — Get the unique identifier for this document (derived from title)
 -  `tags` function L29-31 — `(&self) -> &[Tag]` — Get the document tags
 -  `phase` function L34-43 — `(&self) -> Result<Phase, DocumentValidationError>` — Get the current phase of the document (parsed from tags)
@@ -1791,12 +1791,12 @@
 - pub `parent_id` function L112-117 — `(&self) -> Option<&DocumentId>` — Get the parent ID if it exists
 - pub `from_option` function L120-125 — `(id: Option<DocumentId>) -> Self` — Create from optional document ID
 - pub `null` function L128-130 — `() -> Self` — Create a null reference for disabled levels
-- pub `DocumentType` enum L153-159 — `Vision | Strategy | Initiative | Task | Adr` — Document type enumeration
-- pub `valid_transitions_from` function L192-228 — `(&self, from_phase: Phase) -> Vec<Phase>` — Get valid transitions from a given phase for this document type.
-- pub `can_transition` function L231-233 — `(&self, from: Phase, to: Phase) -> bool` — Check if a transition from one phase to another is valid for this document type.
-- pub `next_phase` function L237-239 — `(&self, current: Phase) -> Option<Phase>` — Get the next phase in the natural sequence for this document type.
-- pub `phase_sequence` function L242-273 — `(&self) -> Vec<Phase>` — Get the ordered phase sequence for this document type (for display purposes).
-- pub `Phase` enum L278-302 — `Draft | Review | Published | Discussion | Decided | Superseded | Backlog | Todo ...` — Document phase/status
+- pub `DocumentType` enum L153-159 — `Vision | Initiative | Task | Adr | Specification` — Document type enumeration
+- pub `valid_transitions_from` function L192-227 — `(&self, from_phase: Phase) -> Vec<Phase>` — Get valid transitions from a given phase for this document type.
+- pub `can_transition` function L230-232 — `(&self, from: Phase, to: Phase) -> bool` — Check if a transition from one phase to another is valid for this document type.
+- pub `next_phase` function L236-238 — `(&self, current: Phase) -> Option<Phase>` — Get the next phase in the natural sequence for this document type.
+- pub `phase_sequence` function L241-271 — `(&self) -> Vec<Phase>` — Get the ordered phase sequence for this document type (for display purposes).
+- pub `Phase` enum L276-302 — `Draft | Review | Published | Discussion | Decided | Superseded | Backlog | Todo ...` — Document phase/status
 - pub `Tag` enum L329-332 — `Phase | Label` — Document tag that can be either a phase or a string
 - pub `to_str` function L402-413 — `(&self) -> String` — Convert tag back to its string representation (reverse of from_str)
 -  `MAX_ID_LENGTH` variable L6 — `: usize` — Maximum length for document IDs
@@ -1819,7 +1819,7 @@
 -  `DocumentType` type L173-186 — `impl FromStr for DocumentType`
 -  `Err` type L174 — `= String`
 -  `from_str` function L176-185 — `(s: &str) -> Result<Self, Self::Err>`
--  `DocumentType` type L188-274 — `= DocumentType`
+-  `DocumentType` type L188-272 — `= DocumentType`
 -  `Phase` type L304-325 — `= Phase`
 -  `fmt` function L305-324 — `(&self, f: &mut fmt::Formatter) -> fmt::Result`
 -  `Tag` type L334-347 — `= Tag`
@@ -1834,7 +1834,7 @@
 -  `Err` type L368 — `= ()`
 -  `from_str` function L370-397 — `(s: &str) -> Result<Self, Self::Err>`
 -  `Tag` type L400-414 — `= Tag`
--  `tests` module L417-599 — `-`
+-  `tests` module L417-598 — `-`
 -  `test_title_to_slug` function L421-438 — `()`
 -  `test_id_length_capping` function L441-446 — `()`
 -  `test_adr_custom_id` function L449-452 — `()`
@@ -1842,9 +1842,9 @@
 -  `test_tag_to_str` function L483-491 — `()`
 -  `test_tag_roundtrip` function L494-507 — `()`
 -  `test_document_type_valid_transitions` function L510-533 — `()`
--  `test_document_type_can_transition` function L536-553 — `()`
--  `test_document_type_next_phase` function L556-575 — `()`
--  `test_document_type_phase_sequence` function L578-598 — `()`
+-  `test_document_type_can_transition` function L536-552 — `()`
+-  `test_document_type_next_phase` function L555-574 — `()`
+-  `test_document_type_phase_sequence` function L577-597 — `()`
 
 ### crates/metis-docs-core/src/domain/documents/initiative
 
@@ -1860,102 +1860,93 @@
 #### crates/metis-docs-core/src/domain/documents/initiative/mod.rs
 
 - pub `Complexity` enum L13-19 — `XS | S | M | L | XL` — Complexity level for initiatives
-- pub `Initiative` struct L53-56 — `{ core: super::traits::DocumentCore, estimated_complexity: Complexity }` — An Initiative document represents a concrete implementation approach for a strategy
-- pub `new` function L61-84 — `( title: String, parent_id: Option<DocumentId>, // Usually a Strategy strategy_i...` — Create a new Initiative document with content rendered from template
-- pub `new_with_template` function L88-135 — `( title: String, parent_id: Option<DocumentId>, strategy_id: Option<DocumentId>,...` — Create a new Initiative document with a custom template
-- pub `from_parts` function L139-167 — `( title: String, metadata: DocumentMetadata, content: DocumentContent, parent_id...` — Create an Initiative document from existing data (used when loading from file)
-- pub `estimated_complexity` function L169-171 — `(&self) -> Complexity`
-- pub `from_file` function L198-204 — `(path: P) -> Result<Self, DocumentValidationError>` — Create an Initiative document by reading and parsing a file
-- pub `from_content` function L207-287 — `(raw_content: &str) -> Result<Self, DocumentValidationError>` — Create an Initiative document from raw file content string
-- pub `to_file` function L290-295 — `(&self, path: P) -> Result<(), DocumentValidationError>` — Write the Initiative document to a file
-- pub `to_content` function L298-380 — `(&self) -> Result<String, DocumentValidationError>` — Convert the Initiative document to its markdown string representation using templates
+- pub `Initiative` struct L53-56 — `{ core: super::traits::DocumentCore, estimated_complexity: Complexity }` — An Initiative document represents a concrete implementation project
+- pub `new` function L61-82 — `( title: String, parent_id: Option<DocumentId>, blocked_by: Vec<DocumentId>, tag...` — Create a new Initiative document with content rendered from template
+- pub `new_with_template` function L86-130 — `( title: String, parent_id: Option<DocumentId>, blocked_by: Vec<DocumentId>, tag...` — Create a new Initiative document with a custom template
+- pub `from_parts` function L134-159 — `( title: String, metadata: DocumentMetadata, content: DocumentContent, parent_id...` — Create an Initiative document from existing data (used when loading from file)
+- pub `estimated_complexity` function L161-163 — `(&self) -> Complexity`
+- pub `from_file` function L190-196 — `(path: P) -> Result<Self, DocumentValidationError>` — Create an Initiative document by reading and parsing a file
+- pub `from_content` function L199-274 — `(raw_content: &str) -> Result<Self, DocumentValidationError>` — Create an Initiative document from raw file content string
+- pub `to_file` function L277-282 — `(&self, path: P) -> Result<(), DocumentValidationError>` — Write the Initiative document to a file
+- pub `to_content` function L285-358 — `(&self) -> Result<String, DocumentValidationError>` — Convert the Initiative document to its markdown string representation using templates
 -  `Complexity` type L21-31 — `= Complexity`
 -  `fmt` function L22-30 — `(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result`
 -  `Complexity` type L33-49 — `= Complexity`
 -  `Err` type L34 — `= DocumentValidationError`
 -  `from_str` function L36-48 — `(s: &str) -> Result<Self, Self::Err>`
--  `Initiative` type L58-381 — `= Initiative`
--  `next_phase_in_sequence` function L174-185 — `(current: Phase) -> Option<Phase>` — Get the next phase in the Initiative sequence
--  `update_phase_tag` function L188-195 — `(&mut self, new_phase: Phase)` — Update the phase tag in the document's tags
--  `Initiative` type L383-502 — `impl Document for Initiative`
--  `document_type` function L386-388 — `(&self) -> DocumentType`
--  `title` function L390-392 — `(&self) -> &str`
--  `metadata` function L394-396 — `(&self) -> &DocumentMetadata`
--  `content` function L398-400 — `(&self) -> &DocumentContent`
--  `core` function L402-404 — `(&self) -> &super::traits::DocumentCore`
--  `can_transition_to` function L406-413 — `(&self, phase: Phase) -> bool`
--  `parent_id` function L415-417 — `(&self) -> Option<&DocumentId>`
--  `blocked_by` function L419-421 — `(&self) -> &[DocumentId]`
--  `validate` function L423-439 — `(&self) -> Result<(), DocumentValidationError>`
--  `exit_criteria_met` function L441-446 — `(&self) -> bool`
--  `template` function L448-455 — `(&self) -> DocumentTemplate`
--  `frontmatter_template` function L457-459 — `(&self) -> &'static str`
--  `content_template` function L461-463 — `(&self) -> &'static str`
--  `acceptance_criteria_template` function L465-467 — `(&self) -> &'static str`
--  `transition_phase` function L469-497 — `( &mut self, target_phase: Option<Phase>, ) -> Result<Phase, DocumentValidationE...`
--  `core_mut` function L499-501 — `(&mut self) -> &mut super::traits::DocumentCore`
--  `tests` module L505-709 — `-`
--  `test_initiative_from_content` function L510-575 — `()`
--  `test_initiative_complexity_parsing` function L578-587 — `()`
--  `test_initiative_invalid_level` function L590-616 — `()`
--  `test_initiative_validation` function L619-665 — `()`
--  `test_initiative_phase_transitions` function L668-699 — `()`
--  `test_complexity_display` function L702-708 — `()`
+-  `Initiative` type L58-359 — `= Initiative`
+-  `next_phase_in_sequence` function L166-177 — `(current: Phase) -> Option<Phase>` — Get the next phase in the Initiative sequence
+-  `update_phase_tag` function L180-187 — `(&mut self, new_phase: Phase)` — Update the phase tag in the document's tags
+-  `Initiative` type L361-480 — `impl Document for Initiative`
+-  `document_type` function L364-366 — `(&self) -> DocumentType`
+-  `title` function L368-370 — `(&self) -> &str`
+-  `metadata` function L372-374 — `(&self) -> &DocumentMetadata`
+-  `content` function L376-378 — `(&self) -> &DocumentContent`
+-  `core` function L380-382 — `(&self) -> &super::traits::DocumentCore`
+-  `can_transition_to` function L384-391 — `(&self, phase: Phase) -> bool`
+-  `parent_id` function L393-395 — `(&self) -> Option<&DocumentId>`
+-  `blocked_by` function L397-399 — `(&self) -> &[DocumentId]`
+-  `validate` function L401-417 — `(&self) -> Result<(), DocumentValidationError>`
+-  `exit_criteria_met` function L419-424 — `(&self) -> bool`
+-  `template` function L426-433 — `(&self) -> DocumentTemplate`
+-  `frontmatter_template` function L435-437 — `(&self) -> &'static str`
+-  `content_template` function L439-441 — `(&self) -> &'static str`
+-  `acceptance_criteria_template` function L443-445 — `(&self) -> &'static str`
+-  `transition_phase` function L447-475 — `( &mut self, target_phase: Option<Phase>, ) -> Result<Phase, DocumentValidationE...`
+-  `core_mut` function L477-479 — `(&mut self) -> &mut super::traits::DocumentCore`
+-  `tests` module L483-684 — `-`
+-  `test_initiative_from_content` function L488-553 — `()`
+-  `test_initiative_complexity_parsing` function L556-565 — `()`
+-  `test_initiative_invalid_level` function L568-594 — `()`
+-  `test_initiative_validation` function L597-641 — `()`
+-  `test_initiative_phase_transitions` function L644-674 — `()`
+-  `test_complexity_display` function L677-683 — `()`
 
-### crates/metis-docs-core/src/domain/documents/strategy
+### crates/metis-docs-core/src/domain/documents/specification
 
-**Role**: Implements the Strategy document type — a high-level plan for achieving a Vision goal, with a five-phase lifecycle and risk/stakeholder metadata.
+> *Semantic summary to be generated by AI agent.*
 
-**Key abstractions**:
-- `Strategy` — Embeds `DocumentCore` plus `risk_level: RiskLevel` and `stakeholders: Vec<String>`. Parent is a Vision (optional in `direct` config). Strategies themselves hold no child references; child initiatives are linked via the database relationship table.
-- `RiskLevel` enum — Low/Medium/High/Critical, stored as a string in frontmatter. Defaults to `Low` when the field is absent.
-- Phase sequence: Shaping → Design → Ready → Active → Completed. Transitions between non-adjacent phases are blocked.
+#### crates/metis-docs-core/src/domain/documents/specification/mod.rs
 
-**Internal flow**: `from_content()` parses `risk` and `stakeholders` from frontmatter in addition to the common `DocumentCore` fields. `to_content()` includes these in the Tera template context.
-
-#### crates/metis-docs-core/src/domain/documents/strategy/mod.rs
-
-- pub `RiskLevel` enum L13-18 — `Low | Medium | High | Critical` — Risk level for strategies
-- pub `Strategy` struct L50-54 — `{ core: super::traits::DocumentCore, risk_level: RiskLevel, stakeholders: Vec<St...` — A Strategy document defines high-level approaches to achieve vision goals
-- pub `new` function L59-82 — `( title: String, parent_id: Option<DocumentId>, // Usually a Vision blocked_by: ...` — Create a new Strategy document with content rendered from template
-- pub `new_with_template` function L86-134 — `( title: String, parent_id: Option<DocumentId>, blocked_by: Vec<DocumentId>, tag...` — Create a new Strategy document with a custom template
-- pub `from_parts` function L138-167 — `( title: String, metadata: DocumentMetadata, content: DocumentContent, parent_id...` — Create a Strategy document from existing data (used when loading from file)
-- pub `risk_level` function L169-171 — `(&self) -> RiskLevel`
-- pub `stakeholders` function L173-175 — `(&self) -> &[String]`
-- pub `from_file` function L201-207 — `(path: P) -> Result<Self, DocumentValidationError>` — Create a Strategy document by reading and parsing a file
-- pub `from_content` function L210-287 — `(raw_content: &str) -> Result<Self, DocumentValidationError>` — Create a Strategy document from raw file content string
-- pub `to_file` function L290-295 — `(&self, path: P) -> Result<(), DocumentValidationError>` — Write the Strategy document to a file
-- pub `to_content` function L298-380 — `(&self) -> Result<String, DocumentValidationError>` — Convert the Strategy document to its markdown string representation using templates
--  `RiskLevel` type L20-29 — `= RiskLevel`
--  `fmt` function L21-28 — `(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result`
--  `RiskLevel` type L31-46 — `= RiskLevel`
--  `Err` type L32 — `= DocumentValidationError`
--  `from_str` function L34-45 — `(s: &str) -> Result<Self, Self::Err>`
--  `Strategy` type L56-383 — `= Strategy`
--  `next_phase_in_sequence` function L178-188 — `(current: Phase) -> Option<Phase>` — Get the next phase in the Strategy sequence
--  `update_phase_tag` function L191-198 — `(&mut self, new_phase: Phase)` — Update the phase tag in the document's tags
--  `Strategy` type L385-503 — `impl Document for Strategy`
--  `document_type` function L388-390 — `(&self) -> DocumentType`
--  `title` function L392-394 — `(&self) -> &str`
--  `metadata` function L396-398 — `(&self) -> &DocumentMetadata`
--  `content` function L400-402 — `(&self) -> &DocumentContent`
--  `core` function L404-406 — `(&self) -> &super::traits::DocumentCore`
--  `can_transition_to` function L408-415 — `(&self, phase: Phase) -> bool`
--  `parent_id` function L417-419 — `(&self) -> Option<&DocumentId>`
--  `blocked_by` function L421-423 — `(&self) -> &[DocumentId]`
--  `validate` function L425-440 — `(&self) -> Result<(), DocumentValidationError>`
--  `exit_criteria_met` function L442-447 — `(&self) -> bool`
--  `template` function L449-456 — `(&self) -> DocumentTemplate`
--  `frontmatter_template` function L458-460 — `(&self) -> &'static str`
--  `content_template` function L462-464 — `(&self) -> &'static str`
--  `acceptance_criteria_template` function L466-468 — `(&self) -> &'static str`
--  `transition_phase` function L470-498 — `( &mut self, target_phase: Option<Phase>, ) -> Result<Phase, DocumentValidationE...`
--  `core_mut` function L500-502 — `(&mut self) -> &mut super::traits::DocumentCore`
--  `tests` module L506-672 — `-`
--  `test_strategy_new` function L512-547 — `()`
--  `test_strategy_from_content` function L550-608 — `()`
--  `test_strategy_phase_transitions` function L611-638 — `()`
--  `test_strategy_validation` function L641-671 — `()`
+- pub `Specification` struct L16-18 — `{ core: super::traits::DocumentCore }` — A Specification captures system-level or project-level design:
+- pub `new` function L22-31 — `( title: String, parent_id: DocumentId, tags: Vec<Tag>, archived: bool, short_co...` — Create a new Specification document with content rendered from template
+- pub `new_with_template` function L34-72 — `( title: String, parent_id: DocumentId, tags: Vec<Tag>, archived: bool, short_co...` — Create a new Specification document with a custom template
+- pub `from_parts` function L75-95 — `( title: String, metadata: DocumentMetadata, content: DocumentContent, parent_id...` — Create a Specification from existing data (used when loading from file)
+- pub `from_file` function L98-104 — `(path: P) -> Result<Self, DocumentValidationError>` — Create a Specification document by reading and parsing a file
+- pub `from_content` function L107-163 — `(raw_content: &str) -> Result<Self, DocumentValidationError>` — Create a Specification document from raw file content string
+- pub `to_file` function L185-190 — `(&self, path: P) -> Result<(), DocumentValidationError>` — Write the Specification document to a file
+- pub `to_content` function L193-248 — `(&self) -> Result<String, DocumentValidationError>` — Convert the Specification document to its markdown string representation
+-  `Specification` type L20-249 — `= Specification`
+-  `next_phase_in_sequence` function L166-175 — `(current: Phase) -> Option<Phase>` — Get the next phase in the Specification sequence
+-  `update_phase_tag` function L178-182 — `(&mut self, new_phase: Phase)` — Update the phase tag in the document's tags
+-  `Specification` type L251-358 — `impl Document for Specification`
+-  `id` function L252-254 — `(&self) -> DocumentId`
+-  `document_type` function L256-258 — `(&self) -> DocumentType`
+-  `title` function L260-262 — `(&self) -> &str`
+-  `metadata` function L264-266 — `(&self) -> &DocumentMetadata`
+-  `content` function L268-270 — `(&self) -> &DocumentContent`
+-  `core` function L272-274 — `(&self) -> &super::traits::DocumentCore`
+-  `can_transition_to` function L276-282 — `(&self, phase: Phase) -> bool`
+-  `parent_id` function L284-286 — `(&self) -> Option<&DocumentId>`
+-  `blocked_by` function L288-290 — `(&self) -> &[DocumentId]`
+-  `validate` function L292-300 — `(&self) -> Result<(), DocumentValidationError>`
+-  `exit_criteria_met` function L302-304 — `(&self) -> bool`
+-  `template` function L306-313 — `(&self) -> DocumentTemplate`
+-  `frontmatter_template` function L315-317 — `(&self) -> &'static str`
+-  `content_template` function L319-321 — `(&self) -> &'static str`
+-  `acceptance_criteria_template` function L323-325 — `(&self) -> &'static str`
+-  `transition_phase` function L327-353 — `( &mut self, target_phase: Option<Phase>, ) -> Result<Phase, DocumentValidationE...`
+-  `core_mut` function L355-357 — `(&mut self) -> &mut super::traits::DocumentCore`
+-  `tests` module L361-604 — `-`
+-  `test_specification_from_content` function L365-408 — `()`
+-  `test_specification_invalid_level` function L411-439 — `()`
+-  `test_specification_validation` function L442-453 — `()`
+-  `test_specification_empty_title_validation` function L456-467 — `()`
+-  `test_specification_cannot_be_blocked` function L470-481 — `()`
+-  `test_specification_phase_transitions` function L484-522 — `()`
+-  `test_specification_transition_phase_auto` function L525-550 — `()`
+-  `test_specification_transition_phase_invalid` function L553-576 — `()`
+-  `test_specification_to_content_roundtrip` function L579-603 — `()`
 
 ### crates/metis-docs-core/src/domain/documents/task
 
@@ -1971,45 +1962,45 @@
 #### crates/metis-docs-core/src/domain/documents/task/mod.rs
 
 - pub `Task` struct L13-15 — `{ core: super::traits::DocumentCore }` — A Task document represents a concrete, actionable piece of work
-- pub `new` function L20-45 — `( title: String, parent_id: Option<DocumentId>, // Usually an Initiative parent_...` — Create a new Task document with content rendered from template
-- pub `new_with_template` function L49-97 — `( title: String, parent_id: Option<DocumentId>, parent_title: Option<String>, st...` — Create a new Task document with a custom template
-- pub `from_parts` function L101-125 — `( title: String, metadata: DocumentMetadata, content: DocumentContent, parent_id...` — Create a Task document from existing data (used when loading from file)
-- pub `from_file` function L128-134 — `(path: P) -> Result<Self, DocumentValidationError>` — Create a Task document by reading and parsing a file
-- pub `from_content` function L137-215 — `(raw_content: &str) -> Result<Self, DocumentValidationError>` — Create a Task document from raw file content string
-- pub `to_file` function L241-246 — `(&self, path: P) -> Result<(), DocumentValidationError>` — Write the Task document to a file
-- pub `to_content` function L249-327 — `(&self) -> Result<String, DocumentValidationError>` — Convert the Task document to its markdown string representation using templates
--  `Task` type L17-328 — `= Task`
--  `next_phase_in_sequence` function L218-228 — `(current: Phase) -> Option<Phase>` — Get the next phase in the Task sequence
--  `update_phase_tag` function L231-238 — `(&mut self, new_phase: Phase)` — Update the phase tag in the document's tags
--  `Task` type L330-467 — `impl Document for Task`
--  `document_type` function L333-335 — `(&self) -> DocumentType`
--  `title` function L337-339 — `(&self) -> &str`
--  `metadata` function L341-343 — `(&self) -> &DocumentMetadata`
--  `content` function L345-347 — `(&self) -> &DocumentContent`
--  `core` function L349-351 — `(&self) -> &super::traits::DocumentCore`
--  `can_transition_to` function L353-360 — `(&self, phase: Phase) -> bool`
--  `parent_id` function L362-364 — `(&self) -> Option<&DocumentId>`
--  `blocked_by` function L366-368 — `(&self) -> &[DocumentId]`
--  `validate` function L370-404 — `(&self) -> Result<(), DocumentValidationError>`
--  `exit_criteria_met` function L406-411 — `(&self) -> bool`
--  `template` function L413-420 — `(&self) -> DocumentTemplate`
--  `frontmatter_template` function L422-424 — `(&self) -> &'static str`
--  `content_template` function L426-428 — `(&self) -> &'static str`
--  `acceptance_criteria_template` function L430-432 — `(&self) -> &'static str`
--  `transition_phase` function L434-462 — `( &mut self, target_phase: Option<Phase>, ) -> Result<Phase, DocumentValidationE...`
--  `core_mut` function L464-466 — `(&mut self) -> &mut super::traits::DocumentCore`
--  `tests` module L470-830 — `-`
--  `test_task_from_content` function L476-532 — `()`
--  `test_task_invalid_level` function L535-560 — `()`
--  `test_task_validation` function L563-594 — `()`
--  `test_task_blocked_validation` function L597-629 — `()`
--  `test_task_phase_transitions` function L632-650 — `()`
--  `test_task_active_phase_transitions` function L653-670 — `()`
--  `test_task_blocked_phase_transitions` function L673-690 — `()`
--  `test_task_transition_phase_auto` function L693-721 — `()`
--  `test_task_transition_phase_blocking` function L724-753 — `()`
--  `test_task_transition_phase_invalid` function L756-783 — `()`
--  `test_task_update_section` function L786-829 — `()`
+- pub `new` function L20-43 — `( title: String, parent_id: Option<DocumentId>, // Usually an Initiative parent_...` — Create a new Task document with content rendered from template
+- pub `new_with_template` function L47-93 — `( title: String, parent_id: Option<DocumentId>, parent_title: Option<String>, in...` — Create a new Task document with a custom template
+- pub `from_parts` function L97-119 — `( title: String, metadata: DocumentMetadata, content: DocumentContent, parent_id...` — Create a Task document from existing data (used when loading from file)
+- pub `from_file` function L122-128 — `(path: P) -> Result<Self, DocumentValidationError>` — Create a Task document by reading and parsing a file
+- pub `from_content` function L131-206 — `(raw_content: &str) -> Result<Self, DocumentValidationError>` — Create a Task document from raw file content string
+- pub `to_file` function L232-237 — `(&self, path: P) -> Result<(), DocumentValidationError>` — Write the Task document to a file
+- pub `to_content` function L240-309 — `(&self) -> Result<String, DocumentValidationError>` — Convert the Task document to its markdown string representation using templates
+-  `Task` type L17-310 — `= Task`
+-  `next_phase_in_sequence` function L209-219 — `(current: Phase) -> Option<Phase>` — Get the next phase in the Task sequence
+-  `update_phase_tag` function L222-229 — `(&mut self, new_phase: Phase)` — Update the phase tag in the document's tags
+-  `Task` type L312-449 — `impl Document for Task`
+-  `document_type` function L315-317 — `(&self) -> DocumentType`
+-  `title` function L319-321 — `(&self) -> &str`
+-  `metadata` function L323-325 — `(&self) -> &DocumentMetadata`
+-  `content` function L327-329 — `(&self) -> &DocumentContent`
+-  `core` function L331-333 — `(&self) -> &super::traits::DocumentCore`
+-  `can_transition_to` function L335-342 — `(&self, phase: Phase) -> bool`
+-  `parent_id` function L344-346 — `(&self) -> Option<&DocumentId>`
+-  `blocked_by` function L348-350 — `(&self) -> &[DocumentId]`
+-  `validate` function L352-386 — `(&self) -> Result<(), DocumentValidationError>`
+-  `exit_criteria_met` function L388-393 — `(&self) -> bool`
+-  `template` function L395-402 — `(&self) -> DocumentTemplate`
+-  `frontmatter_template` function L404-406 — `(&self) -> &'static str`
+-  `content_template` function L408-410 — `(&self) -> &'static str`
+-  `acceptance_criteria_template` function L412-414 — `(&self) -> &'static str`
+-  `transition_phase` function L416-444 — `( &mut self, target_phase: Option<Phase>, ) -> Result<Phase, DocumentValidationE...`
+-  `core_mut` function L446-448 — `(&mut self) -> &mut super::traits::DocumentCore`
+-  `tests` module L452-801 — `-`
+-  `test_task_from_content` function L458-514 — `()`
+-  `test_task_invalid_level` function L517-542 — `()`
+-  `test_task_validation` function L545-574 — `()`
+-  `test_task_blocked_validation` function L577-607 — `()`
+-  `test_task_phase_transitions` function L610-627 — `()`
+-  `test_task_active_phase_transitions` function L630-646 — `()`
+-  `test_task_blocked_phase_transitions` function L649-665 — `()`
+-  `test_task_transition_phase_auto` function L668-695 — `()`
+-  `test_task_transition_phase_blocking` function L698-726 — `()`
+-  `test_task_transition_phase_invalid` function L729-755 — `()`
+-  `test_task_update_section` function L758-800 — `()`
 
 ### crates/metis-docs-core/src/domain/documents/vision
 
@@ -2026,43 +2017,43 @@
 
 - pub `Vision` struct L12-14 — `{ core: super::traits::DocumentCore }` — A Vision document represents the high-level direction and goals
 - pub `new` function L18-27 — `( title: String, tags: Vec<Tag>, archived: bool, short_code: String, ) -> Result...` — Create a new Vision document with content rendered from template
-- pub `new_with_template` function L30-69 — `( title: String, tags: Vec<Tag>, archived: bool, short_code: String, template_co...` — Create a new Vision document with a custom template
-- pub `from_parts` function L72-92 — `( title: String, metadata: DocumentMetadata, content: DocumentContent, tags: Vec...` — Create a Vision document from existing data (used when loading from file)
-- pub `from_file` function L95-101 — `(path: P) -> Result<Self, DocumentValidationError>` — Create a Vision document by reading and parsing a file
-- pub `from_content` function L104-156 — `(raw_content: &str) -> Result<Self, DocumentValidationError>` — Create a Vision document from raw file content string
-- pub `to_file` function L180-185 — `(&self, path: P) -> Result<(), DocumentValidationError>` — Write the Vision document to a file
-- pub `to_content` function L188-240 — `(&self) -> Result<String, DocumentValidationError>` — Convert the Vision document to its markdown string representation using templates
--  `Vision` type L16-241 — `= Vision`
--  `next_phase_in_sequence` function L159-167 — `(current: Phase) -> Option<Phase>` — Get the next phase in the Vision sequence
--  `update_phase_tag` function L170-177 — `(&mut self, new_phase: Phase)` — Update the phase tag in the document's tags
--  `Vision` type L243-367 — `impl Document for Vision`
--  `document_type` function L246-248 — `(&self) -> DocumentType`
--  `title` function L250-252 — `(&self) -> &str`
--  `metadata` function L254-256 — `(&self) -> &DocumentMetadata`
--  `content` function L258-260 — `(&self) -> &DocumentContent`
--  `core` function L262-264 — `(&self) -> &super::traits::DocumentCore`
--  `can_transition_to` function L266-273 — `(&self, phase: Phase) -> bool`
--  `parent_id` function L275-277 — `(&self) -> Option<&DocumentId>`
--  `blocked_by` function L279-281 — `(&self) -> &[DocumentId]`
--  `validate` function L283-304 — `(&self) -> Result<(), DocumentValidationError>`
--  `exit_criteria_met` function L306-311 — `(&self) -> bool`
--  `template` function L313-320 — `(&self) -> DocumentTemplate`
--  `frontmatter_template` function L322-324 — `(&self) -> &'static str`
--  `content_template` function L326-328 — `(&self) -> &'static str`
--  `acceptance_criteria_template` function L330-332 — `(&self) -> &'static str`
--  `transition_phase` function L334-362 — `( &mut self, target_phase: Option<Phase>, ) -> Result<Phase, DocumentValidationE...`
--  `core_mut` function L364-366 — `(&mut self) -> &mut super::traits::DocumentCore`
--  `tests` module L370-763 — `-`
--  `test_vision_from_content` function L376-434 — `()`
--  `test_vision_invalid_level` function L437-462 — `()`
--  `test_vision_missing_title` function L465-489 — `()`
--  `test_vision_tag_parsing` function L492-540 — `()`
--  `test_vision_validation` function L543-572 — `()`
--  `test_vision_phase_transitions` function L575-600 — `()`
--  `test_vision_transition_phase_auto` function L603-643 — `()`
--  `test_vision_transition_phase_explicit` function L646-678 — `()`
--  `test_vision_transition_phase_invalid` function L681-710 — `()`
--  `test_vision_update_section` function L713-762 — `()`
+- pub `new_with_template` function L30-68 — `( title: String, tags: Vec<Tag>, archived: bool, short_code: String, template_co...` — Create a new Vision document with a custom template
+- pub `from_parts` function L71-90 — `( title: String, metadata: DocumentMetadata, content: DocumentContent, tags: Vec...` — Create a Vision document from existing data (used when loading from file)
+- pub `from_file` function L93-99 — `(path: P) -> Result<Self, DocumentValidationError>` — Create a Vision document by reading and parsing a file
+- pub `from_content` function L102-154 — `(raw_content: &str) -> Result<Self, DocumentValidationError>` — Create a Vision document from raw file content string
+- pub `to_file` function L178-183 — `(&self, path: P) -> Result<(), DocumentValidationError>` — Write the Vision document to a file
+- pub `to_content` function L186-237 — `(&self) -> Result<String, DocumentValidationError>` — Convert the Vision document to its markdown string representation using templates
+-  `Vision` type L16-238 — `= Vision`
+-  `next_phase_in_sequence` function L157-165 — `(current: Phase) -> Option<Phase>` — Get the next phase in the Vision sequence
+-  `update_phase_tag` function L168-175 — `(&mut self, new_phase: Phase)` — Update the phase tag in the document's tags
+-  `Vision` type L240-364 — `impl Document for Vision`
+-  `document_type` function L243-245 — `(&self) -> DocumentType`
+-  `title` function L247-249 — `(&self) -> &str`
+-  `metadata` function L251-253 — `(&self) -> &DocumentMetadata`
+-  `content` function L255-257 — `(&self) -> &DocumentContent`
+-  `core` function L259-261 — `(&self) -> &super::traits::DocumentCore`
+-  `can_transition_to` function L263-270 — `(&self, phase: Phase) -> bool`
+-  `parent_id` function L272-274 — `(&self) -> Option<&DocumentId>`
+-  `blocked_by` function L276-278 — `(&self) -> &[DocumentId]`
+-  `validate` function L280-301 — `(&self) -> Result<(), DocumentValidationError>`
+-  `exit_criteria_met` function L303-308 — `(&self) -> bool`
+-  `template` function L310-317 — `(&self) -> DocumentTemplate`
+-  `frontmatter_template` function L319-321 — `(&self) -> &'static str`
+-  `content_template` function L323-325 — `(&self) -> &'static str`
+-  `acceptance_criteria_template` function L327-329 — `(&self) -> &'static str`
+-  `transition_phase` function L331-359 — `( &mut self, target_phase: Option<Phase>, ) -> Result<Phase, DocumentValidationE...`
+-  `core_mut` function L361-363 — `(&mut self) -> &mut super::traits::DocumentCore`
+-  `tests` module L367-760 — `-`
+-  `test_vision_from_content` function L373-431 — `()`
+-  `test_vision_invalid_level` function L434-459 — `()`
+-  `test_vision_missing_title` function L462-486 — `()`
+-  `test_vision_tag_parsing` function L489-537 — `()`
+-  `test_vision_validation` function L540-569 — `()`
+-  `test_vision_phase_transitions` function L572-597 — `()`
+-  `test_vision_transition_phase_auto` function L600-640 — `()`
+-  `test_vision_transition_phase_explicit` function L643-675 — `()`
+-  `test_vision_transition_phase_invalid` function L678-707 — `()`
+-  `test_vision_update_section` function L710-759 — `()`
 
 ### crates/metis-docs-core/src/error
 
@@ -2141,32 +2132,41 @@
 
 #### crates/metis-docs-core/tests/database_reconstruction_test.rs
 
--  `test_database_auto_reconstruction` function L16-102 — `()` — Integration test for METIS-T-0012: Database as cache only
--  `test_workspace_detection_without_database` function L106-123 — `()` — Test that workspace detection works without database present
--  `test_is_workspace_without_database` function L127-145 — `()` — Test that is_workspace only checks for .metis directory
+-  `test_database_auto_reconstruction` function L16-101 — `()` — Integration test for METIS-T-0012: Database as cache only
+-  `test_workspace_detection_without_database` function L105-122 — `()` — Test that workspace detection works without database present
+-  `test_is_workspace_without_database` function L126-144 — `()` — Test that is_workspace only checks for .metis directory
 
 #### crates/metis-docs-core/tests/id_path_consistency_test.rs
 
 -  `setup_test_workspace` function L12-28 — `(project_name: &str) -> (tempfile::TempDir, PathBuf)`
--  `test_document_short_code_matches_path` function L31-74 — `()`
--  `test_initiative_id_path_consistency` function L77-138 — `()`
--  `test_task_id_path_consistency` function L141-224 — `()`
--  `test_adr_id_consistency` function L227-256 — `()`
--  `test_long_title_id_path_consistency` function L259-295 — `()`
--  `test_unicode_title_id_path_consistency` function L298-346 — `()`
--  `test_regression_id_path_mismatch_bug` function L352-455 — `()` — Regression test for the ID/path mismatch bug
+-  `test_initiative_short_code_matches_path` function L31-73 — `()`
+-  `test_initiative_id_path_consistency` function L76-108 — `()`
+-  `test_task_id_path_consistency` function L111-170 — `()`
+-  `test_adr_id_consistency` function L173-201 — `()`
+-  `test_long_title_id_path_consistency` function L204-239 — `()`
+-  `test_unicode_title_id_path_consistency` function L242-289 — `()`
+-  `test_regression_id_path_mismatch_bug` function L295-393 — `()` — Regression test for the ID/path mismatch bug
 
 #### crates/metis-docs-core/tests/reassignment_test.rs
 
--  `setup_test_workspace` function L10-87 — `() -> (tempfile::TempDir, std::path::PathBuf)` — Helper to create a test workspace with vision, initiative, and task
--  `test_reassign_backlog_to_initiative` function L91-121 — `()` — Test reassigning a backlog task to an initiative
--  `test_reassign_task_to_backlog` function L125-158 — `()` — Test reassigning a task from initiative to backlog
--  `test_reassign_between_initiatives` function L162-223 — `()` — Test reassigning a task between initiatives
--  `test_reassign_across_strategies` function L227-317 — `()` — Test reassigning a task between initiatives under different strategies
--  `test_reassign_non_task_fails` function L321-346 — `()` — Test that reassignment fails for non-task documents
--  `test_reassign_to_non_initiative_fails` function L350-379 — `()` — Test that reassignment to non-initiative parent fails
--  `test_reassign_to_wrong_phase_initiative_fails` function L383-415 — `()` — Test that reassignment to initiative in wrong phase fails
--  `test_reassign_missing_document_fails` function L419-444 — `()` — Test reassignment with missing source document
+-  `setup_test_workspace` function L10-86 — `() -> (tempfile::TempDir, std::path::PathBuf)` — Helper to create a test workspace with vision, initiative, and task
+-  `test_reassign_backlog_to_initiative` function L90-120 — `()` — Test reassigning a backlog task to an initiative
+-  `test_reassign_task_to_backlog` function L124-157 — `()` — Test reassigning a task from initiative to backlog
+-  `test_reassign_between_initiatives` function L161-221 — `()` — Test reassigning a task between initiatives
+-  `test_reassign_across_initiatives` function L225-285 — `()` — Test reassigning a task between initiatives under different parents
+-  `test_reassign_non_task_fails` function L289-314 — `()` — Test that reassignment fails for non-task documents
+-  `test_reassign_to_non_initiative_fails` function L318-347 — `()` — Test that reassignment to non-initiative parent fails
+-  `test_reassign_to_wrong_phase_initiative_fails` function L351-383 — `()` — Test that reassignment to initiative in wrong phase fails
+-  `test_reassign_missing_document_fails` function L387-412 — `()` — Test reassignment with missing source document
+
+#### crates/metis-docs-core/tests/specification_test.rs
+
+-  `setup_workspace` function L12-19 — `() -> (tempfile::TempDir, std::path::PathBuf)` — Helper to set up workspace and return (temp_dir, metis_dir)
+-  `test_create_specification_with_parent` function L22-51 — `()` — Integration tests for the Specification document type
+-  `test_create_specification_without_parent_fails` function L54-75 — `()` — Integration tests for the Specification document type
+-  `test_specification_phase_transitions` function L78-112 — `()` — Integration tests for the Specification document type
+-  `test_specification_sync_and_discovery` function L115-141 — `()` — Integration tests for the Specification document type
+-  `test_specification_archive_no_cascade` function L144-182 — `()` — Integration tests for the Specification document type
 
 ### crates/metis-docs-gui/src/composables
 
@@ -2244,48 +2244,48 @@
 
 - pub `PhaseConfig` interface L4-9 — `{ key: : string, title: : string, description: : string, emptyMessage: : string ...`
 - pub `BoardConfig` interface L11-17 — `{ id: : BoardType, title: : string, description: : string, phases: : PhaseConfig...`
-- pub `getBoardConfig` function L208-210 — `function getBoardConfig(boardType: BoardType): BoardConfig | undefined`
-- pub `InitiativeFilterOption` interface L212-215 — `{ short_code: : string, title: : string }`
-- pub `getActiveInitiatives` function L220-225 — `function getActiveInitiatives(documents: DocumentInfo[]): InitiativeFilterOption...`
-- pub `getAllInitiatives` function L230-235 — `function getAllInitiatives(documents: DocumentInfo[]): InitiativeFilterOption[]`
-- pub `getDocumentsByPhase` function L243-301 — `function getDocumentsByPhase( documents: DocumentInfo[], boardType: BoardType, i...`
+- pub `getBoardConfig` function L242-244 — `function getBoardConfig(boardType: BoardType): BoardConfig | undefined`
+- pub `InitiativeFilterOption` interface L246-249 — `{ short_code: : string, title: : string }`
+- pub `getActiveInitiatives` function L254-259 — `function getActiveInitiatives(documents: DocumentInfo[]): InitiativeFilterOption...`
+- pub `getAllInitiatives` function L264-269 — `function getAllInitiatives(documents: DocumentInfo[]): InitiativeFilterOption[]`
+- pub `getDocumentsByPhase` function L277-335 — `function getDocumentsByPhase( documents: DocumentInfo[], boardType: BoardType, i...`
 
 #### crates/metis-docs-gui/src/lib/tauri-api.ts
 
 - pub `ProjectInfo` interface L4-8 — `{ path: : string, is_valid: : boolean, vision_exists: : boolean }`
-- pub `DocumentInfo` interface L10-22 — `{ id: : string, title: : string, document_type: : string, short_code: : string, ...`
-- pub `DocumentContent` interface L24-29 — `{ id: : string, title: : string, content: : string, frontmatter_json: : string }`
-- pub `InitializationResult` interface L31-35 — `{ metis_dir: : string, database_path: : string, vision_path: : string }`
-- pub `MetisAPI` class L38-126 — `-`
-- pub `initializeProject` method L42-48 — `initializeProject( path: string, prefix?: string, preset?: string ): Promise<Ini...`
-- pub `loadProject` method L53-55 — `loadProject(path: string): Promise<ProjectInfo>`
-- pub `listDocuments` method L60-62 — `listDocuments(): Promise<DocumentInfo[]>`
-- pub `readDocument` method L67-69 — `readDocument(shortCode: string): Promise<DocumentContent>`
-- pub `searchDocuments` method L74-76 — `searchDocuments(query: string): Promise<DocumentInfo[]>`
-- pub `getProjectConfig` method L81-83 — `getProjectConfig(): Promise<ProjectConfig>`
-- pub `syncProject` method L88-90 — `syncProject(): Promise<SyncResult>`
-- pub `getAvailableParents` method L95-97 — `getAvailableParents(childDocumentType: string): Promise<ParentOption[]>`
-- pub `transitionPhase` method L102-104 — `transitionPhase(shortCode: string, newPhase?: string): Promise<string>`
-- pub `getAppVersion` method L109-111 — `getAppVersion(): Promise<string>`
-- pub `installCli` method L116-118 — `installCli(): Promise<void>`
-- pub `installCliElevated` method L123-125 — `installCliElevated(): Promise<void>`
-- pub `DocumentType` enum L129-135 — `Vision | Strategy | Initiative | Task | ADR`
-- pub `Phase` enum L137-153 — `Draft | Review | Published | Shaping | Design | Ready | Active | Completed | Dis...`
-- pub `formatDate` function L156-158 — `function formatDate(timestamp: number): string`
-- pub `getDocumentTypeIcon` function L160-175 — `function getDocumentTypeIcon(type: string): string`
-- pub `getPhaseColor` function L177-201 — `function getPhaseColor(phase: string): string`
-- pub `CreateDocumentRequest` interface L203-210 — `{ document_type: : string, title: : string, parent_id: : string, complexity: : s...`
-- pub `CreateDocumentResult` interface L212-216 — `{ id: : string, short_code: : string, filepath: : string }`
-- pub `ParentOption` interface L218-223 — `{ short_code: : string, title: : string, document_type: : string, phase: : strin...`
-- pub `ProjectConfig` interface L225-229 — `{ strategies_enabled: : boolean, initiatives_enabled: : boolean, preset_name: : ...`
-- pub `ArchiveResult` interface L231-234 — `{ total_archived: : number, archived_documents: : ArchivedDocument[] }`
-- pub `ArchivedDocument` interface L236-241 — `{ document_id: : string, document_type: : string, original_path: : string, archi...`
-- pub `SyncResult` interface L243-250 — `{ imported: : number, updated: : number, deleted: : number, up_to_date: : number...`
-- pub `DocumentAPI` class L253-281 — `-`
-- pub `createDocument` method L257-259 — `createDocument(request: CreateDocumentRequest): Promise<CreateDocumentResult>`
-- pub `updateDocument` method L264-266 — `updateDocument(shortCode: string, content: string): Promise<void>`
-- pub `transitionPhase` method L271-273 — `transitionPhase(shortCode: string, newPhase?: string): Promise<string>`
-- pub `archiveDocument` method L278-280 — `archiveDocument(shortCode: string): Promise<ArchiveResult>`
+- pub `DocumentInfo` interface L10-23 — `{ id: : string, title: : string, document_type: : string, short_code: : string, ...`
+- pub `DocumentContent` interface L25-30 — `{ id: : string, title: : string, content: : string, frontmatter_json: : string }`
+- pub `InitializationResult` interface L32-36 — `{ metis_dir: : string, database_path: : string, vision_path: : string }`
+- pub `MetisAPI` class L39-127 — `-`
+- pub `initializeProject` method L43-49 — `initializeProject( path: string, prefix?: string, preset?: string ): Promise<Ini...`
+- pub `loadProject` method L54-56 — `loadProject(path: string): Promise<ProjectInfo>`
+- pub `listDocuments` method L61-63 — `listDocuments(): Promise<DocumentInfo[]>`
+- pub `readDocument` method L68-70 — `readDocument(shortCode: string): Promise<DocumentContent>`
+- pub `searchDocuments` method L75-77 — `searchDocuments(query: string): Promise<DocumentInfo[]>`
+- pub `getProjectConfig` method L82-84 — `getProjectConfig(): Promise<ProjectConfig>`
+- pub `syncProject` method L89-91 — `syncProject(): Promise<SyncResult>`
+- pub `getAvailableParents` method L96-98 — `getAvailableParents(childDocumentType: string): Promise<ParentOption[]>`
+- pub `transitionPhase` method L103-105 — `transitionPhase(shortCode: string, newPhase?: string): Promise<string>`
+- pub `getAppVersion` method L110-112 — `getAppVersion(): Promise<string>`
+- pub `installCli` method L117-119 — `installCli(): Promise<void>`
+- pub `installCliElevated` method L124-126 — `installCliElevated(): Promise<void>`
+- pub `DocumentType` enum L130-137 — `Vision | Strategy | Initiative | Task | ADR | Specification`
+- pub `Phase` enum L139-156 — `Draft | Review | Published | Shaping | Design | Ready | Active | Completed | Dis...`
+- pub `formatDate` function L159-161 — `function formatDate(timestamp: number): string`
+- pub `getDocumentTypeIcon` function L163-180 — `function getDocumentTypeIcon(type: string): string`
+- pub `getPhaseColor` function L182-207 — `function getPhaseColor(phase: string): string`
+- pub `CreateDocumentRequest` interface L209-216 — `{ document_type: : string, title: : string, parent_id: : string, complexity: : s...`
+- pub `CreateDocumentResult` interface L218-222 — `{ id: : string, short_code: : string, filepath: : string }`
+- pub `ParentOption` interface L224-229 — `{ short_code: : string, title: : string, document_type: : string, phase: : strin...`
+- pub `ProjectConfig` interface L231-235 — `{ strategies_enabled: : boolean, initiatives_enabled: : boolean, preset_name: : ...`
+- pub `ArchiveResult` interface L237-240 — `{ total_archived: : number, archived_documents: : ArchivedDocument[] }`
+- pub `ArchivedDocument` interface L242-247 — `{ document_id: : string, document_type: : string, original_path: : string, archi...`
+- pub `SyncResult` interface L249-256 — `{ imported: : number, updated: : number, deleted: : number, up_to_date: : number...`
+- pub `DocumentAPI` class L259-287 — `-`
+- pub `createDocument` method L263-265 — `createDocument(request: CreateDocumentRequest): Promise<CreateDocumentResult>`
+- pub `updateDocument` method L270-272 — `updateDocument(shortCode: string, content: string): Promise<void>`
+- pub `transitionPhase` method L277-279 — `transitionPhase(shortCode: string, newPhase?: string): Promise<string>`
+- pub `archiveDocument` method L284-286 — `archiveDocument(shortCode: string): Promise<ArchiveResult>`
 
 ### crates/metis-docs-gui/src/types
 
@@ -2297,13 +2297,13 @@
 
 #### crates/metis-docs-gui/src/types/board.ts
 
-- pub `BoardType` type L1 — `= 'vision' | 'strategy' | 'initiative' | 'task' | 'adr' | 'backlog'`
+- pub `BoardType` type L1 — `= 'vision' | 'strategy' | 'initiative' | 'task' | 'adr' | 'backlog' | 'specifica...`
 
 #### crates/metis-docs-gui/src/types/theme.ts
 
-- pub `ThemeColors` interface L1-57 — `{ background: : { primary: string; secondary: string; tertiary: string; elevated...`
-- pub `Theme` interface L59-62 — `{ name: : string, colors: : ThemeColors }`
-- pub `ThemeName` type L64 — `= 'light' | 'dark' | 'hyper'`
+- pub `ThemeColors` interface L1-58 — `{ background: : { primary: string; secondary: string; tertiary: string; elevated...`
+- pub `Theme` interface L60-63 — `{ name: : string, colors: : ThemeColors }`
+- pub `ThemeName` type L65 — `= 'light' | 'dark' | 'hyper'`
 
 ### crates/metis-docs-gui/src/utils
 
@@ -2394,23 +2394,22 @@
 
 #### crates/metis-docs-gui/src-tauri/src/services/document.rs
 
-- pub `DocumentInfo` struct L13-25 — `{ id: String, title: String, document_type: String, short_code: String, filepath...`
-- pub `DocumentContent` struct L28-33 — `{ id: String, title: String, content: String, frontmatter_json: String }`
-- pub `CreateDocumentRequest` struct L36-43 — `{ document_type: String, title: String, parent_id: Option<String>, complexity: O...`
+- pub `DocumentInfo` struct L13-26 — `{ id: String, title: String, document_type: String, short_code: String, filepath...`
+- pub `DocumentContent` struct L29-34 — `{ id: String, title: String, content: String, frontmatter_json: String }`
+- pub `CreateDocumentRequest` struct L37-43 — `{ document_type: String, title: String, parent_id: Option<String>, complexity: O...`
 - pub `CreateDocumentResult` struct L46-50 — `{ id: String, short_code: String, filepath: String }`
-- pub `create_document` function L85-234 — `( state: State<'_, std::sync::Mutex<AppState>>, request: CreateDocumentRequest, ...`
-- pub `list_documents` function L237-315 — `( state: State<'_, std::sync::Mutex<AppState>>, ) -> Result<Vec<DocumentInfo>, S...`
-- pub `read_document` function L318-362 — `( state: State<'_, std::sync::Mutex<AppState>>, short_code: String, ) -> Result<...`
-- pub `search_documents` function L365-420 — `( state: State<'_, std::sync::Mutex<AppState>>, query: String, ) -> Result<Vec<D...`
-- pub `update_document` function L423-475 — `( state: State<'_, std::sync::Mutex<AppState>>, short_code: String, content: Str...`
-- pub `ParentOption` struct L478-483 — `{ short_code: String, title: String, document_type: String, phase: String }`
-- pub `get_available_parents` function L486-572 — `( state: State<'_, std::sync::Mutex<AppState>>, child_document_type: String, ) -...`
--  `find_strategy_short_code_for_initiative` function L52-82 — `( metis_dir: &Path, initiative_id: &str, ) -> Result<String, String>`
--  `tests` module L575-674 — `-`
--  `test_create_adr_document` function L583-608 — `()`
--  `test_create_task_with_initiative_parent` function L611-673 — `()`
--  `add_tag_to_frontmatter` function L677-730 — `(file_path: &std::path::Path, tag: &str) -> Result<(), String>` — Add a tag to the frontmatter of a document file
--  `extract_tags_from_task_file` function L733-772 — `(filepath: &str) -> Result<Vec<String>, String>` — Extract tags from a task file by parsing it like the TUI does
+- pub `create_document` function L53-181 — `( state: State<'_, std::sync::Mutex<AppState>>, request: CreateDocumentRequest, ...`
+- pub `list_documents` function L184-263 — `( state: State<'_, std::sync::Mutex<AppState>>, ) -> Result<Vec<DocumentInfo>, S...`
+- pub `read_document` function L266-310 — `( state: State<'_, std::sync::Mutex<AppState>>, short_code: String, ) -> Result<...`
+- pub `search_documents` function L313-369 — `( state: State<'_, std::sync::Mutex<AppState>>, query: String, ) -> Result<Vec<D...`
+- pub `update_document` function L372-424 — `( state: State<'_, std::sync::Mutex<AppState>>, short_code: String, content: Str...`
+- pub `ParentOption` struct L427-432 — `{ short_code: String, title: String, document_type: String, phase: String }`
+- pub `get_available_parents` function L435-546 — `( state: State<'_, std::sync::Mutex<AppState>>, child_document_type: String, ) -...`
+-  `tests` module L549-644 — `-`
+-  `test_create_adr_document` function L557-581 — `()`
+-  `test_create_task_with_initiative_parent` function L584-643 — `()`
+-  `add_tag_to_frontmatter` function L647-700 — `(file_path: &std::path::Path, tag: &str) -> Result<(), String>` — Add a tag to the frontmatter of a document file
+-  `extract_tags_from_task_file` function L703-742 — `(filepath: &str) -> Result<Vec<String>, String>` — Extract tags from a task file by parsing it like the TUI does
 
 #### crates/metis-docs-gui/src-tauri/src/services/mod.rs
 
@@ -2426,14 +2425,14 @@
 
 - pub `ProjectInfo` struct L13-17 — `{ path: String, is_valid: bool, vision_exists: bool }`
 - pub `InitializationResult` struct L20-24 — `{ metis_dir: String, database_path: String, vision_path: String }`
-- pub `ProjectConfig` struct L27-31 — `{ strategies_enabled: bool, initiatives_enabled: bool, preset_name: String }`
-- pub `initialize_project` function L34-75 — `( path: String, prefix: Option<String>, preset: Option<String>, ) -> Result<Init...`
-- pub `load_project` function L78-100 — `( state: State<'_, std::sync::Mutex<AppState>>, path: String, ) -> Result<Projec...`
-- pub `get_project_config` function L103-134 — `( state: State<'_, std::sync::Mutex<AppState>>, ) -> Result<ProjectConfig, Strin...`
--  `determine_flight_config` function L137-148 — `(preset_name: Option<&str>) -> Result<FlightLevelConfig, String>` — Determine the flight level configuration based on preset name
--  `tests` module L151-188 — `-`
--  `test_initialize_project_success` function L156-174 — `()`
--  `test_initialize_project_with_default_prefix` function L177-187 — `()`
+- pub `ProjectConfig` struct L27-30 — `{ initiatives_enabled: bool, preset_name: String }`
+- pub `initialize_project` function L33-74 — `( path: String, prefix: Option<String>, preset: Option<String>, ) -> Result<Init...`
+- pub `load_project` function L77-99 — `( state: State<'_, std::sync::Mutex<AppState>>, path: String, ) -> Result<Projec...`
+- pub `get_project_config` function L102-132 — `( state: State<'_, std::sync::Mutex<AppState>>, ) -> Result<ProjectConfig, Strin...`
+-  `determine_flight_config` function L135-145 — `(preset_name: Option<&str>) -> Result<FlightLevelConfig, String>` — Determine the flight level configuration based on preset name
+-  `tests` module L148-185 — `-`
+-  `test_initialize_project_success` function L153-171 — `()`
+-  `test_initialize_project_with_default_prefix` function L174-184 — `()`
 
 #### crates/metis-docs-gui/src-tauri/src/services/sync.rs
 
@@ -2442,11 +2441,11 @@
 
 #### crates/metis-docs-gui/src-tauri/src/services/transition.rs
 
-- pub `transition_phase` function L32-109 — `( state: State<'_, std::sync::Mutex<AppState>>, short_code: String, new_phase: O...`
--  `parse_phase` function L8-29 — `(phase_str: &str) -> Result<Phase, String>`
--  `tests` module L112-129 — `-`
--  `test_parse_phase_valid` function L117-121 — `()`
--  `test_parse_phase_invalid` function L124-128 — `()`
+- pub `transition_phase` function L31-108 — `( state: State<'_, std::sync::Mutex<AppState>>, short_code: String, new_phase: O...`
+-  `parse_phase` function L8-28 — `(phase_str: &str) -> Result<Phase, String>`
+-  `tests` module L111-128 — `-`
+-  `test_parse_phase_valid` function L116-120 — `()`
+-  `test_parse_phase_invalid` function L123-127 — `()`
 
 #### crates/metis-docs-gui/src-tauri/src/services/version.rs
 
@@ -2536,11 +2535,11 @@
 - pub `formatting` module L7 — `-`
 - pub `server` module L8 — `-`
 - pub `tools` module L9 — `-`
-- pub `run` function L135-205 — `() -> AnyhowResult<()>` — Run the MCP server
+- pub `run` function L127-197 — `() -> AnyhowResult<()>` — Run the MCP server
 -  `find_metis_log_path` function L30-44 — `() -> Option<String>`
 -  `get_current_configuration` function L46-62 — `() -> Option<FlightLevelConfig>`
 -  `generate_dynamic_instructions` function L64-108 — `() -> String`
--  `generate_operation_notes` function L110-132 — `(config: &FlightLevelConfig) -> String`
+-  `generate_operation_notes` function L110-124 — `(config: &FlightLevelConfig) -> String`
 
 #### crates/metis-docs-mcp/src/main.rs
 
@@ -2579,10 +2578,9 @@
 
 #### crates/metis-docs-mcp/src/tools/create_document.rs
 
-- pub `CreateDocumentTool` struct L27-46 — `{ project_path: String, document_type: String, title: String, parent_id: Option<...`
-- pub `call_tool` function L49-276 — `(&self) -> std::result::Result<CallToolResult, CallToolError>`
--  `CreateDocumentTool` type L48-332 — `= CreateDocumentTool`
--  `find_strategy_short_code_for_initiative` function L278-331 — `( &self, database: &Database, initiative_id: &str, ) -> Result<String, CallToolE...`
+- pub `CreateDocumentTool` struct L26-43 — `{ project_path: String, document_type: String, title: String, parent_id: Option<...`
+- pub `call_tool` function L46-242 — `(&self) -> std::result::Result<CallToolResult, CallToolError>`
+-  `CreateDocumentTool` type L45-243 — `= CreateDocumentTool`
 
 #### crates/metis-docs-mcp/src/tools/edit_document.rs
 
@@ -2694,40 +2692,38 @@
 -  `extract_text_from_result` function L44-59 — `(result: &rust_mcp_sdk::schema::CallToolResult) -> Option<String>` — Helper to extract text content from MCP response (handles EmbeddedResource)
 -  `get_vision_short_code` function L62-79 — `(metis_path: &str) -> String` — Helper to get vision short code from list results (parses markdown table format)
 -  `extract_short_code` function L82-93 — `(result: &rust_mcp_sdk::schema::CallToolResult) -> String` — Helper to extract short code from MCP response (parses markdown format)
--  `test_full_configuration_workflow` function L96-263 — `()` — These tests mirror real user workflows through MCP tool calls
--  `test_streamlined_configuration_workflow` function L266-381 — `()` — These tests mirror real user workflows through MCP tool calls
--  `test_direct_configuration_workflow` function L384-499 — `()` — These tests mirror real user workflows through MCP tool calls
+-  `test_streamlined_configuration_workflow` function L96-208 — `()` — These tests mirror real user workflows through MCP tool calls
+-  `test_direct_configuration_workflow` function L211-323 — `()` — These tests mirror real user workflows through MCP tool calls
+-  `test_specification_workflow` function L326-436 — `()` — These tests mirror real user workflows through MCP tool calls
 
 #### crates/metis-docs-mcp/tests/configuration_scenarios_test.rs
 
 -  `common` module L10 — `-` — These tests validate real-world usage scenarios for each configuration preset
 -  `extract_text_from_result` function L13-28 — `(result: &rust_mcp_sdk::schema::CallToolResult) -> Option<String>` — Helper to extract text content from MCP response (handles EmbeddedResource)
 -  `extract_short_code` function L31-42 — `(result: &rust_mcp_sdk::schema::CallToolResult) -> String` — Helper to extract short code from MCP response (parses markdown format)
--  `test_streamlined_configuration_workflows` function L47-169 — `() -> Result<()>` — Test MCP server behavior with default streamlined configuration
--  `test_direct_configuration_workflows` function L174-263 — `() -> Result<()>` — Test MCP server behavior with direct configuration
--  `test_full_configuration_workflows` function L268-408 — `() -> Result<()>` — Test MCP server behavior with full configuration
--  `test_configuration_error_messages` function L412-475 — `() -> Result<()>` — Test configuration error messages provide actionable guidance
--  `test_configuration_switching_compatibility` function L479-549 — `() -> Result<()>` — Test configuration switching doesn't break existing documents
+-  `test_streamlined_configuration_workflows` function L47-130 — `() -> Result<()>` — Test MCP server behavior with default streamlined configuration
+-  `test_direct_configuration_workflows` function L135-202 — `() -> Result<()>` — Test MCP server behavior with direct configuration
+-  `test_configuration_error_messages` function L206-259 — `() -> Result<()>` — Test configuration error messages provide actionable guidance
+-  `test_configuration_switching_compatibility` function L263-328 — `() -> Result<()>` — Test configuration switching doesn't break existing documents
 
 #### crates/metis-docs-mcp/tests/functional_test.rs
 
 -  `extract_text_from_result` function L8-23 — `(result: &rust_mcp_sdk::schema::CallToolResult) -> Option<String>` — Helper to extract text content from MCP response (handles EmbeddedResource)
 -  `extract_short_code` function L26-37 — `(result: &rust_mcp_sdk::schema::CallToolResult) -> String` — Helper to extract short code from MCP response (parses markdown format)
 -  `get_vision_short_code` function L40-57 — `(metis_path: &str) -> String` — Helper to get vision short code from list results (parses markdown table format)
--  `test_initialize_and_create_documents` function L60-181 — `()` — Clean functional tests for MCP tools using short codes
--  `test_archive_with_short_codes` function L184-235 — `()` — Clean functional tests for MCP tools using short codes
--  `test_search_with_short_code_hyphen` function L238-307 — `()` — Clean functional tests for MCP tools using short codes
--  `test_list_and_search_include_archived` function L310-425 — `()` — Clean functional tests for MCP tools using short codes
--  `test_create_backlog_items` function L428-562 — `()` — Clean functional tests for MCP tools using short codes
+-  `test_initialize_and_create_documents` function L60-133 — `()` — Clean functional tests for MCP tools using short codes
+-  `test_archive_with_short_codes` function L136-171 — `()` — Clean functional tests for MCP tools using short codes
+-  `test_search_with_short_code_hyphen` function L174-229 — `()` — Clean functional tests for MCP tools using short codes
+-  `test_list_and_search_include_archived` function L232-331 — `()` — Clean functional tests for MCP tools using short codes
+-  `test_create_backlog_items` function L334-450 — `()` — Clean functional tests for MCP tools using short codes
 
 #### crates/metis-docs-mcp/tests/mcp_archive_test.rs
 
 -  `common` module L3 — `-` — Archive behavior tests for MCP server to verify the fixed cascading functionality
 -  `extract_text_from_result` function L11-26 — `(result: &rust_mcp_sdk::schema::CallToolResult) -> Option<String>` — Helper to extract text content from MCP response (handles EmbeddedResource)
 -  `extract_short_code` function L29-40 — `(result: &rust_mcp_sdk::schema::CallToolResult) -> String` — Helper to extract short code from MCP response (parses markdown format)
--  `get_vision_short_code` function L43-60 — `(metis_path: &str) -> String` — Helper to get vision short code from list results (parses markdown table format)
--  `test_mcp_archive_cascading_behavior` function L65-434 — `() -> Result<()>` — Test MCP server archive cascading behavior that mirrors TUI test behavior
--  `test_mcp_archive_error_handling` function L438-518 — `() -> Result<()>` — Test MCP server archive error handling
+-  `test_mcp_archive_cascading_behavior` function L45-262 — `() -> Result<()>` — Test MCP server archive cascading behavior
+-  `test_mcp_archive_error_handling` function L266-318 — `() -> Result<()>` — Test MCP server archive error handling
 
 #### crates/metis-docs-mcp/tests/mcp_server_integration_test.rs
 

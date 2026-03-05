@@ -2,7 +2,7 @@ use crate::application::services::document::DocumentDiscoveryService;
 use crate::domain::documents::traits::Document;
 use crate::domain::documents::types::{DocumentType, Phase};
 use crate::Result;
-use crate::{Adr, Initiative, MetisError, Task, Vision};
+use crate::{Adr, Initiative, MetisError, Specification, Task, Vision};
 use std::path::{Path, PathBuf};
 
 /// Service for managing document phase transitions
@@ -126,6 +126,12 @@ impl PhaseTransitionService {
                     .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
                 Ok(adr.phase()?)
             }
+            DocumentType::Specification => {
+                let spec = Specification::from_file(file_path)
+                    .await
+                    .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
+                Ok(spec.phase()?)
+            }
         }
     }
 
@@ -196,6 +202,21 @@ impl PhaseTransitionService {
                     }
                 })?;
                 adr.to_file(file_path)
+                    .await
+                    .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
+            }
+            DocumentType::Specification => {
+                let mut spec = Specification::from_file(file_path)
+                    .await
+                    .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
+                spec.transition_phase(Some(target_phase)).map_err(|_e| {
+                    MetisError::InvalidPhaseTransition {
+                        from: spec.phase().unwrap_or(Phase::Discovery).to_string(),
+                        to: target_phase.to_string(),
+                        doc_type: "specification".to_string(),
+                    }
+                })?;
+                spec.to_file(file_path)
                     .await
                     .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
             }

@@ -1,6 +1,7 @@
 use super::{
     adr::Adr,
     initiative::Initiative,
+    specification::Specification,
     task::Task,
     traits::{Document, DocumentValidationError},
     types::DocumentType,
@@ -44,6 +45,10 @@ impl DocumentFactory {
                 let adr = Adr::from_file(path).await?;
                 Ok(Box::new(adr))
             }
+            DocumentType::Specification => {
+                let spec = Specification::from_file(path).await?;
+                Ok(Box::new(spec))
+            }
         }
     }
 
@@ -70,6 +75,10 @@ impl DocumentFactory {
             DocumentType::Adr => {
                 let adr = Adr::from_content(raw_content)?;
                 Ok(Box::new(adr))
+            }
+            DocumentType::Specification => {
+                let spec = Specification::from_content(raw_content)?;
+                Ok(Box::new(spec))
             }
         }
     }

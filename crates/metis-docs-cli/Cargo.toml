@@ -30,8 +30,8 @@ tracing-subscriber = { workspace = true }
 chrono = { workspace = true }
 
 # Local dependencies
-metis-docs-core = { path = "../metis-docs-core", version = "1.0.9" }
-metis-docs-mcp = { path = "../metis-docs-mcp", version = "1.0.9" }
+metis-docs-core = { path = "../metis-docs-core", version = "2.0.0" }
+metis-docs-mcp = { path = "../metis-docs-mcp", version = "2.0.0" }
 metis-code-index = { path = "../metis-code-index" }
 
 # CLI-specific dependencies

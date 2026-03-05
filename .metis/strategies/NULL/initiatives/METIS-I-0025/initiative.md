@@ -11,7 +11,7 @@ archived: false
 
 tags:
   - "#initiative"
-  - "#phase/discovery"
+  - "#phase/decompose"
 
 
 exit_criteria_met: false
@@ -37,7 +37,7 @@ This is a recurring pattern across projects: any system complex enough to warran
 - Provide a template with structured sections for system design artifacts (overview, system context, requirements, architecture framing, constraints, decision log)
 - Use `S` short code prefix (e.g., `METIS-S-0001`)
 - Support a lifecycle that allows the specification to evolve after publishing (living document)
-- Parent to Vision (published), child Initiatives can be created against a published Specification
+- Child of Vision (published) or Initiative (non-terminal phase) — attached document, not hierarchy node
 - Requirements as markdown convention (REQ-x.x.x, NFR-x.x.x pattern) in the template — not structured tracking
 - ADRs remain independent but cross-referenced from the Specification's Decision Log section
 - Integrate across CLI, MCP tools, and plugin documentation
@@ -52,11 +52,21 @@ This is a recurring pattern across projects: any system complex enough to warran
 
 ### Hierarchy Position
 
+Specifications are **attached documents** (like ADRs with parents), not hierarchy nodes. The Vision → Initiative → Task flow is unchanged.
+
 ```
-Vision (published) → Specification → Initiative → Task
-                          ↕
-                         ADR (cross-referenced, not parented)
+Vision (published)
+├── Specification (system-level PRD, architecture framing)
+├── Initiative
+│   ├── Specification (project-level detailed design)
+│   └── Task
 ```
+
+A Specification can be a child of:
+- **Vision** (published) — system-level design, PRDs, architecture framing
+- **Initiative** (any non-terminal phase) — project-level detailed design, technical specs
+
+Initiatives do NOT parent to Specifications. The Vision → Initiative → Task hierarchy is unchanged. Specifications attach alongside, not in the chain.
 
 ### Phases
 
@@ -84,11 +94,7 @@ The Specification template provides structured sections. Unused sections should 
 
 ### Configuration & Presets
 
-With Strategy removed, presets become:
-- **streamlined** (default): Vision → Specification → Initiative → Task (specifications enabled)
-- **direct**: Initiative → Task (specifications disabled)
-
-The config key will be `specifications_enabled: bool` in `FlightLevelConfig`.
+No configuration or preset changes needed. Specifications are always available (like ADRs) — they don't gate the hierarchy. Both streamlined and direct presets work unchanged.
 
 ### Short Code
 
@@ -122,14 +128,12 @@ The config key will be `specifications_enabled: bool` in `FlightLevelConfig`.
 
 ## Implementation Plan
 
-Depends on METIS-I-0024 (strategy removal) being complete first.
+Depends on METIS-I-0024 (strategy removal) being complete first. ✅
 
-1. Add Specification to domain model — struct, phases, Document trait impl
-2. Add Specification template with all sections
-3. Add Specification to configuration and presets
-4. Add database support — level type, parent validation
-5. Add Specification to services — creation, discovery, transition, archive
-6. Add CLI command — `metis create specification`
-7. Add MCP tool support — `"specification"` as valid document_type
-8. Add tests across all crates
-9. Update plugin documentation — hierarchy descriptions, phase tables, workflow examples
+1. Add Specification to domain model — struct, phases (discovery→drafting→review→published), Document trait impl
+2. Add Specification template (frontmatter.yaml, content.md, postmatter.md) with all sections
+3. Add Specification to services — creation (with parent validation: Vision or Initiative), discovery, transition, archive, deletion
+4. Add CLI command — `metis create specification`
+5. Add MCP tool support — `"specification"` as valid document_type in create, list, search, transition tools
+6. Add/update tests across all crates
+7. Update plugin documentation — hierarchy descriptions, phase tables, document selection, workflow examples

@@ -40,8 +40,8 @@ impl FlightLevelConfig {
     /// Check if a document type is allowed in this configuration
     pub fn is_document_type_allowed(&self, doc_type: DocumentType) -> bool {
         match doc_type {
-            DocumentType::Vision | DocumentType::Adr => true, // Always allowed
-            DocumentType::Task => true,                       // Always allowed
+            DocumentType::Vision | DocumentType::Adr | DocumentType::Specification => true, // Always allowed
+            DocumentType::Task => true, // Always allowed
             DocumentType::Initiative => self.initiatives_enabled,
         }
     }
@@ -50,6 +50,7 @@ impl FlightLevelConfig {
     pub fn get_parent_type(&self, doc_type: DocumentType) -> Option<DocumentType> {
         match doc_type {
             DocumentType::Vision | DocumentType::Adr => None, // Top level documents
+            DocumentType::Specification => None,             // Attached document (parent set explicitly)
             DocumentType::Initiative => Some(DocumentType::Vision),
             DocumentType::Task => {
                 if self.initiatives_enabled {
@@ -80,6 +81,7 @@ impl FlightLevelConfig {
 
         types.push(DocumentType::Task);
         types.push(DocumentType::Adr); // ADRs are always available
+        types.push(DocumentType::Specification); // Specifications are always available
 
         types
     }
@@ -284,7 +286,8 @@ mod tests {
                 DocumentType::Vision,
                 DocumentType::Initiative,
                 DocumentType::Task,
-                DocumentType::Adr
+                DocumentType::Adr,
+                DocumentType::Specification
             ]
         );
 
@@ -292,7 +295,12 @@ mod tests {
         let direct_types = direct.enabled_document_types();
         assert_eq!(
             direct_types,
-            vec![DocumentType::Vision, DocumentType::Task, DocumentType::Adr]
+            vec![
+                DocumentType::Vision,
+                DocumentType::Task,
+                DocumentType::Adr,
+                DocumentType::Specification
+            ]
         );
     }
 

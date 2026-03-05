@@ -1,6 +1,6 @@
 ---
 name: document-selection
-description: This skill should be used when the user asks "what document type should I create", "create a bug ticket", "create a feature request", "should this be a task or initiative", "when to use an ADR", "track this bug", "log this tech debt", or needs help choosing between vision, initiative, task, backlog item, or ADR document types.
+description: This skill should be used when the user asks "what document type should I create", "create a bug ticket", "create a feature request", "should this be a task or initiative", "when to use an ADR", "when to use a specification", "track this bug", "log this tech debt", "write a spec", or needs help choosing between vision, initiative, task, backlog item, ADR, or specification document types.
 ---
 
 # Document Type Selection
@@ -12,6 +12,10 @@ This skill helps choose the right Metis document type for different kinds of wor
 **Is this work, or is it a decision?**
 - Decision about architecture/approach → **ADR**
 - Work to be done → Continue below
+
+**Is this a detailed specification or design document?**
+- Yes, describes system/feature requirements or design → **Specification**
+- No → Continue below
 
 **Does this define WHY the project exists?**
 - Yes → **Vision**
@@ -32,6 +36,7 @@ This skill helps choose the right Metis document type for different kinds of wor
 | Task | Atomic work units | Initiative (decompose/active phase) |
 | Backlog Item | Ad-hoc bugs/features/debt | No |
 | ADR | Architectural decisions | No |
+| Specification | System/feature specs (living docs) | Vision or Initiative |
 
 **Parent phase guidance:**
 - Initiatives are typically created under a published vision
@@ -49,6 +54,7 @@ When users request work items using common terms, map to Metis document types:
 | "tech debt ticket", "tech debt" | `create_document(type="task", backlog_category="tech-debt", ...)` |
 | "project", "epic", "feature work" | Initiative (with parent) |
 | "work item", "ticket" | Task (if has parent) or Backlog Item (if standalone) |
+| "spec", "specification", "design doc" | `create_document(type="specification", parent_id="...", ...)` |
 
 ## When to Create Each Type
 
@@ -89,6 +95,17 @@ Create when:
 
 **Moving backlog items**: Use `reassign_parent` to move a backlog item into an initiative, or move a task back to backlog.
 
+### Specification
+Create when:
+- Documenting system architecture or feature requirements
+- Writing a detailed design document for a project area
+- Creating living documentation that evolves as the system changes
+- Need a persistent reference for how something works or should work
+
+**Not a specification**: Architectural decisions (ADR), project planning (initiative), individual work items (task)
+
+**Phases**: discovery → drafting → review → published (published content remains editable as a living document)
+
 ### ADR
 Create when:
 - Making significant architectural decision
@@ -113,6 +130,8 @@ Create when:
 **Initiative vs Backlog**: Committing to it now? If no, backlog.
 
 **Backlog vs Task**: Does it have a parent? If no, backlog.
+
+**Specification vs ADR**: Specs describe *how something works*; ADRs record *why a decision was made*. A spec may reference ADRs for the reasoning behind design choices.
 
 **Cross-cutting work**: Create initiative under most relevant parent; tasks can reference other initiatives.
 

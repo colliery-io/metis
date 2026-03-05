@@ -5,7 +5,7 @@ use crate::domain::documents::initiative::Complexity;
 use crate::domain::documents::traits::Document;
 use crate::domain::documents::types::{DocumentId, DocumentType, ParentReference, Phase, Tag};
 use crate::Result;
-use crate::{Adr, Database, Initiative, MetisError, Task, Vision};
+use crate::{Adr, Database, Initiative, MetisError, Specification, Task, Vision};
 use diesel::{sqlite::SqliteConnection, Connection};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -515,6 +515,68 @@ impl DocumentCreationService {
         Ok(CreationResult {
             document_id: adr.id(),
             document_type: DocumentType::Adr,
+            file_path,
+            short_code,
+        })
+    }
+
+    /// Create a new specification document
+    pub async fn create_specification(
+        &self,
+        config: DocumentCreationConfig,
+    ) -> Result<CreationResult> {
+        // Validate parent is provided
+        let parent_id = config.parent_id.clone().ok_or_else(|| MetisError::ValidationFailed {
+            message: "Specification requires a parent document (Vision or Initiative)".to_string(),
+        })?;
+
+        // Generate short code for specification
+        let short_code = self.generate_short_code("specification")?;
+        let specs_dir = self.workspace_dir.join("specifications").join(&short_code);
+        let file_path = specs_dir.join("specification.md");
+
+        // Check if specification already exists
+        if file_path.exists() {
+            return Err(MetisError::ValidationFailed {
+                message: format!("Specification with short code '{}' already exists", short_code),
+            });
+        }
+
+        // Load template (with fallback chain)
+        let template_content = self
+            .template_loader
+            .load_content_template("specification")
+            .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
+
+        // Create specification with defaults
+        let mut tags = vec![
+            Tag::Label("specification".to_string()),
+            Tag::Phase(config.phase.unwrap_or(Phase::Discovery)),
+        ];
+        tags.extend(config.tags);
+
+        let specification = Specification::new_with_template(
+            config.title.clone(),
+            parent_id,
+            tags,
+            false, // not archived
+            short_code.clone(),
+            &template_content,
+        )
+        .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
+
+        // Create parent directory
+        fs::create_dir_all(&specs_dir).map_err(|e| MetisError::FileSystem(e.to_string()))?;
+
+        // Write to file
+        specification
+            .to_file(&file_path)
+            .await
+            .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
+
+        Ok(CreationResult {
+            document_id: specification.id(),
+            document_type: DocumentType::Specification,
             file_path,
             short_code,
         })

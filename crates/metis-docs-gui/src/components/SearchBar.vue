@@ -187,6 +187,8 @@ const getTypeBadgeClass = (type: string): string => {
       return 'badge-task'
     case 'adr':
       return 'badge-adr'
+    case 'specification':
+      return 'badge-specification'
     default:
       return 'badge-default'
   }
@@ -205,6 +207,8 @@ const getDocTypeColor = (type: string): string => {
       return 'var(--color-documentType-task)'
     case 'adr':
       return 'var(--color-documentType-adr)'
+    case 'specification':
+      return 'var(--color-documentType-specification)'
     default:
       return 'var(--color-text-primary)'
   }
@@ -356,6 +360,11 @@ watch(results, () => {
 .badge-adr {
   background-color: color-mix(in srgb, var(--color-documentType-adr) 20%, transparent);
   color: var(--color-documentType-adr);
+}
+
+.badge-specification {
+  background-color: color-mix(in srgb, var(--color-documentType-specification) 20%, transparent);
+  color: var(--color-documentType-specification);
 }
 
 .badge-default {

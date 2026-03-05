@@ -16,6 +16,7 @@ pub const VISION_DIR: &str = "vision";
 pub const INITIATIVE_DIR: &str = "initiative";
 pub const TASK_DIR: &str = "task";
 pub const ADR_DIR: &str = "adr";
+pub const SPECIFICATION_DIR: &str = "specification";
 pub const ARCHIVED_DIR: &str = "archived";
 
 /// Template names
@@ -23,6 +24,7 @@ pub const VISION_TEMPLATE: &str = "vision";
 pub const INITIATIVE_TEMPLATE: &str = "initiative";
 pub const TASK_TEMPLATE: &str = "task";
 pub const ADR_TEMPLATE: &str = "adr";
+pub const SPECIFICATION_TEMPLATE: &str = "specification";
 
 /// Document phases
 pub mod phases {
@@ -46,6 +48,11 @@ pub mod phases {
     pub const ADR_DISCUSSION: &str = "discussion";
     pub const ADR_DECIDED: &str = "decided";
     pub const ADR_SUPERSEDED: &str = "superseded";
+
+    pub const SPECIFICATION_DISCOVERY: &str = "discovery";
+    pub const SPECIFICATION_DRAFTING: &str = "drafting";
+    pub const SPECIFICATION_REVIEW: &str = "review";
+    pub const SPECIFICATION_PUBLISHED: &str = "published";
 }
 
 /// Complexity levels for initiatives

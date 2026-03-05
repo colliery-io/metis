@@ -9,6 +9,8 @@ Metis supports two configuration presets that determine which flight levels are 
 | **Streamlined** | Vision -> Initiative -> Task | 3 levels |
 | **Direct** | Vision -> Task | 2 levels |
 
+**Note**: ADRs and Specifications are always available in all presets.
+
 ## Streamlined Preset
 
 **Hierarchy**: Vision -> Initiative -> Task

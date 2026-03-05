@@ -11,6 +11,7 @@ A decision framework for choosing the right document type.
 | Task | Atomic unit of work | Initiative |
 | Backlog Item | Ad-hoc work (bug/feature/debt) | No |
 | ADR | Recording architectural decisions | No |
+| Specification | Documenting system/feature design | Vision or Initiative |
 
 ## Decision Tree
 
@@ -19,6 +20,10 @@ A decision framework for choosing the right document type.
 **Is this work, or is it a decision?**
 - Decision about architecture/approach → **ADR**
 - Work to be done → Continue below
+
+**Is this a detailed specification or design document?**
+- Yes, describes system/feature requirements or design → **Specification**
+- No → Continue below
 
 ### For Work Items
 
@@ -87,6 +92,23 @@ Create a backlog item when:
 - `feature` - Enhancement request
 - `tech-debt` - Code quality improvement
 
+### When to Create a Specification
+
+Create a specification when:
+- Documenting system architecture or feature requirements in detail
+- Writing a living design document that evolves with the system
+- Need a persistent reference that stakeholders can review
+- Describing how something works or should work
+
+**Not a specification:**
+- Architectural decisions (use ADR — specs describe *what*, ADRs record *why*)
+- Project planning (use initiative)
+- Individual work items (use task)
+
+**Parent**: Specifications require a parent — either a published Vision or a non-terminal Initiative.
+
+**Phases**: discovery → drafting → review → published (published content remains editable)
+
 ### When to Create an ADR
 
 Create an ADR when:
@@ -122,6 +144,7 @@ When unclear between levels:
 - **Task vs Initiative**: Does it need discovery/design phases? If yes, initiative.
 - **Initiative vs Backlog**: Are you committing to it now? If no, backlog.
 - **Backlog vs Task**: Does it have a parent? If no, backlog.
+- **Specification vs ADR**: Specs describe *how something works*; ADRs record *why a decision was made*.
 
 ### Cross-Cutting Work
 

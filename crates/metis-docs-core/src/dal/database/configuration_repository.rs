@@ -165,6 +165,7 @@ impl ConfigurationRepository {
             "initiative" => "I",
             "task" => "T",
             "adr" => "A",
+            "specification" => "S",
             _ => {
                 return Err(crate::MetisError::ConfigurationError(
                     ConfigurationError::InvalidValue(format!(

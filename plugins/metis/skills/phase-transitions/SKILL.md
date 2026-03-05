@@ -53,6 +53,15 @@ draft → discussion → decided → superseded
 
 **WARNING**: Auto-advancing from `decided` moves to `superseded`. Most ADRs should stay in `decided` indefinitely. Only manually transition to `superseded` when explicitly replacing with a new ADR.
 
+### Specification
+```
+discovery → drafting → review → published
+```
+- **discovery** → drafting
+- **drafting** → review
+- **review** → published
+- **published**: terminal (but content remains editable as a living document)
+
 ## Default Phases
 
 When documents are created, they start in these phases:
@@ -60,6 +69,7 @@ When documents are created, they start in these phases:
 - **Initiative**: `discovery`
 - **Task**: `todo` (or `backlog` for backlog items)
 - **ADR**: `draft`
+- **Specification**: `discovery`
 
 **Backlog note**: Tasks created with `backlog_category` start in `backlog` phase and do NOT auto-transition. You must explicitly transition from `backlog` → `todo` before the task can be worked.
 

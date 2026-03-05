@@ -16,6 +16,7 @@ pub use dal::Database;
 pub use domain::documents::{
     adr::Adr,
     initiative::{Complexity, Initiative},
+    specification::Specification,
     task::Task,
     traits::{Document, DocumentValidationError},
     types::{DocumentId, DocumentType, Phase, Tag},

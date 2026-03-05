@@ -57,6 +57,15 @@ draft → discussion → decided → superseded
 
 **WARNING**: Auto-advancing from `decided` moves to `superseded`. Most ADRs should stay in `decided` indefinitely. Only manually transition to `superseded` when explicitly replacing with a new ADR.
 
+### Specification
+```
+discovery → drafting → review → published
+```
+- **discovery**: Understanding what needs to be specified, gathering requirements
+- **drafting**: Writing the specification content
+- **review**: Stakeholder review and feedback
+- **published**: Stable reference document (terminal, but content remains editable as a living document)
+
 ## Exit Criteria
 
 Each phase has exit criteria - conditions that must be true before transitioning. Exit criteria prevent premature advancement and ensure quality gates are met.

@@ -47,6 +47,7 @@ export const lightTheme: Theme = {
       task: '#c9a227',         // Warm gold
       adr: '#7a6b8a',          // Dusty purple
       backlog: '#8a8d9a',
+      specification: '#4a7c8f', // Muted teal
     },
   },
 };
@@ -98,6 +99,7 @@ export const darkTheme: Theme = {
       task: '#7dd3fc',         // Light cyan-blue
       adr: '#f0c36d',          // Warm gold
       backlog: '#78909c',      // Blue gray
+      specification: '#38bdf8', // Bright sky blue
     },
   },
 };
@@ -149,6 +151,7 @@ export const hyperTheme: Theme = {
       task: '#00e676',         // Neon green
       adr: '#ffea00',          // Electric yellow
       backlog: '#6a6a80',
+      specification: '#00e5ff', // Electric cyan
     },
   },
 };

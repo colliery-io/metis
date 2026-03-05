@@ -2,7 +2,7 @@ use crate::application::services::DatabaseService;
 use crate::domain::documents::traits::Document;
 use crate::domain::documents::types::DocumentType;
 use crate::Result;
-use crate::{Adr, Initiative, MetisError, Task, Vision};
+use crate::{Adr, Initiative, MetisError, Specification, Task, Vision};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
@@ -230,6 +230,37 @@ impl DocumentDiscoveryService {
                 }
                 Err(MetisError::NotFound("ADR document not found".to_string()))
             }
+
+            DocumentType::Specification => {
+                let specs_dir = self.workspace_dir.join("specifications");
+                if !specs_dir.exists() {
+                    return Err(MetisError::NotFound(
+                        "No specifications directory found".to_string(),
+                    ));
+                }
+
+                for entry in
+                    fs::read_dir(&specs_dir).map_err(|e| MetisError::FileSystem(e.to_string()))?
+                {
+                    let entry_path = entry
+                        .map_err(|e| MetisError::FileSystem(e.to_string()))?
+                        .path();
+                    // Each specification lives in its own directory: specifications/{SHORT_CODE}/specification.md
+                    if entry_path.is_dir() {
+                        let spec_path = entry_path.join("specification.md");
+                        if spec_path.exists() {
+                            if let Ok(spec) = Specification::from_file(&spec_path).await {
+                                if spec.id().to_string() == document_id {
+                                    return Ok(spec_path);
+                                }
+                            }
+                        }
+                    }
+                }
+                Err(MetisError::NotFound(
+                    "Specification document not found".to_string(),
+                ))
+            }
         }
     }
 
@@ -324,6 +355,26 @@ impl DocumentDiscoveryService {
                         if adr_path.is_file() && adr_path.extension().is_some_and(|ext| ext == "md")
                         {
                             documents.push(adr_path);
+                        }
+                    }
+                }
+            }
+
+            DocumentType::Specification => {
+                let specs_dir = self.workspace_dir.join("specifications");
+                if specs_dir.exists() {
+                    for entry in fs::read_dir(&specs_dir)
+                        .map_err(|e| MetisError::FileSystem(e.to_string()))?
+                    {
+                        let entry_path = entry
+                            .map_err(|e| MetisError::FileSystem(e.to_string()))?
+                            .path();
+                        // Each specification lives in its own directory
+                        if entry_path.is_dir() {
+                            let spec_path = entry_path.join("specification.md");
+                            if spec_path.exists() {
+                                documents.push(spec_path);
+                            }
                         }
                     }
                 }
@@ -423,6 +474,7 @@ impl DocumentDiscoveryService {
             "I" => Ok(DocumentType::Initiative),
             "T" => Ok(DocumentType::Task),
             "A" => Ok(DocumentType::Adr),
+            "S" => Ok(DocumentType::Specification),
             _ => Err(MetisError::ValidationFailed {
                 message: format!(
                     "Unknown document type code: '{}' in short code '{}'",
@@ -454,6 +506,11 @@ impl DocumentDiscoveryService {
                 .workspace_dir
                 .join("adrs")
                 .join(format!("{}.md", short_code))),
+            DocumentType::Specification => Ok(self
+                .workspace_dir
+                .join("specifications")
+                .join(short_code)
+                .join("specification.md")),
         }
     }
 

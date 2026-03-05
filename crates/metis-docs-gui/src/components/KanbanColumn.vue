@@ -22,6 +22,7 @@
           :document="doc"
           :dragging-enabled="true"
           :board-type="boardType"
+          :all-documents="allDocuments || []"
           :highlighted="doc.short_code === props.highlightedShortCode"
           @promote="handlePromote"
           @view="handleView"
@@ -45,6 +46,7 @@ interface Props {
   documents: DocumentInfo[]
   phaseKey: string
   boardType?: string
+  allDocuments?: DocumentInfo[]
   highlightedShortCode?: string
 }
 

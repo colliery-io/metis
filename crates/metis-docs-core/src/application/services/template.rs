@@ -33,6 +33,13 @@ mod defaults {
         pub const EXIT_CRITERIA: &str =
             include_str!("../../domain/documents/adr/acceptance_criteria.md");
     }
+
+    pub mod specification {
+        pub const CONTENT: &str =
+            include_str!("../../domain/documents/specification/content.md");
+        pub const EXIT_CRITERIA: &str =
+            include_str!("../../domain/documents/specification/acceptance_criteria.md");
+    }
 }
 
 /// Error type for template loading operations
@@ -181,6 +188,8 @@ impl TemplateLoader {
             ("task", TemplateType::ExitCriteria) => defaults::task::EXIT_CRITERIA,
             ("adr", TemplateType::Content) => defaults::adr::CONTENT,
             ("adr", TemplateType::ExitCriteria) => defaults::adr::EXIT_CRITERIA,
+            ("specification", TemplateType::Content) => defaults::specification::CONTENT,
+            ("specification", TemplateType::ExitCriteria) => defaults::specification::EXIT_CRITERIA,
             _ => return Err(TemplateError::UnknownDocumentType(doc_type.to_string())),
         };
 
@@ -241,6 +250,9 @@ impl TemplateLoader {
                 context.insert("number", &1);
                 context.insert("decision_maker", "");
                 context.insert("decision_date", "");
+            }
+            "specification" => {
+                context.insert("parent_id", "TEST-V-0001");
             }
             _ => {}
         }
@@ -325,6 +337,7 @@ fn doc_type_letter(doc_type: &str) -> char {
         "initiative" => 'I',
         "task" => 'T',
         "adr" => 'A',
+        "specification" => 'S',
         _ => 'X',
     }
 }
@@ -339,7 +352,7 @@ mod tests {
         let loader = TemplateLoader::new(None);
 
         // All document types should have embedded templates
-        for doc_type in &["vision", "initiative", "task", "adr"] {
+        for doc_type in &["vision", "initiative", "task", "adr", "specification"] {
             let content = loader.load_content_template(doc_type);
             assert!(content.is_ok(), "Failed to load content for {}", doc_type);
             assert!(!content.unwrap().is_empty());

@@ -86,6 +86,9 @@ Early initiatives may invalidate later plans. That's fine. The hierarchy makes i
 ### ADRs from Day One
 Greenfield projects make many architectural decisions. Capture them in ADRs while context is fresh.
 
+### Specifications for Key Systems
+Create specifications for core system components early. Specs are living documents that evolve as the system grows — attach them to your vision or key initiatives.
+
 ## Example Flow
 
 ```

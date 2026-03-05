@@ -107,6 +107,7 @@ impl TransitionPhaseTool {
             "ready" => Ok(Phase::Ready),
             "decompose" => Ok(Phase::Decompose),
             "discovery" => Ok(Phase::Discovery),
+            "drafting" => Ok(Phase::Drafting),
             _ => Err(CallToolError::new(std::io::Error::new(
                 std::io::ErrorKind::InvalidInput,
                 format!("Unknown phase: {}", phase_str),
@@ -121,6 +122,7 @@ impl TransitionPhaseTool {
             "initiative" => Some(DocumentType::Initiative),
             "task" => Some(DocumentType::Task),
             "adr" => Some(DocumentType::Adr),
+            "specification" => Some(DocumentType::Specification),
             _ => None,
         };
 

@@ -1,0 +1,18 @@
+id: {{ slug }}
+level: specification
+title: "{{ title }}"
+short_code: "{{ short_code }}"
+created_at: {{ created_at }}
+updated_at: {{ updated_at }}
+parent: {{ parent_id }}
+blocked_by: []
+
+# Phase progression for Specifications
+tags:
+  - "#specification"
+  - "#phase/discovery"
+  # - "#phase/drafting"
+  # - "#phase/review"
+  # - "#phase/published"
+
+exit_criteria_met: false

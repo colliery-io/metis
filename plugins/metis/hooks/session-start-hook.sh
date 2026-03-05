@@ -95,7 +95,7 @@ Use these MCP tools for all Metis operations:
 - \`mcp__metis__read_document\` - Read a document by short code (e.g., METIS-T-0001)
 - \`mcp__metis__edit_document\` - Update document content (search and replace)
 - \`mcp__metis__transition_phase\` - Move documents through phases (todo->active->completed)
-- \`mcp__metis__create_document\` - Create new vision, initiative, task, or ADR documents
+- \`mcp__metis__create_document\` - Create new vision, initiative, task, ADR, or specification documents
 - \`mcp__metis__reassign_parent\` - Move tasks between initiatives or to/from backlog
 
 ## CRITICAL: Creating Documents

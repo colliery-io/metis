@@ -214,6 +214,7 @@ const boardTypeRequiresParent = (boardType: BoardType) => {
     // Need initiative parents if initiatives are enabled, otherwise no parent needed (direct config)
     return projectConfig.value.initiatives_enabled ?? false
   }
+  if (boardType === 'specification') return true // Specifications always need a parent (vision or initiative)
   if (boardType === 'backlog') return false  // Backlog items never have parents by definition
   if (boardType === 'adr') return false      // ADRs don't require parents
   return false
@@ -233,6 +234,8 @@ const getDocumentTypeLabel = (type: BoardType) => {
       return 'ADR (Architectural Decision Record)'
     case 'backlog':
       return 'Backlog Item'
+    case 'specification':
+      return 'Specification'
     default:
       return 'Document'
   }
@@ -274,6 +277,8 @@ const getParentTypeLabel = () => {
       return 'Strategy'
     case 'task':
       return 'Initiative'
+    case 'specification':
+      return 'Vision or Initiative'
     default:
       return 'Parent'
   }

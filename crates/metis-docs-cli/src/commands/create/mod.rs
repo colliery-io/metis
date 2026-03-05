@@ -1,5 +1,6 @@
 mod adr;
 mod initiative;
+mod specification;
 mod task;
 
 use crate::commands::SyncCommand;
@@ -35,6 +36,14 @@ pub enum CreateCommands {
         /// ADR title
         title: String,
     },
+    /// Create a new specification document
+    Specification {
+        /// Specification title
+        title: String,
+        /// Parent document short code (Vision or Initiative, e.g., PROJ-V-0001)
+        #[arg(short, long)]
+        parent: String,
+    },
 }
 
 impl CreateCommand {
@@ -48,6 +57,9 @@ impl CreateCommand {
             }
             CreateCommands::Adr { title } => {
                 adr::create_new_adr(title).await?;
+            }
+            CreateCommands::Specification { title, parent } => {
+                specification::create_new_specification(title, parent).await?;
             }
         }
 

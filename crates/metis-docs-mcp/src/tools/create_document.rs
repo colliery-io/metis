@@ -16,7 +16,7 @@ use std::str::FromStr;
 
 #[mcp_tool(
     name = "create_document",
-    description = "Create a new Metis document (vision, initiative, task, adr). Each document gets a unique short code in format PREFIX-TYPE-NNNN (e.g., PROJ-V-0001). Parent documents should be referenced by their short code (e.g., PROJ-V-0001). Document type availability depends on current flight level configuration. For standalone work items not tied to initiatives, use document_type='task' with backlog_category to create a backlog item.",
+    description = "Create a new Metis document (vision, initiative, task, adr, specification). Each document gets a unique short code in format PREFIX-TYPE-NNNN (e.g., PROJ-V-0001). Parent documents should be referenced by their short code (e.g., PROJ-V-0001). Document type availability depends on current flight level configuration. For standalone work items not tied to initiatives, use document_type='task' with backlog_category to create a backlog item.",
     idempotent_hint = false,
     destructive_hint = false,
     open_world_hint = false,
@@ -26,11 +26,11 @@ use std::str::FromStr;
 pub struct CreateDocumentTool {
     /// Path to the .metis folder (e.g., "/Users/me/my-project/.metis"). Must end with .metis
     pub project_path: String,
-    /// Document type: vision, initiative, task, adr
+    /// Document type: vision, initiative, task, adr, specification
     pub document_type: String,
     /// Title of the document
     pub title: String,
-    /// Parent document short code (required for initiative, task). Omit for backlog items.
+    /// Parent document short code (required for initiative, task, specification). Omit for backlog items.
     pub parent_id: Option<String>,
     /// Complexity for initiatives (xs, s, m, l, xl)
     pub complexity: Option<String>,
@@ -203,6 +203,18 @@ impl CreateDocumentTool {
                 .create_adr(config)
                 .await
                 .map_err(|e| CallToolError::new(e))?,
+            DocumentType::Specification => {
+                if self.parent_id.is_none() {
+                    return Err(CallToolError::new(std::io::Error::new(
+                        std::io::ErrorKind::InvalidInput,
+                        "Specification requires a parent document (Vision or Initiative). Provide parent_id with the parent short code.",
+                    )));
+                }
+                creation_service
+                    .create_specification(config)
+                    .await
+                    .map_err(|e| CallToolError::new(e))?
+            }
         };
 
         let parent_display = self

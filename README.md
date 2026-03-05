@@ -108,11 +108,6 @@ Choose the right level of structure for your project:
 Vision → Initiative → Task
 ```
 
-**Full** -- for complex, multi-team efforts:
-```
-Vision → Strategy → Initiative → Task
-```
-
 **Direct** -- for simple, solo work:
 ```
 Vision → Task
@@ -120,9 +115,11 @@ Vision → Task
 
 Set during init or change later:
 ```bash
-metis init --name "My Project" --preset full
+metis init --name "My Project" --preset streamlined
 metis config set --preset direct
 ```
+
+ADRs and Specifications are always available regardless of preset.
 
 ### Document Phases
 
@@ -131,10 +128,10 @@ Each document type progresses through defined phases:
 | Type | Phases |
 |------|--------|
 | **Vision** | draft > review > published |
-| **Strategy** | shaping > design > ready > active > completed |
 | **Initiative** | discovery > design > ready > decompose > active > completed |
 | **Task** | todo > active > completed (+ blocked) |
 | **ADR** | draft > discussion > decided > superseded |
+| **Specification** | discovery > drafting > review > published |
 
 Phases are forward-only. You can't skip from `todo` to `completed` -- the task must go through `active` first. This prevents cutting corners.
 
@@ -145,7 +142,7 @@ Claude interacts with Metis through MCP tools:
 | Tool | Purpose |
 |------|---------|
 | `initialize_project` | Create a `.metis/` workspace |
-| `create_document` | Create vision, initiative, task, ADR, or backlog item |
+| `create_document` | Create vision, initiative, task, ADR, specification, or backlog item |
 | `read_document` | Read document content by short code |
 | `edit_document` | Update document content |
 | `transition_phase` | Advance through workflow phases |
