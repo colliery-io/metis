@@ -74,6 +74,10 @@ impl FilesystemService {
             if entry.file_type().is_file() {
                 if let Some(path_str) = entry.path().to_str() {
                     if path_str.ends_with(".md") {
+                        // Skip non-document infrastructure files (e.g. code-index.md)
+                        if entry.file_name() == "code-index.md" {
+                            continue;
+                        }
                         files.push(path_str.to_string());
                     }
                 }
@@ -179,5 +183,28 @@ mod tests {
         for file in &found_files {
             assert!(file.ends_with(".md"));
         }
+    }
+
+    #[test]
+    fn test_find_markdown_files_excludes_code_index() {
+        let temp_dir = tempdir().expect("Failed to create temp dir");
+        let base_path = temp_dir.path();
+
+        let files = vec![
+            "vision.md",
+            "code-index.md",
+            "initiatives/init-1/initiative.md",
+        ];
+
+        for file in &files {
+            let file_path = base_path.join(file);
+            FilesystemService::write_file(&file_path, "# Test").expect("Failed to write file");
+        }
+
+        let found_files = FilesystemService::find_markdown_files(base_path)
+            .expect("Failed to find markdown files");
+
+        assert_eq!(found_files.len(), 2);
+        assert!(found_files.iter().all(|f| !f.contains("code-index.md")));
     }
 }
