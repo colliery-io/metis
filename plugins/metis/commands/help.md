@@ -10,10 +10,11 @@ Please explain the following to the user:
 
 Metis Ralph integrates the Ralph Wiggum technique with Metis document management for iterative AI-driven work loops.
 
-**Two modes:**
+**Three modes:**
 
-1. **Task Execution** (`/metis-ralph`) - Execute a Metis task iteratively until complete
-2. **Initiative Decomposition** (`/metis-decompose`) - Break down an initiative into tasks
+1. **Task Execution** (`/metis-ralph`) - Execute a single Metis task iteratively until complete
+2. **Multi-Task Execution** (`/metis-ralph-tasks`) - Execute a list of tasks serially, auto-completing each
+3. **Initiative Decomposition** (`/metis-decompose`) - Break down an initiative into tasks
 
 **Core concept:**
 - Claude receives a Metis document as the prompt
@@ -43,6 +44,28 @@ Execute a Metis task with a Ralph loop.
 5. Task transitioned to "completed"
 
 **Completion:** Output `<promise>TASK COMPLETE</promise>` after transitioning to completed.
+
+---
+
+### /metis-ralph-tasks <SHORT_CODE> [SHORT_CODE...] [OPTIONS]
+
+Execute multiple Metis tasks serially with a Ralph loop. Each task is auto-completed before moving to the next.
+
+**Usage:**
+```
+/metis-ralph-tasks PROJ-T-0001 PROJ-T-0002 PROJ-T-0003
+/metis-ralph-tasks PROJ-T-0001 PROJ-T-0002 --max-iterations 50
+```
+
+**What happens:**
+1. All tasks verified to exist
+2. For each task in order: read, activate, implement, log progress, complete
+3. Loop continues until all tasks are done
+4. User reviews all work at the end
+
+**Completion:** Output `<promise>ALL TASKS COMPLETE</promise>` when all tasks are done.
+
+**Best for:** Well-understood tasks that can be executed autonomously without human review between each one.
 
 ---
 
