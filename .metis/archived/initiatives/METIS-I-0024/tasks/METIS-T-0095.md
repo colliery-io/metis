@@ -7,7 +7,7 @@ created_at: 2026-03-03T19:10:50.978361+00:00
 updated_at: 2026-03-04T00:53:45.083328+00:00
 parent: METIS-I-0024
 blocked_by: []
-archived: false
+archived: true
 
 tags:
   - "#task"
@@ -15,7 +15,6 @@ tags:
 
 
 exit_criteria_met: false
-strategy_id: NULL
 initiative_id: METIS-I-0024
 ---
 
@@ -28,6 +27,8 @@ initiative_id: METIS-I-0024
 ## Objective
 
 Remove `strategies_enabled` from configuration, collapse the "full" preset (which is now identical to "streamlined"), and ensure existing `config.toml` files with the old field parse without error.
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 

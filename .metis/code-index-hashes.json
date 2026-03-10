@@ -41,7 +41,7 @@
     "crates/metis-docs-core/src/application/services/document/discovery.rs": "1c6473dd5822ad4bc6507437e30ec7f55fdacf0a294403730fcfc6df5f4d96be",
     "crates/metis-docs-core/src/application/services/document/mod.rs": "c8437f2c2b1d0dbadbefd0935b02bc154b7d8ad8195769f7df30dea84423c7a5",
     "crates/metis-docs-core/src/application/services/document/validation.rs": "a548b91192c52926ee9fa4ad8a415c1a9dda9c5b7aadb5af813e483ec4181c79",
-    "crates/metis-docs-core/src/application/services/filesystem.rs": "630da84735611b736d5f598d7c0e3981a4d13376e5b2ae68291d54ded2f27693",
+    "crates/metis-docs-core/src/application/services/filesystem.rs": "6e45b86b809f12a90dbd28406a333c720e7188fa11e13c1a36b7c1ee40471922",
     "crates/metis-docs-core/src/application/services/mod.rs": "1d9defd0d6840107ce2114acc1e30bb6d7228260c58aa56ae32495c349bb9e7c",
     "crates/metis-docs-core/src/application/services/synchronization.rs": "9df1b0cba1bb57a36af37adb574f5355a4ae34422171112adf3d5b70e9a5876e",
     "crates/metis-docs-core/src/application/services/template.rs": "c9bdffce14077df3cee24f98b2fb16ec01ee0bf296b96f00cdffdcf60267a6d7",

@@ -4,19 +4,18 @@ level: initiative
 title: "Add Specification Document Type"
 short_code: "METIS-I-0025"
 created_at: 2026-03-03T19:13:27.267297+00:00
-updated_at: 2026-03-03T19:13:27.267297+00:00
+updated_at: 2026-03-05T02:36:42.077406+00:00
 parent: METIS-V-0001
 blocked_by: []
-archived: false
+archived: true
 
 tags:
   - "#initiative"
-  - "#phase/decompose"
+  - "#phase/completed"
 
 
 exit_criteria_met: false
 estimated_complexity: L
-strategy_id: NULL
 initiative_id: add-specification-document-type
 ---
 

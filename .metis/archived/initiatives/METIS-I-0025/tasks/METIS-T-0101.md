@@ -7,7 +7,7 @@ created_at: 2026-03-03T21:00:00+00:00
 updated_at: 2026-03-04T04:02:20.977083+00:00
 parent: METIS-I-0025
 blocked_by: []
-archived: false
+archived: true
 
 tags:
   - "#task"
@@ -15,7 +15,6 @@ tags:
 
 
 exit_criteria_met: false
-strategy_id: NULL
 initiative_id: METIS-I-0025
 ---
 
@@ -28,6 +27,8 @@ initiative_id: METIS-I-0025
 ## Objective
 
 Create the embedded template files for the Specification document type. These are compiled into the binary via `include_str!()` and provide the default content structure.
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 

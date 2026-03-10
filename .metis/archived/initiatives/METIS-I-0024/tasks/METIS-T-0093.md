@@ -7,7 +7,7 @@ created_at: 2026-03-03T19:10:49.173963+00:00
 updated_at: 2026-03-03T21:58:47.016377+00:00
 parent: METIS-I-0024
 blocked_by: []
-archived: false
+archived: true
 
 tags:
   - "#task"
@@ -15,7 +15,6 @@ tags:
 
 
 exit_criteria_met: false
-strategy_id: NULL
 initiative_id: METIS-I-0024
 ---
 
@@ -28,6 +27,8 @@ initiative_id: METIS-I-0024
 ## Objective
 
 Change the `.metis/` directory layout from the current `strategies/{id}/initiatives/` nesting to a flat `initiatives/` structure. Implement a v1→v2 filesystem migration that runs automatically on workspace open.
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 

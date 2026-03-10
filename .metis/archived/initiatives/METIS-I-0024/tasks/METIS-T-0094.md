@@ -7,7 +7,7 @@ created_at: 2026-03-03T19:10:50.072057+00:00
 updated_at: 2026-03-04T00:42:18.531163+00:00
 parent: METIS-I-0024
 blocked_by: []
-archived: false
+archived: true
 
 tags:
   - "#task"
@@ -15,7 +15,6 @@ tags:
 
 
 exit_criteria_met: false
-strategy_id: NULL
 initiative_id: METIS-I-0024
 ---
 
@@ -28,6 +27,8 @@ initiative_id: METIS-I-0024
 ## Objective
 
 Create a diesel migration that removes the `strategy_id` column from the documents table, drops strategy-related indexes, and deletes any strategy rows. Update the Rust schema and model definitions.
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 

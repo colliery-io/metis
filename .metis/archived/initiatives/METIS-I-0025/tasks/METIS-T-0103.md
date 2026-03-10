@@ -7,7 +7,7 @@ created_at: 2026-03-03T21:00:00+00:00
 updated_at: 2026-03-04T04:51:34.863309+00:00
 parent: METIS-I-0025
 blocked_by: []
-archived: false
+archived: true
 
 tags:
   - "#task"
@@ -15,7 +15,6 @@ tags:
 
 
 exit_criteria_met: false
-strategy_id: NULL
 initiative_id: METIS-I-0025
 ---
 
@@ -28,6 +27,8 @@ initiative_id: METIS-I-0025
 ## Objective
 
 Add `metis create specification` CLI command following the existing pattern for `metis create adr`.
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 

@@ -7,7 +7,7 @@ created_at: 2026-03-03T19:10:48.284964+00:00
 updated_at: 2026-03-03T21:00:07.463407+00:00
 parent: METIS-I-0024
 blocked_by: []
-archived: false
+archived: true
 
 tags:
   - "#task"
@@ -15,7 +15,6 @@ tags:
 
 
 exit_criteria_met: false
-strategy_id: NULL
 initiative_id: METIS-I-0024
 ---
 
@@ -28,6 +27,8 @@ initiative_id: METIS-I-0024
 ## Objective
 
 Remove all strategy handling from the application service layer. This includes creation, discovery, transition, and archive services. The NULL strategy pattern for initiative parenting is eliminated here.
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 

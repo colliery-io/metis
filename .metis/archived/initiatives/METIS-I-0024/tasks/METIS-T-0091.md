@@ -7,7 +7,7 @@ created_at: 2026-03-03T19:10:47.392443+00:00
 updated_at: 2026-03-03T20:33:53.832111+00:00
 parent: METIS-I-0024
 blocked_by: []
-archived: false
+archived: true
 
 tags:
   - "#task"
@@ -15,7 +15,6 @@ tags:
 
 
 exit_criteria_met: false
-strategy_id: NULL
 initiative_id: METIS-I-0024
 ---
 
@@ -28,6 +27,8 @@ initiative_id: METIS-I-0024
 ## Objective
 
 Delete the Strategy document type from the domain model. This is the foundational task — everything else depends on the type being gone.
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 

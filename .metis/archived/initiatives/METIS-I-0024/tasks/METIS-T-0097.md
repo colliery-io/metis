@@ -7,7 +7,7 @@ created_at: 2026-03-03T19:10:52.293987+00:00
 updated_at: 2026-03-04T01:18:01.395188+00:00
 parent: METIS-I-0024
 blocked_by: []
-archived: false
+archived: true
 
 tags:
   - "#task"
@@ -15,7 +15,6 @@ tags:
 
 
 exit_criteria_met: false
-strategy_id: NULL
 initiative_id: METIS-I-0024
 ---
 
@@ -28,6 +27,8 @@ initiative_id: METIS-I-0024
 ## Objective
 
 Remove strategy as a valid document type from all MCP tool parameters and simplify initiative parent handling in the create_document tool.
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 

@@ -7,7 +7,7 @@ created_at: 2026-03-03T17:39:39.082072+00:00
 updated_at: 2026-03-03T19:17:43.862514+00:00
 parent: METIS-V-0001
 blocked_by: []
-archived: false
+archived: true
 
 tags:
   - "#initiative"
@@ -16,7 +16,6 @@ tags:
 
 exit_criteria_met: false
 estimated_complexity: M
-strategy_id: NULL
 initiative_id: remove-strategy-layer-from-metis
 ---
 

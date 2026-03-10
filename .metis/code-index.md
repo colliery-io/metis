@@ -1,6 +1,6 @@
 # Code Index
 
-> Generated: 2026-03-04T19:38:52Z | 144 files | JavaScript, Rust, TypeScript
+> Generated: 2026-03-05T15:31:31Z | 144 files | JavaScript, Rust, TypeScript
 
 ## Project Structure
 
@@ -980,13 +980,14 @@
 - pub `compute_content_hash` function L40-44 — `(content: &str) -> String` — Compute SHA256 hash of string content
 - pub `get_file_mtime` function L47-57 — `(path: P) -> Result<f64>` — Get file modification time as Unix timestamp
 - pub `delete_file` function L60-62 — `(path: P) -> Result<()>` — Delete a file
-- pub `find_markdown_files` function L65-84 — `(dir: P) -> Result<Vec<String>>` — List all markdown files in a directory recursively
--  `FilesystemService` type L10-85 — `= FilesystemService`
--  `tests` module L88-183 — `-`
--  `test_write_and_read_file` function L93-108 — `()`
--  `test_compute_hashes` function L111-131 — `()`
--  `test_file_operations` function L134-151 — `()`
--  `test_find_markdown_files` function L154-182 — `()`
+- pub `find_markdown_files` function L65-88 — `(dir: P) -> Result<Vec<String>>` — List all markdown files in a directory recursively
+-  `FilesystemService` type L10-89 — `= FilesystemService`
+-  `tests` module L92-210 — `-`
+-  `test_write_and_read_file` function L97-112 — `()`
+-  `test_compute_hashes` function L115-135 — `()`
+-  `test_file_operations` function L138-155 — `()`
+-  `test_find_markdown_files` function L158-186 — `()`
+-  `test_find_markdown_files_excludes_code_index` function L189-209 — `()`
 
 #### crates/metis-docs-core/src/application/services/mod.rs
 

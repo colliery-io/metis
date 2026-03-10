@@ -7,7 +7,7 @@ created_at: 2026-03-04T03:06:37.946662+00:00
 updated_at: 2026-03-04T13:15:00.619710+00:00
 parent: METIS-I-0025
 blocked_by: []
-archived: false
+archived: true
 
 tags:
   - "#task"
@@ -15,7 +15,6 @@ tags:
 
 
 exit_criteria_met: false
-strategy_id: NULL
 initiative_id: METIS-I-0025
 ---
 
@@ -28,6 +27,8 @@ initiative_id: METIS-I-0025
 ## Objective
 
 Add Specification document type to all plugin documentation — MCP server instructions, hooks, skills, agents, and commands.
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 

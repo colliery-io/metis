@@ -7,7 +7,7 @@ created_at: 2026-03-03T19:10:53.693741+00:00
 updated_at: 2026-03-04T01:18:23.852782+00:00
 parent: METIS-I-0024
 blocked_by: []
-archived: false
+archived: true
 
 tags:
   - "#task"
@@ -15,7 +15,6 @@ tags:
 
 
 exit_criteria_met: false
-strategy_id: NULL
 initiative_id: METIS-I-0024
 ---
 
@@ -28,6 +27,8 @@ initiative_id: METIS-I-0024
 ## Objective
 
 Update or remove all tests that reference strategy across all three crates. Ensure `angreal test` passes clean.
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 
