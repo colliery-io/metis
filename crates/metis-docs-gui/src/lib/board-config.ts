@@ -131,6 +131,39 @@ const adrPhases: PhaseConfig[] = [
   },
 ];
 
+const strategyPhases: PhaseConfig[] = [
+  {
+    key: 'shaping',
+    title: 'Shaping',
+    description: 'Defining the strategic approach',
+    emptyMessage: 'No strategies being shaped',
+  },
+  {
+    key: 'design',
+    title: 'Design',
+    description: 'Designing the strategy details',
+    emptyMessage: 'No strategies in design',
+  },
+  {
+    key: 'ready',
+    title: 'Ready',
+    description: 'Strategy ready for execution',
+    emptyMessage: 'No strategies ready',
+  },
+  {
+    key: 'active',
+    title: 'Active',
+    description: 'Strategy being executed',
+    emptyMessage: 'No active strategies',
+  },
+  {
+    key: 'completed',
+    title: 'Completed',
+    description: 'Strategy outcomes delivered',
+    emptyMessage: 'No completed strategies',
+  },
+];
+
 const specificationPhases: PhaseConfig[] = [
   {
     key: 'discovery',
@@ -193,6 +226,13 @@ export const boardConfigs: BoardConfig[] = [
     description: 'Strategic direction and outcomes',
     phases: visionPhases,
     documentFilter: (doc) => doc.document_type === 'vision',
+  },
+  {
+    id: 'strategy',
+    title: 'Strategy Board',
+    description: 'Coordinated strategic approaches',
+    phases: strategyPhases,
+    documentFilter: (doc) => doc.document_type === 'strategy',
   },
   {
     id: 'initiative',
