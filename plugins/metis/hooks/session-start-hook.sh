@@ -85,8 +85,12 @@ ${STATE_SUMMARY}
 ${ACTIVE_WORK:-No active or ready tasks found}
 \`\`\`
 
-## Code Index
-Code index refreshed at \`.metis/code-index.md\` — read it for codebase orientation (project structure, key symbols, module summaries).
+## Code Index — Use Before Exploring
+\`.metis/code-index.md\` contains the project structure, key symbols, and semantic summaries for every module. **If you need to find where code lives, read the code index BEFORE using Glob, Grep, or the Explore agent.** It tells you which modules and files are relevant so you can go straight there instead of discovering the codebase from scratch.
+
+- If a task or context already tells you which files to edit — skip the index and go straight to implementation
+- If you need to discover where something lives — read the index first, then target your search
+- When spawning subagents for implementation — pass the relevant file paths downstream so they don't need to rediscover; if that's not possible, instruct them to read \`.metis/code-index.md\` before exploring
 ${SUMMARIZER_MSG}
 
 ## MCP Tools (Preferred)

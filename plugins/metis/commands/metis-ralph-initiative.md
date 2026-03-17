@@ -36,6 +36,10 @@ Only after successful verification, execute the setup script:
 
 You are now in a Metis Ralph Initiative loop. You will work through ALL tasks under this initiative.
 
+### Orient (only if needed)
+- If the tasks already specify which files/modules to modify, skip this — go straight to execution
+- If you need to discover where code lives, **read `.metis/code-index.md` first** — it has the project structure, key symbols, and module summaries. Use it to target your searches instead of exploring the codebase from scratch
+
 ### Initialize
 - The initiative content was already read in Step 1
 - Use `mcp__metis__list_documents` to find all tasks under the initiative

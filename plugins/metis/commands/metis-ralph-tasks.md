@@ -36,6 +36,10 @@ Only after successful verification of all tasks, execute the setup script:
 
 You are now in a Metis Ralph multi-task loop. Work through each task in order.
 
+### Orient (only if needed)
+- If the tasks already specify which files/modules to modify, skip this — go straight to execution
+- If you need to discover where code lives, **read `.metis/code-index.md` first** — it has the project structure, key symbols, and module summaries. Use it to target your searches instead of exploring the codebase from scratch
+
 ### For Each Task
 
 1. **Read** the task content using `mcp__metis__read_document`
