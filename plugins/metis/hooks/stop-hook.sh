@@ -4,17 +4,31 @@
 # Prevents session exit when a metis-ralph loop is active
 # Feeds the task prompt back to continue the loop
 # Progress is logged to the task document via MCP
+#
+# State files are session-scoped to prevent cross-session interference
+# when multiple Claude instances run in the same project directory.
 
 set -euo pipefail
 
 # Read hook input from stdin
 HOOK_INPUT=$(cat)
 
-# Check if metis-ralph loop is active
-STATE_FILE=".claude/metis-ralph-active.yaml"
+# Extract session_id to find this session's state file
+SESSION_ID=$(echo "$HOOK_INPUT" | jq -r '.session_id // empty')
 
-if [[ ! -f "$STATE_FILE" ]]; then
-  # No active loop - allow exit
+# Check for session-scoped state file first, fall back to legacy unscoped file
+if [[ -n "$SESSION_ID" ]] && [[ -f ".claude/metis-ralph-active-${SESSION_ID}.yaml" ]]; then
+  STATE_FILE=".claude/metis-ralph-active-${SESSION_ID}.yaml"
+elif [[ -f ".claude/metis-ralph-active.yaml" ]]; then
+  # Legacy unscoped state file — only use if it belongs to this session
+  STATE_FILE=".claude/metis-ralph-active.yaml"
+  OWNER_SESSION=$(grep '^session_id:' "$STATE_FILE" 2>/dev/null | sed 's/session_id: *//' | tr -d '"' || true)
+  if [[ -n "$OWNER_SESSION" ]] && [[ -n "$SESSION_ID" ]] && [[ "$OWNER_SESSION" != "$SESSION_ID" ]]; then
+    # State file belongs to a different session — do not interfere
+    exit 0
+  fi
+else
+  # No active loop for this session - allow exit
   exit 0
 fi
 

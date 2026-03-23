@@ -2,6 +2,15 @@
 # SessionStart hook for Metis projects
 # Detects .metis directory and provides comprehensive project context
 
+# Read hook input from stdin to extract session_id
+HOOK_INPUT=$(cat)
+
+# Export session ID so Bash tool commands can use it for session-scoped state files
+SESSION_ID=$(echo "$HOOK_INPUT" | jq -r '.session_id // empty')
+if [ -n "$CLAUDE_ENV_FILE" ] && [ -n "$SESSION_ID" ]; then
+    echo "export CLAUDE_SESSION_ID='$SESSION_ID'" >> "$CLAUDE_ENV_FILE"
+fi
+
 # Exit silently if not in a Metis project
 if [ ! -d "$CLAUDE_PROJECT_DIR/.metis" ]; then
     exit 0
