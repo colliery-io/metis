@@ -252,6 +252,32 @@ download_and_install() {
     rm -rf "$temp_dir"
 }
 
+# Install Claude Code plugin (nuke and reinstall)
+install_claude_plugin() {
+    if ! command -v claude >/dev/null 2>&1; then
+        warn "Claude Code not found — skipping plugin install"
+        echo "  Install Claude Code, then run: claude plugin install metis@colliery-io-metis"
+        return
+    fi
+
+    info "Installing Metis Claude Code plugin..."
+
+    # Uninstall existing plugin (ignore errors if not installed)
+    claude plugin uninstall metis@colliery-io-metis 2>/dev/null || true
+
+    # Ensure marketplace is registered and up to date
+    claude plugin marketplace add colliery-io/metis 2>/dev/null || true
+    claude plugin marketplace update colliery-io-metis 2>/dev/null || true
+
+    # Fresh install
+    if claude plugin install metis@colliery-io-metis; then
+        success "Metis Claude Code plugin installed"
+    else
+        warn "Failed to install Claude Code plugin"
+        echo "  You can install manually: claude plugin install metis@colliery-io-metis"
+    fi
+}
+
 # Print post-install info
 print_info() {
     echo ""
@@ -284,7 +310,7 @@ print_info() {
     echo ""
     echo "${BOLD}${YELLOW}Important for Updates:${NC}"
     echo "  After updating, launch the Metis GUI at least once to update the CLI."
-    echo "  Then restart Claude Code to pick up the new MCP server."
+    echo "  Restart Claude Code to pick up the new MCP server and plugin."
     echo ""
     echo "For more information: https://github.com/${GITHUB_REPO}"
 }
@@ -302,6 +328,7 @@ main() {
     check_dependencies
     get_latest_version
     download_and_install
+    install_claude_plugin
     print_info
 
     echo ""
