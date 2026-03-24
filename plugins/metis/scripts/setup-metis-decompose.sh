@@ -137,11 +137,20 @@ fi
 
 # Create pointer file with loop state
 # Document access goes through MCP - no file path needed
+# State file is session-scoped to prevent cross-session interference
 mkdir -p .claude
 
-cat > .claude/metis-ralph-active.yaml <<EOF
+# Use session-scoped filename if CLAUDE_SESSION_ID is available
+if [[ -n "${CLAUDE_SESSION_ID:-}" ]]; then
+  STATE_FILE=".claude/metis-ralph-active-${CLAUDE_SESSION_ID}.yaml"
+else
+  STATE_FILE=".claude/metis-ralph-active.yaml"
+fi
+
+cat > "$STATE_FILE" <<EOF
 # Metis Ralph Loop State
 # Progress is logged to the initiative document via MCP
+session_id: "${CLAUDE_SESSION_ID:-}"
 short_code: "$SHORT_CODE"
 project_path: "$PROJECT_PATH"
 mode: decompose
