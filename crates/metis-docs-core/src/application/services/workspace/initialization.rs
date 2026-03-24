@@ -36,6 +36,29 @@ impl WorkspaceInitializationService {
         let metis_dir = base_path.join(".metis");
         std::fs::create_dir_all(&metis_dir)?;
 
+        // Create .gitignore if it doesn't exist
+        let gitignore_path = metis_dir.join(".gitignore");
+        if !gitignore_path.exists() {
+            std::fs::write(
+                &gitignore_path,
+                "# SQLite database (runtime state, not source of truth for docs)\n\
+                 metis.db\n\
+                 metis.db-shm\n\
+                 metis.db-wal\n\
+                 \n\
+                 # MCP server log\n\
+                 metis-mcp-server.log\n\
+                 \n\
+                 # Code index (regenerated each session)\n\
+                 code-index.md\n\
+                 code-index-hashes.json\n\
+                 code-index-symbols.json\n\
+                 \n\
+                 # Index dirty flag\n\
+                 .index-dirty\n",
+            )?;
+        }
+
         // Initialize database - check if it already exists and is valid
         let db_path = metis_dir.join("metis.db");
         let db_exists = db_path.exists();
@@ -202,6 +225,13 @@ mod tests {
         assert!(vision_content.contains("#vision"));
         assert!(vision_content.contains("#phase/draft"));
         assert!(vision_content.contains("archived: false"));
+
+        // Verify .gitignore was created
+        let gitignore_path = metis_dir.join(".gitignore");
+        assert!(gitignore_path.exists(), ".gitignore should be created during initialization");
+        let gitignore_content = fs::read_to_string(&gitignore_path).unwrap();
+        assert!(gitignore_content.contains("metis.db"));
+        assert!(gitignore_content.contains("code-index.md"));
 
         // Verify config.toml was created
         let config_path = metis_dir.join("config.toml");

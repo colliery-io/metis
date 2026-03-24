@@ -1,0 +1,15 @@
+# SQLite database (runtime state, not source of truth for docs)
+metis.db
+metis.db-shm
+metis.db-wal
+
+# MCP server log
+metis-mcp-server.log
+
+# Code index (regenerated each session)
+code-index.md
+code-index-hashes.json
+code-index-symbols.json
+
+# Index dirty flag
+.index-dirty
