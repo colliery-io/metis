@@ -148,6 +148,18 @@ force: bool (optional) - Skip exit criteria validation
 
 **For initiatives**: ALWAYS check in with the human before transitioning phases. Summarize current state and get explicit approval to proceed.
 
+### open_document
+Open a document in an external viewer (VSCode, system editor) for review and editing.
+```
+project_path: string (required) - Path to the .metis folder (e.g., "/path/to/project/.metis")
+short_code: string (required) - Document ID (e.g., PROJ-I-0001)
+include_children: bool (optional) - Also open child tasks (default: false)
+viewer: string (optional) - Override viewer: "sys_editor", "code", or "gui"
+```
+**Usage**: Use this to open documents for human review at natural checkpoints — after decomposition, before phase transitions, or when the user requests to see a document. Documents are also opened proactively after `create_document` and `edit_document` unless suppressed in config.
+
+**Viewer workflow**: After opening a document for user review, wait for the user to confirm they've reviewed it. Then use `read_document` to pick up any changes they made before continuing.
+
 ### archive_document
 Archive a document and all its children.
 ```
@@ -211,7 +223,8 @@ reassign_parent:
 ## Key Principles
 
 - **ALWAYS populate document content**: Creating a document is NOT complete until you edit it with real content. The workflow is: `create_document` → `read_document` → `edit_document` with actual information. Never leave template placeholders.
-- **Read before edit**: Always `read_document` before `edit_document`
+- **Read before edit**: Always `read_document` before `edit_document`. The server enforces this — edits without a prior read will be rejected. If a document was modified externally (e.g., user edited in VSCode), you must re-read before editing.
+- **Open for review**: Use `open_document` at natural review points. After decomposition, open the initiative with `include_children: true` so the user can review all tasks. Wait for confirmation before proceeding.
 - **Delete unused sections**: Templates contain optional sections. If a section doesn't apply to your document, delete it entirely rather than leaving it empty or with placeholder text
 - **Auto-transition**: Omit phase parameter to follow natural workflow
 - **Hierarchy matters**: Tasks need initiatives, initiatives need visions

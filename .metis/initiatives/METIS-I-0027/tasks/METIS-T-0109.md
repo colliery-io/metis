@@ -4,14 +4,14 @@ level: task
 title: "open_document MCP tool"
 short_code: "METIS-T-0109"
 created_at: 2026-03-26T14:59:09.821963+00:00
-updated_at: 2026-03-26T14:59:09.821963+00:00
+updated_at: 2026-03-26T16:59:37.654015+00:00
 parent: METIS-I-0027
 blocked_by: []
 archived: false
 
 tags:
   - "#task"
-  - "#phase/todo"
+  - "#phase/completed"
 
 
 exit_criteria_met: false
@@ -27,6 +27,10 @@ initiative_id: METIS-I-0027
 ## Objective
 
 Implement the `open_document` MCP tool that resolves short codes to file paths and dispatches to the configured viewer backend. This is the primary interface agents and users interact with to open documents externally.
+
+## Acceptance Criteria
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 
@@ -52,4 +56,4 @@ Implement the `open_document` MCP tool that resolves short codes to file paths a
 
 ## Status Updates
 
-*To be added during implementation*
+- **2026-03-26**: Implemented. Created `OpenDocumentTool` with `short_code`, `include_children`, and `viewer` override params. Registered in toolbox and server handler. Resolves short codes to file paths, gathers child documents when `include_children` is true via `find_children`. Dispatches to `ViewerDispatcher` (currently no backends — those come in T-0110/T-0111). Wired `ViewerDispatcher` into `MetisServerHandler` with `with_viewer_config` constructor. Builds and all 18 tests pass.

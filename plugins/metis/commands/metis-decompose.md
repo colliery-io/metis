@@ -1,7 +1,7 @@
 ---
 description: "Decompose a Metis initiative into tasks"
 argument-hint: "SHORT_CODE [--max-iterations N]"
-allowed-tools: ["Bash(${CLAUDE_PLUGIN_ROOT}/scripts/setup-metis-decompose.sh:*)", "mcp__metis__read_document"]
+allowed-tools: ["Bash(${CLAUDE_PLUGIN_ROOT}/scripts/setup-metis-decompose.sh:*)", "mcp__metis__read_document", "mcp__metis__open_document"]
 hide-from-slash-command-tool: "true"
 ---
 
@@ -58,6 +58,8 @@ You are now in a Metis Ralph loop for initiative decomposition. Follow these ste
 ### Complete
 When decomposition is FULLY complete:
 - Do **NOT** transition to "active" - that requires user approval
+- Use `mcp__metis__open_document` with `include_children: true` to open the initiative and all child tasks in the user's configured viewer for review
+- Tell the user: "I've opened the initiative and all tasks for review. Please review and let me know when you're ready to proceed."
 - Output: `<promise>DECOMPOSITION COMPLETE</promise>` to signal ready for review
 
 ## Critical Rules

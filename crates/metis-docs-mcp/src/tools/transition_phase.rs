@@ -75,7 +75,10 @@ impl TransitionPhaseTool {
 
         let phase_strs: Vec<&str> = phases.iter().map(|s| s.as_str()).collect();
 
-        let output = ToolOutput::new()
+        // Get phase-specific guidance for what to do in the new phase
+        let guidance = self.phase_guidance(&doc_type_str, &result.to_phase.to_string());
+
+        let mut output = ToolOutput::new()
             .header("Phase Transition")
             .text(&format!(
                 "{}: {} -> {}",
@@ -84,10 +87,13 @@ impl TransitionPhaseTool {
                 result.to_phase
             ))
             .blank()
-            .phase_progress(&phase_strs, current_index)
-            .build_result();
+            .phase_progress(&phase_strs, current_index);
 
-        Ok(output)
+        if let Some(guidance_text) = guidance {
+            output = output.blank().text(guidance_text);
+        }
+
+        Ok(output.build_result())
     }
 
     fn parse_phase(&self, phase_str: &str) -> Result<Phase, CallToolError> {
@@ -112,6 +118,82 @@ impl TransitionPhaseTool {
                 std::io::ErrorKind::InvalidInput,
                 format!("Unknown phase: {}", phase_str),
             ))),
+        }
+    }
+
+    fn phase_guidance(&self, document_type: &str, phase: &str) -> Option<&'static str> {
+        match (document_type, phase) {
+            // Vision phases
+            ("vision", "draft") => Some(
+                "**Draft phase**: Define the purpose, core values, long-term vision, and success criteria. This is the foundation — take time to get it right."
+            ),
+            ("vision", "review") => Some(
+                "**Review phase**: The vision is ready for stakeholder review. Verify that purpose resonates, values are actionable, and success is measurable. Get explicit sign-off before publishing."
+            ),
+            ("vision", "published") => Some(
+                "**Published**: This vision is now the authoritative strategic direction. Initiatives can be created under it. Changes should be rare and deliberate."
+            ),
+
+            // Initiative phases
+            ("initiative", "discovery") => Some(
+                "**Discovery phase**: Understand the problem space. Ask clarifying questions about scope, priorities, and constraints. Document context, goals, and non-goals. Do NOT assume you understand the full picture — ask the human."
+            ),
+            ("initiative", "design") => Some(
+                "**Design phase**: Define the technical approach. Present multiple options with trade-offs. Document architecture, detailed design, and alternatives considered. Get human approval on the approach before proceeding."
+            ),
+            ("initiative", "ready") => Some(
+                "**Ready phase**: The design is approved and the initiative is ready for decomposition. Review that all design decisions are documented and the implementation plan is clear. Get human sign-off before decomposing."
+            ),
+            ("initiative", "decompose") => Some(
+                "**Decompose phase**: Break the initiative into discrete, actionable tasks. Each task should be independently completable (1-14 days). After creating tasks, open them for review with `open_document` (include_children: true) and get human approval before moving to active."
+            ),
+            ("initiative", "active") => Some(
+                "**Active phase**: Tasks are being executed. Track progress by updating active tasks regularly. This initiative should not be transitioned to completed until ALL child tasks are done."
+            ),
+            ("initiative", "completed") => Some(
+                "**Completed**: All work under this initiative is done. Consider archiving if no longer needed for reference."
+            ),
+
+            // Task phases
+            ("task", "todo") => Some(
+                "**Todo phase**: Task is defined and ready to be picked up. Read the task thoroughly before starting — understand the objective, acceptance criteria, and dependencies."
+            ),
+            ("task", "active") => Some(
+                "**Active phase**: You are now working on this task. Update the Status Updates section regularly with progress, findings, decisions, and plan changes. This is your working memory — if context is lost, this is how you (or another agent) picks up where you left off."
+            ),
+            ("task", "blocked") => Some(
+                "**Blocked**: This task cannot proceed. Document what is blocking it in the Status Updates section. Include what you've tried and what needs to happen to unblock."
+            ),
+            ("task", "completed") => Some(
+                "**Completed**: Task is done. Verify all acceptance criteria are met before considering this truly finished."
+            ),
+
+            // ADR phases
+            ("adr", "draft") => Some(
+                "**Draft phase**: Document the decision context, the options considered, and the proposed decision. Be thorough — ADRs are the historical record of why decisions were made."
+            ),
+            ("adr", "discussion") => Some(
+                "**Discussion phase**: The ADR is open for review and debate. Gather feedback, document concerns, and refine the decision. Do not finalize without stakeholder input."
+            ),
+            ("adr", "decided") => Some(
+                "**Decided**: This decision is now in effect. Implementation should follow the decision as documented. If circumstances change, create a new ADR that supersedes this one."
+            ),
+
+            // Specification phases
+            ("specification", "discovery") => Some(
+                "**Discovery phase**: Gather requirements and understand what needs to be specified. Interview stakeholders, review existing documentation, and identify scope."
+            ),
+            ("specification", "drafting") => Some(
+                "**Drafting phase**: Write the specification content. Be precise and complete — this document will guide implementation."
+            ),
+            ("specification", "review") => Some(
+                "**Review phase**: The specification is ready for technical and stakeholder review. Address feedback and refine until approved."
+            ),
+            ("specification", "published") => Some(
+                "**Published**: This specification is the authoritative reference. It remains a living document — update it as the system evolves, but changes should be reviewed."
+            ),
+
+            _ => None,
         }
     }
 

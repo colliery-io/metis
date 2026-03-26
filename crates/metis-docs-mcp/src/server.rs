@@ -1,10 +1,13 @@
+use crate::read_tracker::DocumentReadTracker;
 use crate::tools::{
     ArchiveDocumentTool, CreateDocumentTool, EditDocumentTool, IndexCodeTool,
-    InitializeProjectTool, ListDocumentsTool, MetisTools, ReadDocumentTool, SearchDocumentsTool,
-    TransitionPhaseTool,
+    InitializeProjectTool, ListDocumentsTool, MetisTools, OpenDocumentTool, ReadDocumentTool,
+    SearchDocumentsTool, TransitionPhaseTool,
 };
+use crate::viewer::ViewerDispatcher;
 use crate::MetisServerConfig;
 use async_trait::async_trait;
+use metis_core::domain::configuration::ViewerConfig;
 use rust_mcp_sdk::{
     mcp_server::ServerHandler,
     schema::{
@@ -18,13 +21,28 @@ use tracing::info;
 pub struct MetisServerHandler {
     #[allow(dead_code)]
     config: Arc<MetisServerConfig>,
+    read_tracker: Arc<DocumentReadTracker>,
+    viewer_dispatcher: Arc<ViewerDispatcher>,
 }
 
 impl MetisServerHandler {
     pub fn new(config: MetisServerConfig) -> Self {
+        Self::with_viewer_config(config, ViewerConfig::default())
+    }
+
+    pub fn with_viewer_config(config: MetisServerConfig, viewer_config: ViewerConfig) -> Self {
         info!("Initializing Metis MCP Server");
+
+        // Build viewer backends
+        let backends: Vec<Box<dyn crate::viewer::DocumentViewer>> = vec![
+            Box::new(crate::viewer::VscodeViewer::new()),
+            Box::new(crate::viewer::SysEditorViewer::new()),
+        ];
+
         Self {
             config: Arc::new(config),
+            read_tracker: Arc::new(DocumentReadTracker::new()),
+            viewer_dispatcher: Arc::new(ViewerDispatcher::new(viewer_config, backends)),
         }
     }
 }
@@ -69,12 +87,13 @@ impl ServerHandler for MetisServerHandler {
             "read_document" => {
                 let tool: ReadDocumentTool = serde_json::from_value(args)
                     .map_err(rust_mcp_sdk::schema::schema_utils::CallToolError::new)?;
-                tool.call_tool().await
+                tool.call_tool_with_tracker(self.read_tracker.clone()).await
             }
             "create_document" => {
                 let tool: CreateDocumentTool = serde_json::from_value(args)
                     .map_err(rust_mcp_sdk::schema::schema_utils::CallToolError::new)?;
-                tool.call_tool().await
+                tool.call_tool_with_dispatcher(self.viewer_dispatcher.clone())
+                    .await
             }
             "transition_phase" => {
                 let tool: TransitionPhaseTool = serde_json::from_value(args)
@@ -84,7 +103,11 @@ impl ServerHandler for MetisServerHandler {
             "edit_document" => {
                 let tool: EditDocumentTool = serde_json::from_value(args)
                     .map_err(rust_mcp_sdk::schema::schema_utils::CallToolError::new)?;
-                tool.call_tool().await
+                tool.call_tool_with_tracker_and_dispatcher(
+                    self.read_tracker.clone(),
+                    self.viewer_dispatcher.clone(),
+                )
+                .await
             }
             "archive_document" => {
                 let tool: ArchiveDocumentTool = serde_json::from_value(args)
@@ -95,6 +118,12 @@ impl ServerHandler for MetisServerHandler {
                 let tool: IndexCodeTool = serde_json::from_value(args)
                     .map_err(rust_mcp_sdk::schema::schema_utils::CallToolError::new)?;
                 tool.call_tool().await
+            }
+            "open_document" => {
+                let tool: OpenDocumentTool = serde_json::from_value(args)
+                    .map_err(rust_mcp_sdk::schema::schema_utils::CallToolError::new)?;
+                tool.call_tool_with_dispatcher(self.viewer_dispatcher.clone())
+                    .await
             }
             _ => Err(rust_mcp_sdk::schema::schema_utils::CallToolError::unknown_tool(params.name)),
         }

@@ -4,14 +4,14 @@ level: task
 title: "VSCode viewer backend"
 short_code: "METIS-T-0110"
 created_at: 2026-03-26T14:59:09.854055+00:00
-updated_at: 2026-03-26T14:59:09.854055+00:00
+updated_at: 2026-03-26T17:01:03.986875+00:00
 parent: METIS-I-0027
 blocked_by: []
 archived: false
 
 tags:
   - "#task"
-  - "#phase/todo"
+  - "#phase/completed"
 
 
 exit_criteria_met: false
@@ -27,6 +27,10 @@ initiative_id: METIS-I-0027
 ## Objective
 
 Implement the VSCode viewer backend that opens Metis documents in VSCode via the `code` CLI.
+
+## Acceptance Criteria
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 
@@ -51,4 +55,4 @@ Implement the VSCode viewer backend that opens Metis documents in VSCode via the
 
 ## Status Updates
 
-*To be added during implementation*
+- **2026-03-26**: Implemented. `VscodeViewer` shells out to `code --reuse-window` with file paths. Caches `which code` check on construction. `is_open` returns false (VSCode handles tab dedup internally). Wired into server handler's backend list. 3 unit tests. All 21 MCP tests pass.

@@ -4,14 +4,14 @@ level: task
 title: "System editor viewer backend"
 short_code: "METIS-T-0111"
 created_at: 2026-03-26T14:59:09.879883+00:00
-updated_at: 2026-03-26T14:59:09.879883+00:00
+updated_at: 2026-03-26T17:06:42.954775+00:00
 parent: METIS-I-0027
 blocked_by: []
 archived: false
 
 tags:
   - "#task"
-  - "#phase/todo"
+  - "#phase/completed"
 
 
 exit_criteria_met: false
@@ -27,6 +27,10 @@ initiative_id: METIS-I-0027
 ## Objective
 
 Implement the system editor viewer backend that opens Metis documents using `$EDITOR` or the OS default handler (`open` on macOS, `xdg-open` on Linux).
+
+## Acceptance Criteria
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 
@@ -54,4 +58,4 @@ Implement the system editor viewer backend that opens Metis documents using `$ED
 
 ## Status Updates
 
-*To be added during implementation*
+- **2026-03-26**: Implemented. `SysEditorViewer` reads `$EDITOR`, falls back to `open` (macOS) / `xdg-open` (Linux). Detects TUI editors (vim, nvim, nano, etc.) and spawns them in a terminal window. Always reports as available (OS default handler exists). 4 unit tests including TUI editor detection. All 25 MCP tests pass.

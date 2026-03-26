@@ -1,4 +1,6 @@
 use crate::formatting::{error_result, ToolOutput};
+use crate::read_tracker::DocumentReadTracker;
+use crate::viewer::ViewerDispatcher;
 use metis_core::application::services::workspace::WorkspaceDetectionService;
 use rust_mcp_sdk::{
     macros::{mcp_tool, JsonSchema},
@@ -6,7 +8,9 @@ use rust_mcp_sdk::{
 };
 use serde::{Deserialize, Serialize};
 use std::path::Path;
+use std::sync::Arc;
 use tokio::fs;
+use tracing::warn;
 
 #[mcp_tool(
     name = "edit_document",
@@ -32,6 +36,30 @@ pub struct EditDocumentTool {
 
 impl EditDocumentTool {
     pub async fn call_tool(&self) -> std::result::Result<CallToolResult, CallToolError> {
+        self.call_tool_inner(None, None).await
+    }
+
+    #[allow(dead_code)]
+    pub async fn call_tool_with_tracker(
+        &self,
+        tracker: Arc<DocumentReadTracker>,
+    ) -> std::result::Result<CallToolResult, CallToolError> {
+        self.call_tool_inner(Some(tracker), None).await
+    }
+
+    pub async fn call_tool_with_tracker_and_dispatcher(
+        &self,
+        tracker: Arc<DocumentReadTracker>,
+        dispatcher: Arc<ViewerDispatcher>,
+    ) -> std::result::Result<CallToolResult, CallToolError> {
+        self.call_tool_inner(Some(tracker), Some(dispatcher)).await
+    }
+
+    async fn call_tool_inner(
+        &self,
+        tracker: Option<Arc<DocumentReadTracker>>,
+        dispatcher: Option<Arc<ViewerDispatcher>>,
+    ) -> std::result::Result<CallToolResult, CallToolError> {
         let metis_dir = Path::new(&self.project_path);
 
         // Prepare workspace (validates, creates/updates database, syncs)
@@ -76,6 +104,17 @@ impl EditDocumentTool {
             ));
         }
 
+        // Check read-before-edit guard (if tracker is available)
+        if let Some(ref tracker) = tracker {
+            if let Err(guard_err) = tracker.check_edit_allowed(&full_document_path) {
+                return Ok(error_result(
+                    &format!("Edit rejected for {}", self.short_code),
+                    &guard_err.to_string(),
+                    None,
+                ));
+            }
+        }
+
         // Read the current document content
         let content = fs::read_to_string(&full_document_path)
             .await
@@ -97,6 +136,11 @@ impl EditDocumentTool {
             .await
             .map_err(|e| CallToolError::new(e))?;
 
+        // Update the tracker after our own successful write
+        if let Some(ref tracker) = tracker {
+            tracker.record_edit(&full_document_path);
+        }
+
         // Build concise output with diff
         let replace_all = self.replace_all.unwrap_or(false);
         let count_msg = if replace_all && replacements_made > 1 {
@@ -109,6 +153,15 @@ impl EditDocumentTool {
             .text(&format!("✓ {} updated{}", self.short_code, count_msg))
             .diff(&self.search, &self.replace)
             .build_result();
+
+        // Proactive open: open the document in the viewer if not already open
+        if let Some(dispatcher) = dispatcher {
+            if !dispatcher.is_proactive_opening_suppressed() {
+                if let Err(e) = dispatcher.open(&[full_document_path.to_path_buf()], None) {
+                    warn!("Proactive open after edit failed: {}", e);
+                }
+            }
+        }
 
         Ok(output)
     }

@@ -21,7 +21,7 @@ This script:
 ### Pin a Specific Version
 
 ```bash
-METIS_VERSION=2.0.3 curl -fsSL https://raw.githubusercontent.com/colliery-io/metis/main/scripts/install.sh | bash
+METIS_VERSION=2.0.4 curl -fsSL https://raw.githubusercontent.com/colliery-io/metis/main/scripts/install.sh | bash
 ```
 
 ### Platform-Specific Details

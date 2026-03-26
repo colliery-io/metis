@@ -4,14 +4,14 @@ level: task
 title: "Viewer config and trait abstraction"
 short_code: "METIS-T-0107"
 created_at: 2026-03-26T14:59:07.714919+00:00
-updated_at: 2026-03-26T14:59:07.714919+00:00
+updated_at: 2026-03-26T16:45:24.299069+00:00
 parent: METIS-I-0027
 blocked_by: []
 archived: false
 
 tags:
   - "#task"
-  - "#phase/todo"
+  - "#phase/completed"
 
 
 exit_criteria_met: false
@@ -27,6 +27,10 @@ initiative_id: METIS-I-0027
 ## Objective
 
 Add the `[viewer]` configuration section to arawn.toml and define the `DocumentViewer` trait that all viewer backends will implement. This is the foundation that every other task in this initiative depends on.
+
+## Acceptance Criteria
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 
@@ -51,4 +55,4 @@ Add the `[viewer]` configuration section to arawn.toml and define the `DocumentV
 
 ## Status Updates
 
-*To be added during implementation*
+- **2026-03-26**: Implemented. Added `ViewerConfig` (with `ViewerBackend` enum) to `ConfigFile` in metis-docs-core. Created `viewer` module in metis-docs-mcp with `DocumentViewer` trait (`open`, `is_open`, `name`, `is_available`) and `ViewerDispatcher` with fallback chain logic and look-before-you-leap `is_open` checks. 8 unit tests covering: configured backend, fallback on failure, fallback on unavailable, skip already-open, no backends, viewer override, empty paths, suppress config. All tests pass.

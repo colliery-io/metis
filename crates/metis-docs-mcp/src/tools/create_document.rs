@@ -1,4 +1,5 @@
 use crate::formatting::ToolOutput;
+use crate::viewer::ViewerDispatcher;
 use metis_core::{
     application::services::{
         document::{creation::DocumentCreationConfig, DocumentCreationService},
@@ -13,6 +14,8 @@ use rust_mcp_sdk::{
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use std::str::FromStr;
+use std::sync::Arc;
+use tracing::warn;
 
 #[mcp_tool(
     name = "create_document",
@@ -44,6 +47,20 @@ pub struct CreateDocumentTool {
 
 impl CreateDocumentTool {
     pub async fn call_tool(&self) -> std::result::Result<CallToolResult, CallToolError> {
+        self.call_tool_inner(None).await
+    }
+
+    pub async fn call_tool_with_dispatcher(
+        &self,
+        dispatcher: Arc<ViewerDispatcher>,
+    ) -> std::result::Result<CallToolResult, CallToolError> {
+        self.call_tool_inner(Some(dispatcher)).await
+    }
+
+    async fn call_tool_inner(
+        &self,
+        dispatcher: Option<Arc<ViewerDispatcher>>,
+    ) -> std::result::Result<CallToolResult, CallToolError> {
         let metis_dir = Path::new(&self.project_path);
 
         // Prepare workspace (validates, creates/updates database, syncs)
@@ -237,6 +254,15 @@ impl CreateDocumentTool {
             )
             .text(&format!("Path: `{}`", result.file_path.to_string_lossy()))
             .build_result();
+
+        // Proactive open: open the newly created document in the viewer
+        if let Some(dispatcher) = dispatcher {
+            if !dispatcher.is_proactive_opening_suppressed() {
+                if let Err(e) = dispatcher.open(&[result.file_path.clone()], None) {
+                    warn!("Proactive open after create failed: {}", e);
+                }
+            }
+        }
 
         Ok(result_output)
     }

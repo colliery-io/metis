@@ -1,4 +1,5 @@
 use crate::formatting::{error_result, ToolOutput};
+use crate::read_tracker::DocumentReadTracker;
 use metis_core::{application::services::workspace::WorkspaceDetectionService, dal::Database};
 use rust_mcp_sdk::{
     macros::{mcp_tool, JsonSchema},
@@ -6,6 +7,7 @@ use rust_mcp_sdk::{
 };
 use serde::{Deserialize, Serialize};
 use std::path::Path;
+use std::sync::Arc;
 use tokio::fs;
 
 #[mcp_tool(
@@ -53,6 +55,20 @@ impl ReadDocumentTool {
     }
 
     pub async fn call_tool(&self) -> std::result::Result<CallToolResult, CallToolError> {
+        self.call_tool_inner(None).await
+    }
+
+    pub async fn call_tool_with_tracker(
+        &self,
+        tracker: Arc<DocumentReadTracker>,
+    ) -> std::result::Result<CallToolResult, CallToolError> {
+        self.call_tool_inner(Some(tracker)).await
+    }
+
+    async fn call_tool_inner(
+        &self,
+        tracker: Option<Arc<DocumentReadTracker>>,
+    ) -> std::result::Result<CallToolResult, CallToolError> {
         let metis_dir = Path::new(&self.project_path);
 
         // Prepare workspace (validates, creates/updates database, syncs)
@@ -86,6 +102,11 @@ impl ReadDocumentTool {
         let content = fs::read_to_string(&full_document_path)
             .await
             .map_err(|e| CallToolError::new(e))?;
+
+        // Record the read in the tracker (if available)
+        if let Some(tracker) = tracker {
+            tracker.record_read(&full_document_path);
+        }
 
         // Extract metadata from frontmatter
         let (doc_type, phase, _created, _archived, title) = self.extract_metadata(&content);

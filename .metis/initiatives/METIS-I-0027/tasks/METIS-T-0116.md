@@ -4,14 +4,14 @@ level: task
 title: "Plugin skill and prompt integration"
 short_code: "METIS-T-0116"
 created_at: 2026-03-26T14:59:09.999021+00:00
-updated_at: 2026-03-26T14:59:09.999021+00:00
+updated_at: 2026-03-26T17:46:59.692456+00:00
 parent: METIS-I-0027
 blocked_by: []
 archived: false
 
 tags:
   - "#task"
-  - "#phase/todo"
+  - "#phase/completed"
 
 
 exit_criteria_met: false
@@ -27,6 +27,10 @@ initiative_id: METIS-I-0027
 ## Objective
 
 Update Claude Code plugin skills (Ralph loop, decomposition, etc.) and agent prompts to leverage `open_document` and the viewer workflow — open for review, prompt user to confirm, re-read before continuing.
+
+## Acceptance Criteria
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 
@@ -52,4 +56,4 @@ Update Claude Code plugin skills (Ralph loop, decomposition, etc.) and agent pro
 
 ## Status Updates
 
-*To be added during implementation*
+- **2026-03-26**: Implemented. Updated MCP `instructions.md` with `open_document` tool reference, viewer workflow guidance, and updated read-before-edit documentation. Updated decompose command (`metis-decompose.md`) to call `open_document` with `include_children: true` as final step and added it to allowed-tools. Updated SessionStart hook to list `open_document` in MCP tools. All 25 tests pass.

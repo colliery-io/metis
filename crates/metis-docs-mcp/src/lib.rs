@@ -5,8 +5,10 @@ pub mod config;
 pub mod error;
 pub mod error_utils;
 pub mod formatting;
+pub mod read_tracker;
 pub mod server;
 pub mod tools;
+pub mod viewer;
 
 pub use config::MetisServerConfig;
 pub use error::{McpServerError, Result};

@@ -4,14 +4,14 @@ level: task
 title: "Proactive open on create/edit"
 short_code: "METIS-T-0115"
 created_at: 2026-03-26T14:59:09.976053+00:00
-updated_at: 2026-03-26T14:59:09.976053+00:00
+updated_at: 2026-03-26T17:18:22.651730+00:00
 parent: METIS-I-0027
 blocked_by: []
 archived: false
 
 tags:
   - "#task"
-  - "#phase/todo"
+  - "#phase/completed"
 
 
 exit_criteria_met: false
@@ -27,6 +27,10 @@ initiative_id: METIS-I-0027
 ## Objective
 
 Wire `create_document` and `edit_document` to proactively open documents in the configured viewer after successful operations, controlled by the `suppress_proactive_ticket_opening` config flag.
+
+## Acceptance Criteria
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 
@@ -52,4 +56,4 @@ Wire `create_document` and `edit_document` to proactively open documents in the 
 
 ## Status Updates
 
-*To be added during implementation*
+- **2026-03-26**: Implemented. `create_document` and `edit_document` now accept a `ViewerDispatcher` and proactively open documents after successful operations. Opening is best-effort (failures logged via `warn!`, don't fail the operation). Suppressed when `suppress_proactive_ticket_opening = true`. Dispatcher's `is_open` check prevents re-opening already-open files. All 25 MCP tests pass.

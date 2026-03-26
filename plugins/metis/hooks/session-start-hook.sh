@@ -110,6 +110,7 @@ Use these MCP tools for all Metis operations:
 - \`mcp__metis__transition_phase\` - Move documents through phases (todo->active->completed)
 - \`mcp__metis__create_document\` - Create new vision, initiative, task, ADR, or specification documents
 - \`mcp__metis__reassign_parent\` - Move tasks between initiatives or to/from backlog
+- \`mcp__metis__open_document\` - Open a document in an external viewer (VSCode/system editor) for review. Use \`include_children: true\` to open an initiative with all its tasks.
 
 ## CRITICAL: Creating Documents
 When you create a document, you MUST immediately populate it with content:

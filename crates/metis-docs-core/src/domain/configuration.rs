@@ -140,11 +140,53 @@ impl fmt::Display for ConfigurationError {
 
 impl std::error::Error for ConfigurationError {}
 
+/// Viewer backend configuration
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ViewerBackend {
+    #[serde(rename = "sys_editor")]
+    SysEditor,
+    #[serde(rename = "code")]
+    Code,
+    #[serde(rename = "gui")]
+    Gui,
+}
+
+impl fmt::Display for ViewerBackend {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ViewerBackend::SysEditor => write!(f, "sys_editor"),
+            ViewerBackend::Code => write!(f, "code"),
+            ViewerBackend::Gui => write!(f, "gui"),
+        }
+    }
+}
+
+/// Viewer configuration section in config.toml
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ViewerConfig {
+    /// Default viewer backend. Falls back to $EDITOR if not set.
+    pub default: Option<ViewerBackend>,
+    /// Suppress proactive opening of documents on create/edit (default: false)
+    #[serde(default)]
+    pub suppress_proactive_ticket_opening: bool,
+}
+
+impl Default for ViewerConfig {
+    fn default() -> Self {
+        Self {
+            default: None,
+            suppress_proactive_ticket_opening: false,
+        }
+    }
+}
+
 /// Configuration file structure that persists to .metis/config.toml
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ConfigFile {
     pub project: ProjectConfig,
     pub flight_levels: FlightLevelConfig,
+    #[serde(default)]
+    pub viewer: ViewerConfig,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -165,6 +207,7 @@ impl ConfigFile {
         Ok(Self {
             project: ProjectConfig { prefix },
             flight_levels,
+            viewer: ViewerConfig::default(),
         })
     }
 
@@ -206,6 +249,11 @@ impl ConfigFile {
     pub fn flight_levels(&self) -> &FlightLevelConfig {
         &self.flight_levels
     }
+
+    /// Get the viewer configuration
+    pub fn viewer(&self) -> &ViewerConfig {
+        &self.viewer
+    }
 }
 
 impl Default for ConfigFile {
@@ -215,6 +263,7 @@ impl Default for ConfigFile {
                 prefix: "PROJ".to_string(),
             },
             flight_levels: FlightLevelConfig::streamlined(),
+            viewer: ViewerConfig::default(),
         }
     }
 }

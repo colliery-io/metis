@@ -4,14 +4,14 @@ level: task
 title: "Read-before-edit guard"
 short_code: "METIS-T-0108"
 created_at: 2026-03-26T14:59:09.789307+00:00
-updated_at: 2026-03-26T14:59:09.789307+00:00
+updated_at: 2026-03-26T16:49:11.009457+00:00
 parent: METIS-I-0027
 blocked_by: []
 archived: false
 
 tags:
   - "#task"
-  - "#phase/todo"
+  - "#phase/completed"
 
 
 exit_criteria_met: false
@@ -27,6 +27,10 @@ initiative_id: METIS-I-0027
 ## Objective
 
 Implement an mtime-based guard in the MCP server that prevents `edit_document` from overwriting changes made externally (e.g., by a user editing in VSCode or the GUI). The server tracks when each document was last read and rejects edits if the file has been modified since.
+
+## Acceptance Criteria
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 
@@ -56,4 +60,4 @@ Implement an mtime-based guard in the MCP server that prevents `edit_document` f
 
 ## Status Updates
 
-*To be added during implementation*
+- **2026-03-26**: Implemented. Created `DocumentReadTracker` with `Mutex<HashMap<PathBuf, SystemTime>>`. Wired into server handler as `Arc<DocumentReadTracker>`. `read_document` records timestamps via `call_tool_with_tracker`. `edit_document` checks mtime guard before editing, records after successful write. 1-second tolerance for filesystem granularity. 4 unit tests: read-then-edit passes, edit-without-read rejected, edit-after-external-modify rejected, record-edit-allows-subsequent. All 18 MCP tests pass.
