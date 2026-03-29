@@ -1,3 +1,5 @@
+bettis_review/
+
 # Rust
 /target/
 **/*.rs.bk

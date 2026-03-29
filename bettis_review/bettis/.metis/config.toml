@@ -1,6 +1,0 @@
-[project]
-prefix = "BETTIS"
-
-[flight_levels]
-strategies_enabled = false
-initiatives_enabled = true
