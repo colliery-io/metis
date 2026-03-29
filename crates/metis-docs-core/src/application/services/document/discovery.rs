@@ -34,13 +34,9 @@ impl DocumentDiscoveryService {
         };
 
         // Then canonicalize to handle symlinks (e.g., /tmp vs /private/tmp)
-        let workspace_dir = absolute_path
-            .canonicalize()
-            .unwrap_or(absolute_path);
+        let workspace_dir = absolute_path.canonicalize().unwrap_or(absolute_path);
 
-        Self {
-            workspace_dir,
-        }
+        Self { workspace_dir }
     }
 
     /// Find a document by its short code across all document types
@@ -538,9 +534,7 @@ impl DocumentDiscoveryService {
             )));
         }
 
-        let initiative_path = initiatives_dir
-            .join(short_code)
-            .join("initiative.md");
+        let initiative_path = initiatives_dir.join(short_code).join("initiative.md");
 
         if initiative_path.exists() {
             return Ok(initiative_path);
@@ -579,8 +573,8 @@ impl DocumentDiscoveryService {
         // Then check initiative hierarchy
         let initiatives_dir = self.workspace_dir.join("initiatives");
         if initiatives_dir.exists() {
-            for initiative_entry in fs::read_dir(&initiatives_dir)
-                .map_err(|e| MetisError::FileSystem(e.to_string()))?
+            for initiative_entry in
+                fs::read_dir(&initiatives_dir).map_err(|e| MetisError::FileSystem(e.to_string()))?
             {
                 let initiative_dir = initiative_entry
                     .map_err(|e| MetisError::FileSystem(e.to_string()))?

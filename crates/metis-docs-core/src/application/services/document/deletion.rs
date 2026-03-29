@@ -42,8 +42,7 @@ impl DeletionService {
             if parent_dir != Path::new(".") && parent_dir != Path::new("") && parent_dir.is_dir() {
                 // For initiative documents, delete the entire parent directory
                 // This handles cases like "initiative-id/initiative.md" -> delete "initiative-id/"
-                if file_path.file_name() == Some(std::ffi::OsStr::new("initiative.md"))
-                {
+                if file_path.file_name() == Some(std::ffi::OsStr::new("initiative.md")) {
                     Self::remove_directory_recursive(
                         parent_dir,
                         &mut deleted_files,

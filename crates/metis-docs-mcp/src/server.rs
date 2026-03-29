@@ -92,8 +92,7 @@ impl ServerHandler for MetisServerHandler {
             "create_document" => {
                 let tool: CreateDocumentTool = serde_json::from_value(args)
                     .map_err(rust_mcp_sdk::schema::schema_utils::CallToolError::new)?;
-                tool.call_tool_with_dispatcher(self.viewer_dispatcher.clone())
-                    .await
+                tool.call_tool().await
             }
             "transition_phase" => {
                 let tool: TransitionPhaseTool = serde_json::from_value(args)

@@ -47,7 +47,10 @@ pub async fn create_new_task(title: &str, initiative_id: &str) -> Result<()> {
 async fn find_initiative(
     workspace_dir: &Path,
     initiative_id: &str,
-) -> Result<(metis_core::domain::documents::types::DocumentId, std::path::PathBuf)> {
+) -> Result<(
+    metis_core::domain::documents::types::DocumentId,
+    std::path::PathBuf,
+)> {
     let db_path = workspace_dir.join("metis.db");
     if !db_path.exists() {
         anyhow::bail!("Database not found. Run 'metis sync' first.");

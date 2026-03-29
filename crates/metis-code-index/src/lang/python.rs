@@ -633,7 +633,10 @@ class ChildClass(BaseClass, MixinA):
 "#;
         let tree = parse_python(source);
         let symbols = PythonExtractor::extract_symbols(&tree, source, "test.py").unwrap();
-        let class = symbols.iter().find(|s| s.kind == SymbolKind::Class).unwrap();
+        let class = symbols
+            .iter()
+            .find(|s| s.kind == SymbolKind::Class)
+            .unwrap();
         assert!(class.signature.is_some(), "Class should have signature");
         let sig = class.signature.as_ref().unwrap();
         assert!(sig.contains("BaseClass"), "sig = {sig}");
@@ -715,11 +718,17 @@ class Service:
 
         let get_name = methods.iter().find(|m| m.name == "get_name").unwrap();
         let sig = get_name.signature.as_ref().unwrap();
-        assert!(sig.contains("-> str"), "Method should have return type: {sig}");
+        assert!(
+            sig.contains("-> str"),
+            "Method should have return type: {sig}"
+        );
 
         let process = methods.iter().find(|m| m.name == "process").unwrap();
         let sig = process.signature.as_ref().unwrap();
-        assert!(sig.contains("-> bool"), "Method should have return type: {sig}");
+        assert!(
+            sig.contains("-> bool"),
+            "Method should have return type: {sig}"
+        );
     }
 
     #[test]

@@ -93,11 +93,7 @@ impl WorkspaceMigrationService {
                     // Ensure parent directory exists
                     std::fs::create_dir_all(&initiatives_dir)?;
 
-                    tracing::info!(
-                        "Moving initiative: {} -> {}",
-                        src.display(),
-                        dest.display()
-                    );
+                    tracing::info!("Moving initiative: {} -> {}", src.display(), dest.display());
                     std::fs::rename(&src, &dest)?;
 
                     moved_items.push(MigrationAction {
@@ -223,9 +219,7 @@ mod tests {
         fs::create_dir_all(&strategy_dir).unwrap();
         fs::write(strategy_dir.join("strategy.md"), "# Strategy Doc").unwrap();
 
-        let initiative_dir = strategy_dir
-            .join("initiatives")
-            .join("PROJ-I-0001");
+        let initiative_dir = strategy_dir.join("initiatives").join("PROJ-I-0001");
         fs::create_dir_all(&initiative_dir).unwrap();
         fs::write(initiative_dir.join("initiative.md"), "# Initiative").unwrap();
 
@@ -233,7 +227,11 @@ mod tests {
         assert!(report.migrated);
 
         // Initiative moved up
-        assert!(metis_dir.join("initiatives").join("PROJ-I-0001").join("initiative.md").exists());
+        assert!(metis_dir
+            .join("initiatives")
+            .join("PROJ-I-0001")
+            .join("initiative.md")
+            .exists());
 
         // Strategy doc deleted
         assert!(!strategy_dir.join("strategy.md").exists());
@@ -264,12 +262,18 @@ mod tests {
 
         // Add strategy.md files
         fs::write(
-            metis_dir.join("strategies").join("PROJ-S-0001").join("strategy.md"),
+            metis_dir
+                .join("strategies")
+                .join("PROJ-S-0001")
+                .join("strategy.md"),
             "# Strategy 1",
         )
         .unwrap();
         fs::write(
-            metis_dir.join("strategies").join("PROJ-S-0002").join("strategy.md"),
+            metis_dir
+                .join("strategies")
+                .join("PROJ-S-0002")
+                .join("strategy.md"),
             "# Strategy 2",
         )
         .unwrap();
@@ -281,7 +285,11 @@ mod tests {
         // All initiatives at flat layout
         for init in &["PROJ-I-0001", "PROJ-I-0002", "PROJ-I-0003"] {
             assert!(
-                metis_dir.join("initiatives").join(init).join("initiative.md").exists(),
+                metis_dir
+                    .join("initiatives")
+                    .join(init)
+                    .join("initiative.md")
+                    .exists(),
                 "Initiative {} should exist at flat layout",
                 init
             );
@@ -343,7 +351,11 @@ mod tests {
         assert_eq!(content, "# Existing");
 
         // Non-conflicting initiative should be moved
-        assert!(metis_dir.join("initiatives").join("PROJ-I-0002").join("initiative.md").exists());
+        assert!(metis_dir
+            .join("initiatives")
+            .join("PROJ-I-0002")
+            .join("initiative.md")
+            .exists());
 
         // Only one item moved (the non-conflicting one)
         assert_eq!(report.moved_items.len(), 1);
@@ -367,8 +379,14 @@ mod tests {
         // Verify the report contains actionable info
         assert!(report.migrated);
         assert_eq!(report.moved_items.len(), 1);
-        assert!(report.moved_items[0].from.to_string_lossy().contains("strategies"));
-        assert!(report.moved_items[0].to.to_string_lossy().contains("initiatives"));
+        assert!(report.moved_items[0]
+            .from
+            .to_string_lossy()
+            .contains("strategies"));
+        assert!(report.moved_items[0]
+            .to
+            .to_string_lossy()
+            .contains("initiatives"));
         assert!(!report.deleted_items.is_empty());
     }
 }

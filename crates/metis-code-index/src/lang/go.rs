@@ -212,9 +212,7 @@ impl GoExtractor {
                     SymbolKind::Interface => {
                         outer_node.and_then(|n| build_go_interface_signature(n, source))
                     }
-                    SymbolKind::Type => {
-                        outer_node.and_then(|n| build_go_type_signature(n, source))
-                    }
+                    SymbolKind::Type => outer_node.and_then(|n| build_go_type_signature(n, source)),
                     SymbolKind::Variable => {
                         outer_node.and_then(|n| build_go_var_signature(n, source))
                     }
@@ -643,7 +641,10 @@ type ReadWriter interface {
 
         // Reader should have method signature
         let reader = interfaces.iter().find(|i| i.name == "Reader").unwrap();
-        assert!(reader.signature.is_some(), "Interface should have signature");
+        assert!(
+            reader.signature.is_some(),
+            "Interface should have signature"
+        );
         let sig = reader.signature.as_ref().unwrap();
         assert!(sig.contains("Read()"), "sig = {sig}");
 

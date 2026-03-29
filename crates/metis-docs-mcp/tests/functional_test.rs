@@ -12,9 +12,9 @@ fn extract_text_from_result(result: &rust_mcp_sdk::schema::CallToolResult) -> Op
         }
         Some(rust_mcp_sdk::schema::ContentBlock::EmbeddedResource(embedded)) => {
             match &embedded.resource {
-                rust_mcp_sdk::schema::EmbeddedResourceResource::TextResourceContents(text_resource) => {
-                    Some(text_resource.text.clone())
-                }
+                rust_mcp_sdk::schema::EmbeddedResourceResource::TextResourceContents(
+                    text_resource,
+                ) => Some(text_resource.text.clone()),
                 _ => None,
             }
         }
@@ -217,13 +217,19 @@ async fn test_search_with_short_code_hyphen() {
     };
 
     let result = search_tool.call_tool().await;
-    assert!(result.is_ok(), "Search with hyphenated short code should succeed (not fail with 'no such column' error)");
+    assert!(
+        result.is_ok(),
+        "Search with hyphenated short code should succeed (not fail with 'no such column' error)"
+    );
 
     if let Ok(ref search_result) = result {
         if let Some(text) = extract_text_from_result(search_result) {
             println!("Search result: {}", text);
             // Should find our initiative
-            assert!(text.contains(&initiative_short_code), "Search should find the initiative by short code");
+            assert!(
+                text.contains(&initiative_short_code),
+                "Search should find the initiative by short code"
+            );
         }
     }
 }
@@ -266,7 +272,10 @@ async fn test_list_and_search_include_archived() {
     };
     let result = list_tool.call_tool().await.unwrap();
     let text = extract_text_from_result(&result).unwrap();
-    assert!(text.contains(&adr_short_code), "ADR should appear in default list");
+    assert!(
+        text.contains(&adr_short_code),
+        "ADR should appear in default list"
+    );
 
     // Verify ADR appears in search
     let search_tool = SearchDocumentsTool {
@@ -278,7 +287,10 @@ async fn test_list_and_search_include_archived() {
     };
     let result = search_tool.call_tool().await.unwrap();
     let text = extract_text_from_result(&result).unwrap();
-    assert!(text.contains(&adr_short_code), "ADR should appear in default search");
+    assert!(
+        text.contains(&adr_short_code),
+        "ADR should appear in default search"
+    );
 
     // Archive the ADR
     let archive_tool = ArchiveDocumentTool {
@@ -294,7 +306,10 @@ async fn test_list_and_search_include_archived() {
     };
     let result = list_tool.call_tool().await.unwrap();
     let text = extract_text_from_result(&result).unwrap();
-    assert!(!text.contains(&adr_short_code), "Archived ADR should NOT appear in default list");
+    assert!(
+        !text.contains(&adr_short_code),
+        "Archived ADR should NOT appear in default list"
+    );
 
     // Verify ADR DOES appear when include_archived=true
     let list_tool = ListDocumentsTool {
@@ -303,7 +318,10 @@ async fn test_list_and_search_include_archived() {
     };
     let result = list_tool.call_tool().await.unwrap();
     let text = extract_text_from_result(&result).unwrap();
-    assert!(text.contains(&adr_short_code), "Archived ADR SHOULD appear when include_archived=true");
+    assert!(
+        text.contains(&adr_short_code),
+        "Archived ADR SHOULD appear when include_archived=true"
+    );
 
     // Verify ADR no longer appears in default search (unarchived only)
     let search_tool = SearchDocumentsTool {
@@ -315,7 +333,10 @@ async fn test_list_and_search_include_archived() {
     };
     let result = search_tool.call_tool().await.unwrap();
     let text = extract_text_from_result(&result).unwrap();
-    assert!(!text.contains(&adr_short_code), "Archived ADR should NOT appear in default search");
+    assert!(
+        !text.contains(&adr_short_code),
+        "Archived ADR should NOT appear in default search"
+    );
 
     // Verify ADR DOES appear in search when include_archived=true
     let search_tool = SearchDocumentsTool {
@@ -327,7 +348,10 @@ async fn test_list_and_search_include_archived() {
     };
     let result = search_tool.call_tool().await.unwrap();
     let text = extract_text_from_result(&result).unwrap();
-    assert!(text.contains(&adr_short_code), "Archived ADR SHOULD appear in search when include_archived=true");
+    assert!(
+        text.contains(&adr_short_code),
+        "Archived ADR SHOULD appear in search when include_archived=true"
+    );
 }
 
 #[tokio::test]
@@ -363,7 +387,10 @@ async fn test_create_backlog_items() {
 
     // Verify the bug file was created in backlog/bugs/
     let bug_file = format!("{}/backlog/bugs/{}.md", metis_path, bug_short_code);
-    assert!(std::path::Path::new(&bug_file).exists(), "Bug file should exist in backlog/bugs/");
+    assert!(
+        std::path::Path::new(&bug_file).exists(),
+        "Bug file should exist in backlog/bugs/"
+    );
 
     // Create a feature backlog item
     let create_feature = CreateDocumentTool {
@@ -384,7 +411,10 @@ async fn test_create_backlog_items() {
 
     // Verify the feature file was created in backlog/features/
     let feature_file = format!("{}/backlog/features/{}.md", metis_path, feature_short_code);
-    assert!(std::path::Path::new(&feature_file).exists(), "Feature file should exist in backlog/features/");
+    assert!(
+        std::path::Path::new(&feature_file).exists(),
+        "Feature file should exist in backlog/features/"
+    );
 
     // Create a tech-debt backlog item
     let create_tech_debt = CreateDocumentTool {
@@ -399,13 +429,22 @@ async fn test_create_backlog_items() {
     };
 
     let result = create_tech_debt.call_tool().await;
-    assert!(result.is_ok(), "Create tech-debt backlog item should succeed");
+    assert!(
+        result.is_ok(),
+        "Create tech-debt backlog item should succeed"
+    );
     let tech_debt_short_code = extract_short_code(&result.unwrap());
     println!("Created tech-debt backlog item: {}", tech_debt_short_code);
 
     // Verify the tech-debt file was created in backlog/tech-debt/
-    let tech_debt_file = format!("{}/backlog/tech-debt/{}.md", metis_path, tech_debt_short_code);
-    assert!(std::path::Path::new(&tech_debt_file).exists(), "Tech-debt file should exist in backlog/tech-debt/");
+    let tech_debt_file = format!(
+        "{}/backlog/tech-debt/{}.md",
+        metis_path, tech_debt_short_code
+    );
+    assert!(
+        std::path::Path::new(&tech_debt_file).exists(),
+        "Tech-debt file should exist in backlog/tech-debt/"
+    );
 
     // Test invalid backlog category
     let create_invalid = CreateDocumentTool {
@@ -435,7 +474,10 @@ async fn test_create_backlog_items() {
     };
 
     let result = create_orphan.call_tool().await;
-    assert!(result.is_err(), "Task without parent or backlog_category should fail");
+    assert!(
+        result.is_err(),
+        "Task without parent or backlog_category should fail"
+    );
 
     // Verify all backlog items appear in list
     let list_tool = ListDocumentsTool {
@@ -445,6 +487,12 @@ async fn test_create_backlog_items() {
     let result = list_tool.call_tool().await.unwrap();
     let text = extract_text_from_result(&result).unwrap();
     assert!(text.contains(&bug_short_code), "Bug should appear in list");
-    assert!(text.contains(&feature_short_code), "Feature should appear in list");
-    assert!(text.contains(&tech_debt_short_code), "Tech-debt should appear in list");
+    assert!(
+        text.contains(&feature_short_code),
+        "Feature should appear in list"
+    );
+    assert!(
+        text.contains(&tech_debt_short_code),
+        "Tech-debt should appear in list"
+    );
 }

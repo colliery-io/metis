@@ -98,7 +98,6 @@ mod tests {
     use crate::services::project::initialize_project;
     use tempfile::TempDir;
 
-
     #[tokio::test]
     async fn test_archive_service_creation() {
         let temp_dir = TempDir::new().unwrap();

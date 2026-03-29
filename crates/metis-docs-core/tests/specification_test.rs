@@ -2,7 +2,9 @@
 
 use metis_core::application::services::{
     document::creation::{DocumentCreationConfig, DocumentCreationService},
-    workspace::{PhaseTransitionService, WorkspaceDetectionService, WorkspaceInitializationService},
+    workspace::{
+        PhaseTransitionService, WorkspaceDetectionService, WorkspaceInitializationService,
+    },
 };
 use metis_core::domain::documents::types::{DocumentType, Phase};
 use metis_core::{Document, Specification};
@@ -33,7 +35,11 @@ async fn test_create_specification_with_parent() {
     };
 
     let result = creation_service.create_specification(config).await;
-    assert!(result.is_ok(), "Create spec should succeed: {:?}", result.err());
+    assert!(
+        result.is_ok(),
+        "Create spec should succeed: {:?}",
+        result.err()
+    );
 
     let result = result.unwrap();
     assert_eq!(result.document_type, DocumentType::Specification);
@@ -93,21 +99,42 @@ async fn test_specification_phase_transitions() {
 
     // Sync so DB knows about the spec
     let detection_service = WorkspaceDetectionService::new();
-    let _db = detection_service.prepare_workspace(&metis_dir).await.unwrap();
+    let _db = detection_service
+        .prepare_workspace(&metis_dir)
+        .await
+        .unwrap();
 
     // Transition through all phases: Discovery -> Drafting -> Review -> Published
     let transition_service = PhaseTransitionService::new(&metis_dir);
 
-    let result = transition_service.transition_to_next_phase(&short_code).await;
-    assert!(result.is_ok(), "Discovery->Drafting should succeed: {:?}", result.err());
+    let result = transition_service
+        .transition_to_next_phase(&short_code)
+        .await;
+    assert!(
+        result.is_ok(),
+        "Discovery->Drafting should succeed: {:?}",
+        result.err()
+    );
     assert_eq!(result.unwrap().to_phase, Phase::Drafting);
 
-    let result = transition_service.transition_to_next_phase(&short_code).await;
-    assert!(result.is_ok(), "Drafting->Review should succeed: {:?}", result.err());
+    let result = transition_service
+        .transition_to_next_phase(&short_code)
+        .await;
+    assert!(
+        result.is_ok(),
+        "Drafting->Review should succeed: {:?}",
+        result.err()
+    );
     assert_eq!(result.unwrap().to_phase, Phase::Review);
 
-    let result = transition_service.transition_to_next_phase(&short_code).await;
-    assert!(result.is_ok(), "Review->Published should succeed: {:?}", result.err());
+    let result = transition_service
+        .transition_to_next_phase(&short_code)
+        .await;
+    assert!(
+        result.is_ok(),
+        "Review->Published should succeed: {:?}",
+        result.err()
+    );
     assert_eq!(result.unwrap().to_phase, Phase::Published);
 }
 
@@ -130,7 +157,10 @@ async fn test_specification_sync_and_discovery() {
 
     // Sync workspace — specification should be imported into database
     let detection_service = WorkspaceDetectionService::new();
-    let db = detection_service.prepare_workspace(&metis_dir).await.unwrap();
+    let db = detection_service
+        .prepare_workspace(&metis_dir)
+        .await
+        .unwrap();
 
     // Verify specification is in database
     let mut repo = db.into_repository();
@@ -158,7 +188,10 @@ async fn test_specification_archive_no_cascade() {
 
     // Sync so DB knows about the spec
     let detection_service = WorkspaceDetectionService::new();
-    let db = detection_service.prepare_workspace(&metis_dir).await.unwrap();
+    let db = detection_service
+        .prepare_workspace(&metis_dir)
+        .await
+        .unwrap();
 
     // Archive the specification using DatabaseService
     use metis_core::application::services::workspace::ArchiveService;

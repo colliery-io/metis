@@ -1,7 +1,7 @@
 use crate::application::services::DatabaseService;
 use crate::dal::database::models::Document;
-use crate::Result;
 use crate::MetisError;
+use crate::Result;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -53,9 +53,7 @@ impl ReassignmentService {
         let absolute_path = if path.is_absolute() {
             path.to_path_buf()
         } else {
-            std::env::current_dir()
-                .unwrap_or_default()
-                .join(path)
+            std::env::current_dir().unwrap_or_default().join(path)
         };
 
         Self {
@@ -110,7 +108,8 @@ impl ReassignmentService {
                 message: "Could not determine filename".to_string(),
             })?;
 
-        let dest_path = self.workspace_dir
+        let dest_path = self
+            .workspace_dir
             .join("backlog")
             .join(category.directory_name())
             .join(filename);
@@ -134,10 +133,7 @@ impl ReassignmentService {
     ) -> Result<Document> {
         let doc = db_service
             .find_by_short_code(short_code)?
-            .ok_or_else(|| MetisError::NotFound(format!(
-                "Document '{}' not found",
-                short_code
-            )))?;
+            .ok_or_else(|| MetisError::NotFound(format!("Document '{}' not found", short_code)))?;
 
         if doc.document_type != "task" {
             return Err(MetisError::ValidationFailed {
@@ -157,12 +153,9 @@ impl ReassignmentService {
         parent_id: &str,
         db_service: &mut DatabaseService,
     ) -> Result<Document> {
-        let parent = db_service
-            .find_by_short_code(parent_id)?
-            .ok_or_else(|| MetisError::NotFound(format!(
-                "Parent initiative '{}' not found",
-                parent_id
-            )))?;
+        let parent = db_service.find_by_short_code(parent_id)?.ok_or_else(|| {
+            MetisError::NotFound(format!("Parent initiative '{}' not found", parent_id))
+        })?;
 
         if parent.document_type != "initiative" {
             return Err(MetisError::ValidationFailed {
@@ -203,14 +196,18 @@ impl ReassignmentService {
 
         // Get initiative directory from its filepath
         let parent_path = Path::new(&parent_doc.filepath);
-        let initiative_dir = parent_path.parent().ok_or_else(|| {
-            MetisError::ValidationFailed {
+        let initiative_dir = parent_path
+            .parent()
+            .ok_or_else(|| MetisError::ValidationFailed {
                 message: "Could not determine initiative directory".to_string(),
-            }
-        })?;
+            })?;
 
         // Tasks go in {initiative_dir}/tasks/
-        Ok(self.workspace_dir.join(initiative_dir).join("tasks").join(filename))
+        Ok(self
+            .workspace_dir
+            .join(initiative_dir)
+            .join("tasks")
+            .join(filename))
     }
 
     /// Move a file from source to destination
@@ -226,10 +223,7 @@ impl ReassignmentService {
         // Check destination doesn't exist
         if dest.exists() {
             return Err(MetisError::ValidationFailed {
-                message: format!(
-                    "Destination already exists: {}",
-                    dest.display()
-                ),
+                message: format!("Destination already exists: {}", dest.display()),
             });
         }
 
@@ -244,18 +238,14 @@ impl ReassignmentService {
         if let Some(parent_dir) = dest.parent() {
             if !parent_dir.exists() {
                 fs::create_dir_all(parent_dir).map_err(|e| {
-                    MetisError::FileSystem(format!(
-                        "Failed to create destination directory: {}",
-                        e
-                    ))
+                    MetisError::FileSystem(format!("Failed to create destination directory: {}", e))
                 })?;
             }
         }
 
         // Move the file
-        fs::rename(source, dest).map_err(|e| {
-            MetisError::FileSystem(format!("Failed to move file: {}", e))
-        })?;
+        fs::rename(source, dest)
+            .map_err(|e| MetisError::FileSystem(format!("Failed to move file: {}", e)))?;
 
         Ok(())
     }
@@ -268,10 +258,22 @@ mod tests {
     #[test]
     fn test_backlog_category_parsing() {
         assert_eq!(BacklogCategory::from_str("bug"), Some(BacklogCategory::Bug));
-        assert_eq!(BacklogCategory::from_str("feature"), Some(BacklogCategory::Feature));
-        assert_eq!(BacklogCategory::from_str("tech-debt"), Some(BacklogCategory::TechDebt));
-        assert_eq!(BacklogCategory::from_str("techdebt"), Some(BacklogCategory::TechDebt));
-        assert_eq!(BacklogCategory::from_str("tech_debt"), Some(BacklogCategory::TechDebt));
+        assert_eq!(
+            BacklogCategory::from_str("feature"),
+            Some(BacklogCategory::Feature)
+        );
+        assert_eq!(
+            BacklogCategory::from_str("tech-debt"),
+            Some(BacklogCategory::TechDebt)
+        );
+        assert_eq!(
+            BacklogCategory::from_str("techdebt"),
+            Some(BacklogCategory::TechDebt)
+        );
+        assert_eq!(
+            BacklogCategory::from_str("tech_debt"),
+            Some(BacklogCategory::TechDebt)
+        );
         assert_eq!(BacklogCategory::from_str("invalid"), None);
     }
 

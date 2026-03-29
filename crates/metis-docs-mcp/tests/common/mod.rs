@@ -19,7 +19,6 @@ impl McpTestHelper {
         Ok(Self { core_helper })
     }
 
-
     /// Get metis directory as string (for backward compatibility)
     pub fn metis_dir(&self) -> String {
         self.core_helper.metis_dir_string()
@@ -70,7 +69,8 @@ impl McpTestHelper {
             .map_err(|e| anyhow::anyhow!("Failed to create config: {}", e))?;
 
         // Save to filesystem (database will sync on next operation)
-        new_config.save(&config_file_path)
+        new_config
+            .save(&config_file_path)
             .map_err(|e| anyhow::anyhow!("Failed to save config: {}", e))?;
 
         Ok(())

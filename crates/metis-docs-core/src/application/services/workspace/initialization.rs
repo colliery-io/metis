@@ -101,9 +101,13 @@ impl WorkspaceInitializationService {
                     let flight_levels = config_repo.get_flight_level_config()?;
                     let config_file = ConfigFile::new(project_prefix, flight_levels)
                         .map_err(MetisError::ConfigurationError)?;
-                    config_file.save(&config_file_path)
+                    config_file
+                        .save(&config_file_path)
                         .map_err(MetisError::ConfigurationError)?;
-                    tracing::info!("Created configuration file at {}", config_file_path.display());
+                    tracing::info!(
+                        "Created configuration file at {}",
+                        config_file_path.display()
+                    );
                 }
             }
             Err(e) => {
@@ -228,14 +232,20 @@ mod tests {
 
         // Verify .gitignore was created
         let gitignore_path = metis_dir.join(".gitignore");
-        assert!(gitignore_path.exists(), ".gitignore should be created during initialization");
+        assert!(
+            gitignore_path.exists(),
+            ".gitignore should be created during initialization"
+        );
         let gitignore_content = fs::read_to_string(&gitignore_path).unwrap();
         assert!(gitignore_content.contains("metis.db"));
         assert!(gitignore_content.contains("code-index.md"));
 
         // Verify config.toml was created
         let config_path = metis_dir.join("config.toml");
-        assert!(config_path.exists(), "config.toml should be created during initialization");
+        assert!(
+            config_path.exists(),
+            "config.toml should be created during initialization"
+        );
         assert!(config_path.is_file());
 
         // Verify config.toml content

@@ -7,7 +7,8 @@ use std::path::PathBuf;
 /// tab/window sprawl).
 pub trait DocumentViewer: Send + Sync {
     /// Open one or more document files in this viewer.
-    fn open(&self, paths: &[PathBuf]) -> Result<(), ViewerError>;
+    /// If `background` is true, open without stealing window focus.
+    fn open(&self, paths: &[PathBuf], background: bool) -> Result<(), ViewerError>;
 
     /// Check whether a file is already open in this viewer.
     /// Used for "look before you leap" — skip opening if already visible.

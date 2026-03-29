@@ -155,10 +155,7 @@ impl DocumentCreationService {
         let short_code = self.generate_short_code("initiative")?;
 
         // Initiatives go under initiatives/ directory
-        let initiative_dir = self
-            .workspace_dir
-            .join("initiatives")
-            .join(&short_code);
+        let initiative_dir = self.workspace_dir.join("initiatives").join(&short_code);
 
         let file_path = initiative_dir.join("initiative.md");
 
@@ -224,12 +221,8 @@ impl DocumentCreationService {
         initiative_id: &str,
     ) -> Result<CreationResult> {
         // Use streamlined configuration for backward compatibility
-        self.create_task_with_config(
-            config,
-            initiative_id,
-            &FlightLevelConfig::streamlined(),
-        )
-        .await
+        self.create_task_with_config(config, initiative_id, &FlightLevelConfig::streamlined())
+            .await
     }
 
     /// Create a new task document with flight level configuration
@@ -243,8 +236,7 @@ impl DocumentCreationService {
         let short_code = self.generate_short_code("task")?;
 
         // Resolve short codes first (outside conditionals to avoid lifetime issues)
-        let initiative_short_code = if flight_config.initiatives_enabled
-            && initiative_id != "NULL"
+        let initiative_short_code = if flight_config.initiatives_enabled && initiative_id != "NULL"
         {
             // Validate parent initiative exists by looking up its short codes in database
             let db_path = self.workspace_dir.join("metis.db");
@@ -282,27 +274,28 @@ impl DocumentCreationService {
         };
 
         // Determine directory structure
-        let (parent_ref, parent_title, effective_initiative_id) =
-            if flight_config.initiatives_enabled {
-                // Initiatives are enabled, tasks go under initiatives
-                if initiative_id == "NULL" {
-                    return Err(MetisError::ValidationFailed {
+        let (parent_ref, parent_title, effective_initiative_id) = if flight_config
+            .initiatives_enabled
+        {
+            // Initiatives are enabled, tasks go under initiatives
+            if initiative_id == "NULL" {
+                return Err(MetisError::ValidationFailed {
                     message: format!(
                         "Cannot create task with NULL initiative when initiatives are enabled in {} configuration. Provide a valid initiative_id or create the task as a backlog item",
                         flight_config.preset_name()
                     ),
                 });
-                }
+            }
 
-                (
-                    ParentReference::Some(DocumentId::from(initiative_id)),
-                    Some(initiative_id.to_string()),
-                    initiative_short_code.as_str(),
-                )
-            } else {
-                // Direct configuration: use NULL placeholder for initiative
-                (ParentReference::Null, None, "NULL")
-            };
+            (
+                ParentReference::Some(DocumentId::from(initiative_id)),
+                Some(initiative_id.to_string()),
+                initiative_short_code.as_str(),
+            )
+        } else {
+            // Direct configuration: use NULL placeholder for initiative
+            (ParentReference::Null, None, "NULL")
+        };
 
         // Directory structure: initiatives/{initiative_short_code}/tasks/{task_short_code}
         let task_dir = self
@@ -526,9 +519,13 @@ impl DocumentCreationService {
         config: DocumentCreationConfig,
     ) -> Result<CreationResult> {
         // Validate parent is provided
-        let parent_id = config.parent_id.clone().ok_or_else(|| MetisError::ValidationFailed {
-            message: "Specification requires a parent document (Vision or Initiative)".to_string(),
-        })?;
+        let parent_id = config
+            .parent_id
+            .clone()
+            .ok_or_else(|| MetisError::ValidationFailed {
+                message: "Specification requires a parent document (Vision or Initiative)"
+                    .to_string(),
+            })?;
 
         // Generate short code for specification
         let short_code = self.generate_short_code("specification")?;
@@ -538,7 +535,10 @@ impl DocumentCreationService {
         // Check if specification already exists
         if file_path.exists() {
             return Err(MetisError::ValidationFailed {
-                message: format!("Specification with short code '{}' already exists", short_code),
+                message: format!(
+                    "Specification with short code '{}' already exists",
+                    short_code
+                ),
             });
         }
 
@@ -678,10 +678,7 @@ mod tests {
             complexity: None,
         };
 
-        let result = service
-            .create_initiative(initiative_config)
-            .await
-            .unwrap();
+        let result = service.create_initiative(initiative_config).await.unwrap();
 
         assert_eq!(result.document_type, DocumentType::Initiative);
         assert!(result.file_path.exists());
@@ -690,7 +687,6 @@ mod tests {
         let initiative = Initiative::from_file(&result.file_path).await.unwrap();
         assert_eq!(initiative.title(), "Test Initiative");
     }
-
 
     #[tokio::test]
     async fn test_get_next_adr_number() {
@@ -749,10 +745,7 @@ mod tests {
         };
 
         let result = service
-            .create_initiative_with_config(
-                initiative_config,
-                &flight_config,
-            )
+            .create_initiative_with_config(initiative_config, &flight_config)
             .await
             .unwrap();
 

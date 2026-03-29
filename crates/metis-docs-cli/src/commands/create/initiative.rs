@@ -182,10 +182,7 @@ mod tests {
         let metis_dir = temp_dir.path().join(".metis");
         let result = find_vision(&metis_dir, "TEST-V-9999").await;
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("not found"));
+        assert!(result.unwrap_err().to_string().contains("not found"));
 
         // Always restore original directory
         let _ = std::env::set_current_dir(original_dir);
@@ -216,7 +213,11 @@ mod tests {
 
         // Vision should be findable by short code
         let vision_id = find_vision(&metis_dir, "TEST-V-0001").await;
-        assert!(vision_id.is_ok(), "Vision should be found: {:?}", vision_id.err());
+        assert!(
+            vision_id.is_ok(),
+            "Vision should be found: {:?}",
+            vision_id.err()
+        );
 
         // Restore original directory
         let _ = std::env::set_current_dir(original_dir);

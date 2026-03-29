@@ -1,6 +1,6 @@
+use super::migration::WorkspaceMigrationService;
 use crate::constants::{DATABASE_FILE_NAME, METIS_DIR_NAME};
 use crate::{Application, Database};
-use super::migration::WorkspaceMigrationService;
 use anyhow::Result;
 use std::path::{Path, PathBuf};
 
@@ -87,7 +87,11 @@ impl WorkspaceDetectionService {
     /// (verified by the presence of `config.toml`), returns the `.metis` subdirectory path.
     pub fn resolve_metis_dir(&self, path: &Path) -> PathBuf {
         // If path already ends with .metis, use as-is
-        if path.file_name().map(|f| f == METIS_DIR_NAME).unwrap_or(false) {
+        if path
+            .file_name()
+            .map(|f| f == METIS_DIR_NAME)
+            .unwrap_or(false)
+        {
             return path.to_path_buf();
         }
 
@@ -237,7 +241,11 @@ mod tests {
         let metis_dir = project_root.join(".metis");
         fs::create_dir_all(&metis_dir).unwrap();
         // Must have config.toml to be recognized as a valid workspace
-        fs::write(metis_dir.join("config.toml"), "[project]\nprefix = \"TEST\"").unwrap();
+        fs::write(
+            metis_dir.join("config.toml"),
+            "[project]\nprefix = \"TEST\"",
+        )
+        .unwrap();
 
         // Passing project root should resolve to .metis subdir
         let resolved = service.resolve_metis_dir(project_root);

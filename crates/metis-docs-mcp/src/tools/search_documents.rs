@@ -1,5 +1,5 @@
 use crate::formatting::ToolOutput;
-use metis_core::{Application, application::services::workspace::WorkspaceDetectionService};
+use metis_core::{application::services::workspace::WorkspaceDetectionService, Application};
 use rust_mcp_sdk::{
     macros::{mcp_tool, JsonSchema},
     schema::{schema_utils::CallToolError, CallToolResult},
@@ -35,7 +35,9 @@ impl SearchDocumentsTool {
     fn sanitize_search_query(&self, query: &str) -> String {
         // If query is very short or contains problematic FTS characters, quote it
         // Note: '-' is the NOT operator in FTS5, so queries like "PROJ-I-0001" must be quoted
-        let problematic_chars = ['#', '*', ':', '(', ')', '[', ']', '{', '}', '^', '~', '?', '-'];
+        let problematic_chars = [
+            '#', '*', ':', '(', ')', '[', ']', '{', '}', '^', '~', '?', '-',
+        ];
 
         if query.len() <= 2 || query.chars().any(|c| problematic_chars.contains(&c)) {
             // Wrap in double quotes and escape any internal quotes
@@ -105,7 +107,11 @@ impl SearchDocumentsTool {
 
         let mut output = ToolOutput::new()
             .header(&format!("Search Results for \"{}\"", self.query))
-            .text(&format!("Found {} match{}", result_count, if result_count == 1 { "" } else { "es" }));
+            .text(&format!(
+                "Found {} match{}",
+                result_count,
+                if result_count == 1 { "" } else { "es" }
+            ));
 
         if result_count > 0 {
             let rows: Vec<Vec<String>> = limited_results

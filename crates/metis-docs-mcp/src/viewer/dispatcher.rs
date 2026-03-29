@@ -63,7 +63,11 @@ impl ViewerDispatcher {
             for path in paths {
                 match backend.is_open(path) {
                     Ok(true) => {
-                        info!("Skipping '{}' — already open in {}", path.display(), backend.name());
+                        info!(
+                            "Skipping '{}' — already open in {}",
+                            path.display(),
+                            backend.name()
+                        );
                         skipped.push(path.clone());
                     }
                     Ok(false) => {
@@ -90,13 +94,9 @@ impl ViewerDispatcher {
                 });
             }
 
-            match backend.open(&to_open) {
+            match backend.open(&to_open, self.config.background) {
                 Ok(()) => {
-                    info!(
-                        "Opened {} document(s) in {}",
-                        to_open.len(),
-                        backend.name()
-                    );
+                    info!("Opened {} document(s) in {}", to_open.len(), backend.name());
                     return Ok(OpenResult {
                         opened: to_open,
                         skipped,
@@ -124,10 +124,7 @@ impl ViewerDispatcher {
 
     /// Resolve the ordered list of backends to try.
     /// Preferred backend goes first, then sys_editor as fallback.
-    fn resolve_backend_order(
-        &self,
-        preferred: Option<&ViewerBackend>,
-    ) -> Vec<&dyn DocumentViewer> {
+    fn resolve_backend_order(&self, preferred: Option<&ViewerBackend>) -> Vec<&dyn DocumentViewer> {
         let mut order: Vec<&dyn DocumentViewer> = Vec::new();
 
         // If there's a preferred backend, put it first
@@ -205,7 +202,7 @@ mod tests {
     }
 
     impl DocumentViewer for StubViewer {
-        fn open(&self, _paths: &[PathBuf]) -> Result<(), ViewerError> {
+        fn open(&self, _paths: &[PathBuf], _background: bool) -> Result<(), ViewerError> {
             self.open_called.store(true, Ordering::SeqCst);
             if self.open_succeeds {
                 Ok(())
@@ -235,16 +232,15 @@ mod tests {
         let config = ViewerConfig {
             default: Some(ViewerBackend::Code),
             suppress_proactive_ticket_opening: false,
+            background: false,
         };
 
         let vscode = StubViewer::new("VSCode", true, true);
         let open_called = vscode.open_called.clone();
         let sys_editor = StubViewer::new("System Editor", true, true);
 
-        let dispatcher = ViewerDispatcher::new(
-            config,
-            vec![Box::new(vscode), Box::new(sys_editor)],
-        );
+        let dispatcher =
+            ViewerDispatcher::new(config, vec![Box::new(vscode), Box::new(sys_editor)]);
 
         let result = dispatcher.open(&[PathBuf::from("/tmp/test.md")], None);
         assert!(result.is_ok());
@@ -258,16 +254,15 @@ mod tests {
         let config = ViewerConfig {
             default: Some(ViewerBackend::Code),
             suppress_proactive_ticket_opening: false,
+            background: false,
         };
 
         let vscode = StubViewer::new("VSCode", true, false); // fails
         let sys_editor = StubViewer::new("System Editor", true, true); // succeeds
         let sys_open_called = sys_editor.open_called.clone();
 
-        let dispatcher = ViewerDispatcher::new(
-            config,
-            vec![Box::new(vscode), Box::new(sys_editor)],
-        );
+        let dispatcher =
+            ViewerDispatcher::new(config, vec![Box::new(vscode), Box::new(sys_editor)]);
 
         let result = dispatcher.open(&[PathBuf::from("/tmp/test.md")], None);
         assert!(result.is_ok());
@@ -281,15 +276,14 @@ mod tests {
         let config = ViewerConfig {
             default: Some(ViewerBackend::Code),
             suppress_proactive_ticket_opening: false,
+            background: false,
         };
 
         let vscode = StubViewer::new("VSCode", false, true); // not available
         let sys_editor = StubViewer::new("System Editor", true, true);
 
-        let dispatcher = ViewerDispatcher::new(
-            config,
-            vec![Box::new(vscode), Box::new(sys_editor)],
-        );
+        let dispatcher =
+            ViewerDispatcher::new(config, vec![Box::new(vscode), Box::new(sys_editor)]);
 
         let result = dispatcher.open(&[PathBuf::from("/tmp/test.md")], None);
         assert!(result.is_ok());
@@ -301,11 +295,11 @@ mod tests {
         let config = ViewerConfig {
             default: Some(ViewerBackend::Code),
             suppress_proactive_ticket_opening: false,
+            background: false,
         };
 
         let open_path = PathBuf::from("/tmp/already_open.md");
-        let vscode = StubViewer::new("VSCode", true, true)
-            .with_open_files(vec![open_path.clone()]);
+        let vscode = StubViewer::new("VSCode", true, true).with_open_files(vec![open_path.clone()]);
         let open_called = vscode.open_called.clone();
 
         let dispatcher = ViewerDispatcher::new(config, vec![Box::new(vscode)]);
@@ -331,20 +325,22 @@ mod tests {
         let config = ViewerConfig {
             default: Some(ViewerBackend::Code),
             suppress_proactive_ticket_opening: false,
+            background: false,
         };
 
         let vscode = StubViewer::new("VSCode", true, true);
         let sys_editor = StubViewer::new("System Editor", true, true);
         let sys_open_called = sys_editor.open_called.clone();
 
-        let dispatcher = ViewerDispatcher::new(
-            config,
-            vec![Box::new(vscode), Box::new(sys_editor)],
-        );
+        let dispatcher =
+            ViewerDispatcher::new(config, vec![Box::new(vscode), Box::new(sys_editor)]);
 
         // Override to sys_editor even though config says code
         let result = dispatcher
-            .open(&[PathBuf::from("/tmp/test.md")], Some(&ViewerBackend::SysEditor))
+            .open(
+                &[PathBuf::from("/tmp/test.md")],
+                Some(&ViewerBackend::SysEditor),
+            )
             .unwrap();
         assert_eq!(result.viewer_used, "System Editor");
         assert!(sys_open_called.load(Ordering::SeqCst));
@@ -365,6 +361,7 @@ mod tests {
         let config = ViewerConfig {
             default: None,
             suppress_proactive_ticket_opening: true,
+            background: false,
         };
 
         let dispatcher = ViewerDispatcher::new(config, vec![]);
@@ -378,6 +375,7 @@ mod tests {
         let config = ViewerConfig {
             default: None,
             suppress_proactive_ticket_opening: false,
+            background: false,
         };
 
         let sys_editor = StubViewer::new("System Editor", true, true);

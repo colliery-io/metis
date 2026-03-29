@@ -832,11 +832,7 @@ impl TypeScriptExtractor {
         Some(compact_signature(&members.join(" | "), 120))
     }
 
-    fn build_arrow_signature(
-        node: &tree_sitter::Node,
-        source: &str,
-        name: &str,
-    ) -> Option<String> {
+    fn build_arrow_signature(node: &tree_sitter::Node, source: &str, name: &str) -> Option<String> {
         // variable_declarator > value: arrow_function
         let arrow_node = node.child_by_field_name("value")?;
         let params = arrow_node
@@ -1032,12 +1028,21 @@ type UserId = string;
         assert_eq!(types.len(), 2);
 
         let result_type = types.iter().find(|t| t.name == "Result").unwrap();
-        assert!(result_type.signature.is_some(), "Type alias should have signature");
+        assert!(
+            result_type.signature.is_some(),
+            "Type alias should have signature"
+        );
         let sig = result_type.signature.as_ref().unwrap();
-        assert!(sig.starts_with("= "), "Type alias sig should start with '= ': {sig}");
+        assert!(
+            sig.starts_with("= "),
+            "Type alias sig should start with '= ': {sig}"
+        );
 
         let userid = types.iter().find(|t| t.name == "UserId").unwrap();
-        assert!(userid.signature.is_some(), "Type alias should have signature");
+        assert!(
+            userid.signature.is_some(),
+            "Type alias should have signature"
+        );
         let sig = userid.signature.as_ref().unwrap();
         assert!(sig.contains("= string"), "sig = {sig}");
     }

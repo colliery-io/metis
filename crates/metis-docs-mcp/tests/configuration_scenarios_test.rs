@@ -17,9 +17,9 @@ fn extract_text_from_result(result: &rust_mcp_sdk::schema::CallToolResult) -> Op
         }
         Some(rust_mcp_sdk::schema::ContentBlock::EmbeddedResource(embedded)) => {
             match &embedded.resource {
-                rust_mcp_sdk::schema::EmbeddedResourceResource::TextResourceContents(text_resource) => {
-                    Some(text_resource.text.clone())
-                }
+                rust_mcp_sdk::schema::EmbeddedResourceResource::TextResourceContents(
+                    text_resource,
+                ) => Some(text_resource.text.clone()),
                 _ => None,
             }
         }

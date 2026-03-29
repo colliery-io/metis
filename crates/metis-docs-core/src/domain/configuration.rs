@@ -32,7 +32,9 @@ impl FlightLevelConfig {
     }
 
     /// Alias for streamlined() — kept for backward compatibility
-    #[deprecated(note = "Use streamlined() instead. The full preset is identical to streamlined now that strategies are removed.")]
+    #[deprecated(
+        note = "Use streamlined() instead. The full preset is identical to streamlined now that strategies are removed."
+    )]
     pub fn full() -> Self {
         Self::streamlined()
     }
@@ -50,7 +52,7 @@ impl FlightLevelConfig {
     pub fn get_parent_type(&self, doc_type: DocumentType) -> Option<DocumentType> {
         match doc_type {
             DocumentType::Vision | DocumentType::Adr => None, // Top level documents
-            DocumentType::Specification => None,             // Attached document (parent set explicitly)
+            DocumentType::Specification => None, // Attached document (parent set explicitly)
             DocumentType::Initiative => Some(DocumentType::Vision),
             DocumentType::Task => {
                 if self.initiatives_enabled {
@@ -163,22 +165,18 @@ impl fmt::Display for ViewerBackend {
 
 /// Viewer configuration section in config.toml
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct ViewerConfig {
     /// Default viewer backend. Falls back to $EDITOR if not set.
     pub default: Option<ViewerBackend>,
     /// Suppress proactive opening of documents on create/edit (default: false)
     #[serde(default)]
     pub suppress_proactive_ticket_opening: bool,
+    /// Open documents in the background without stealing window focus (default: false)
+    #[serde(default)]
+    pub background: bool,
 }
 
-impl Default for ViewerConfig {
-    fn default() -> Self {
-        Self {
-            default: None,
-            suppress_proactive_ticket_opening: false,
-        }
-    }
-}
 
 /// Configuration file structure that persists to .metis/config.toml
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -196,7 +194,10 @@ pub struct ProjectConfig {
 
 impl ConfigFile {
     /// Create a new configuration with defaults
-    pub fn new(prefix: String, flight_levels: FlightLevelConfig) -> Result<Self, ConfigurationError> {
+    pub fn new(
+        prefix: String,
+        flight_levels: FlightLevelConfig,
+    ) -> Result<Self, ConfigurationError> {
         // Validate prefix format: 2-8 uppercase letters
         if !prefix.chars().all(|c| c.is_ascii_uppercase()) || prefix.len() < 2 || prefix.len() > 8 {
             return Err(ConfigurationError::InvalidValue(
@@ -423,17 +424,21 @@ initiatives_enabled = true
 
         // Invalid prefixes
         assert!(ConfigFile::new("A".to_string(), FlightLevelConfig::streamlined()).is_err()); // Too short
-        assert!(ConfigFile::new("ABCDEFGHI".to_string(), FlightLevelConfig::streamlined()).is_err()); // Too long
+        assert!(
+            ConfigFile::new("ABCDEFGHI".to_string(), FlightLevelConfig::streamlined()).is_err()
+        ); // Too long
         assert!(ConfigFile::new("ab".to_string(), FlightLevelConfig::streamlined()).is_err()); // Lowercase
         assert!(ConfigFile::new("A1".to_string(), FlightLevelConfig::streamlined()).is_err()); // Contains number
-        assert!(ConfigFile::new("A-B".to_string(), FlightLevelConfig::streamlined()).is_err()); // Contains hyphen
+        assert!(ConfigFile::new("A-B".to_string(), FlightLevelConfig::streamlined()).is_err());
+        // Contains hyphen
     }
 
     #[test]
     fn test_config_file_save_and_load() {
         use tempfile::NamedTempFile;
 
-        let original_config = ConfigFile::new("METIS".to_string(), FlightLevelConfig::streamlined()).unwrap();
+        let original_config =
+            ConfigFile::new("METIS".to_string(), FlightLevelConfig::streamlined()).unwrap();
 
         // Create a temporary file
         let temp_file = NamedTempFile::new().unwrap();
@@ -448,14 +453,18 @@ initiatives_enabled = true
         // Verify they match
         assert_eq!(original_config, loaded_config);
         assert_eq!(loaded_config.prefix(), "METIS");
-        assert_eq!(loaded_config.flight_levels(), &FlightLevelConfig::streamlined());
+        assert_eq!(
+            loaded_config.flight_levels(),
+            &FlightLevelConfig::streamlined()
+        );
     }
 
     #[test]
     fn test_config_file_toml_format() {
         use tempfile::NamedTempFile;
 
-        let config = ConfigFile::new("METIS".to_string(), FlightLevelConfig::streamlined()).unwrap();
+        let config =
+            ConfigFile::new("METIS".to_string(), FlightLevelConfig::streamlined()).unwrap();
 
         // Create a temporary file
         let temp_file = NamedTempFile::new().unwrap();

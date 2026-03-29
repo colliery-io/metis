@@ -3,8 +3,7 @@ use anyhow::Result;
 use clap::Args;
 use metis_core::{
     application::services::workspace::WorkspaceInitializationService,
-    domain::configuration::FlightLevelConfig,
-    Database,
+    domain::configuration::FlightLevelConfig, Database,
 };
 
 #[derive(Args)]
@@ -57,7 +56,8 @@ impl InitCommand {
             .map_err(|e| anyhow::anyhow!("Failed to create configuration repository: {}", e))?;
 
         // Update flight level config if it differs from default
-        let current_config = config_repo.get_flight_level_config()
+        let current_config = config_repo
+            .get_flight_level_config()
             .map_err(|e| anyhow::anyhow!("Failed to get flight level config: {}", e))?;
         if flight_config != current_config {
             config_repo
@@ -68,9 +68,11 @@ impl InitCommand {
             let config_file_path = result.metis_dir.join("config.toml");
             let config_file = metis_core::domain::configuration::ConfigFile::new(
                 project_prefix.clone(),
-                flight_config.clone()
-            ).map_err(|e| anyhow::anyhow!("Failed to create config file: {}", e))?;
-            config_file.save(&config_file_path)
+                flight_config.clone(),
+            )
+            .map_err(|e| anyhow::anyhow!("Failed to create config file: {}", e))?;
+            config_file
+                .save(&config_file_path)
                 .map_err(|e| anyhow::anyhow!("Failed to save config.toml: {}", e))?;
         }
 
@@ -79,7 +81,10 @@ impl InitCommand {
         std::fs::write(&gitignore_path, "metis.db\nmetis-mcp-server.log\n")
             .map_err(|e| anyhow::anyhow!("Failed to create .gitignore: {}", e))?;
 
-        println!("[+] Initialized Metis workspace in {}", current_dir.display());
+        println!(
+            "[+] Initialized Metis workspace in {}",
+            current_dir.display()
+        );
         println!("[+] Created vision.md with project template");
         println!("[+] Created config.toml with project settings");
         println!("[+] Set project prefix: {}", project_prefix);

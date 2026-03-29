@@ -18,12 +18,14 @@ pub async fn sync_project(
     state: State<'_, std::sync::Mutex<AppState>>,
 ) -> Result<SyncResult, String> {
     let current_project = {
-        let app_state = state.lock().map_err(|e| format!("Failed to get app state: {}", e))?;
+        let app_state = state
+            .lock()
+            .map_err(|e| format!("Failed to get app state: {}", e))?;
         app_state.current_project.clone()
     };
 
     let project_path = current_project.ok_or("No project currently loaded")?;
-    
+
     // Find the .metis directory
     let metis_dir = project_path.join(".metis");
     if !metis_dir.exists() {
@@ -88,10 +90,7 @@ pub async fn sync_project(
                 messages.push(format!("✗ Error syncing {}: {}", filepath, error));
                 errors += 1;
             }
-            metis_core::application::services::synchronization::SyncResult::Moved {
-                from,
-                to,
-            } => {
+            metis_core::application::services::synchronization::SyncResult::Moved { from, to } => {
                 messages.push(format!("↻ Moved: {} → {}", from, to));
                 updated += 1;
             }

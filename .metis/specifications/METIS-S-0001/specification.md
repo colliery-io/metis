@@ -39,7 +39,9 @@ The agent evaluates documentation against four quadrants:
 ## Process
 
 ### Phase 1: Deep Discovery
+
 Before writing anything, thoroughly explore the entire codebase:
+
 - Read every configuration file, entrypoint, and README
 - Trace the main workflows end-to-end
 - Identify all user-facing interfaces (CLI commands, APIs, config files, environment variables)
@@ -48,16 +50,20 @@ Before writing anything, thoroughly explore the entire codebase:
 - Note any implicit knowledge or tribal conventions that aren't documented
 
 ### Phase 2: Documentation Plan
+
 Produce an outline of every document you intend to write, organized by Diataxis category. For each document, include:
+
 - Title
 - Target audience
 - Key topics covered
 - Dependencies on other documents
 
 ### Phase 3: Write Documentation
+
 Write each document fully. Do not leave placeholders or TODOs. Every document should be complete, accurate, and usable by its target audience.
 
 ### Phase 4: Review
+
 Launch review agents in parallel to evaluate the documentation:
 
 - **Accuracy Agent**: Cross-reference every claim against the actual codebase. Flag any discrepancies between what the docs say and what the code does.

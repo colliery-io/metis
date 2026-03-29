@@ -41,10 +41,7 @@ mod cli_helpers {
         let config_path = metis_dir.join("config.toml");
         let vision_path = metis_dir.join("vision.md");
 
-        metis_dir.exists()
-            && db_path.exists()
-            && config_path.exists()
-            && vision_path.exists()
+        metis_dir.exists() && db_path.exists() && config_path.exists() && vision_path.exists()
     }
 
     pub fn verify_config_toml(path: &PathBuf, expected_prefix: &str) -> bool {

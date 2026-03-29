@@ -332,9 +332,7 @@ impl RustExtractor {
                     SymbolKind::Struct => {
                         outer_node.and_then(|n| build_struct_signature(n, source))
                     }
-                    SymbolKind::Enum => {
-                        outer_node.and_then(|n| build_enum_signature(n, source))
-                    }
+                    SymbolKind::Enum => outer_node.and_then(|n| build_enum_signature(n, source)),
                     SymbolKind::Interface => {
                         outer_node.and_then(|n| build_trait_signature(n, source))
                     }
@@ -784,7 +782,10 @@ pub struct Foo {
             "Struct should have signature"
         );
         let sig = symbols[0].signature.as_ref().unwrap();
-        assert!(sig.contains("bar: i32"), "Signature should contain field: {sig}");
+        assert!(
+            sig.contains("bar: i32"),
+            "Signature should contain field: {sig}"
+        );
     }
 
     #[test]
@@ -841,7 +842,10 @@ pub(crate) enum Status {
         let sig = symbols[0].signature.as_ref().unwrap();
         assert!(sig.contains("Active"), "sig = {sig}");
         assert!(sig.contains("Inactive"), "sig = {sig}");
-        assert!(sig.contains(" | "), "Variants should be pipe-separated: {sig}");
+        assert!(
+            sig.contains(" | "),
+            "Variants should be pipe-separated: {sig}"
+        );
     }
 
     #[test]
@@ -982,7 +986,10 @@ pub const MAX_SIZE: usize = 100;
         assert_eq!(symbols[0].name, "MAX_SIZE");
         assert_eq!(symbols[0].kind, SymbolKind::Variable);
         // Const should have type annotation signature
-        assert!(symbols[0].signature.is_some(), "Const should have signature");
+        assert!(
+            symbols[0].signature.is_some(),
+            "Const should have signature"
+        );
         let sig = symbols[0].signature.as_ref().unwrap();
         assert!(sig.contains(": usize"), "sig = {sig}");
     }
@@ -995,12 +1002,21 @@ pub type Result<T> = std::result::Result<T, Error>;
         let tree = parse_rust(source);
         let symbols = RustExtractor::extract_symbols(&tree, source, "test.rs").unwrap();
 
-        let types: Vec<_> = symbols.iter().filter(|s| s.kind == SymbolKind::Type).collect();
+        let types: Vec<_> = symbols
+            .iter()
+            .filter(|s| s.kind == SymbolKind::Type)
+            .collect();
         assert_eq!(types.len(), 1);
         assert_eq!(types[0].name, "Result");
-        assert!(types[0].signature.is_some(), "Type alias should have signature");
+        assert!(
+            types[0].signature.is_some(),
+            "Type alias should have signature"
+        );
         let sig = types[0].signature.as_ref().unwrap();
-        assert!(sig.starts_with("= "), "Type alias sig should start with '= ': {sig}");
+        assert!(
+            sig.starts_with("= "),
+            "Type alias sig should start with '= ': {sig}"
+        );
     }
 
     #[test]

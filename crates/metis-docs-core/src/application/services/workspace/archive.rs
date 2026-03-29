@@ -105,9 +105,7 @@ impl ArchiveService {
         };
 
         // Then canonicalize to handle symlinks (e.g., /tmp vs /private/tmp)
-        let workspace_dir = absolute_path
-            .canonicalize()
-            .unwrap_or(absolute_path);
+        let workspace_dir = absolute_path.canonicalize().unwrap_or(absolute_path);
 
         let discovery_service = DocumentDiscoveryService::new(&workspace_dir);
 
@@ -139,13 +137,14 @@ impl ArchiveService {
         let mut archived_documents = Vec::new();
 
         match doc_type {
-            DocumentType::Vision | DocumentType::Task | DocumentType::Adr | DocumentType::Specification => {
+            DocumentType::Vision
+            | DocumentType::Task
+            | DocumentType::Adr
+            | DocumentType::Specification => {
                 // These document types don't have children, just archive the file
                 // Convert relative path from DB to absolute path for filesystem operations
                 let absolute_path = self.workspace_dir.join(&doc.filepath);
-                let archived_doc = self
-                    .archive_single_file(&absolute_path, doc_type)
-                    .await?;
+                let archived_doc = self.archive_single_file(&absolute_path, doc_type).await?;
                 archived_documents.push(archived_doc);
             }
 
@@ -188,15 +187,21 @@ impl ArchiveService {
     ) -> Result<ArchivedDocument> {
         // Calculate relative path from workspace
         // file_path should be canonical (or at least absolute) for strip_prefix to work
-        let canonical_file = file_path.canonicalize()
+        let canonical_file = file_path
+            .canonicalize()
             .unwrap_or_else(|_| file_path.to_path_buf());
 
         let relative_path = canonical_file
             .strip_prefix(&self.workspace_dir)
-            .map_err(|e| MetisError::FileSystem(format!(
-                "Failed to get relative path for {} (canonical: {}, workspace: {}): {}",
-                file_path.display(), canonical_file.display(), self.workspace_dir.display(), e
-            )))?;
+            .map_err(|e| {
+                MetisError::FileSystem(format!(
+                    "Failed to get relative path for {} (canonical: {}, workspace: {}): {}",
+                    file_path.display(),
+                    canonical_file.display(),
+                    self.workspace_dir.display(),
+                    e
+                ))
+            })?;
 
         // Create archived path
         let archived_path = self.workspace_dir.join("archived").join(relative_path);
@@ -231,15 +236,21 @@ impl ArchiveService {
     ) -> Result<ArchivedDocument> {
         // Calculate relative path from workspace
         // dir_path should be canonical (or at least absolute) for strip_prefix to work
-        let canonical_dir = dir_path.canonicalize()
+        let canonical_dir = dir_path
+            .canonicalize()
             .unwrap_or_else(|_| dir_path.to_path_buf());
 
         let relative_path = canonical_dir
             .strip_prefix(&self.workspace_dir)
-            .map_err(|e| MetisError::FileSystem(format!(
-                "Failed to get relative path for {} (canonical: {}, workspace: {}): {}",
-                dir_path.display(), canonical_dir.display(), self.workspace_dir.display(), e
-            )))?;
+            .map_err(|e| {
+                MetisError::FileSystem(format!(
+                    "Failed to get relative path for {} (canonical: {}, workspace: {}): {}",
+                    dir_path.display(),
+                    canonical_dir.display(),
+                    self.workspace_dir.display(),
+                    e
+                ))
+            })?;
 
         // Create archived path
         let archived_path = self.workspace_dir.join("archived").join(relative_path);
@@ -482,13 +493,14 @@ impl ArchiveService {
         let mut archived_documents = Vec::new();
 
         match doc_type {
-            DocumentType::Vision | DocumentType::Task | DocumentType::Adr | DocumentType::Specification => {
+            DocumentType::Vision
+            | DocumentType::Task
+            | DocumentType::Adr
+            | DocumentType::Specification => {
                 // These document types don't have children, just archive the file
                 // Convert relative path from DB to absolute path for filesystem operations
                 let absolute_path = self.workspace_dir.join(&doc.filepath);
-                let archived_doc = self
-                    .archive_single_file(&absolute_path, doc_type)
-                    .await?;
+                let archived_doc = self.archive_single_file(&absolute_path, doc_type).await?;
                 archived_documents.push(archived_doc);
             }
 

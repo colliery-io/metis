@@ -337,8 +337,7 @@ async fn test_regression_id_path_mismatch_bug() {
     );
 
     // Verify the frontmatter ID matches
-    let initiative_content =
-        std::fs::read_to_string(initiative_dir.join("initiative.md")).unwrap();
+    let initiative_content = std::fs::read_to_string(initiative_dir.join("initiative.md")).unwrap();
     assert!(
         initiative_content.contains(&format!("id: {}", initiative_result.document_id)),
         "Frontmatter ID should match"

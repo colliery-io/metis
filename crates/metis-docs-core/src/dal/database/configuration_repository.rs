@@ -74,9 +74,9 @@ impl ConfigurationRepository {
 
     /// Get flight level configuration
     pub fn get_flight_level_config(&mut self) -> Result<FlightLevelConfig> {
-        let json = self.get("flight_levels")?.unwrap_or_else(|| {
-            r#"{"initiatives_enabled":true}"#.to_string()
-        });
+        let json = self
+            .get("flight_levels")?
+            .unwrap_or_else(|| r#"{"initiatives_enabled":true}"#.to_string());
 
         serde_json::from_str(&json).map_err(|e| {
             crate::MetisError::ConfigurationError(ConfigurationError::SerializationError(

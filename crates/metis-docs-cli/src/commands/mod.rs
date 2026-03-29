@@ -17,7 +17,6 @@ pub use create::CreateCommand;
 pub use index::IndexCommand;
 pub use init::InitCommand;
 pub use list::ListCommand;
-pub use list::OutputFormat;
 pub use mcp::McpCommand;
 pub use search::SearchCommand;
 pub use status::StatusCommand;

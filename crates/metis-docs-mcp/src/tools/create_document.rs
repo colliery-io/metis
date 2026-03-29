@@ -1,5 +1,4 @@
 use crate::formatting::ToolOutput;
-use crate::viewer::ViewerDispatcher;
 use metis_core::{
     application::services::{
         document::{creation::DocumentCreationConfig, DocumentCreationService},
@@ -14,8 +13,6 @@ use rust_mcp_sdk::{
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use std::str::FromStr;
-use std::sync::Arc;
-use tracing::warn;
 
 #[mcp_tool(
     name = "create_document",
@@ -47,20 +44,6 @@ pub struct CreateDocumentTool {
 
 impl CreateDocumentTool {
     pub async fn call_tool(&self) -> std::result::Result<CallToolResult, CallToolError> {
-        self.call_tool_inner(None).await
-    }
-
-    pub async fn call_tool_with_dispatcher(
-        &self,
-        dispatcher: Arc<ViewerDispatcher>,
-    ) -> std::result::Result<CallToolResult, CallToolError> {
-        self.call_tool_inner(Some(dispatcher)).await
-    }
-
-    async fn call_tool_inner(
-        &self,
-        dispatcher: Option<Arc<ViewerDispatcher>>,
-    ) -> std::result::Result<CallToolResult, CallToolError> {
         let metis_dir = Path::new(&self.project_path);
 
         // Prepare workspace (validates, creates/updates database, syncs)
@@ -157,20 +140,26 @@ impl CreateDocumentTool {
                     .await
                     .map_err(|e| CallToolError::new(e))?
             }
-            DocumentType::Initiative => {
-                creation_service
-                    .create_initiative_with_config(config, &flight_config)
-                    .await
-                    .map_err(|e| CallToolError::new(e))?
-            }
+            DocumentType::Initiative => creation_service
+                .create_initiative_with_config(config, &flight_config)
+                .await
+                .map_err(|e| CallToolError::new(e))?,
             DocumentType::Task => {
                 // Check if this should be a backlog item
                 if let Some(category) = &self.backlog_category {
                     // Creating a backlog item - add category tag
                     let category_tag = match category.to_lowercase().as_str() {
-                        "bug" => metis_core::domain::documents::types::Tag::Label("bug".to_string()),
-                        "feature" => metis_core::domain::documents::types::Tag::Label("feature".to_string()),
-                        "tech-debt" | "techdebt" | "tech_debt" => metis_core::domain::documents::types::Tag::Label("tech-debt".to_string()),
+                        "bug" => {
+                            metis_core::domain::documents::types::Tag::Label("bug".to_string())
+                        }
+                        "feature" => {
+                            metis_core::domain::documents::types::Tag::Label("feature".to_string())
+                        }
+                        "tech-debt" | "techdebt" | "tech_debt" => {
+                            metis_core::domain::documents::types::Tag::Label(
+                                "tech-debt".to_string(),
+                            )
+                        }
                         _ => {
                             return Err(CallToolError::new(std::io::Error::new(
                                 std::io::ErrorKind::InvalidInput,
@@ -195,11 +184,7 @@ impl CreateDocumentTool {
                 } else if let Some(initiative_id) = resolved_parent_id.as_ref() {
                     // Task with parent initiative
                     creation_service
-                        .create_task_with_config(
-                            config,
-                            initiative_id,
-                            &flight_config,
-                        )
+                        .create_task_with_config(config, initiative_id, &flight_config)
                         .await
                         .map_err(|e| CallToolError::new(e))?
                 } else if flight_config.initiatives_enabled {
@@ -234,11 +219,7 @@ impl CreateDocumentTool {
             }
         };
 
-        let parent_display = self
-            .parent_id
-            .as_ref()
-            .map(|s| s.as_str())
-            .unwrap_or("-");
+        let parent_display = self.parent_id.as_deref().unwrap_or("-");
 
         let result_output = ToolOutput::new()
             .header("Document Created")
@@ -254,15 +235,6 @@ impl CreateDocumentTool {
             )
             .text(&format!("Path: `{}`", result.file_path.to_string_lossy()))
             .build_result();
-
-        // Proactive open: open the newly created document in the viewer
-        if let Some(dispatcher) = dispatcher {
-            if !dispatcher.is_proactive_opening_suppressed() {
-                if let Err(e) = dispatcher.open(&[result.file_path.clone()], None) {
-                    warn!("Proactive open after create failed: {}", e);
-                }
-            }
-        }
 
         Ok(result_output)
     }

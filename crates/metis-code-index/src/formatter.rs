@@ -35,7 +35,12 @@ pub fn format_index(
 
     write_header(&mut output, walk_result, timestamp);
     write_project_structure(&mut output, walk_result);
-    write_modules(&mut output, walk_result, symbols_by_file, &existing_summaries);
+    write_modules(
+        &mut output,
+        walk_result,
+        symbols_by_file,
+        &existing_summaries,
+    );
 
     output
 }
@@ -362,12 +367,7 @@ pub fn write_index_file(
     timestamp: &str,
 ) -> std::io::Result<()> {
     let existing = std::fs::read_to_string(output_path).ok();
-    let content = format_index(
-        walk_result,
-        symbols_by_file,
-        timestamp,
-        existing.as_deref(),
-    );
+    let content = format_index(walk_result, symbols_by_file, timestamp, existing.as_deref());
     std::fs::write(output_path, content)
 }
 
@@ -744,9 +744,11 @@ mod tests {
         let mut symbols = BTreeMap::new();
         symbols.insert(
             PathBuf::from("src/lib.rs"),
-            vec![Symbol::new("MAX_SIZE", SymbolKind::Variable, "src/lib.rs", 5, 5)
-                .with_visibility(Visibility::Public)
-                .with_signature(": usize")],
+            vec![
+                Symbol::new("MAX_SIZE", SymbolKind::Variable, "src/lib.rs", 5, 5)
+                    .with_visibility(Visibility::Public)
+                    .with_signature(": usize"),
+            ],
         );
 
         let output = format_index(&walk, &symbols, "2026-02-24", None);

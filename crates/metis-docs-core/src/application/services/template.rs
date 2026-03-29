@@ -35,8 +35,7 @@ mod defaults {
     }
 
     pub mod specification {
-        pub const CONTENT: &str =
-            include_str!("../../domain/documents/specification/content.md");
+        pub const CONTENT: &str = include_str!("../../domain/documents/specification/content.md");
         pub const EXIT_CRITERIA: &str =
             include_str!("../../domain/documents/specification/acceptance_criteria.md");
     }
@@ -223,7 +222,10 @@ impl TemplateLoader {
         // Common variables for all document types
         context.insert("title", "Sample Document Title");
         context.insert("slug", "sample-document-title");
-        context.insert("short_code", &format!("TEST-{}-0001", doc_type_letter(doc_type)));
+        context.insert(
+            "short_code",
+            &format!("TEST-{}-0001", doc_type_letter(doc_type)),
+        );
         context.insert("created_at", "2025-01-01T00:00:00Z");
         context.insert("updated_at", "2025-01-01T00:00:00Z");
         context.insert("archived", "false");
@@ -447,7 +449,6 @@ mod tests {
         // Type-specific variables
         let initiative_ctx = loader.sample_context_for_type("initiative");
         assert!(initiative_ctx.get("estimated_complexity").is_some());
-
     }
 
     #[test]

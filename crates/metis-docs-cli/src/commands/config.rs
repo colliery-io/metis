@@ -110,9 +110,7 @@ impl ConfigCommand {
             FlightLevelConfig::new(initiatives_enabled)
                 .map_err(|e| anyhow::anyhow!("Invalid configuration: {}", e))?
         } else {
-            anyhow::bail!(
-                "Must specify either --preset or --initiatives"
-            );
+            anyhow::bail!("Must specify either --preset or --initiatives");
         };
 
         // Save the new configuration

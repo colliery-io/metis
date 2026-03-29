@@ -5,7 +5,6 @@ use metis_core::{
     Application, Database,
 };
 use serde::{Deserialize, Serialize};
-use std::path::Path;
 use std::str::FromStr;
 use tauri::State;
 
@@ -494,10 +493,14 @@ pub async fn get_available_parents(
             let documents = app
                 .with_database(|service| -> Result<Vec<_>, metis_core::MetisError> {
                     let mut all_parents = Vec::new();
-                    if let Ok(visions) = service.find_by_type(DocumentType::from_str("vision").unwrap()) {
+                    if let Ok(visions) =
+                        service.find_by_type(DocumentType::from_str("vision").unwrap())
+                    {
                         all_parents.extend(visions.into_iter().filter(|d| !d.archived));
                     }
-                    if let Ok(initiatives) = service.find_by_type(DocumentType::from_str("initiative").unwrap()) {
+                    if let Ok(initiatives) =
+                        service.find_by_type(DocumentType::from_str("initiative").unwrap())
+                    {
                         all_parents.extend(initiatives.into_iter().filter(|d| !d.archived));
                     }
                     Ok(all_parents)
@@ -550,8 +553,6 @@ mod tests {
     use super::*;
     use crate::services::project::initialize_project;
     use tempfile::TempDir;
-
-
 
     #[tokio::test]
     async fn test_create_adr_document() {
@@ -626,11 +627,7 @@ mod tests {
         };
 
         let task_result = creation_service
-            .create_task_with_config(
-                task_config,
-                &initiative_result.short_code,
-                &flight_config,
-            )
+            .create_task_with_config(task_config, &initiative_result.short_code, &flight_config)
             .await;
 
         assert!(

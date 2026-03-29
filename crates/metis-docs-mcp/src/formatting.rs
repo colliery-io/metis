@@ -11,11 +11,11 @@ pub struct Icons;
 
 impl Icons {
     pub const SUCCESS: &'static str = "\u{2713}"; // ✓
-    pub const ERROR: &'static str = "\u{2717}";   // ✗
+    pub const ERROR: &'static str = "\u{2717}"; // ✗
     pub const WARNING: &'static str = "\u{26A0}"; // ⚠
-    pub const INFO: &'static str = "\u{2139}";    // ℹ
+    pub const INFO: &'static str = "\u{2139}"; // ℹ
     pub const PENDING: &'static str = "\u{25CB}"; // ○
-    pub const ACTIVE: &'static str = "\u{25CF}";  // ●
+    pub const ACTIVE: &'static str = "\u{25CF}"; // ●
 }
 
 /// Builder for constructing formatted tool output
@@ -115,7 +115,8 @@ impl ToolOutput {
         if diff_content.ends_with('\n') {
             diff_content.pop();
         }
-        self.sections.push(format!("```diff\n{}\n```", diff_content));
+        self.sections
+            .push(format!("```diff\n{}\n```", diff_content));
         self
     }
 
@@ -148,10 +149,7 @@ impl ToolOutput {
         writeln!(table, "| {} |", header_cells.join(" | ")).unwrap();
 
         // Separator row with proper width (matching header/data format)
-        let separators: Vec<String> = col_widths
-            .iter()
-            .map(|w| "-".repeat(*w))
-            .collect();
+        let separators: Vec<String> = col_widths.iter().map(|w| "-".repeat(*w)).collect();
         writeln!(table, "| {} |", separators.join(" | ")).unwrap();
 
         // Data rows with padding
@@ -178,7 +176,11 @@ impl ToolOutput {
     pub fn status_list(mut self, items: Vec<(&str, bool)>) -> Self {
         let mut list = String::new();
         for (item, completed) in items {
-            let icon = if completed { Icons::ACTIVE } else { Icons::PENDING };
+            let icon = if completed {
+                Icons::ACTIVE
+            } else {
+                Icons::PENDING
+            };
             writeln!(list, "{} {}", icon, item).unwrap();
         }
         if list.ends_with('\n') {
@@ -199,7 +201,11 @@ impl ToolOutput {
     pub fn indented(mut self, items: Vec<(bool, &str)>) -> Self {
         let mut content = String::new();
         for (success, item) in items {
-            let icon = if success { Icons::SUCCESS } else { Icons::ERROR };
+            let icon = if success {
+                Icons::SUCCESS
+            } else {
+                Icons::ERROR
+            };
             writeln!(content, "  {} {}", icon, item).unwrap();
         }
         if content.ends_with('\n') {
@@ -321,9 +327,7 @@ mod tests {
             .header("Test")
             .table(
                 &["Code", "Title"],
-                vec![
-                    vec!["METIS-T-0001".to_string(), "Test Task".to_string()],
-                ],
+                vec![vec!["METIS-T-0001".to_string(), "Test Task".to_string()]],
             )
             .build();
 

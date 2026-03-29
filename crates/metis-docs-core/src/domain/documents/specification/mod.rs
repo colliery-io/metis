@@ -27,7 +27,14 @@ impl Specification {
         short_code: String,
     ) -> Result<Self, DocumentValidationError> {
         let template_content = include_str!("content.md");
-        Self::new_with_template(title, parent_id, tags, archived, short_code, template_content)
+        Self::new_with_template(
+            title,
+            parent_id,
+            tags,
+            archived,
+            short_code,
+            template_content,
+        )
     }
 
     /// Create a new Specification document with a custom template
@@ -401,10 +408,7 @@ This is the system design specification.
         assert_eq!(spec.document_type(), DocumentType::Specification);
         assert!(!spec.archived());
         assert_eq!(spec.phase().unwrap(), Phase::Discovery);
-        assert_eq!(
-            spec.parent_id().unwrap().to_string(),
-            "TEST-V-0001"
-        );
+        assert_eq!(spec.parent_id().unwrap().to_string(), "TEST-V-0001");
     }
 
     #[test]
@@ -596,9 +600,6 @@ exit_criteria_met: false
         assert_eq!(spec2.title(), "System Design");
         assert_eq!(spec2.document_type(), DocumentType::Specification);
         assert_eq!(spec2.phase().unwrap(), Phase::Discovery);
-        assert_eq!(
-            spec2.parent_id().unwrap().to_string(),
-            "TEST-V-0001"
-        );
+        assert_eq!(spec2.parent_id().unwrap().to_string(), "TEST-V-0001");
     }
 }

@@ -15,6 +15,12 @@ pub struct SysEditorViewer {
     editor: Option<String>,
 }
 
+impl Default for SysEditorViewer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SysEditorViewer {
     pub fn new() -> Self {
         let editor = std::env::var("EDITOR").ok();
@@ -29,25 +35,30 @@ impl SysEditorViewer {
             .and_then(|n| n.to_str())
             .unwrap_or(editor);
 
-        TUI_EDITORS.iter().any(|&tui| bin_name == tui)
+        TUI_EDITORS.contains(&bin_name)
     }
 
     /// Open files using the OS default handler (`open` on macOS, `xdg-open` on Linux).
-    fn open_with_os_default(paths: &[PathBuf]) -> Result<(), ViewerError> {
+    fn open_with_os_default(paths: &[PathBuf], background: bool) -> Result<(), ViewerError> {
         for path in paths {
-            let cmd_name = if cfg!(target_os = "macos") {
-                "open"
-            } else {
-                "xdg-open"
-            };
-
-            Command::new(cmd_name)
-                .arg(path)
-                .spawn()
-                .map_err(|e| ViewerError::OpenFailed {
+            if cfg!(target_os = "macos") {
+                let mut cmd = Command::new("open");
+                if background {
+                    cmd.arg("-g");
+                }
+                cmd.arg(path);
+                cmd.spawn().map_err(|e| ViewerError::OpenFailed {
                     viewer: "System Editor".to_string(),
-                    reason: format!("Failed to run '{}': {}", cmd_name, e),
+                    reason: format!("Failed to run 'open': {}", e),
                 })?;
+            } else {
+                Command::new("xdg-open").arg(path).spawn().map_err(|e| {
+                    ViewerError::OpenFailed {
+                        viewer: "System Editor".to_string(),
+                        reason: format!("Failed to run 'xdg-open': {}", e),
+                    }
+                })?;
+            }
         }
         Ok(())
     }
@@ -122,7 +133,7 @@ impl SysEditorViewer {
 }
 
 impl DocumentViewer for SysEditorViewer {
-    fn open(&self, paths: &[PathBuf]) -> Result<(), ViewerError> {
+    fn open(&self, paths: &[PathBuf], background: bool) -> Result<(), ViewerError> {
         match &self.editor {
             Some(editor) => {
                 info!("Opening with $EDITOR: {}", editor);
@@ -130,7 +141,7 @@ impl DocumentViewer for SysEditorViewer {
             }
             None => {
                 info!("No $EDITOR set, using OS default handler");
-                Self::open_with_os_default(paths)
+                Self::open_with_os_default(paths, background)
             }
         }
     }

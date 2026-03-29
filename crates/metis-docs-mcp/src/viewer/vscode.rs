@@ -8,6 +8,12 @@ pub struct VscodeViewer {
     available: bool,
 }
 
+impl Default for VscodeViewer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl VscodeViewer {
     pub fn new() -> Self {
         let available = Self::check_available();
@@ -24,7 +30,7 @@ impl VscodeViewer {
 }
 
 impl DocumentViewer for VscodeViewer {
-    fn open(&self, paths: &[PathBuf]) -> Result<(), ViewerError> {
+    fn open(&self, paths: &[PathBuf], background: bool) -> Result<(), ViewerError> {
         if !self.available {
             return Err(ViewerError::NotAvailable {
                 viewer: "VSCode".to_string(),
@@ -32,17 +38,28 @@ impl DocumentViewer for VscodeViewer {
             });
         }
 
-        let mut cmd = Command::new("code");
-        cmd.arg("--reuse-window");
-
-        for path in paths {
-            cmd.arg(path);
+        if background && cfg!(target_os = "macos") {
+            // Use `open -g` to open in VSCode without stealing focus
+            let mut cmd = Command::new("open");
+            cmd.arg("-g").arg("-a").arg("Visual Studio Code");
+            for path in paths {
+                cmd.arg(path);
+            }
+            cmd.spawn().map_err(|e| ViewerError::OpenFailed {
+                viewer: "VSCode".to_string(),
+                reason: e.to_string(),
+            })?;
+        } else {
+            let mut cmd = Command::new("code");
+            cmd.arg("--reuse-window");
+            for path in paths {
+                cmd.arg(path);
+            }
+            cmd.spawn().map_err(|e| ViewerError::OpenFailed {
+                viewer: "VSCode".to_string(),
+                reason: e.to_string(),
+            })?;
         }
-
-        cmd.spawn().map_err(|e| ViewerError::OpenFailed {
-            viewer: "VSCode".to_string(),
-            reason: e.to_string(),
-        })?;
 
         Ok(())
     }
@@ -77,7 +94,7 @@ mod tests {
     #[test]
     fn test_vscode_viewer_not_available_returns_error() {
         let viewer = VscodeViewer { available: false };
-        let result = viewer.open(&[PathBuf::from("/tmp/test.md")]);
+        let result = viewer.open(&[PathBuf::from("/tmp/test.md")], false);
         assert!(result.is_err());
         match result.unwrap_err() {
             ViewerError::NotAvailable { viewer, .. } => assert_eq!(viewer, "VSCode"),

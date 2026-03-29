@@ -4,8 +4,7 @@ use tracing_subscriber::filter::LevelFilter;
 
 use crate::commands::{
     ArchiveCommand, ConfigCommand, CreateCommand, IndexCommand, InitCommand, ListCommand,
-    McpCommand, SearchCommand, StatusCommand, SyncCommand, TransitionCommand,
-    ValidateCommand,
+    McpCommand, SearchCommand, StatusCommand, SyncCommand, TransitionCommand, ValidateCommand,
 };
 
 #[derive(Parser)]
@@ -183,7 +182,9 @@ mod tests {
                 short_code: "TEST-I-0001".to_string(),
                 phase: None,
             };
-            cmd.execute().await.expect("Failed to transition initiative");
+            cmd.execute()
+                .await
+                .expect("Failed to transition initiative");
         }
 
         // 8. Create a task under the initiative (now in decompose phase)
