@@ -1,4 +1,5 @@
 ---
+model: sonnet
 name: code-index-summarizer
 description: |
   Use this agent to generate or update semantic summaries in .metis/code-index.md.

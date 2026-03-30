@@ -1,4 +1,5 @@
 ---
+model: sonnet
 name: flight-levels
 description: |
   Use this agent when working with Metis documents and needing methodology guidance. Helps with document type selection, work decomposition, phase transitions, and Flight Levels best practices.
