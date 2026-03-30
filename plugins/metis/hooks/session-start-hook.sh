@@ -59,11 +59,15 @@ if [ "$TODO_COUNT" != "0" ]; then
 fi
 STATE_SUMMARY="${STATE_SUMMARY:-No actionable items}"
 
-# Always run code index on session start — it's fast (<1s)
-metis index --incremental 2>/dev/null
+# Only run code index if dirty flag is set or index doesn't exist yet
+CODE_INDEX_PATH="$CLAUDE_PROJECT_DIR/.metis/code-index.md"
+DIRTY_FILE="$CLAUDE_PROJECT_DIR/.metis/.index-dirty"
+if [ ! -f "$CODE_INDEX_PATH" ] || [ -f "$DIRTY_FILE" ]; then
+    metis index --incremental 2>/dev/null
+    rm -f "$DIRTY_FILE"
+fi
 
 # Check if semantic summaries need generating
-CODE_INDEX_PATH="$CLAUDE_PROJECT_DIR/.metis/code-index.md"
 PLACEHOLDER_COUNT=0
 if [ -f "$CODE_INDEX_PATH" ]; then
     PLACEHOLDER_COUNT=$(grep -c "Semantic summary to be generated" "$CODE_INDEX_PATH" 2>/dev/null || true)
