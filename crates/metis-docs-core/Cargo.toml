@@ -39,7 +39,7 @@ gray_matter = "0.2"
 tera = "1.19"
 include_dir = "0.7"
 walkdir = "2.0"
-git2 = "0.19"
+git2 = { version = "0.19", features = ["vendored-openssl"] }
 
 # Optional test utilities
 tempfile = { workspace = true, optional = true }
