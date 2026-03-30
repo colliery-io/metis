@@ -1,13 +1,13 @@
-use crate::application::services::DatabaseService;
+use crate::application::services::{DatabaseService, FilesystemService};
 use crate::dal::database::models::Document;
 use crate::MetisError;
 use crate::Result;
-use std::fs;
 use std::path::{Path, PathBuf};
 
 /// Service for reassigning tasks to different parent initiatives or the backlog
 pub struct ReassignmentService {
     workspace_dir: PathBuf,
+    fs: FilesystemService,
 }
 
 /// Result of reassignment operation
@@ -56,8 +56,10 @@ impl ReassignmentService {
             std::env::current_dir().unwrap_or_default().join(path)
         };
 
+        let fs = FilesystemService::new(&absolute_path);
         Self {
             workspace_dir: absolute_path,
+            fs,
         }
     }
 
@@ -234,18 +236,8 @@ impl ReassignmentService {
             });
         }
 
-        // Create destination directory if needed
-        if let Some(parent_dir) = dest.parent() {
-            if !parent_dir.exists() {
-                fs::create_dir_all(parent_dir).map_err(|e| {
-                    MetisError::FileSystem(format!("Failed to create destination directory: {}", e))
-                })?;
-            }
-        }
-
-        // Move the file
-        fs::rename(source, dest)
-            .map_err(|e| MetisError::FileSystem(format!("Failed to move file: {}", e)))?;
+        // Move the file (FilesystemService handles directory creation and overlay routing)
+        self.fs.rename_file(source, dest)?;
 
         Ok(())
     }

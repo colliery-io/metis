@@ -17,6 +17,8 @@ pub fn has_metis_vault() -> (bool, Option<PathBuf>) {
 
         // Check if this directory has a valid Metis vault (just .metis directory)
         if metis_dir.exists() && metis_dir.is_dir() {
+            // Lazy-install git hook if missing
+            let _ = crate::commands::flush::ensure_git_hook_installed(&current);
             return (true, Some(metis_dir));
         }
 

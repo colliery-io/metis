@@ -13,3 +13,6 @@ code-index-symbols.json
 
 # Index dirty flag
 .index-dirty
+
+# Git overlay pending changes (flushed to main by post-commit hook)
+.pending/

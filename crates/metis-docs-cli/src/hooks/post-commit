@@ -1,0 +1,9 @@
+#!/bin/sh
+# Metis post-commit hook — flushes pending .metis/ overlay changes to main.
+# Installed by `metis init` or auto-installed on first Metis operation.
+# METIS_POST_COMMIT_HOOK — do not remove this marker comment.
+
+# Only run if metis binary is available
+if command -v metis >/dev/null 2>&1; then
+    metis flush 2>/dev/null || true
+fi

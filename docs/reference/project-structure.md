@@ -37,11 +37,32 @@ my-project/
 │   │       └── specification.md
 │   ├── archived/
 │   │   └── (archived documents moved here)
+│   ├── .pending/                     # Overlay for pending writes (gitignored, on feature branches)
 │   ├── code-index.md                # Generated code index (gitignored)
 │   ├── code-index-hashes.json       # File hashes for incremental indexing (gitignored)
 │   └── code-index-symbols.json      # Cached symbols (gitignored)
 └── (your project files)
 ```
+
+## Branch-Independent Storage
+
+Metis documents always live on `main`/`master`, regardless of which git branch you're working on. This prevents documents from getting stranded on feature branches.
+
+**How it works:**
+
+| Situation | Read behavior | Write behavior |
+|-----------|--------------|----------------|
+| On `main`/`master` | Normal filesystem reads | Normal filesystem writes |
+| On a feature branch | Reads from main's git tree (via `git2`) | Writes to `.metis/.pending/` overlay |
+| Not in a git repo | Normal filesystem reads | Normal filesystem writes |
+
+When on a feature branch, reads check the overlay first (so your in-session writes are immediately visible), then fall back to main's committed tree. Deletes create tombstone files (`.md.deleted`) in the overlay to prevent fallthrough to main.
+
+**Flushing to main:**
+
+Pending overlay changes are flushed to `main` as a single commit whenever you run `git commit`. A `post-commit` hook calls `metis flush`, which uses git plumbing to commit directly to main's ref without checking it out. The overlay is cleaned up after a successful flush.
+
+The hook is installed automatically by `metis init` or lazily on the first Metis CLI operation. You can also run `metis flush` manually.
 
 ## Document File Structure
 

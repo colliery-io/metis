@@ -36,6 +36,8 @@ metis-code-index = { path = "../metis-code-index" }
 
 # CLI-specific dependencies
 clap = { version = "4.0", features = ["derive", "color"] }
+git2 = "0.19"
+walkdir = "2.0"
 dialoguer = "0.11"
 indicatif = "0.17"
 colored = "2.0"

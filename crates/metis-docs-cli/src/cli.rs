@@ -3,8 +3,9 @@ use clap::{Parser, Subcommand};
 use tracing_subscriber::filter::LevelFilter;
 
 use crate::commands::{
-    ArchiveCommand, ConfigCommand, CreateCommand, IndexCommand, InitCommand, ListCommand,
-    McpCommand, SearchCommand, StatusCommand, SyncCommand, TransitionCommand, ValidateCommand,
+    ArchiveCommand, ConfigCommand, CreateCommand, FlushCommand, IndexCommand, InitCommand,
+    ListCommand, McpCommand, SearchCommand, StatusCommand, SyncCommand, TransitionCommand,
+    ValidateCommand,
 };
 
 #[derive(Parser)]
@@ -46,6 +47,8 @@ pub enum Commands {
     Config(ConfigCommand),
     /// Generate code index for AI agent navigation
     Index(IndexCommand),
+    /// Flush pending .metis/ overlay changes to main branch
+    Flush(FlushCommand),
 }
 
 impl Cli {
@@ -77,6 +80,7 @@ impl Cli {
             Commands::Mcp(cmd) => cmd.execute().await,
             Commands::Config(cmd) => cmd.execute().await,
             Commands::Index(cmd) => cmd.execute().await,
+            Commands::Flush(cmd) => cmd.execute().await,
         }
     }
 }
