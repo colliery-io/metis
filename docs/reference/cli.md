@@ -34,7 +34,8 @@ metis init [OPTIONS]
 - `.metis/vision.md` — Default vision document
 - `.metis/config.toml` — Project configuration
 - `.metis/metis.db` — SQLite database
-- `.metis/.gitignore` — Ignores database, logs, index cache files
+- `.metis/.gitignore` — Ignores database, logs, index cache, and overlay directory
+- `.git/hooks/post-commit` — Git hook for automatic overlay flush (if in a git repo)
 
 **Examples:**
 ```bash
@@ -401,4 +402,32 @@ metis index                              # Full index
 metis index --incremental                # Only changed files
 metis index --structure-only             # Directory tree only
 metis index --incremental --structure-only
+```
+
+---
+
+## metis flush
+
+Flush pending `.metis/` overlay changes to the main branch.
+
+```
+metis flush
+```
+
+No arguments. This command is the core of Metis's branch-independent storage:
+
+- When working on a **feature branch**, Metis document reads come from main's git tree and writes go to a `.metis/.pending/` overlay directory
+- `metis flush` takes all pending overlay changes and commits them to main as a single commit using git plumbing — **without checking out main**
+- Tombstone files (`.md.deleted`) in the overlay cause the corresponding file to be removed from main's tree
+- After a successful flush, `.metis/.pending/` is cleaned up
+- If there's nothing to flush, the command is a silent no-op
+- When already on main, the command is a no-op (writes go directly to the filesystem)
+
+**Commit message:** `metis: sync document changes`
+
+**Automatic execution:** A `post-commit` git hook calls `metis flush` after every commit, so pending document changes are automatically flushed to main whenever you commit code. The hook is installed automatically by `metis init` or lazily on the first Metis CLI operation in a git repo.
+
+**Example:**
+```bash
+metis flush                              # Manual flush (usually not needed)
 ```

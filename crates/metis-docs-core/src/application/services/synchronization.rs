@@ -11,6 +11,7 @@ use std::path::{Path, PathBuf};
 /// Synchronization service - bridges filesystem and database
 pub struct SyncService<'a> {
     db_service: &'a mut DatabaseService,
+    fs: FilesystemService,
     workspace_dir: Option<&'a Path>,
     db_path: Option<std::path::PathBuf>,
 }
@@ -19,6 +20,7 @@ impl<'a> SyncService<'a> {
     pub fn new(db_service: &'a mut DatabaseService) -> Self {
         Self {
             db_service,
+            fs: FilesystemService::local(),
             workspace_dir: None,
             db_path: None,
         }
@@ -32,6 +34,8 @@ impl<'a> SyncService<'a> {
         self.workspace_dir = Some(workspace_dir);
         // Infer db_path from workspace_dir
         self.db_path = Some(workspace_dir.join("metis.db"));
+        // Auto-detect storage backend based on git branch
+        self.fs = FilesystemService::new(workspace_dir);
         self
     }
 
@@ -72,9 +76,9 @@ impl<'a> SyncService<'a> {
         })?;
 
         // Get file metadata
-        let file_hash = FilesystemService::compute_file_hash(&file_path)?;
-        let updated_at = FilesystemService::get_file_mtime(&file_path)?;
-        let content = FilesystemService::read_file(&file_path)?;
+        let file_hash = self.fs.compute_file_hash(&file_path)?;
+        let updated_at = self.fs.get_file_mtime(&file_path)?;
+        let content = self.fs.read_file(&file_path)?;
 
         // Convert domain object to database model
         let new_doc = self.domain_to_database_model(
@@ -108,7 +112,7 @@ impl<'a> SyncService<'a> {
         let absolute_path = self.to_absolute_path(filepath);
 
         // Write to filesystem
-        FilesystemService::write_file(absolute_path, &content)?;
+        self.fs.write_file(absolute_path, &content)?;
 
         Ok(())
     }
@@ -242,13 +246,8 @@ impl<'a> SyncService<'a> {
     }
 
     /// Extract document short code from file without keeping the document object around
-    fn extract_document_short_code<P: AsRef<Path>>(file_path: P) -> Result<String> {
-        // Read file content to extract frontmatter and get document short code
-        let raw_content = std::fs::read_to_string(file_path.as_ref()).map_err(|e| {
-            MetisError::ValidationFailed {
-                message: format!("Failed to read file: {}", e),
-            }
-        })?;
+    fn extract_document_short_code<P: AsRef<Path>>(&self, file_path: P) -> Result<String> {
+        let raw_content = self.fs.read_file(file_path.as_ref())?;
 
         // Parse frontmatter to get document short code
         use gray_matter::{engine::YAML, Matter};
@@ -304,11 +303,11 @@ impl<'a> SyncService<'a> {
         self.update_counters_from_filesystem(&dir_path)?;
 
         // Step 1: Scan all markdown files and group by short code
-        let files = FilesystemService::find_markdown_files(&dir_path)?;
+        let files = self.fs.find_markdown_files(&dir_path)?;
         let mut short_code_map: HashMap<String, Vec<PathBuf>> = HashMap::new();
 
         for file_path in files {
-            match Self::extract_document_short_code(&file_path) {
+            match self.extract_document_short_code(&file_path) {
                 Ok(short_code) => {
                     short_code_map
                         .entry(short_code)
@@ -385,7 +384,7 @@ impl<'a> SyncService<'a> {
         let file_path = file_path.as_ref();
 
         // Step 1: Read current document content
-        let content = FilesystemService::read_file(file_path)?;
+        let content = self.fs.read_file(file_path)?;
 
         // Step 2: Parse frontmatter
         use gray_matter::{engine::YAML, Matter};
@@ -452,7 +451,7 @@ impl<'a> SyncService<'a> {
             .await?;
 
         // Step 7: Write updated content back to file
-        FilesystemService::write_file(file_path, &updated_content)?;
+        self.fs.write_file(file_path, &updated_content)?;
 
         // Step 8: Rename file if filename contains the short code
         // Extract just the suffix (e.g., "T-0001" from "TEST-T-0001")
@@ -471,7 +470,7 @@ impl<'a> SyncService<'a> {
         if file_name.contains(&old_suffix) {
             let new_file_name = file_name.replace(&old_suffix, &new_suffix);
             let new_path = file_path.with_file_name(new_file_name);
-            std::fs::rename(file_path, &new_path)?;
+            self.fs.rename_file(file_path, &new_path)?;
 
             tracing::info!(
                 "Renumbered {} from {} to {}",
@@ -501,7 +500,7 @@ impl<'a> SyncService<'a> {
             })?;
 
         // Find all markdown files in same directory
-        let siblings = FilesystemService::find_markdown_files(parent_dir)?;
+        let siblings = self.fs.find_markdown_files(parent_dir)?;
 
         // Create regex pattern to match short code as whole word
         let pattern_str = format!(r"\b{}\b", regex::escape(old_short_code));
@@ -517,12 +516,12 @@ impl<'a> SyncService<'a> {
                 continue; // Skip the document we just renumbered
             }
 
-            match FilesystemService::read_file(&sibling_path) {
+            match self.fs.read_file(&sibling_path) {
                 Ok(content) => {
                     if pattern.is_match(&content) {
                         let updated_content = pattern.replace_all(&content, new_short_code);
                         if let Err(e) =
-                            FilesystemService::write_file(&sibling_path, &updated_content)
+                            self.fs.write_file(&sibling_path, &updated_content)
                         {
                             tracing::warn!(
                                 "Failed to update references in {}: {}",
@@ -554,7 +553,7 @@ impl<'a> SyncService<'a> {
         let relative_path_str = self.to_relative_path(&file_path);
 
         // Check if file exists on filesystem
-        let file_exists = FilesystemService::file_exists(&file_path);
+        let file_exists = self.fs.file_exists(&file_path);
 
         // Check if document exists in database at this filepath (DB stores relative paths)
         let db_doc_by_path = self.db_service.find_by_filepath(&relative_path_str)?;
@@ -563,7 +562,7 @@ impl<'a> SyncService<'a> {
             // File exists, not in database at this path - need to check if it's a moved document
             (true, None) => {
                 // Extract the document short code without creating full document object
-                let short_code = Self::extract_document_short_code(&file_path)?;
+                let short_code = self.extract_document_short_code(&file_path)?;
 
                 // Check if a document with this short code exists at a different path
                 if let Some(existing_doc) = self.db_service.find_by_short_code(&short_code)? {
@@ -594,7 +593,7 @@ impl<'a> SyncService<'a> {
 
             // Both exist - check if file changed
             (true, Some(db_doc)) => {
-                let current_hash = FilesystemService::compute_file_hash(&file_path)?;
+                let current_hash = self.fs.compute_file_hash(&file_path)?;
 
                 if db_doc.file_hash != current_hash {
                     // File changed, reimport (file is source of truth)
@@ -628,7 +627,7 @@ impl<'a> SyncService<'a> {
 
         // Step 2: Re-scan all markdown files AFTER renumbering
         // This picks up renamed files with new short codes
-        let files = FilesystemService::find_markdown_files(&dir_path)?;
+        let files = self.fs.find_markdown_files(&dir_path)?;
 
         // Step 3: Sync each file
         for file_path in files {
@@ -646,7 +645,7 @@ impl<'a> SyncService<'a> {
         for (_, relative_filepath) in db_pairs {
             // Convert relative path from DB to absolute for filesystem check
             let absolute_path = self.to_absolute_path(&relative_filepath);
-            if !FilesystemService::file_exists(&absolute_path) {
+            if !self.fs.file_exists(&absolute_path) {
                 // File no longer exists, delete from database
                 match self.db_service.delete_document(&relative_filepath) {
                     Ok(_) => results.push(SyncResult::Deleted {
@@ -671,7 +670,7 @@ impl<'a> SyncService<'a> {
         let mut issues = Vec::new();
 
         // Find all markdown files (returns absolute paths)
-        let files = FilesystemService::find_markdown_files(&dir_path)?;
+        let files = self.fs.find_markdown_files(&dir_path)?;
 
         // Check each file
         for file_path in &files {
@@ -679,7 +678,7 @@ impl<'a> SyncService<'a> {
             let relative_path = self.to_relative_path(file_path);
 
             if let Some(db_doc) = self.db_service.find_by_filepath(&relative_path)? {
-                let current_hash = FilesystemService::compute_file_hash(file_path)?;
+                let current_hash = self.fs.compute_file_hash(file_path)?;
                 if db_doc.file_hash != current_hash {
                     issues.push(SyncIssue::OutOfSync {
                         filepath: relative_path,
@@ -699,7 +698,7 @@ impl<'a> SyncService<'a> {
             // Convert relative path from DB to absolute for filesystem check
             let absolute_path = self.to_absolute_path(&relative_filepath);
             let absolute_str = absolute_path.to_string_lossy().to_string();
-            if !files.contains(&absolute_str) && !FilesystemService::file_exists(&absolute_path) {
+            if !files.contains(&absolute_str) && !self.fs.file_exists(&absolute_path) {
                 issues.push(SyncIssue::MissingFromFilesystem {
                     filepath: relative_filepath,
                 });
@@ -773,12 +772,12 @@ impl<'a> SyncService<'a> {
         }
 
         // Find all markdown files
-        let files = FilesystemService::find_markdown_files(dir_path)?;
+        let files = self.fs.find_markdown_files(dir_path)?;
         tracing::info!("Counter recovery: scanning {} markdown files", files.len());
 
         for file_path in files {
             // Guard: Read file with error handling
-            let content = match std::fs::read_to_string(&file_path) {
+            let content = match self.fs.read_file(&file_path) {
                 Ok(c) => c,
                 Err(e) => {
                     tracing::warn!(
@@ -1018,7 +1017,8 @@ mod tests {
         let mut sync_service = SyncService::new(&mut db_service);
 
         let file_path = temp_dir.path().join("test.md");
-        FilesystemService::write_file(&file_path, &create_test_document_content())
+        let test_fs = FilesystemService::local();
+        test_fs.write_file(&file_path, &create_test_document_content())
             .expect("Failed to write file");
 
         let doc = sync_service
@@ -1055,7 +1055,8 @@ mod tests {
         );
 
         // Create file and sync
-        FilesystemService::write_file(&file_path, &create_test_document_content())
+        let test_fs = FilesystemService::local();
+        test_fs.write_file(&file_path, &create_test_document_content())
             .expect("Failed to write file");
 
         let result = sync_service
@@ -1084,7 +1085,7 @@ mod tests {
         // Modify file
         let modified_content =
             &create_test_document_content().replace("Test content.", "Modified content.");
-        FilesystemService::write_file(&file_path, modified_content).expect("Failed to write");
+        test_fs.write_file(&file_path, modified_content).expect("Failed to write");
 
         let result = sync_service
             .sync_file(&file_path)
@@ -1098,7 +1099,7 @@ mod tests {
         );
 
         // Delete file
-        FilesystemService::delete_file(&file_path).expect("Failed to delete");
+        test_fs.delete_file(&file_path).expect("Failed to delete");
 
         let result = sync_service
             .sync_file(&file_path)
@@ -1136,7 +1137,8 @@ mod tests {
                 .replace("Test Document", &format!("Test Document {}", id))
                 .replace("test-document", id)
                 .replace("TEST-V-9003", &format!("TEST-V-900{}", i + 3));
-            FilesystemService::write_file(&full_path, content).expect("Failed to write");
+            let test_fs = FilesystemService::local();
+            test_fs.write_file(&full_path, content).expect("Failed to write");
         }
 
         // Sync directory

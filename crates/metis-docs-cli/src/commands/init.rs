@@ -76,10 +76,18 @@ impl InitCommand {
                 .map_err(|e| anyhow::anyhow!("Failed to save config.toml: {}", e))?;
         }
 
-        // Create/update .gitignore in .metis directory to ignore database
+        // Create/update .gitignore in .metis directory to ignore database and overlay
         let gitignore_path = result.metis_dir.join(".gitignore");
-        std::fs::write(&gitignore_path, "metis.db\nmetis-mcp-server.log\n")
-            .map_err(|e| anyhow::anyhow!("Failed to create .gitignore: {}", e))?;
+        std::fs::write(
+            &gitignore_path,
+            "metis.db\nmetis.db-shm\nmetis.db-wal\nmetis-mcp-server.log\ncode-index.md\ncode-index-hashes.json\ncode-index-symbols.json\n.index-dirty\n.pending/\n",
+        )
+        .map_err(|e| anyhow::anyhow!("Failed to create .gitignore: {}", e))?;
+
+        // Install git post-commit hook if in a git repo
+        if let Err(e) = crate::commands::flush::ensure_git_hook_installed(&current_dir) {
+            tracing::warn!("Could not install git hook: {}", e);
+        }
 
         println!(
             "[+] Initialized Metis workspace in {}",
