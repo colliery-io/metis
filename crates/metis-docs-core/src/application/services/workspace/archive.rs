@@ -277,6 +277,11 @@ impl ArchiveService {
             }
         }
 
+        // On Local backend, clean up the now-empty source directory
+        if !self.fs.is_git_overlay() && dir_path.exists() {
+            let _ = std::fs::remove_dir_all(dir_path);
+        }
+
         Ok(ArchivedDocument {
             document_id,
             document_type: doc_type,
