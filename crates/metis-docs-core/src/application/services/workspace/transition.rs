@@ -1,4 +1,5 @@
 use crate::application::services::document::DocumentDiscoveryService;
+use crate::application::services::FilesystemService;
 use crate::domain::documents::traits::Document;
 use crate::domain::documents::types::{DocumentType, Phase};
 use crate::Result;
@@ -8,6 +9,7 @@ use std::path::{Path, PathBuf};
 /// Service for managing document phase transitions
 pub struct PhaseTransitionService {
     discovery_service: DocumentDiscoveryService,
+    fs: FilesystemService,
 }
 
 /// Result of a phase transition
@@ -25,8 +27,12 @@ impl PhaseTransitionService {
     pub fn new<P: AsRef<Path>>(workspace_dir: P) -> Self {
         let workspace_dir = workspace_dir.as_ref().to_path_buf();
         let discovery_service = DocumentDiscoveryService::new(&workspace_dir);
+        let fs = FilesystemService::new(&workspace_dir);
 
-        Self { discovery_service }
+        Self {
+            discovery_service,
+            fs,
+        }
     }
 
     /// Transition a document to a specific phase
@@ -101,34 +107,30 @@ impl PhaseTransitionService {
 
     /// Get the current phase of a document
     async fn get_current_phase(&self, file_path: &Path, doc_type: DocumentType) -> Result<Phase> {
+        let content = self.fs.read_file(file_path)?;
         match doc_type {
             DocumentType::Vision => {
-                let vision = Vision::from_file(file_path)
-                    .await
+                let vision = Vision::from_content(&content)
                     .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
                 Ok(vision.phase()?)
             }
             DocumentType::Initiative => {
-                let initiative = Initiative::from_file(file_path)
-                    .await
+                let initiative = Initiative::from_content(&content)
                     .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
                 Ok(initiative.phase()?)
             }
             DocumentType::Task => {
-                let task = Task::from_file(file_path)
-                    .await
+                let task = Task::from_content(&content)
                     .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
                 Ok(task.phase()?)
             }
             DocumentType::Adr => {
-                let adr = Adr::from_file(file_path)
-                    .await
+                let adr = Adr::from_content(&content)
                     .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
                 Ok(adr.phase()?)
             }
             DocumentType::Specification => {
-                let spec = Specification::from_file(file_path)
-                    .await
+                let spec = Specification::from_content(&content)
                     .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
                 Ok(spec.phase()?)
             }
@@ -142,85 +144,74 @@ impl PhaseTransitionService {
         doc_type: DocumentType,
         target_phase: Phase,
     ) -> Result<()> {
-        match doc_type {
+        let content = self.fs.read_file(file_path)?;
+        let updated = match doc_type {
             DocumentType::Vision => {
-                let mut vision = Vision::from_file(file_path)
-                    .await
+                let mut doc = Vision::from_content(&content)
                     .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
-                vision.transition_phase(Some(target_phase)).map_err(|_e| {
+                doc.transition_phase(Some(target_phase)).map_err(|_e| {
                     MetisError::InvalidPhaseTransition {
-                        from: vision.phase().unwrap_or(Phase::Draft).to_string(),
+                        from: doc.phase().unwrap_or(Phase::Draft).to_string(),
                         to: target_phase.to_string(),
                         doc_type: "vision".to_string(),
                     }
                 })?;
-                vision
-                    .to_file(file_path)
-                    .await
-                    .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
+                doc.to_content()
+                    .map_err(|e| MetisError::InvalidDocument(e.to_string()))?
             }
             DocumentType::Initiative => {
-                let mut initiative = Initiative::from_file(file_path)
-                    .await
+                let mut doc = Initiative::from_content(&content)
                     .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
-                initiative
-                    .transition_phase(Some(target_phase))
+                doc.transition_phase(Some(target_phase))
                     .map_err(|_e| MetisError::InvalidPhaseTransition {
-                        from: initiative.phase().unwrap_or(Phase::Discovery).to_string(),
+                        from: doc.phase().unwrap_or(Phase::Discovery).to_string(),
                         to: target_phase.to_string(),
                         doc_type: "initiative".to_string(),
                     })?;
-                initiative
-                    .to_file(file_path)
-                    .await
-                    .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
+                doc.to_content()
+                    .map_err(|e| MetisError::InvalidDocument(e.to_string()))?
             }
             DocumentType::Task => {
-                let mut task = Task::from_file(file_path)
-                    .await
+                let mut doc = Task::from_content(&content)
                     .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
-                task.transition_phase(Some(target_phase)).map_err(|_e| {
+                doc.transition_phase(Some(target_phase)).map_err(|_e| {
                     MetisError::InvalidPhaseTransition {
-                        from: task.phase().unwrap_or(Phase::Todo).to_string(),
+                        from: doc.phase().unwrap_or(Phase::Todo).to_string(),
                         to: target_phase.to_string(),
                         doc_type: "task".to_string(),
                     }
                 })?;
-                task.to_file(file_path)
-                    .await
-                    .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
+                doc.to_content()
+                    .map_err(|e| MetisError::InvalidDocument(e.to_string()))?
             }
             DocumentType::Adr => {
-                let mut adr = Adr::from_file(file_path)
-                    .await
+                let mut doc = Adr::from_content(&content)
                     .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
-                adr.transition_phase(Some(target_phase)).map_err(|_e| {
+                doc.transition_phase(Some(target_phase)).map_err(|_e| {
                     MetisError::InvalidPhaseTransition {
-                        from: adr.phase().unwrap_or(Phase::Draft).to_string(),
+                        from: doc.phase().unwrap_or(Phase::Draft).to_string(),
                         to: target_phase.to_string(),
                         doc_type: "adr".to_string(),
                     }
                 })?;
-                adr.to_file(file_path)
-                    .await
-                    .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
+                doc.to_content()
+                    .map_err(|e| MetisError::InvalidDocument(e.to_string()))?
             }
             DocumentType::Specification => {
-                let mut spec = Specification::from_file(file_path)
-                    .await
+                let mut doc = Specification::from_content(&content)
                     .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
-                spec.transition_phase(Some(target_phase)).map_err(|_e| {
+                doc.transition_phase(Some(target_phase)).map_err(|_e| {
                     MetisError::InvalidPhaseTransition {
-                        from: spec.phase().unwrap_or(Phase::Discovery).to_string(),
+                        from: doc.phase().unwrap_or(Phase::Discovery).to_string(),
                         to: target_phase.to_string(),
                         doc_type: "specification".to_string(),
                     }
                 })?;
-                spec.to_file(file_path)
-                    .await
-                    .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
+                doc.to_content()
+                    .map_err(|e| MetisError::InvalidDocument(e.to_string()))?
             }
-        }
+        };
+        self.fs.write_file(file_path, &updated)?;
         Ok(())
     }
 
