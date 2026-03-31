@@ -1,10 +1,9 @@
 use crate::application::services::document::DocumentDiscoveryService;
-use crate::application::services::DatabaseService;
+use crate::application::services::{DatabaseService, FilesystemService};
 use crate::domain::documents::traits::Document;
 use crate::domain::documents::types::DocumentType;
 use crate::Result;
 use crate::{Adr, Initiative, MetisError, Specification, Task, Vision};
-use std::fs;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
@@ -12,6 +11,7 @@ use std::str::FromStr;
 pub struct ArchiveService {
     workspace_dir: PathBuf,
     discovery_service: DocumentDiscoveryService,
+    fs: FilesystemService,
 }
 
 /// Result of archive operation
@@ -39,55 +39,49 @@ impl ArchiveService {
         file_path: &Path,
         doc_type: DocumentType,
     ) -> Result<()> {
-        match doc_type {
+        // Read content via overlay-aware FilesystemService, modify, write back
+        let content = self.fs.read_file(file_path)?;
+
+        // Parse, set archived flag, serialize back
+        let updated_content = match doc_type {
             DocumentType::Vision => {
-                let mut vision = Vision::from_file(file_path)
-                    .await
+                let mut doc = Vision::from_content(&content)
                     .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
-                vision.core_mut().archived = true;
-                vision
-                    .to_file(file_path)
-                    .await
-                    .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
+                doc.core_mut().archived = true;
+                doc.to_content()
+                    .map_err(|e| MetisError::InvalidDocument(e.to_string()))?
             }
             DocumentType::Initiative => {
-                let mut initiative = Initiative::from_file(file_path)
-                    .await
+                let mut doc = Initiative::from_content(&content)
                     .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
-                initiative.core_mut().archived = true;
-                initiative
-                    .to_file(file_path)
-                    .await
-                    .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
+                doc.core_mut().archived = true;
+                doc.to_content()
+                    .map_err(|e| MetisError::InvalidDocument(e.to_string()))?
             }
             DocumentType::Task => {
-                let mut task = Task::from_file(file_path)
-                    .await
+                let mut doc = Task::from_content(&content)
                     .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
-                task.core_mut().archived = true;
-                task.to_file(file_path)
-                    .await
-                    .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
+                doc.core_mut().archived = true;
+                doc.to_content()
+                    .map_err(|e| MetisError::InvalidDocument(e.to_string()))?
             }
             DocumentType::Adr => {
-                let mut adr = Adr::from_file(file_path)
-                    .await
+                let mut doc = Adr::from_content(&content)
                     .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
-                adr.core_mut().archived = true;
-                adr.to_file(file_path)
-                    .await
-                    .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
+                doc.core_mut().archived = true;
+                doc.to_content()
+                    .map_err(|e| MetisError::InvalidDocument(e.to_string()))?
             }
             DocumentType::Specification => {
-                let mut spec = Specification::from_file(file_path)
-                    .await
+                let mut doc = Specification::from_content(&content)
                     .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
-                spec.core_mut().archived = true;
-                spec.to_file(file_path)
-                    .await
-                    .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
+                doc.core_mut().archived = true;
+                doc.to_content()
+                    .map_err(|e| MetisError::InvalidDocument(e.to_string()))?
             }
-        }
+        };
+
+        self.fs.write_file(file_path, &updated_content)?;
         Ok(())
     }
 
@@ -108,10 +102,12 @@ impl ArchiveService {
         let workspace_dir = absolute_path.canonicalize().unwrap_or(absolute_path);
 
         let discovery_service = DocumentDiscoveryService::new(&workspace_dir);
+        let fs = FilesystemService::new(&workspace_dir);
 
         Self {
             workspace_dir,
             discovery_service,
+            fs,
         }
     }
 
@@ -185,8 +181,6 @@ impl ArchiveService {
         file_path: &Path,
         doc_type: DocumentType,
     ) -> Result<ArchivedDocument> {
-        // Calculate relative path from workspace
-        // file_path should be canonical (or at least absolute) for strip_prefix to work
         let canonical_file = file_path
             .canonicalize()
             .unwrap_or_else(|_| file_path.to_path_buf());
@@ -203,12 +197,10 @@ impl ArchiveService {
                 ))
             })?;
 
-        // Create archived path
         let archived_path = self.workspace_dir.join("archived").join(relative_path);
 
-        // Ensure parent directory exists
         if let Some(parent) = archived_path.parent() {
-            fs::create_dir_all(parent).map_err(|e| MetisError::FileSystem(e.to_string()))?;
+            self.fs.create_dir_all(parent)?;
         }
 
         // Mark as archived in frontmatter before moving
@@ -218,7 +210,7 @@ impl ArchiveService {
         let document_id = self.get_document_id(file_path, doc_type).await?;
 
         // Move the file
-        fs::rename(file_path, &archived_path).map_err(|e| MetisError::FileSystem(e.to_string()))?;
+        self.fs.rename_file(file_path, &archived_path)?;
 
         Ok(ArchivedDocument {
             document_id,
@@ -228,14 +220,12 @@ impl ArchiveService {
         })
     }
 
-    /// Archive a directory (for strategies and initiatives)
+    /// Archive a directory (for initiatives)
     async fn archive_directory(
         &self,
         dir_path: &Path,
         doc_type: DocumentType,
     ) -> Result<ArchivedDocument> {
-        // Calculate relative path from workspace
-        // dir_path should be canonical (or at least absolute) for strip_prefix to work
         let canonical_dir = dir_path
             .canonicalize()
             .unwrap_or_else(|_| dir_path.to_path_buf());
@@ -252,15 +242,12 @@ impl ArchiveService {
                 ))
             })?;
 
-        // Create archived path
         let archived_path = self.workspace_dir.join("archived").join(relative_path);
 
-        // Ensure parent directory exists
         if let Some(parent) = archived_path.parent() {
-            fs::create_dir_all(parent).map_err(|e| MetisError::FileSystem(e.to_string()))?;
+            self.fs.create_dir_all(parent)?;
         }
 
-        // Get document ID before moving
         let main_file = match doc_type {
             DocumentType::Initiative => dir_path.join("initiative.md"),
             _ => {
@@ -275,19 +262,19 @@ impl ArchiveService {
 
         let document_id = self.get_document_id(&main_file, doc_type).await?;
 
-        // Move the entire directory (including the main document file)
-        // Children should already be archived and their frontmatter marked as archived
-        // Handle case where archived directory already exists by merging contents
-        if archived_path.exists() {
-            // Target exists, merge by moving individual files/subdirs
-            self.merge_directory_contents(dir_path, &archived_path)
-                .await?;
-            // Remove the now-empty source directory
-            fs::remove_dir_all(dir_path).map_err(|e| MetisError::FileSystem(e.to_string()))?;
-        } else {
-            // Target doesn't exist, can use simple rename
-            fs::rename(dir_path, &archived_path)
-                .map_err(|e| MetisError::FileSystem(e.to_string()))?;
+        // Move all files from source directory to archived directory via FilesystemService
+        let files = self.fs.find_markdown_files(dir_path)?;
+        for file in &files {
+            let source = Path::new(file);
+            if let Ok(rel) = source
+                .canonicalize()
+                .unwrap_or_else(|_| source.to_path_buf())
+                .strip_prefix(&canonical_dir)
+            {
+                let dest = archived_path.join(rel);
+                self.fs.create_dir_all(dest.parent().unwrap_or(&archived_path))?;
+                self.fs.rename_file(source, &dest)?;
+            }
         }
 
         Ok(ArchivedDocument {
@@ -298,77 +285,34 @@ impl ArchiveService {
         })
     }
 
-    /// Merge directory contents by moving files/subdirs from source to target
-    /// Handles conflicts by overwriting (source takes precedence)
-    async fn merge_directory_contents(&self, source_dir: &Path, target_dir: &Path) -> Result<()> {
-        for entry in fs::read_dir(source_dir).map_err(|e| MetisError::FileSystem(e.to_string()))? {
-            let entry = entry.map_err(|e| MetisError::FileSystem(e.to_string()))?;
-            let source_path = entry.path();
-            let file_name = source_path.file_name().unwrap();
-            let target_path = target_dir.join(file_name);
-
-            if source_path.is_dir() {
-                // Recursively merge subdirectories
-                if target_path.exists() {
-                    // Target subdir exists, merge recursively
-                    Box::pin(self.merge_directory_contents(&source_path, &target_path)).await?;
-                    // Remove now-empty source subdir
-                    if let Ok(entries) = fs::read_dir(&source_path) {
-                        if entries.count() == 0 {
-                            fs::remove_dir(&source_path)
-                                .map_err(|e| MetisError::FileSystem(e.to_string()))?;
-                        }
-                    }
-                } else {
-                    // Target subdir doesn't exist, can move entire directory
-                    fs::rename(&source_path, &target_path)
-                        .map_err(|e| MetisError::FileSystem(e.to_string()))?;
-                }
-            } else {
-                // Move file (overwrite if exists)
-                if target_path.exists() {
-                    fs::remove_file(&target_path)
-                        .map_err(|e| MetisError::FileSystem(e.to_string()))?;
-                }
-                fs::rename(&source_path, &target_path)
-                    .map_err(|e| MetisError::FileSystem(e.to_string()))?;
-            }
-        }
-        Ok(())
-    }
-
     /// Get document ID from a file
     async fn get_document_id(&self, file_path: &Path, doc_type: DocumentType) -> Result<String> {
+        let content = self.fs.read_file(file_path)?;
         match doc_type {
             DocumentType::Vision => {
-                let vision = Vision::from_file(file_path)
-                    .await
+                let doc = Vision::from_content(&content)
                     .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
-                Ok(vision.id().to_string())
+                Ok(doc.id().to_string())
             }
             DocumentType::Initiative => {
-                let initiative = Initiative::from_file(file_path)
-                    .await
+                let doc = Initiative::from_content(&content)
                     .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
-                Ok(initiative.id().to_string())
+                Ok(doc.id().to_string())
             }
             DocumentType::Task => {
-                let task = Task::from_file(file_path)
-                    .await
+                let doc = Task::from_content(&content)
                     .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
-                Ok(task.id().to_string())
+                Ok(doc.id().to_string())
             }
             DocumentType::Adr => {
-                let adr = Adr::from_file(file_path)
-                    .await
+                let doc = Adr::from_content(&content)
                     .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
-                Ok(adr.id().to_string())
+                Ok(doc.id().to_string())
             }
             DocumentType::Specification => {
-                let spec = Specification::from_file(file_path)
-                    .await
+                let doc = Specification::from_content(&content)
                     .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
-                Ok(spec.id().to_string())
+                Ok(doc.id().to_string())
             }
         }
     }
@@ -403,67 +347,51 @@ impl ArchiveService {
     /// Get all archived documents
     pub async fn get_archived_documents(&self) -> Result<Vec<ArchivedDocument>> {
         let archived_dir = self.workspace_dir.join("archived");
-        if !archived_dir.exists() {
-            return Ok(Vec::new());
-        }
+
+        // Use find_markdown_files for overlay-aware scanning
+        let files = match self.fs.find_markdown_files(&archived_dir) {
+            Ok(f) => f,
+            Err(_) => return Ok(Vec::new()),
+        };
 
         let mut archived_docs = Vec::new();
-        self.scan_archived_directory(&archived_dir, &mut archived_docs)
-            .await?;
-        Ok(archived_docs)
-    }
+        for file_path_str in &files {
+            let path = Path::new(file_path_str);
+            if let Ok(doc_type) = self.determine_document_type(path).await {
+                if let Ok(document_id) = self.get_document_id(path, doc_type).await {
+                    let archived_relative = path
+                        .strip_prefix(self.workspace_dir.join("archived"))
+                        .map_err(|e| MetisError::FileSystem(e.to_string()))?;
+                    let original_path = self.workspace_dir.join(archived_relative);
 
-    /// Recursively scan archived directory for documents
-    async fn scan_archived_directory(
-        &self,
-        dir: &Path,
-        results: &mut Vec<ArchivedDocument>,
-    ) -> Result<()> {
-        for entry in fs::read_dir(dir).map_err(|e| MetisError::FileSystem(e.to_string()))? {
-            let entry = entry.map_err(|e| MetisError::FileSystem(e.to_string()))?;
-            let path = entry.path();
-
-            if path.is_dir() {
-                Box::pin(self.scan_archived_directory(&path, results)).await?;
-            } else if path.is_file() && path.extension().is_some_and(|ext| ext == "md") {
-                // Try to determine document type and extract info
-                if let Ok(doc_type) = self.determine_document_type(&path).await {
-                    if let Ok(document_id) = self.get_document_id(&path, doc_type).await {
-                        // Calculate original path
-                        let archived_relative = path
-                            .strip_prefix(self.workspace_dir.join("archived"))
-                            .map_err(|e| MetisError::FileSystem(e.to_string()))?;
-                        let original_path = self.workspace_dir.join(archived_relative);
-
-                        results.push(ArchivedDocument {
-                            document_id,
-                            document_type: doc_type,
-                            original_path,
-                            archived_path: path,
-                        });
-                    }
+                    archived_docs.push(ArchivedDocument {
+                        document_id,
+                        document_type: doc_type,
+                        original_path,
+                        archived_path: path.to_path_buf(),
+                    });
                 }
             }
         }
-        Ok(())
+        Ok(archived_docs)
     }
 
-    /// Determine document type from file path and content
+    /// Determine document type from file content
     async fn determine_document_type(&self, file_path: &Path) -> Result<DocumentType> {
-        // Try each document type
-        if Vision::from_file(file_path).await.is_ok() {
+        let content = self.fs.read_file(file_path)?;
+        if Vision::from_content(&content).is_ok() {
             return Ok(DocumentType::Vision);
         }
-        if Initiative::from_file(file_path).await.is_ok() {
+        if Initiative::from_content(&content).is_ok() {
             return Ok(DocumentType::Initiative);
         }
-        if Task::from_file(file_path).await.is_ok() {
+        if Task::from_content(&content).is_ok() {
             return Ok(DocumentType::Task);
         }
-        if Adr::from_file(file_path).await.is_ok() {
+        if Adr::from_content(&content).is_ok() {
             return Ok(DocumentType::Adr);
         }
-        if Specification::from_file(file_path).await.is_ok() {
+        if Specification::from_content(&content).is_ok() {
             return Ok(DocumentType::Specification);
         }
 
@@ -563,6 +491,7 @@ mod tests {
     use crate::application::services::document::creation::DocumentCreationConfig;
     use crate::application::services::document::DocumentCreationService;
     use crate::Database;
+    use std::fs;
     use diesel::{sqlite::SqliteConnection, Connection};
     use tempfile::tempdir;
 

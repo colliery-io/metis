@@ -10,9 +10,9 @@ pub enum StorageBackend {
     Local,
     /// Git-backed overlay: reads from main's tree, writes to a pending overlay directory.
     /// Pending changes are flushed to main on git commit via a post-commit hook.
+    /// Stores paths instead of GitRepo to avoid Send/Sync issues with git2::Repository.
     GitOverlay {
-        git_repo: GitRepo,
-        /// The .metis/ workspace directory (absolute path)
+        /// The .metis/ workspace directory (absolute path) — used to re-discover the git repo
         workspace_dir: PathBuf,
         /// Directory for pending writes (e.g., .metis/.pending/)
         overlay_dir: PathBuf,
@@ -39,7 +39,6 @@ impl FilesystemService {
                 let overlay_dir = workspace.join(".pending");
                 return Self {
                     backend: StorageBackend::GitOverlay {
-                        git_repo,
                         workspace_dir: workspace.to_path_buf(),
                         overlay_dir,
                     },
@@ -64,6 +63,16 @@ impl FilesystemService {
         matches!(self.backend, StorageBackend::GitOverlay { .. })
     }
 
+    /// Open the git repo for the current workspace. Called lazily per-operation.
+    fn open_git_repo(&self) -> Option<GitRepo> {
+        match &self.backend {
+            StorageBackend::GitOverlay { workspace_dir, .. } => {
+                GitRepo::discover(workspace_dir)
+            }
+            StorageBackend::Local => None,
+        }
+    }
+
     /// Canonicalize a path, falling back to the original if canonicalization fails.
     fn canonical(path: &Path) -> PathBuf {
         path.canonicalize().unwrap_or_else(|_| path.to_path_buf())
@@ -71,10 +80,9 @@ impl FilesystemService {
 
     /// Convert an absolute file path to a repo-relative tree path for git2 blob lookup.
     /// e.g., `/project/.metis/initiatives/FOO/initiative.md` → `.metis/initiatives/FOO/initiative.md`
-    fn to_tree_path(&self, path: &Path) -> Option<String> {
+    fn to_tree_path(&self, path: &Path, git_repo: &GitRepo) -> Option<String> {
         match &self.backend {
             StorageBackend::GitOverlay {
-                git_repo,
                 workspace_dir,
                 ..
             } => {
@@ -125,8 +133,12 @@ impl FilesystemService {
     /// This is the pure git read path — overlay merging is added in T-0120.
     fn read_from_git(&self, path: &Path) -> Result<String> {
         match &self.backend {
-            StorageBackend::GitOverlay { git_repo, .. } => {
-                let tree_path = self.to_tree_path(path).ok_or_else(|| {
+            StorageBackend::GitOverlay { .. } => {
+                let git_repo = self.open_git_repo().ok_or_else(|| {
+                    MetisError::FileSystem("Cannot open git repository".to_string())
+                })?;
+
+                let tree_path = self.to_tree_path(path, &git_repo).ok_or_else(|| {
                     MetisError::FileSystem(format!(
                         "Cannot resolve tree path for: {}",
                         path.display()
@@ -230,7 +242,7 @@ impl FilesystemService {
     pub fn file_exists<P: AsRef<Path>>(&self, path: P) -> bool {
         match &self.backend {
             StorageBackend::Local => path.as_ref().exists(),
-            StorageBackend::GitOverlay { git_repo, .. } => {
+            StorageBackend::GitOverlay { .. } => {
                 let path = path.as_ref();
 
                 // Tombstoned = deleted in overlay
@@ -246,8 +258,12 @@ impl FilesystemService {
                 }
 
                 // Check git tree
-                if let Some(tree_path) = self.to_tree_path(path) {
-                    git_repo.blob_exists(&tree_path)
+                if let Some(git_repo) = self.open_git_repo() {
+                    if let Some(tree_path) = self.to_tree_path(path, &git_repo) {
+                        git_repo.blob_exists(&tree_path)
+                    } else {
+                        false
+                    }
                 } else {
                     false
                 }
@@ -282,13 +298,31 @@ impl FilesystemService {
                     })?;
                 Ok(mtime.as_secs_f64())
             }
-            StorageBackend::GitOverlay { git_repo, .. } => {
+            StorageBackend::GitOverlay { .. } => {
                 // Use main's HEAD commit time as the best available proxy
+                let git_repo = self.open_git_repo().ok_or_else(|| {
+                    MetisError::ValidationFailed {
+                        message: "Cannot open git repository".to_string(),
+                    }
+                })?;
                 git_repo.main_head_commit_time().ok_or_else(|| {
                     MetisError::ValidationFailed {
                         message: "Cannot determine main branch commit time".to_string(),
                     }
                 })
+            }
+        }
+    }
+
+    /// Create directories recursively
+    pub fn create_dir_all<P: AsRef<Path>>(&self, path: P) -> Result<()> {
+        match &self.backend {
+            StorageBackend::Local => {
+                fs::create_dir_all(path).map_err(MetisError::Io)
+            }
+            StorageBackend::GitOverlay { .. } => {
+                // No-op: git doesn't track directories, and write_file creates parents in the overlay
+                Ok(())
             }
         }
     }
@@ -351,12 +385,14 @@ impl FilesystemService {
         match &self.backend {
             StorageBackend::Local => Self::find_markdown_files_local(dir),
             StorageBackend::GitOverlay {
-                git_repo,
                 workspace_dir,
                 overlay_dir,
                 ..
             } => {
                 let dir_path = dir.as_ref();
+                let git_repo = self.open_git_repo().ok_or_else(|| {
+                    MetisError::FileSystem("Cannot open git repository".to_string())
+                })?;
                 let repo_root_raw = git_repo.workdir().ok_or_else(|| {
                     MetisError::FileSystem("Cannot determine repo root".to_string())
                 })?;

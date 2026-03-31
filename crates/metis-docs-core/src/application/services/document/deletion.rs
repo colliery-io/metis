@@ -1,3 +1,4 @@
+use crate::application::services::FilesystemService;
 use crate::Result;
 use std::path::Path;
 
@@ -8,24 +9,28 @@ use std::path::Path;
 /// 2. For initiatives: rm -r the folder
 /// 3. For tasks: delete the file
 /// 4. Caller can sync to update database
-pub struct DeletionService {}
-
-impl Default for DeletionService {
-    fn default() -> Self {
-        Self::new()
-    }
+pub struct DeletionService {
+    fs: FilesystemService,
 }
 
 impl DeletionService {
     pub fn new() -> Self {
-        Self {}
+        Self {
+            fs: FilesystemService::local(),
+        }
+    }
+
+    pub fn new_for_workspace<P: AsRef<Path>>(workspace_dir: P) -> Self {
+        Self {
+            fs: FilesystemService::new(workspace_dir),
+        }
     }
 
     /// Delete a document and all its children recursively
     pub async fn delete_document_recursive(&self, filepath: &str) -> Result<DeletionResult> {
         let file_path = Path::new(filepath);
 
-        if !file_path.exists() {
+        if !self.fs.file_exists(file_path) {
             return Ok(DeletionResult {
                 deleted_files: vec![],
                 cleaned_directories: vec![],
@@ -35,38 +40,30 @@ impl DeletionService {
         let mut deleted_files = Vec::new();
         let mut cleaned_directories = Vec::new();
 
-        // For documents structured as "parent-dir/document.md",
-        // we need to delete the entire parent directory
-        if let Some(parent_dir) = file_path.parent() {
-            // Check if parent is not the workspace root and is a directory
-            if parent_dir != Path::new(".") && parent_dir != Path::new("") && parent_dir.is_dir() {
-                // For initiative documents, delete the entire parent directory
-                // This handles cases like "initiative-id/initiative.md" -> delete "initiative-id/"
-                if file_path.file_name() == Some(std::ffi::OsStr::new("initiative.md")) {
-                    Self::remove_directory_recursive(
-                        parent_dir,
-                        &mut deleted_files,
-                        &mut cleaned_directories,
-                    )?;
-                    return Ok(DeletionResult {
-                        deleted_files,
-                        cleaned_directories,
-                    });
-                }
+        // For initiative documents, delete via overlay tombstones for all files
+        if file_path.file_name() == Some(std::ffi::OsStr::new("initiative.md")) {
+            if let Some(parent_dir) = file_path.parent() {
+                self.remove_directory_recursive(
+                    parent_dir,
+                    &mut deleted_files,
+                    &mut cleaned_directories,
+                )?;
+                return Ok(DeletionResult {
+                    deleted_files,
+                    cleaned_directories,
+                });
             }
         }
 
         // For other files (like tasks or documents at root), just delete the file
-        if file_path.is_file() {
-            if let Err(e) = std::fs::remove_file(file_path) {
-                eprintln!(
-                    "Warning: Could not delete file {}: {}",
-                    file_path.display(),
-                    e
-                );
-            } else {
-                deleted_files.push(file_path.display().to_string());
-            }
+        if let Err(e) = self.fs.delete_file(file_path) {
+            eprintln!(
+                "Warning: Could not delete file {}: {}",
+                file_path.display(),
+                e
+            );
+        } else {
+            deleted_files.push(file_path.display().to_string());
         }
 
         Ok(DeletionResult {
@@ -77,51 +74,38 @@ impl DeletionService {
 
     /// Recursively remove a directory and all its contents
     fn remove_directory_recursive(
+        &self,
         dir_path: &Path,
         deleted_files: &mut Vec<String>,
         cleaned_directories: &mut Vec<String>,
     ) -> Result<()> {
-        if !dir_path.exists() || !dir_path.is_dir() {
-            return Ok(());
-        }
+        // Find all markdown files in this directory via overlay-aware search
+        let files = match self.fs.find_markdown_files(dir_path) {
+            Ok(f) => f,
+            Err(_) => return Ok(()),
+        };
 
-        // First, collect all files in this directory and subdirectories
-        let entries = std::fs::read_dir(dir_path).map_err(|e| {
-            crate::MetisError::FileSystem(format!(
-                "Failed to read directory {}: {}",
-                dir_path.display(),
-                e
-            ))
-        })?;
-
-        for entry in entries {
-            let entry = entry.map_err(|e| crate::MetisError::FileSystem(e.to_string()))?;
-            let path = entry.path();
-
-            if path.is_file() {
-                // Delete the file
-                if let Err(e) = std::fs::remove_file(&path) {
-                    eprintln!("Warning: Could not delete file {}: {}", path.display(), e);
-                } else {
-                    deleted_files.push(path.display().to_string());
-                }
-            } else if path.is_dir() {
-                // Recursively remove subdirectory
-                Self::remove_directory_recursive(&path, deleted_files, cleaned_directories)?;
+        for file_path in &files {
+            let path = Path::new(file_path);
+            if let Err(e) = self.fs.delete_file(path) {
+                eprintln!("Warning: Could not delete file {}: {}", file_path, e);
+            } else {
+                deleted_files.push(file_path.clone());
             }
         }
 
-        // Now remove the empty directory
-        if let Err(e) = std::fs::remove_dir(dir_path) {
-            eprintln!(
-                "Warning: Could not remove directory {}: {}",
-                dir_path.display(),
-                e
-            );
-        } else {
-            cleaned_directories.push(dir_path.display().to_string());
+        // On Local backend, also remove the physical directory
+        if !self.fs.is_git_overlay() && dir_path.exists() {
+            if let Err(e) = std::fs::remove_dir_all(dir_path) {
+                eprintln!(
+                    "Warning: Could not remove directory {}: {}",
+                    dir_path.display(),
+                    e
+                );
+            }
         }
 
+        cleaned_directories.push(dir_path.display().to_string());
         Ok(())
     }
 }

@@ -1,4 +1,5 @@
 use crate::application::services::template::TemplateLoader;
+use crate::application::services::FilesystemService;
 use crate::dal::database::configuration_repository::ConfigurationRepository;
 use crate::domain::configuration::FlightLevelConfig;
 use crate::domain::documents::initiative::Complexity;
@@ -7,7 +8,6 @@ use crate::domain::documents::types::{DocumentId, DocumentType, ParentReference,
 use crate::Result;
 use crate::{Adr, Database, Initiative, MetisError, Specification, Task, Vision};
 use diesel::{sqlite::SqliteConnection, Connection};
-use std::fs;
 use std::path::{Path, PathBuf};
 
 /// Service for creating new documents with proper defaults and validation
@@ -15,6 +15,7 @@ pub struct DocumentCreationService {
     workspace_dir: PathBuf,
     db_path: PathBuf,
     template_loader: TemplateLoader,
+    fs: FilesystemService,
 }
 
 /// Configuration for creating a new document
@@ -43,10 +44,12 @@ impl DocumentCreationService {
         let workspace_path = workspace_dir.as_ref().to_path_buf();
         let db_path = workspace_path.join("metis.db");
         let template_loader = TemplateLoader::for_workspace(&workspace_path);
+        let fs = FilesystemService::new(&workspace_path);
         Self {
             workspace_dir: workspace_path,
             db_path,
             template_loader,
+            fs,
         }
     }
 
@@ -69,7 +72,7 @@ impl DocumentCreationService {
         let file_path = self.workspace_dir.join("vision.md");
 
         // Check if vision already exists
-        if file_path.exists() {
+        if self.fs.file_exists(&file_path) {
             return Err(MetisError::ValidationFailed {
                 message: "Vision document already exists".to_string(),
             });
@@ -102,14 +105,14 @@ impl DocumentCreationService {
 
         // Create parent directory if needed
         if let Some(parent) = file_path.parent() {
-            fs::create_dir_all(parent).map_err(|e| MetisError::FileSystem(e.to_string()))?;
+            self.fs.create_dir_all(parent)?;
         }
 
         // Write to file
-        vision
-            .to_file(&file_path)
-            .await
+        let content = vision
+            .to_content()
             .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
+        self.fs.write_file(&file_path, &content)?;
 
         Ok(CreationResult {
             document_id: vision.id(),
@@ -160,7 +163,7 @@ impl DocumentCreationService {
         let file_path = initiative_dir.join("initiative.md");
 
         // Check if initiative already exists
-        if file_path.exists() {
+        if self.fs.file_exists(&file_path) {
             return Err(MetisError::ValidationFailed {
                 message: format!("Initiative with short code '{}' already exists", short_code),
             });
@@ -198,13 +201,13 @@ impl DocumentCreationService {
         .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
 
         // Create parent directory
-        fs::create_dir_all(&initiative_dir).map_err(|e| MetisError::FileSystem(e.to_string()))?;
+        self.fs.create_dir_all(&initiative_dir)?;
 
         // Write to file
-        initiative
-            .to_file(&file_path)
-            .await
+        let content = initiative
+            .to_content()
             .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
+        self.fs.write_file(&file_path, &content)?;
 
         Ok(CreationResult {
             document_id: initiative.id(),
@@ -261,7 +264,7 @@ impl DocumentCreationService {
                 .join(&initiative.short_code)
                 .join("initiative.md");
 
-            if !initiative_file.exists() {
+            if !self.fs.file_exists(&initiative_file) {
                 return Err(MetisError::NotFound(format!(
                     "Parent initiative '{}' not found at expected path",
                     initiative_id
@@ -307,7 +310,7 @@ impl DocumentCreationService {
         let file_path = task_dir.join(format!("{}.md", short_code));
 
         // Check if task already exists
-        if file_path.exists() {
+        if self.fs.file_exists(&file_path) {
             return Err(MetisError::ValidationFailed {
                 message: format!("Task with short code '{}' already exists", short_code),
             });
@@ -350,14 +353,13 @@ impl DocumentCreationService {
         .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
 
         // Create parent directory if needed
-        if !task_dir.exists() {
-            fs::create_dir_all(&task_dir).map_err(|e| MetisError::FileSystem(e.to_string()))?;
-        }
+        self.fs.create_dir_all(&task_dir)?;
 
         // Write to file
-        task.to_file(&file_path)
-            .await
+        let content = task
+            .to_content()
             .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
+        self.fs.write_file(&file_path, &content)?;
 
         Ok(CreationResult {
             document_id: task.id(),
@@ -380,7 +382,7 @@ impl DocumentCreationService {
         let file_path = backlog_dir.join(format!("{}.md", short_code));
 
         // Check if backlog item already exists
-        if file_path.exists() {
+        if self.fs.file_exists(&file_path) {
             return Err(MetisError::ValidationFailed {
                 message: format!(
                     "Backlog item with short code '{}' already exists",
@@ -416,14 +418,13 @@ impl DocumentCreationService {
         .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
 
         // Create parent directory if needed
-        if !backlog_dir.exists() {
-            fs::create_dir_all(&backlog_dir).map_err(|e| MetisError::FileSystem(e.to_string()))?;
-        }
+        self.fs.create_dir_all(&backlog_dir)?;
 
         // Write to file
-        task.to_file(&file_path)
-            .await
+        let content = task
+            .to_content()
             .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
+        self.fs.write_file(&file_path, &content)?;
 
         Ok(CreationResult {
             document_id: task.id(),
@@ -462,7 +463,7 @@ impl DocumentCreationService {
         let file_path = adrs_dir.join(&adr_filename);
 
         // Check if ADR already exists
-        if file_path.exists() {
+        if self.fs.file_exists(&file_path) {
             return Err(MetisError::ValidationFailed {
                 message: format!("ADR with short code '{}' already exists", short_code),
             });
@@ -498,12 +499,13 @@ impl DocumentCreationService {
         .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
 
         // Create parent directory
-        fs::create_dir_all(&adrs_dir).map_err(|e| MetisError::FileSystem(e.to_string()))?;
+        self.fs.create_dir_all(&adrs_dir)?;
 
         // Write to file
-        adr.to_file(&file_path)
-            .await
+        let content = adr
+            .to_content()
             .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
+        self.fs.write_file(&file_path, &content)?;
 
         Ok(CreationResult {
             document_id: adr.id(),
@@ -533,7 +535,7 @@ impl DocumentCreationService {
         let file_path = specs_dir.join("specification.md");
 
         // Check if specification already exists
-        if file_path.exists() {
+        if self.fs.file_exists(&file_path) {
             return Err(MetisError::ValidationFailed {
                 message: format!(
                     "Specification with short code '{}' already exists",
@@ -566,13 +568,13 @@ impl DocumentCreationService {
         .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
 
         // Create parent directory
-        fs::create_dir_all(&specs_dir).map_err(|e| MetisError::FileSystem(e.to_string()))?;
+        self.fs.create_dir_all(&specs_dir)?;
 
         // Write to file
-        specification
-            .to_file(&file_path)
-            .await
+        let content = specification
+            .to_content()
             .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
+        self.fs.write_file(&file_path, &content)?;
 
         Ok(CreationResult {
             document_id: specification.id(),
@@ -586,17 +588,15 @@ impl DocumentCreationService {
     fn get_next_adr_number(&self) -> Result<u32> {
         let adrs_dir = self.workspace_dir.join("adrs");
 
-        if !adrs_dir.exists() {
-            return Ok(1);
-        }
+        // Use find_markdown_files which is overlay-aware
+        let files = match self.fs.find_markdown_files(&adrs_dir) {
+            Ok(f) => f,
+            Err(_) => return Ok(1), // No adrs dir yet
+        };
 
         let mut max_number = 0;
-        for entry in fs::read_dir(&adrs_dir).map_err(|e| MetisError::FileSystem(e.to_string()))? {
-            let entry = entry.map_err(|e| MetisError::FileSystem(e.to_string()))?;
-            let filename = entry.file_name().to_string_lossy().to_string();
-
-            if filename.ends_with(".md") {
-                // Parse number from filename like "001-title.md"
+        for file_path in &files {
+            if let Some(filename) = Path::new(file_path).file_name().and_then(|f| f.to_str()) {
                 if let Some(number_str) = filename.split('-').next() {
                     if let Ok(number) = number_str.parse::<u32>() {
                         max_number = max_number.max(number);
@@ -612,6 +612,7 @@ impl DocumentCreationService {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs;
     use tempfile::tempdir;
 
     #[tokio::test]
