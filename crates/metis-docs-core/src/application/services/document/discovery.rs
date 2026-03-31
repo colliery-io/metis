@@ -1,15 +1,15 @@
-use crate::application::services::DatabaseService;
+use crate::application::services::{DatabaseService, FilesystemService};
 use crate::domain::documents::traits::Document;
 use crate::domain::documents::types::DocumentType;
 use crate::Result;
 use crate::{Adr, Initiative, MetisError, Specification, Task, Vision};
-use std::fs;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
 /// Service for discovering documents by ID across all document types
 pub struct DocumentDiscoveryService {
     workspace_dir: PathBuf,
+    fs: FilesystemService,
 }
 
 /// Result of document discovery
@@ -35,8 +35,9 @@ impl DocumentDiscoveryService {
 
         // Then canonicalize to handle symlinks (e.g., /tmp vs /private/tmp)
         let workspace_dir = absolute_path.canonicalize().unwrap_or(absolute_path);
+        let fs = FilesystemService::new(&workspace_dir);
 
-        Self { workspace_dir }
+        Self { workspace_dir, fs }
     }
 
     /// Find a document by its short code across all document types
@@ -48,7 +49,7 @@ impl DocumentDiscoveryService {
         let doc_type = self.document_type_from_short_code(short_code)?;
         let file_path = self.construct_path_from_short_code(short_code, doc_type)?;
 
-        if file_path.exists() {
+        if self.fs.file_exists(&file_path) {
             Ok(DocumentDiscoveryResult {
                 document_type: doc_type,
                 file_path,
@@ -91,173 +92,49 @@ impl DocumentDiscoveryService {
         document_id: &str,
         doc_type: DocumentType,
     ) -> Result<PathBuf> {
-        match doc_type {
-            DocumentType::Vision => {
-                let file_path = self.workspace_dir.join("vision.md");
-                if file_path.exists() {
-                    let vision = Vision::from_file(&file_path)
-                        .await
-                        .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
-                    if vision.id().to_string() == document_id {
-                        return Ok(file_path);
-                    }
-                }
-                Err(MetisError::NotFound(
-                    "Vision document not found".to_string(),
-                ))
-            }
+        // Use find_markdown_files (overlay-aware) to scan all documents,
+        // then parse each to match the document ID
+        let files = self.fs.find_markdown_files(&self.workspace_dir)?;
 
-            DocumentType::Initiative => {
-                let initiatives_dir = self.workspace_dir.join("initiatives");
-                if !initiatives_dir.exists() {
-                    return Err(MetisError::NotFound(
-                        "No initiatives directory found".to_string(),
-                    ));
-                }
+        for file_path_str in &files {
+            let file_path = PathBuf::from(file_path_str);
+            let content = match self.fs.read_file(&file_path) {
+                Ok(c) => c,
+                Err(_) => continue,
+            };
 
-                for initiative_entry in fs::read_dir(&initiatives_dir)
-                    .map_err(|e| MetisError::FileSystem(e.to_string()))?
-                {
-                    let initiative_dir = initiative_entry
-                        .map_err(|e| MetisError::FileSystem(e.to_string()))?
-                        .path();
-                    if !initiative_dir.is_dir() {
-                        continue;
-                    }
+            let matches = match doc_type {
+                DocumentType::Vision => Vision::from_content(&content)
+                    .ok()
+                    .map(|d| d.id().to_string() == document_id)
+                    .unwrap_or(false),
+                DocumentType::Initiative => Initiative::from_content(&content)
+                    .ok()
+                    .map(|d| d.id().to_string() == document_id)
+                    .unwrap_or(false),
+                DocumentType::Task => Task::from_content(&content)
+                    .ok()
+                    .map(|d| d.id().to_string() == document_id)
+                    .unwrap_or(false),
+                DocumentType::Adr => Adr::from_content(&content)
+                    .ok()
+                    .map(|d| d.id().to_string() == document_id)
+                    .unwrap_or(false),
+                DocumentType::Specification => Specification::from_content(&content)
+                    .ok()
+                    .map(|d| d.id().to_string() == document_id)
+                    .unwrap_or(false),
+            };
 
-                    let file_path = initiative_dir.join("initiative.md");
-                    if file_path.exists() {
-                        let initiative = Initiative::from_file(&file_path)
-                            .await
-                            .map_err(|e| MetisError::InvalidDocument(e.to_string()))?;
-                        if initiative.id().to_string() == document_id {
-                            return Ok(file_path);
-                        }
-                    }
-                }
-
-                Err(MetisError::NotFound(
-                    "Initiative document not found".to_string(),
-                ))
-            }
-
-            DocumentType::Task => {
-                // First check backlog directory for backlog tasks
-                let backlog_dir = self.workspace_dir.join("backlog");
-                if backlog_dir.exists() {
-                    for entry in fs::read_dir(&backlog_dir)
-                        .map_err(|e| MetisError::FileSystem(e.to_string()))?
-                    {
-                        let task_path = entry
-                            .map_err(|e| MetisError::FileSystem(e.to_string()))?
-                            .path();
-                        if task_path.is_file()
-                            && task_path.extension().is_some_and(|ext| ext == "md")
-                        {
-                            if let Ok(task) = Task::from_file(&task_path).await {
-                                if task.id().to_string() == document_id {
-                                    return Ok(task_path);
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Then check initiatives directory for assigned tasks
-                let initiatives_dir = self.workspace_dir.join("initiatives");
-                if initiatives_dir.exists() {
-                    for initiative_entry in fs::read_dir(&initiatives_dir)
-                        .map_err(|e| MetisError::FileSystem(e.to_string()))?
-                    {
-                        let initiative_dir = initiative_entry
-                            .map_err(|e| MetisError::FileSystem(e.to_string()))?
-                            .path();
-                        if !initiative_dir.is_dir() {
-                            continue;
-                        }
-
-                        // Look for task files in the tasks subdirectory
-                        let tasks_dir = initiative_dir.join("tasks");
-                        if !tasks_dir.exists() {
-                            continue;
-                        }
-
-                        for task_entry in fs::read_dir(&tasks_dir)
-                            .map_err(|e| MetisError::FileSystem(e.to_string()))?
-                        {
-                            let task_path = task_entry
-                                .map_err(|e| MetisError::FileSystem(e.to_string()))?
-                                .path();
-                            if task_path.is_file()
-                                && task_path.extension().is_some_and(|ext| ext == "md")
-                            {
-                                if let Ok(task) = Task::from_file(&task_path).await {
-                                    if task.id().to_string() == document_id {
-                                        return Ok(task_path);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                Err(MetisError::NotFound("Task document not found".to_string()))
-            }
-
-            DocumentType::Adr => {
-                let adrs_dir = self.workspace_dir.join("adrs");
-                if !adrs_dir.exists() {
-                    return Err(MetisError::NotFound("No ADRs directory found".to_string()));
-                }
-
-                for entry in
-                    fs::read_dir(&adrs_dir).map_err(|e| MetisError::FileSystem(e.to_string()))?
-                {
-                    let adr_path = entry
-                        .map_err(|e| MetisError::FileSystem(e.to_string()))?
-                        .path();
-                    if adr_path.is_file() && adr_path.extension().is_some_and(|ext| ext == "md") {
-                        if let Ok(adr) = Adr::from_file(&adr_path).await {
-                            if adr.id().to_string() == document_id {
-                                return Ok(adr_path);
-                            }
-                        }
-                    }
-                }
-                Err(MetisError::NotFound("ADR document not found".to_string()))
-            }
-
-            DocumentType::Specification => {
-                let specs_dir = self.workspace_dir.join("specifications");
-                if !specs_dir.exists() {
-                    return Err(MetisError::NotFound(
-                        "No specifications directory found".to_string(),
-                    ));
-                }
-
-                for entry in
-                    fs::read_dir(&specs_dir).map_err(|e| MetisError::FileSystem(e.to_string()))?
-                {
-                    let entry_path = entry
-                        .map_err(|e| MetisError::FileSystem(e.to_string()))?
-                        .path();
-                    // Each specification lives in its own directory: specifications/{SHORT_CODE}/specification.md
-                    if entry_path.is_dir() {
-                        let spec_path = entry_path.join("specification.md");
-                        if spec_path.exists() {
-                            if let Ok(spec) = Specification::from_file(&spec_path).await {
-                                if spec.id().to_string() == document_id {
-                                    return Ok(spec_path);
-                                }
-                            }
-                        }
-                    }
-                }
-                Err(MetisError::NotFound(
-                    "Specification document not found".to_string(),
-                ))
+            if matches {
+                return Ok(file_path);
             }
         }
+
+        Err(MetisError::NotFound(format!(
+            "{} document '{}' not found",
+            doc_type, document_id
+        )))
     }
 
     /// Find a document by its ID with a specific document type constraint
@@ -276,106 +153,37 @@ impl DocumentDiscoveryService {
 
     /// Get all documents of a specific type
     pub async fn find_all_documents_of_type(&self, doc_type: DocumentType) -> Result<Vec<PathBuf>> {
-        let mut documents = Vec::new();
-
-        match doc_type {
+        // Use overlay-aware find_markdown_files and filter by path convention
+        let search_dir = match doc_type {
             DocumentType::Vision => {
                 let file_path = self.workspace_dir.join("vision.md");
-                if file_path.exists() {
-                    documents.push(file_path);
+                if self.fs.file_exists(&file_path) {
+                    return Ok(vec![file_path]);
                 }
+                return Ok(vec![]);
             }
+            DocumentType::Initiative => self.workspace_dir.join("initiatives"),
+            DocumentType::Task => self.workspace_dir.clone(), // tasks in initiatives/ and backlog/
+            DocumentType::Adr => self.workspace_dir.join("adrs"),
+            DocumentType::Specification => self.workspace_dir.join("specifications"),
+        };
 
-            DocumentType::Initiative => {
-                let initiatives_dir = self.workspace_dir.join("initiatives");
-                if initiatives_dir.exists() {
-                    for initiative_entry in fs::read_dir(&initiatives_dir)
-                        .map_err(|e| MetisError::FileSystem(e.to_string()))?
-                    {
-                        let initiative_dir = initiative_entry
-                            .map_err(|e| MetisError::FileSystem(e.to_string()))?
-                            .path();
-                        if initiative_dir.is_dir() {
-                            let file_path = initiative_dir.join("initiative.md");
-                            if file_path.exists() {
-                                documents.push(file_path);
-                            }
-                        }
-                    }
-                }
-            }
+        let all_files = match self.fs.find_markdown_files(&search_dir) {
+            Ok(f) => f,
+            Err(_) => return Ok(vec![]),
+        };
 
-            DocumentType::Task => {
-                let initiatives_dir = self.workspace_dir.join("initiatives");
-                if initiatives_dir.exists() {
-                    for initiative_entry in fs::read_dir(&initiatives_dir)
-                        .map_err(|e| MetisError::FileSystem(e.to_string()))?
-                    {
-                        let initiative_dir = initiative_entry
-                            .map_err(|e| MetisError::FileSystem(e.to_string()))?
-                            .path();
-                        if !initiative_dir.is_dir() {
-                            continue;
-                        }
-
-                        let tasks_dir = initiative_dir.join("tasks");
-                        if !tasks_dir.exists() {
-                            continue;
-                        }
-
-                        for task_entry in fs::read_dir(&tasks_dir)
-                            .map_err(|e| MetisError::FileSystem(e.to_string()))?
-                        {
-                            let task_path = task_entry
-                                .map_err(|e| MetisError::FileSystem(e.to_string()))?
-                                .path();
-                            if task_path.is_file()
-                                && task_path.extension().is_some_and(|ext| ext == "md")
-                            {
-                                documents.push(task_path);
-                            }
-                        }
-                    }
-                }
-            }
-
-            DocumentType::Adr => {
-                let adrs_dir = self.workspace_dir.join("adrs");
-                if adrs_dir.exists() {
-                    for entry in fs::read_dir(&adrs_dir)
-                        .map_err(|e| MetisError::FileSystem(e.to_string()))?
-                    {
-                        let adr_path = entry
-                            .map_err(|e| MetisError::FileSystem(e.to_string()))?
-                            .path();
-                        if adr_path.is_file() && adr_path.extension().is_some_and(|ext| ext == "md")
-                        {
-                            documents.push(adr_path);
-                        }
-                    }
-                }
-            }
-
-            DocumentType::Specification => {
-                let specs_dir = self.workspace_dir.join("specifications");
-                if specs_dir.exists() {
-                    for entry in fs::read_dir(&specs_dir)
-                        .map_err(|e| MetisError::FileSystem(e.to_string()))?
-                    {
-                        let entry_path = entry
-                            .map_err(|e| MetisError::FileSystem(e.to_string()))?
-                            .path();
-                        // Each specification lives in its own directory
-                        if entry_path.is_dir() {
-                            let spec_path = entry_path.join("specification.md");
-                            if spec_path.exists() {
-                                documents.push(spec_path);
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        let documents: Vec<PathBuf> = all_files
+            .into_iter()
+            .filter(|f| match doc_type {
+                DocumentType::Initiative => f.ends_with("initiative.md"),
+                DocumentType::Task => f.contains("/tasks/") || f.contains("/backlog/"),
+                DocumentType::Adr => true, // all .md in adrs/
+                DocumentType::Specification => f.ends_with("specification.md"),
+                DocumentType::Vision => false, // handled above
+            })
+            .map(PathBuf::from)
+            .collect();
 
         Ok(documents)
     }
@@ -518,25 +326,20 @@ impl DocumentDiscoveryService {
             if let Ok(db) = crate::Database::new(&db_path.to_string_lossy()) {
                 if let Ok(mut repo) = db.repository() {
                     if let Ok(Some(doc)) = repo.find_by_short_code(short_code) {
-                        // Convert relative path from DB to absolute path
                         return Ok(self.workspace_dir.join(&doc.filepath));
                     }
                 }
             }
         }
 
-        // Fall back to filesystem search
-        let initiatives_dir = self.workspace_dir.join("initiatives");
-        if !initiatives_dir.exists() {
-            return Err(MetisError::NotFound(format!(
-                "Initiative '{}' not found - no initiatives directory",
-                short_code
-            )));
-        }
+        // Fall back to overlay-aware filesystem check
+        let initiative_path = self
+            .workspace_dir
+            .join("initiatives")
+            .join(short_code)
+            .join("initiative.md");
 
-        let initiative_path = initiatives_dir.join(short_code).join("initiative.md");
-
-        if initiative_path.exists() {
+        if self.fs.file_exists(&initiative_path) {
             return Ok(initiative_path);
         }
 
@@ -554,42 +357,17 @@ impl DocumentDiscoveryService {
             if let Ok(db) = crate::Database::new(&db_path.to_string_lossy()) {
                 if let Ok(mut repo) = db.repository() {
                     if let Ok(Some(doc)) = repo.find_by_short_code(short_code) {
-                        // Convert relative path from DB to absolute path
                         return Ok(self.workspace_dir.join(&doc.filepath));
                     }
                 }
             }
         }
 
-        // Fall back to filesystem search - check backlog first
-        let backlog_path = self
-            .workspace_dir
-            .join("backlog")
-            .join(format!("{}.md", short_code));
-        if backlog_path.exists() {
-            return Ok(backlog_path);
-        }
-
-        // Then check initiative hierarchy
-        let initiatives_dir = self.workspace_dir.join("initiatives");
-        if initiatives_dir.exists() {
-            for initiative_entry in
-                fs::read_dir(&initiatives_dir).map_err(|e| MetisError::FileSystem(e.to_string()))?
-            {
-                let initiative_dir = initiative_entry
-                    .map_err(|e| MetisError::FileSystem(e.to_string()))?
-                    .path();
-                if !initiative_dir.is_dir() {
-                    continue;
-                }
-
-                let task_path = initiative_dir
-                    .join("tasks")
-                    .join(format!("{}.md", short_code));
-
-                if task_path.exists() {
-                    return Ok(task_path);
-                }
+        // Fall back to overlay-aware search: scan all markdown files for matching short code
+        let all_files = self.fs.find_markdown_files(&self.workspace_dir)?;
+        for file_path_str in &all_files {
+            if file_path_str.contains(short_code) {
+                return Ok(PathBuf::from(file_path_str));
             }
         }
 
