@@ -1,7 +1,7 @@
 use crate::formatting::{error_result, ToolOutput};
 use crate::read_tracker::DocumentReadTracker;
 use crate::viewer::ViewerDispatcher;
-use metis_core::application::services::workspace::WorkspaceDetectionService;
+use metis_core::application::services::{workspace::WorkspaceDetectionService, FilesystemService};
 use rust_mcp_sdk::{
     macros::{mcp_tool, JsonSchema},
     schema::{schema_utils::CallToolError, CallToolResult},
@@ -9,7 +9,6 @@ use rust_mcp_sdk::{
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use std::sync::Arc;
-use tokio::fs;
 use tracing::warn;
 
 #[mcp_tool(
@@ -93,7 +92,10 @@ impl EditDocumentTool {
 
         let full_document_path = metis_dir.join(&document_path);
 
-        if !full_document_path.exists() {
+        // Use FilesystemService for overlay-aware file access
+        let fs_service = FilesystemService::new(metis_dir);
+
+        if !fs_service.file_exists(&full_document_path) {
             return Ok(error_result(
                 &format!("Document not found: {}", self.short_code),
                 &format!(
@@ -115,10 +117,13 @@ impl EditDocumentTool {
             }
         }
 
-        // Read the current document content
-        let content = fs::read_to_string(&full_document_path)
-            .await
-            .map_err(|e| CallToolError::new(e))?;
+        // Read the current document content through FilesystemService (overlay-aware)
+        let content = fs_service.read_file(&full_document_path).map_err(|e| {
+            CallToolError::new(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                e.to_string(),
+            ))
+        })?;
 
         // Perform the edit operation
         let (updated_content, replacements_made) = self.perform_edit(&content)?;
@@ -131,10 +136,15 @@ impl EditDocumentTool {
             ));
         }
 
-        // Write the updated content back to the file
-        fs::write(&full_document_path, &updated_content)
-            .await
-            .map_err(|e| CallToolError::new(e))?;
+        // Write the updated content back through FilesystemService (overlay-aware)
+        fs_service
+            .write_file(&full_document_path, &updated_content)
+            .map_err(|e| {
+                CallToolError::new(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    e.to_string(),
+                ))
+            })?;
 
         // Update the tracker after our own successful write
         if let Some(ref tracker) = tracker {

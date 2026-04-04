@@ -73,9 +73,31 @@ impl FilesystemService {
         }
     }
 
-    /// Canonicalize a path, falling back to the original if canonicalization fails.
+    /// Canonicalize a path, falling back gracefully for non-existent paths.
+    /// If the full path can't be canonicalized (e.g., it doesn't exist yet),
+    /// tries to canonicalize the nearest existing ancestor and appends the
+    /// remaining components. This handles macOS /var → /private/var consistently.
     fn canonical(path: &Path) -> PathBuf {
-        path.canonicalize().unwrap_or_else(|_| path.to_path_buf())
+        if let Ok(canon) = path.canonicalize() {
+            return canon;
+        }
+        // Path doesn't exist — try canonicalizing the nearest existing ancestor
+        let mut ancestor = path.to_path_buf();
+        let mut suffix_parts = Vec::new();
+        while let Some(parent) = ancestor.parent().map(|p| p.to_path_buf()) {
+            if let Some(file_name) = ancestor.file_name() {
+                suffix_parts.push(file_name.to_os_string());
+            }
+            ancestor = parent;
+            if let Ok(canon_ancestor) = ancestor.canonicalize() {
+                let mut result = canon_ancestor;
+                for part in suffix_parts.into_iter().rev() {
+                    result.push(part);
+                }
+                return result;
+            }
+        }
+        path.to_path_buf()
     }
 
     /// Convert an absolute file path to a repo-relative tree path for git2 blob lookup.
@@ -431,8 +453,12 @@ impl FilesystemService {
                 }
 
                 // Add overlay files
+                // Use canonicalized workspace_dir to match git tree paths
+                // (on macOS, /var -> /private/var causes dedup failures otherwise)
+                let canon_ws = Self::canonical(workspace_dir);
                 let overlay_prefix = dir_path
                     .strip_prefix(workspace_dir)
+                    .or_else(|_| dir_path.strip_prefix(&canon_ws))
                     .ok()
                     .map(|p| overlay_dir.join(p))
                     .unwrap_or_else(|| overlay_dir.clone());
@@ -450,8 +476,9 @@ impl FilesystemService {
                                     continue;
                                 }
                                 // Convert overlay path back to "real" absolute path
+                                // Use canonicalized workspace_dir for consistency with git tree paths
                                 if let Ok(rel) = entry.path().strip_prefix(overlay_dir) {
-                                    let absolute = workspace_dir.join(rel);
+                                    let absolute = canon_ws.join(rel);
                                     result_set.insert(absolute.to_string_lossy().to_string());
                                 }
                             }

@@ -68,17 +68,21 @@ impl<'a> SyncService<'a> {
         // Convert absolute path to relative path for database storage
         let path_str = self.to_relative_path(&file_path);
 
-        // Use DocumentFactory to parse file into domain object
-        let document_obj = DocumentFactory::from_file(&file_path).await.map_err(|e| {
-            MetisError::ValidationFailed {
-                message: format!("Failed to parse document: {}", e),
-            }
-        })?;
+        // Read content through FilesystemService (overlay-aware)
+        let content = self.fs.read_file(&file_path)?;
+
+        // Use DocumentFactory to parse content into domain object
+        // (avoids raw std::fs::read_to_string in DocumentFactory::from_file)
+        let document_obj =
+            DocumentFactory::from_content(&content, &path_str).map_err(|e| {
+                MetisError::ValidationFailed {
+                    message: format!("Failed to parse document: {}", e),
+                }
+            })?;
 
         // Get file metadata
-        let file_hash = self.fs.compute_file_hash(&file_path)?;
+        let file_hash = FilesystemService::compute_content_hash(&content);
         let updated_at = self.fs.get_file_mtime(&file_path)?;
-        let content = self.fs.read_file(&file_path)?;
 
         // Convert domain object to database model
         let new_doc = self.domain_to_database_model(

@@ -1,6 +1,6 @@
 use crate::formatting::{error_result, ToolOutput};
 use crate::viewer::ViewerDispatcher;
-use metis_core::application::services::workspace::WorkspaceDetectionService;
+use metis_core::application::services::{workspace::WorkspaceDetectionService, FilesystemService};
 use metis_core::domain::configuration::ViewerBackend;
 use rust_mcp_sdk::{
     macros::{mcp_tool, JsonSchema},
@@ -78,7 +78,10 @@ impl OpenDocumentTool {
 
         let full_document_path = metis_dir.join(&document_path);
 
-        if !full_document_path.exists() {
+        // Use FilesystemService for overlay-aware file access
+        let fs_service = FilesystemService::new(metis_dir);
+
+        if !fs_service.file_exists(&full_document_path) {
             return Ok(error_result(
                 &format!("Document not found: {}", self.short_code),
                 &format!(
@@ -112,7 +115,7 @@ impl OpenDocumentTool {
 
             for child in children {
                 let child_path = metis_dir.join(&child.filepath);
-                if child_path.exists() {
+                if fs_service.file_exists(&child_path) {
                     paths.push(child_path);
                 }
             }

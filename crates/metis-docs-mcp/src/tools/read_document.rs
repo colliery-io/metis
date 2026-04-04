@@ -1,6 +1,9 @@
 use crate::formatting::{error_result, ToolOutput};
 use crate::read_tracker::DocumentReadTracker;
-use metis_core::{application::services::workspace::WorkspaceDetectionService, dal::Database};
+use metis_core::{
+    application::services::{workspace::WorkspaceDetectionService, FilesystemService},
+    dal::Database,
+};
 use rust_mcp_sdk::{
     macros::{mcp_tool, JsonSchema},
     schema::{schema_utils::CallToolError, CallToolResult},
@@ -8,7 +11,6 @@ use rust_mcp_sdk::{
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use std::sync::Arc;
-use tokio::fs;
 
 #[mcp_tool(
     name = "read_document",
@@ -87,7 +89,10 @@ impl ReadDocumentTool {
         let document_path = self.resolve_short_code_to_path(metis_dir)?;
         let full_document_path = metis_dir.join(&document_path);
 
-        if !full_document_path.exists() {
+        // Use FilesystemService for overlay-aware file access
+        let fs_service = FilesystemService::new(metis_dir);
+
+        if !fs_service.file_exists(&full_document_path) {
             return Ok(error_result(
                 &format!("Document not found: {}", self.short_code),
                 &format!(
@@ -98,10 +103,13 @@ impl ReadDocumentTool {
             ));
         }
 
-        // Read the document content
-        let content = fs::read_to_string(&full_document_path)
-            .await
-            .map_err(|e| CallToolError::new(e))?;
+        // Read the document content through FilesystemService (overlay-aware)
+        let content = fs_service.read_file(&full_document_path).map_err(|e| {
+            CallToolError::new(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                e.to_string(),
+            ))
+        })?;
 
         // Record the read in the tracker (if available)
         if let Some(tracker) = tracker {
