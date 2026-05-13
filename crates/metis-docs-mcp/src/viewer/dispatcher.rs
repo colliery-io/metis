@@ -117,9 +117,9 @@ impl ViewerDispatcher {
         Err(ViewerError::NoViewerAvailable)
     }
 
-    /// Whether proactive opening is suppressed by config.
-    pub fn is_proactive_opening_suppressed(&self) -> bool {
-        self.config.suppress_proactive_ticket_opening
+    /// Whether proactive opening is enabled by config (opt-in, defaults to false).
+    pub fn is_proactive_open_enabled(&self) -> bool {
+        self.config.proactive_open
     }
 
     /// Resolve the ordered list of backends to try.
@@ -231,7 +231,7 @@ mod tests {
     fn test_dispatcher_uses_configured_backend() {
         let config = ViewerConfig {
             default: Some(ViewerBackend::Code),
-            suppress_proactive_ticket_opening: false,
+            proactive_open: false,
             background: false,
         };
 
@@ -253,7 +253,7 @@ mod tests {
     fn test_dispatcher_fallback_on_failure() {
         let config = ViewerConfig {
             default: Some(ViewerBackend::Code),
-            suppress_proactive_ticket_opening: false,
+            proactive_open: false,
             background: false,
         };
 
@@ -275,7 +275,7 @@ mod tests {
     fn test_dispatcher_fallback_on_unavailable() {
         let config = ViewerConfig {
             default: Some(ViewerBackend::Code),
-            suppress_proactive_ticket_opening: false,
+            proactive_open: false,
             background: false,
         };
 
@@ -294,7 +294,7 @@ mod tests {
     fn test_dispatcher_skips_already_open() {
         let config = ViewerConfig {
             default: Some(ViewerBackend::Code),
-            suppress_proactive_ticket_opening: false,
+            proactive_open: false,
             background: false,
         };
 
@@ -324,7 +324,7 @@ mod tests {
     fn test_dispatcher_viewer_override() {
         let config = ViewerConfig {
             default: Some(ViewerBackend::Code),
-            suppress_proactive_ticket_opening: false,
+            proactive_open: false,
             background: false,
         };
 
@@ -357,15 +357,22 @@ mod tests {
     }
 
     #[test]
-    fn test_suppress_proactive_opening() {
+    fn test_proactive_open_enabled() {
         let config = ViewerConfig {
             default: None,
-            suppress_proactive_ticket_opening: true,
+            proactive_open: true,
             background: false,
         };
 
         let dispatcher = ViewerDispatcher::new(config, vec![]);
-        assert!(dispatcher.is_proactive_opening_suppressed());
+        assert!(dispatcher.is_proactive_open_enabled());
+    }
+
+    #[test]
+    fn test_proactive_open_disabled_by_default() {
+        let config = ViewerConfig::default();
+        let dispatcher = ViewerDispatcher::new(config, vec![]);
+        assert!(!dispatcher.is_proactive_open_enabled());
     }
 
     #[test]
@@ -374,7 +381,7 @@ mod tests {
         // try sys_editor (which reads $EDITOR internally)
         let config = ViewerConfig {
             default: None,
-            suppress_proactive_ticket_opening: false,
+            proactive_open: false,
             background: false,
         };
 

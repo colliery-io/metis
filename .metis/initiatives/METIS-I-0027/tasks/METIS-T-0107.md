@@ -34,7 +34,7 @@ Add the `[viewer]` configuration section to arawn.toml and define the `DocumentV
 
 ## Acceptance Criteria
 
-- [ ] arawn.toml schema supports `[viewer]` section with `default` field (`sys_editor` | `code` | `gui`) and `suppress_proactive_ticket_opening` (bool, default false)
+- [ ] config.toml schema supports `[viewer]` section with `default` field (`sys_editor` | `code` | `gui`) and `proactive_open` (bool, default false — opt-in)
 - [ ] `default` falls back to `$EDITOR` environment variable when not configured
 - [ ] `DocumentViewer` trait defined with `open(&self, paths: &[PathBuf]) -> Result<()>` and `is_open(&self, path: &PathBuf) -> Result<bool>`
 - [ ] Viewer dispatcher reads config and routes to the correct backend (can use stub backends initially)

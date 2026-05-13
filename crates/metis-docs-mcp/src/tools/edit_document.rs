@@ -156,7 +156,7 @@ impl EditDocumentTool {
 
         // Proactive open: open the document in the viewer if not already open
         if let Some(dispatcher) = dispatcher {
-            if !dispatcher.is_proactive_opening_suppressed() {
+            if dispatcher.is_proactive_open_enabled() {
                 if let Err(e) = dispatcher.open(&[full_document_path.to_path_buf()], None) {
                     warn!("Proactive open after edit failed: {}", e);
                 }

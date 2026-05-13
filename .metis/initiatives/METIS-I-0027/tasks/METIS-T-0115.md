@@ -57,3 +57,5 @@ Wire `create_document` and `edit_document` to proactively open documents in the 
 ## Status Updates
 
 - **2026-03-26**: Implemented. `create_document` and `edit_document` now accept a `ViewerDispatcher` and proactively open documents after successful operations. Opening is best-effort (failures logged via `warn!`, don't fail the operation). Suppressed when `suppress_proactive_ticket_opening = true`. Dispatcher's `is_open` check prevents re-opening already-open files. All 25 MCP tests pass.
+- **2026-03-29**: Proactive opening on `create_document` removed — found to be too aggressive. Only `edit_document` opens proactively now.
+- **2026-05-13**: Config flag renamed and default inverted. `suppress_proactive_ticket_opening` (default `false` = on) → `proactive_open` (default `false` = off). Proactive opening is now opt-in, since auto-opening was disruptive with multiple concurrent sessions.

@@ -169,9 +169,10 @@ impl fmt::Display for ViewerBackend {
 pub struct ViewerConfig {
     /// Default viewer backend. Falls back to $EDITOR if not set.
     pub default: Option<ViewerBackend>,
-    /// Suppress proactive opening of documents on create/edit (default: false)
+    /// Proactively open documents in the viewer on edit (default: false — opt-in).
+    /// When false, documents are only opened via the explicit `open_document` tool.
     #[serde(default)]
-    pub suppress_proactive_ticket_opening: bool,
+    pub proactive_open: bool,
     /// Open documents in the background without stealing window focus (default: false)
     #[serde(default)]
     pub background: bool,

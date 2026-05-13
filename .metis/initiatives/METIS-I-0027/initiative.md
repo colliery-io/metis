@@ -156,16 +156,17 @@ This is lightweight (no persistence needed — the map lives for the MCP server 
 
 ### Proactive Opening Behavior
 
-The MCP server proactively opens documents in the viewer after `create_document` and `edit_document` calls, unless suppressed. This makes review a default part of the workflow — agents don't need to remember to call `open_document` separately.
+Proactive opening is **opt-in**. By default, the MCP server only opens documents when the agent explicitly calls `open_document`. When `proactive_open = true` is set, `edit_document` will also open the affected document in the viewer (`create_document` does not proactively open — that was found to be too aggressive, particularly with multiple concurrent sessions).
 
-The server uses a "look before you leap" approach: before dispatching to a viewer backend, it checks whether the document is already open. Each backend implements its own detection (e.g., VSCode: check if the file is in an active editor tab; GUI: query app state; sys_editor: track PIDs or session state). If already open, the server skips the open and returns success. This prevents tab/window sprawl from repeated create/edit cycles.
+When proactive opening is enabled, the server uses a "look before you leap" approach: before dispatching to a viewer backend, it checks whether the document is already open. Each backend implements its own detection (e.g., VSCode: check if the file is in an active editor tab; GUI: query app state; sys_editor: track PIDs or session state). If already open, the server skips the open and returns success. This prevents tab/window sprawl from repeated edit cycles.
 
-### Configuration (arawn.toml)
+### Configuration (config.toml)
 
 ```toml
 [viewer]
-default = "code"                        # "sys_editor" | "code" | "gui" — falls back to $EDITOR if not set
-suppress_proactive_ticket_opening = false  # set to true to disable auto-open on create/edit
+default = "code"        # "sys_editor" | "code" | "gui" — falls back to $EDITOR if not set
+proactive_open = false  # set to true to auto-open documents on edit
+background = false      # set to true to open without stealing window focus (macOS: open -g)
 ```
 
 
