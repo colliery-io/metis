@@ -80,11 +80,6 @@ The promise tag is the exit condition:
 <promise>TASK COMPLETE</promise>
 ```
 
-**Initiative decomposition:**
-```
-<promise>DECOMPOSITION COMPLETE</promise>
-```
-
 **Multi-task execution:**
 ```
 <promise>ALL TASKS COMPLETE</promise>
@@ -152,10 +147,6 @@ This is particularly effective for tasks with clear, testable criteria:
 ### Task Mode (`/metis-ralph`)
 
 Single task execution. Claude works on one task document until complete. The task should be in `todo` phase — Claude transitions it to `active` at the start.
-
-### Decompose Mode (`/metis-decompose`)
-
-Initiative decomposition. Claude reads the initiative, transitions it to `decompose`, and creates tasks. The loop continues until Claude believes the decomposition covers all requirements.
 
 ### Multi-Task Mode (`/metis-ralph-tasks`)
 

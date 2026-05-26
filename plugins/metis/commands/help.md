@@ -10,15 +10,14 @@ Please explain the following to the user:
 
 Metis Ralph integrates the Ralph Wiggum technique with Metis document management for iterative AI-driven work loops.
 
-**Three modes:**
+**Two modes:**
 
 1. **Task Execution** (`/metis-ralph`) - Execute a single Metis task iteratively until complete
 2. **Multi-Task Execution** (`/metis-ralph-tasks`) - Execute a list of tasks serially, auto-completing each
-3. **Initiative Decomposition** (`/metis-decompose`) - Break down an initiative into tasks
 
 **Core concept:**
 - Claude receives a Metis document as the prompt
-- Works on the task/decomposition
+- Works on the task
 - Stop hook intercepts exit attempts
 - Same prompt fed back for next iteration
 - Claude sees previous work in files
@@ -69,27 +68,6 @@ Execute multiple Metis tasks serially with a Ralph loop. Each task is auto-compl
 
 ---
 
-### /metis-decompose <SHORT_CODE> [OPTIONS]
-
-Decompose a Metis initiative into tasks.
-
-**Usage:**
-```
-/metis-decompose PROJ-I-0001
-/metis-decompose PROJ-I-0001 --max-iterations 15
-```
-
-**What happens:**
-1. Initiative content read from Metis
-2. Initiative transitioned to "decompose"
-3. Claude analyzes and creates tasks
-4. Loop continues until decomposition complete
-5. Initiative transitioned to "active"
-
-**Completion:** Output `<promise>DECOMPOSITION COMPLETE</promise>` after transitioning to active.
-
----
-
 ### /cancel-metis-ralph
 
 Cancel an active Metis Ralph loop.
@@ -115,7 +93,6 @@ Note: This removes the loop state but does NOT revert Metis document phase trans
 **Good for:**
 - Tasks with clear success criteria
 - Iterative work (getting tests to pass)
-- Systematic initiative breakdown
 - Autonomous execution with Metis tracking
 
 **Not good for:**

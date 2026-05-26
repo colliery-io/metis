@@ -5,7 +5,7 @@ The Metis plugin teaches Claude Code *when* and *why* to use Metis tools, provid
 ## What the Plugin Provides
 
 - **Skills**: Guidance on document selection, decomposition patterns, phase transitions, and project patterns
-- **Commands**: `/metis-ralph` for autonomous task execution, `/metis-decompose` for breaking down initiatives
+- **Commands**: `/metis-ralph` and `/metis-ralph-tasks` for autonomous task execution
 - **Agents**: Flight Levels methodology expert for document type selection and work decomposition
 - **MCP Integration**: Automatic Metis MCP server configuration
 
@@ -62,14 +62,6 @@ Executes all tasks under a decomposed initiative.
 
 ```
 /metis-ralph-initiative PROJ-I-0001
-```
-
-### `/metis-decompose <SHORT_CODE>`
-
-Decomposes an initiative into tasks.
-
-```
-/metis-decompose PROJ-I-0001
 ```
 
 ### `/cancel-metis-ralph`

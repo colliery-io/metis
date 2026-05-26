@@ -1,6 +1,6 @@
 # Metis Plugin
 
-Flight Levels methodology plugin for Metis work management. Includes methodology skills, iterative Ralph loops for task execution and initiative decomposition, and a Flight Levels agent for guidance.
+Flight Levels methodology plugin for Metis work management. Includes methodology skills, iterative Ralph loops for task execution, and a Flight Levels agent for guidance.
 
 ## Components
 
@@ -8,7 +8,7 @@ Flight Levels methodology plugin for Metis work management. Includes methodology
 |-----------|-------------|
 | **Skills** | Flight Levels methodology guidance (decomposition, phases, patterns) |
 | **Agent** | `flight-levels` - Methodology expert for document selection and best practices |
-| **Commands** | `/metis-ralph`, `/metis-decompose`, `/cancel-metis-ralph` - Iterative work loops |
+| **Commands** | `/metis-ralph`, `/metis-ralph-tasks`, `/cancel-metis-ralph` - Iterative work loops |
 | **Hooks** | SessionStart (project detection), Stop (Ralph loop control) |
 | **MCP** | Metis MCP server configuration |
 
@@ -70,23 +70,6 @@ Execute a Metis task with a Ralph loop.
 5. Transitions to "completed"
 6. Outputs completion promise to exit
 
-### /metis-decompose
-
-Decompose a Metis initiative into tasks.
-
-```bash
-/metis-decompose PROJ-I-0001
-/metis-decompose PROJ-I-0001 --max-iterations 15
-```
-
-**Flow:**
-1. Reads initiative content from Metis
-2. Transitions initiative to "decompose"
-3. Analyzes requirements and creates tasks
-4. Iterates: reviews coverage, adds tasks, refines
-5. Transitions to "active"
-6. Outputs completion promise to exit
-
 ### /cancel-metis-ralph
 
 Cancel an active Metis Ralph loop.
@@ -145,9 +128,9 @@ To complete a loop, Claude must:
 <promise>TASK COMPLETE</promise>
 ```
 
-**Initiative decomposition:**
+**Multi-task execution:**
 ```
-<promise>DECOMPOSITION COMPLETE</promise>
+<promise>ALL TASKS COMPLETE</promise>
 ```
 
 ## When to Use Ralph Loops

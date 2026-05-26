@@ -62,12 +62,13 @@ STATE_SUMMARY="${STATE_SUMMARY:-No actionable items}"
 read -r -d '' CONTEXT << EOF
 ## CONTEXT RESTORED: Metis Project
 
-### CRITICAL: Metis IS Your Planning and Work Tracking System
-- **Do NOT use EnterPlanMode, TodoWrite, or TaskCreate.** Metis replaces all of these.
-- **Metis documents are persistent long-term memory** — unlike plan mode (ephemeral, lost on compaction), Metis survives across sessions and agents.
-- **For planning**: Use Metis initiatives and tasks. Do NOT enter Claude's plan mode.
-- **For tracking**: Update active Metis tasks with progress. Do NOT use TodoWrite/TaskCreate.
-- Check for active tasks with \`mcp__metis__list_documents\`.
+### CRITICAL: Metis IS Your System of Record AND Working Memory
+- **You were just compacted — this is exactly why Metis matters.** Anything not written to a Metis document before now is gone. Re-read your active task to recover state.
+- **Metis is the system of record for all work planning and execution.** Plans, decisions, findings, and progress live in Metis documents, which survive compaction; plan mode and the todo list do not.
+- **Update active tasks CONSTANTLY** as you work — progress, findings, decisions, next steps — every few tool calls. Assume you could be compacted again at any moment.
+- **For planning**: Use Metis initiatives and tasks. Plan mode is fine for thinking, but its output MUST become a Metis ticket — not a stray markdown plan. Don't use TaskCreate as a planning substitute.
+- **TodoWrite is allowed ONLY as an ephemeral tactical scratchpad** (e.g., sequencing steps across multiple tickets). Durable plans and progress MUST go in Metis — never let the todo list become a shadow plan.
+- Check for active tasks with \`mcp__metis__list_documents\`, then \`read_document\` to restore context.
 
 ### Current Project State
 ${STATE_SUMMARY}
@@ -100,7 +101,6 @@ For initiatives: ALWAYS check in with the human before phase transitions, design
 
 ### Skills
 - \`/metis-ralph <short-code>\` - Execute task with Ralph loop
-- \`/metis-decompose <short-code>\` - Break initiative into tasks
 EOF
 
 # Output JSON for Claude - PreCompact uses systemContext field

@@ -108,13 +108,18 @@ Use `transition_phase` without specifying a target to auto-advance. Only specify
 
 ## Using Active Tasks as Working Memory
 
-**CRITICAL**: Active tasks and initiatives serve as persistent working memory. While a task is in the `active` phase, you MUST regularly update it with progress, findings, and plan changes as you work.
+**CRITICAL**: Metis is the system of record for all work planning and execution, and active tasks/initiatives serve as persistent working memory. While a task is in the `active` phase, you MUST regularly update it with progress, findings, and plan changes as you work.
 
 ### Why This Matters
-- Long-running tasks may experience context compaction (memory loss)
-- Documents persist across sessions and context windows
+- Long-running tasks may experience context compaction (memory loss) — repeatedly, in long sessions
+- Documents persist across sessions and context windows; plan mode and todo lists do not
 - Future work can reference past decisions and discoveries
 - Other agents/humans can pick up where you left off
+
+### Metis vs. Claude's Planning Tools
+- **Plan mode** is fine for thinking through an approach, but the durable output must be captured as a Metis initiative/tasks — never a standalone markdown plan file left outside Metis.
+- **TodoWrite** is permitted only as an ephemeral tactical scratchpad (e.g., coordinating in-session steps across multiple tickets, possibly out of order). Anything durable MUST live in Metis; never let the todo list become a shadow plan.
+- **The rule of thumb**: if it needs to survive a compaction, it goes in Metis.
 
 ### What to Record in Active Tasks
 Update frequently during active work:

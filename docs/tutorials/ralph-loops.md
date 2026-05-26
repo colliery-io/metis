@@ -93,23 +93,6 @@ This removes the state file and stops the hook from intercepting exits. The task
 
 Note: Document phase transitions persist even after cancellation. If Claude already moved the task to `active`, it stays `active`.
 
-## Running Initiative Decomposition
-
-Ralph loops also work for breaking initiatives into tasks:
-
-```
-/metis-decompose MFP-I-0002
-```
-
-This loop:
-
-1. Reads the initiative content
-2. Transitions it to `decompose` phase
-3. Analyzes requirements and creates tasks
-4. Iterates: reviews coverage, adds missing tasks, refines descriptions
-5. Transitions the initiative to `active`
-6. Exits with `<promise>DECOMPOSITION COMPLETE</promise>`
-
 ## Running Multiple Tasks
 
 Execute a list of tasks serially:
@@ -165,7 +148,6 @@ Then run Ralph as normal. The sandbox provides isolation and bypasses permission
 - **Launch** a Ralph loop with `/metis-ralph`
 - **Monitor** progress through task status updates
 - **Cancel** loops with `/cancel-metis-ralph`
-- **Decompose** initiatives with `/metis-decompose`
 - **Execute** multiple tasks with `/metis-ralph-tasks`
 - **Run** in Docker sandbox for autonomous execution
 - **Write** effective tasks that work well with Ralph loops

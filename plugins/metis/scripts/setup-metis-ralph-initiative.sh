@@ -35,7 +35,8 @@ DESCRIPTION:
 
 PREREQUISITES:
   The initiative should be in "decompose" or "active" phase with tasks created.
-  Use /metis-decompose first if the initiative hasn't been broken down yet.
+  Decompose the initiative into tasks first (with the human in the loop) if it
+  hasn't been broken down yet.
 
 EXAMPLES:
   /metis-ralph-initiative PROJ-I-0001

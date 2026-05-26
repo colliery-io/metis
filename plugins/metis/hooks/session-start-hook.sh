@@ -78,12 +78,12 @@ fi
 read -r -d '' CONTEXT << EOF
 This is a **Metis project** (detected \`.metis\` directory).
 
-## CRITICAL: Metis IS Your Planning and Work Tracking System
-- **Do NOT use EnterPlanMode, TodoWrite, or TaskCreate** in this project. Metis replaces all of these.
-- **Metis documents are persistent long-term memory** — unlike Claude's plan mode (which is ephemeral and lost on context compaction), Metis documents survive across sessions, context windows, and even different agents.
-- **For planning work**: Create Metis initiatives and decompose them into tasks. Do NOT enter Claude's plan mode.
-- **For tracking progress**: Update active Metis tasks with findings, decisions, and next steps. Do NOT use TodoWrite/TaskCreate.
-- **ALWAYS update active Metis tasks** with progress as you work — they are your working memory.
+## CRITICAL: Metis IS Your System of Record AND Working Memory
+- **Metis is the system of record for all work planning and execution.** Every plan, decision, finding, and progress note that needs to outlive this moment belongs in a Metis document — not in plan mode, not in a todo list, not only in the conversation.
+- **Metis documents are persistent working memory.** Unlike Claude's plan mode and todo list (ephemeral — wiped by context compaction), Metis documents survive across compactions, sessions, and even different agents. Long-running sessions WILL compact; the only work that survives is what you wrote to Metis.
+- **Update active tasks CONSTANTLY.** Treat the active task/initiative as your working memory: record progress, findings, decisions, plan changes, and next steps as you go — every few tool calls, not just at the end. Assume you could be compacted at any moment. If it isn't in Metis, it's lost.
+- **For planning work**: Create Metis initiatives and decompose them into tasks. Plan mode is fine for thinking through an approach, but the durable output MUST become a Metis initiative/task — never a standalone markdown plan left outside Metis. Don't use TaskCreate as a planning substitute.
+- **TodoWrite is allowed ONLY as a tactical scratchpad** — e.g., sequencing the in-session steps of an implementation that spans multiple Metis tickets out of order. It is ephemeral and disposable. Anything durable (real plans, progress, decisions, next steps) MUST live in Metis. Never let the todo list become a shadow plan or a substitute for updating tasks.
 - Before starting work, check for active tasks with \`mcp__metis__list_documents\`.
 
 ## Current Project State
@@ -138,7 +138,6 @@ When you receive a task short code:
 
 ## Available Skills
 - \`/metis-ralph <short-code>\` - Execute a task with iterative Ralph loop
-- \`/metis-decompose <short-code>\` - Break an initiative into tasks
 - \`/cancel-metis-ralph\` - Cancel active Ralph loop
 EOF
 

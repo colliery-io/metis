@@ -144,7 +144,7 @@ Additional guidelines:
 
 ## Active Tasks as Working Memory
 
-**CRITICAL**: Active tasks and initiatives serve as persistent working memory. While a task is in the `active` phase, regularly update it with:
+**CRITICAL**: Metis is the system of record for all work, and active tasks/initiatives serve as persistent working memory. Unlike Claude's plan mode and todo list (ephemeral, wiped by context compaction), Metis documents survive compaction, sessions, and agents — so long-running work depends on keeping them current. While a task is in the `active` phase, regularly update it with:
 
 - **Progress**: What's been completed, files modified, tests run
 - **Findings**: Unexpected discoveries, code patterns found, blockers encountered
@@ -152,7 +152,12 @@ Additional guidelines:
 - **Plan changes**: If original approach didn't work, document what changed and why
 - **Next steps**: What remains if work is interrupted
 
-Update frequently during active work - after completing significant steps, when discovering something unexpected, when approach changes.
+Update frequently during active work — every few tool calls, after completing significant steps, when discovering something unexpected, when approach changes. Assume you could be compacted at any moment; if it isn't in Metis, it's lost.
+
+### Relationship to Claude's planning tools
+- **Plan mode is fine for thinking through an approach**, but its durable output must become a Metis initiative/tasks — never a standalone markdown plan file left outside Metis.
+- **TodoWrite is an ephemeral tactical scratchpad only** (e.g., sequencing in-session steps across multiple tickets). Anything durable belongs in Metis; never let the todo list become a shadow plan.
+- **TaskCreate is not a substitute for Metis** task planning.
 
 ## Key Principles
 

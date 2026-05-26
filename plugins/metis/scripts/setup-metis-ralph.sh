@@ -99,7 +99,7 @@ if ! [[ "$SHORT_CODE" =~ ^[A-Z]+-T-[0-9]+$ ]]; then
   echo "Error: Invalid task short code format: $SHORT_CODE" >&2
   echo "" >&2
   echo "Expected format: PREFIX-T-NNNN (e.g., PROJ-T-0001)" >&2
-  echo "Note: /metis-ralph is for tasks. Use /metis-decompose for initiatives." >&2
+  echo "Note: /metis-ralph is for tasks. For initiatives, decompose them into tasks first, then run /metis-ralph-initiative." >&2
   exit 1
 fi
 

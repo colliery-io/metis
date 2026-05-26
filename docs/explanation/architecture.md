@@ -175,7 +175,7 @@ The incremental flow: load previous hashes → compute current hashes → diff �
 The plugin (`plugins/metis/`) teaches Claude Code how to work with Metis:
 
 - **Skills:** Methodology guidance (document selection, decomposition, phase transitions, project patterns)
-- **Commands:** `/metis-ralph` (task execution loop), `/metis-decompose` (initiative breakdown), `/cancel-metis-ralph`
+- **Commands:** `/metis-ralph` (task execution loop), `/metis-ralph-tasks` (multi-task loop), `/metis-ralph-initiative` (initiative execution loop), `/cancel-metis-ralph`
 - **Agents:** Flight Levels methodology expert, code-index-summarizer
 - **Hooks:** SessionStart (project detection, code indexing), PreCompact (re-index), PostToolUse (track changes), Stop (Ralph loop control)
 - **MCP config:** Registers the `metis mcp` server

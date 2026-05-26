@@ -1,6 +1,8 @@
 # Metis - Flight Levels Work Management
 
-**Metis IS the planning and work tracking system for this project.** Do NOT use any other planning tools, task lists, or ephemeral work tracking — Metis replaces all of them. Metis documents are persistent long-term memory that survives across sessions, context windows, and agents. Use Metis initiatives for planning, Metis tasks for tracking progress, and update active tasks with findings and decisions as you work.
+**Metis IS the system of record for all work planning and execution in this project.** Plans, decisions, findings, and progress that need to outlive the current moment belong in Metis documents — they are persistent working memory that survives context compaction, sessions, and even different agents. Use Metis initiatives for planning and Metis tasks for tracking, and update active tasks with findings and decisions as you work (every few tool calls), so long-running sessions can survive multiple compactions without losing state.
+
+Plan mode is fine for thinking through an approach, but the durable output of planning MUST become a Metis initiative/tasks — never a standalone markdown plan left outside Metis. Don't use TaskCreate as a substitute for Metis task planning. Claude's TodoWrite is permitted **only** as an ephemeral tactical scratchpad (e.g., sequencing the in-session steps of an implementation that spans multiple tickets out of order); anything durable MUST live in Metis, and the todo list must never become a shadow plan.
 
 Metis organizes work hierarchically using Flight Levels methodology: Vision (strategic) -> Initiative (projects) -> Task (work items). Work flows down through phases; feedback flows up.
 
@@ -308,6 +310,14 @@ edit_document:
 ```
 
 This ensures no work is lost even if context is compacted or the session ends unexpectedly.
+
+### Metis vs. Claude's Todo List
+
+Claude's TodoWrite is a fine tactical aid — for example, tracking the sequence of in-session steps when an implementation touches several Metis tickets out of order. But it is **ephemeral**: it is wiped by context compaction and invisible to other sessions and agents.
+
+- **System of record vs. scratchpad**: Metis tasks are the system of record for *what work exists and what its status is*. The todo list is at most a transient scratchpad for *how you're sequencing the current burst of execution*.
+- **Mirror durable state into Metis**: If a todo item represents real progress, a decision, or a next step that must survive, write it into the relevant Metis task — do not leave it only in the todo list.
+- **No shadow plans**: Never let the todo list accumulate planning that should live in a Metis initiative or task. When in doubt, put it in Metis.
 
 ## Common Mistakes to Avoid
 
