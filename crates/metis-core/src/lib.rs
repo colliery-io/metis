@@ -11,14 +11,19 @@
 //! - [`schema`] — generated Diesel table definitions (T-0126)
 //! - [`workflow`] — project config + transition engine + short codes (T-0127)
 //! - [`objects`] — content-addressed object store (T-0128)
-//! - DAL + service layer (T-0129)
+//! - [`models`] — row structs + DTOs; [`service`] — business logic (T-0129)
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
+pub mod actor;
 pub mod db;
+pub mod models;
 pub mod objects;
 pub mod schema;
+pub mod service;
 pub mod workflow;
+
+pub use actor::Actor;
 
 /// Re-export of the dual-backend connection type for downstream crates.
 pub use diesel_dualdb::DualConnection;

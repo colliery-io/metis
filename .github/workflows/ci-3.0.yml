@@ -70,4 +70,7 @@ jobs:
 
       - name: Test metis-core on both backends
         working-directory: metis
-        run: cargo test -p metis-core
+        # Single-threaded: the dualdb test macro shares one Postgres database
+        # across tests, and each test resets the schema (db::reset), so the PG
+        # arm must not run tests concurrently. SQLite uses per-test in-memory DBs.
+        run: cargo test -p metis-core -- --test-threads=1

@@ -10,7 +10,10 @@ use metis_core::schema::projects;
 
 #[diesel_dualdb::test(pg, sqlite)]
 fn migrations_apply_and_project_round_trips(conn: &mut DualConnection) {
-    db::run_migrations(conn).expect("migrations apply");
+    // reset() runs down-then-up, so it both exercises the up migration and
+    // gives a clean schema on the shared Postgres test DB (the dualdb test
+    // macro doesn't isolate the PG arm).
+    db::reset(conn).expect("migrations apply");
 
     let id = uuid::Uuid::new_v4();
     let now = chrono::Utc::now();
