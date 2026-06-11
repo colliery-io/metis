@@ -30,9 +30,10 @@ diesel = { version = "2.3", features = [
     "r2d2",
     "returning_clauses_for_sqlite_3_35",
 ] }
-# Local path dependency during 3.0 development. RELEASE BLOCKER: must become a
-# git or crates.io reference before metis 3.0 ships (see METIS-T-0126 notes).
-diesel-dualdb = { path = "../../../diesel-dualdb", features = ["uuid", "chrono", "serde_json"] }
+# Bundle SQLite (static) so no system libsqlite3 is needed to build or run —
+# feature-unifies with diesel's transitive libsqlite3-sys across the graph.
+libsqlite3-sys = { version = "0.30", features = ["bundled"] }
+diesel-dualdb = { version = "0.1.0", features = ["uuid", "chrono", "serde_json"] }
 
 tempfile = { workspace = true, optional = true }
 

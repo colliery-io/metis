@@ -5,11 +5,8 @@ name: CI (3.0)
 # the dual-backend checks on initiative branches and on PRs into `3.0`. It is
 # separate from the 2.x `ci.yml`, which guards `main`.
 #
-# NOTE: metis-core depends on diesel-dualdb, currently an out-of-tree path
-# dependency. Until diesel-dualdb is published to crates.io (or pinned as a git
-# dependency), this workflow checks it out as a sibling directory so the path
-# `../../../diesel-dualdb` resolves. That sibling checkout is the documented
-# release blocker tracked in METIS-T-0126.
+# metis-core depends on diesel-dualdb from crates.io; the schema drift check
+# uses the published `diesel-dualdb-cli`.
 
 on:
   push:
@@ -45,31 +42,22 @@ jobs:
       DUALDB_PG_URL: postgres://metis:metis@localhost:5432/metis_test
 
     steps:
-      - name: Checkout metis
+      - name: Checkout
         uses: actions/checkout@v4
-        with:
-          path: metis
-
-      # Resolve the diesel-dualdb path dependency until it is published.
-      - name: Checkout diesel-dualdb (sibling)
-        uses: actions/checkout@v4
-        with:
-          repository: colliery-io/diesel-dualdb
-          path: diesel-dualdb
 
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
 
+      - name: install diesel-dualdb-cli (schema generator)
+        run: cargo install diesel-dualdb-cli --version 0.1.0 --locked
+
       - name: Check schema is not drifted
-        working-directory: metis
-        run: DUALDB_DIR="$GITHUB_WORKSPACE/diesel-dualdb" bash crates/metis-core/scripts/check-schema-drift.sh
+        run: bash crates/metis-core/scripts/check-schema-drift.sh
 
       - name: Build core + server
-        working-directory: metis
         run: cargo build -p metis-core -p metis-server
 
       - name: Test core + server
-        working-directory: metis
         # Single-threaded: the dualdb test macro shares one Postgres database
         # across tests, and each test resets the schema (db::reset), so the PG
         # arm must not run tests concurrently. SQLite uses per-test in-memory DBs.
