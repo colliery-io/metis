@@ -4,14 +4,14 @@ level: task
 title: "Logical schema and metis-core crate skeleton"
 short_code: "METIS-T-0126"
 created_at: 2026-06-11T13:09:10.797577+00:00
-updated_at: 2026-06-11T14:25:26.630569+00:00
+updated_at: 2026-06-11T14:34:59.090079+00:00
 parent: METIS-I-0031
 blocked_by: []
 archived: false
 
 tags:
   - "#task"
-  - "#phase/active"
+  - "#phase/completed"
 
 
 exit_criteria_met: false
@@ -27,6 +27,8 @@ initiative_id: METIS-I-0031
 ## Objective
 
 Stand up the `metis-core` crate with the full 3.0 logical schema on diesel-dualdb: logical DDL migrations, generated Postgres + SQLite migrations and unified `schema.rs` committed, a connection pool that works against both backends, and CI guarding against generated-output drift.
+
+## Acceptance Criteria
 
 ## Acceptance Criteria
 
