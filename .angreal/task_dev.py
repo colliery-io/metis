@@ -14,6 +14,11 @@ def run_tests():
     # Define crates with their optimal test strategies
     crate_configs = [
         {
+            'name': 'metis-core',
+            'strategy': 'full',  # 3.0 dual-backend core: unit + integration tests
+            'description': 'Running comprehensive tests (dual-backend core)'
+        },
+        {
             'name': 'metis-docs-core',
             'strategy': 'full',  # Has comprehensive unit tests + integration tests
             'description': 'Running comprehensive tests (unit + integration + doc)'

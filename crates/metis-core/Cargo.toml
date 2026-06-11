@@ -1,0 +1,44 @@
+[package]
+name = "metis-core"
+version.workspace = true
+edition.workspace = true
+description = "Metis 3.0 core: dual-backend (Postgres/SQLite) work-item domain, DAL, and service layer"
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[features]
+default = []
+# Pulls in test-only helpers (tempfile-backed sqlite, fixtures).
+test-utils = ["dep:tempfile"]
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+chrono = { workspace = true }
+uuid = { version = "1", features = ["v4", "serde"] }
+sha2 = "0.10"
+
+diesel = { version = "2.3", features = [
+    "postgres",
+    "sqlite",
+    "r2d2",
+    "returning_clauses_for_sqlite_3_35",
+] }
+# Local path dependency during 3.0 development. RELEASE BLOCKER: must become a
+# git or crates.io reference before metis 3.0 ships (see METIS-T-0126 notes).
+diesel-dualdb = { path = "../../../diesel-dualdb", features = ["uuid", "chrono", "serde_json"] }
+
+tempfile = { workspace = true, optional = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+
+[lib]
+name = "metis_core"
+path = "src/lib.rs"

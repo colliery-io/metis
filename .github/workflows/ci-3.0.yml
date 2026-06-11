@@ -1,0 +1,73 @@
+name: CI (3.0)
+
+# Metis 3.0 server work lives on the long-lived `3.0` branch and short-lived
+# feature branches off it (see METIS-I-0031). This workflow runs the
+# dual-backend core checks there. It is separate from the 2.x `ci.yml`, which
+# guards `main`.
+#
+# NOTE: metis-core depends on diesel-dualdb, currently an out-of-tree path
+# dependency. Until diesel-dualdb is published to crates.io (or pinned as a git
+# dependency), this workflow checks it out as a sibling directory so the path
+# `../../../diesel-dualdb` resolves. That sibling checkout is the documented
+# release blocker tracked in METIS-T-0126.
+
+on:
+  push:
+    branches: [ "3.0" ]
+  pull_request:
+    branches: [ "3.0" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  core-dual-backend:
+    name: metis-core (Postgres + SQLite)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: metis
+          POSTGRES_PASSWORD: metis
+          POSTGRES_DB: metis_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      # Consumed by `#[diesel_dualdb::test]` to run the Postgres arm.
+      DUALDB_PG_URL: postgres://metis:metis@localhost:5432/metis_test
+
+    steps:
+      - name: Checkout metis
+        uses: actions/checkout@v4
+        with:
+          path: metis
+
+      # Resolve the diesel-dualdb path dependency until it is published.
+      - name: Checkout diesel-dualdb (sibling)
+        uses: actions/checkout@v4
+        with:
+          repository: colliery-io/diesel-dualdb
+          path: diesel-dualdb
+
+      - name: install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Check schema is not drifted
+        working-directory: metis
+        run: DUALDB_DIR="$GITHUB_WORKSPACE/diesel-dualdb" bash crates/metis-core/scripts/check-schema-drift.sh
+
+      - name: Build metis-core
+        working-directory: metis
+        run: cargo build -p metis-core
+
+      - name: Test metis-core on both backends
+        working-directory: metis
+        run: cargo test -p metis-core
