@@ -4,14 +4,14 @@ level: task
 title: "REST API v1: projects and work items"
 short_code: "METIS-T-0131"
 created_at: 2026-06-11T13:09:30.045818+00:00
-updated_at: 2026-06-11T13:09:30.045818+00:00
+updated_at: 2026-06-11T15:17:49.017046+00:00
 parent: METIS-I-0031
-blocked_by: ["METIS-T-0130"]
+blocked_by: [METIS-T-0130]
 archived: false
 
 tags:
   - "#task"
-  - "#phase/todo"
+  - "#phase/completed"
 
 
 exit_criteria_met: false
@@ -30,13 +30,17 @@ Implement the `/api/v1` REST surface for projects and work items per the initiat
 
 ## Acceptance Criteria
 
-- [ ] Projects: `POST /api/v1/projects`, `GET /api/v1/projects/:slug`, `PATCH /api/v1/projects/:slug` (config updates re-validated through the workflow engine)
-- [ ] Items: `GET /api/v1/items` (filters: project, type, phase, assignee, tag, repo; limit/offset pagination), `POST /api/v1/items`, `GET /api/v1/items/:short_code`, `PATCH /api/v1/items/:short_code` (title/body/assignee/tags/criteria)
-- [ ] `POST /api/v1/items/:short_code/transition { phase?, force? }` — omitted phase advances to next, mirroring today's MCP semantics
-- [ ] `POST` / `DELETE /api/v1/items/:short_code/links` for blocks/relates/supersedes; `POST /api/v1/items/:short_code/archive`
-- [ ] Consistent JSON error envelope with machine-readable codes; phase-gate violations return 409 with the violated gate spelled out; validation 422; unknown short code 404
-- [ ] Item edits accept an optimistic-concurrency precondition (current `content_key` as the If-Match value) → 409 on mismatch, so two agents can't silently clobber each other
-- [ ] Router tests via `tower::ServiceExt::oneshot` for happy paths, auth failures, and every gate-violation case
+## Acceptance Criteria
+
+## Acceptance Criteria
+
+- [x] Projects: `POST`/`GET`/`PATCH /api/v1/projects[/:slug]` (config re-validated through the workflow engine on update)
+- [x] Items: `GET /api/v1/items` (filters project/type/phase/assignee/tag/repo + limit/offset), `POST`, `GET`/`PATCH /items/:short_code` (title/body/assignee/tags/criteria)
+- [x] `POST /items/:short_code/transition { phase?, force? }` — omitted phase advances to next
+- [x] `POST`/`DELETE /items/:short_code/links` (blocks/relates/supersedes); `POST /items/:short_code/archive`
+- [x] JSON error envelope `{error:{code,message,details}}`; phase-gate → 409 with gate detail; validation → 422; unknown → 404; bad input → 400
+- [x] `If-Match` (content_key) optimistic-concurrency precondition on PATCH → 409 on mismatch
+- [x] Router tests via `oneshot`: full lifecycle, auth failures, phase-gate 409, stale-If-Match 409, 404 (7 tests)
 
 ## Implementation Notes
 
@@ -54,4 +58,13 @@ Implement the `/api/v1` REST surface for projects and work items per the initiat
 
 ## Status Updates
 
-*To be added during implementation*
+### 2026-06-11 — Complete (branch `feat/T-0131-rest-api` off `3.0`)
+
+`metis-server::routes` — full `/api/v1` surface over the service layer; 7 router tests green (total 7 server + 48 core).
+
+**Decisions / deviations:**
+- Handlers are thin adapters: deserialize → `AppState::blocking(service)` → serialize the shared `metis-core` DTOs. The `ApiError` envelope (built in T-0130) is reused unchanged — it's the contract MCP/clients will share.
+- **If-Match** header carries the expected `content_key`; mapped to `ItemEdit.expected_content_key` → `ServiceError::Conflict` → 409. This is the server-side successor to 2.x read-before-edit.
+- PATCH `assignee` uses a double-`Option` serde shim so JSON `null` (clear) is distinct from an absent field (leave unchanged).
+- Status mapping: phase-gate 409 (`code: phase_gate`, with from/to/reason detail), conflict 409, validation/invalid-config 422, not-found 404, bad-request 400.
+- Deferred to a later tranche (as scoped in the initiative): repo registry endpoints, `briefing`, saved `views`, free-text `q`/FTS, and `export`. `whoami` retained from T-0130.
