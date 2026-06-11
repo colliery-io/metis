@@ -49,8 +49,15 @@ const MIGRATIONS: &[Migration] = &[Migration {
 /// Connect to `database_url`, returning a pool of dual connections.
 ///
 /// The backend is detected from the URL scheme (see [`detect_backend`]).
+/// SQLite gets a **single-connection** pool: it is a single-writer database, so
+/// a multi-connection pool only invites lock contention and read-after-write
+/// visibility races across connections. Postgres uses the default pool size.
 pub fn connect(database_url: &str) -> Result<Pool, DbError> {
-    Ok(Pool::connect(database_url)?)
+    let pool = match detect_backend(database_url) {
+        Some(Backend::Sqlite) => Pool::builder().max_size(1).connect(database_url)?,
+        _ => Pool::connect(database_url)?,
+    };
+    Ok(pool)
 }
 
 /// Apply all pending migrations on a single connection.

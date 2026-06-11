@@ -28,6 +28,16 @@ tower = "0.5"
 clap = { version = "4", features = ["derive", "env"] }
 rand = "0.8"
 
+# MCP server (same SDK as the frozen 2.x metis-docs-mcp). stdio transport only
+# for now; hosted streamable-http is a follow-up task.
+rust-mcp-sdk = { version = "0.8.0", default-features = false, features = [
+    "server",
+    "macros",
+    "stdio",
+] }
+async-trait = "0.1"
+schemars = "0.8"
+
 [dev-dependencies]
 tower = { version = "0.5", features = ["util"] }
 http-body-util = "0.1"
