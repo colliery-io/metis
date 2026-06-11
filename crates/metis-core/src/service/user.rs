@@ -13,6 +13,7 @@ use diesel_dualdb::DualConnection;
 use sha2::{Digest, Sha256};
 
 use super::{Result, ServiceError};
+use crate::actor::Actor;
 use crate::models::UserRow;
 use crate::schema::{tokens, users};
 
@@ -112,6 +113,36 @@ pub fn issue_token(
         plaintext: plaintext.to_string(),
         id,
     })
+}
+
+/// Resolve a presented bearer token to an [`Actor`].
+///
+/// Returns `None` if the token is unknown, revoked, or belongs to an inactive
+/// user. On success, bumps the token's `last_used_at`. Token comparison is by
+/// stored SHA-256 hash; the plaintext is never persisted.
+pub fn resolve_actor(conn: &mut DualConnection, plaintext: &str) -> Result<Option<Actor>> {
+    let hash = hash_token(plaintext);
+    let row = tokens::table
+        .inner_join(users::table.on(users::id.eq(tokens::user_id)))
+        .filter(tokens::token_hash.eq(&hash))
+        .filter(tokens::revoked_at.is_null())
+        .filter(users::active.eq(true))
+        .select((tokens::user_id, tokens::agent_name))
+        .first::<(Uuid, Option<String>)>(conn)
+        .optional()?;
+
+    match row {
+        Some((user_id, agent)) => {
+            diesel::update(tokens::table.filter(tokens::token_hash.eq(&hash)))
+                .set(tokens::last_used_at.eq(Some(Timestamp(chrono::Utc::now()))))
+                .execute(conn)?;
+            Ok(Some(Actor {
+                user: user_id.0,
+                agent,
+            }))
+        }
+        None => Ok(None),
+    }
 }
 
 /// Revoke a token by id (idempotent set of `revoked_at`).
