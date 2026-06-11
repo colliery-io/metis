@@ -5,7 +5,7 @@ title: "Centralized Architecture for Multi-Team Work Management"
 number: 1
 short_code: "METIS-A-0007"
 created_at: 2026-03-03T02:21:35.203422+00:00
-updated_at: 2026-03-03T17:44:14.763653+00:00
+updated_at: 2026-06-11T11:06:07.171292+00:00
 decision_date: 
 decision_maker: 
 parent: 
@@ -13,15 +13,16 @@ archived: false
 
 tags:
   - "#adr"
-  - "#phase/decided"
+  - "#phase/superseded"
 
 
 exit_criteria_met: false
-strategy_id: NULL
 initiative_id: NULL
 ---
 
 # ADR-007: Multi-Team / Cross-Repo Work Management Is Out of Scope
+
+> **Superseded by METIS-A-0008** (Metis as a Deployed Service with Dual-Backend Storage, 2026-06-11). Multi-repo work management is back in scope via a deployed server on PostgreSQL — not via the file/git federation approaches this ADR rejected, whose rejection still stands.
 
 ## Context
 

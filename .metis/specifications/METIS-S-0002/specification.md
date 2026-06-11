@@ -38,7 +38,7 @@ This framework provides a systematic approach to evaluating a codebase across se
 These lenses evaluate the codebase *as a piece of software engineering* — independent of how it's deployed or consumed.
 
 | Lens | Core Question | Evaluates |
-|------|---------------|-----------|
+| --- | --- | --- |
 | **Legibility** | Can a newcomer understand what this does and why? | Naming, structure, code organization, comments, separation of concerns, cognitive load, implicit vs explicit knowledge |
 | **Correctness** | Does this do what it claims, under all expected conditions? | Test coverage, edge cases, invariants, error handling, contracts, type safety, undefined behavior |
 | **Evolvability** | Can this be changed safely and confidently? | Modularity, coupling, cohesion, abstraction boundaries, dependency management, test quality (not just coverage), feature flags, migration paths |
@@ -49,7 +49,7 @@ These lenses evaluate the codebase *as a piece of software engineering* — inde
 These lenses evaluate the codebase *as something that gets deployed, consumed, and attacked* — its surface area and runtime behavior.
 
 | Lens | Core Question | Evaluates |
-|------|---------------|-----------|
+| --- | --- | --- |
 | **API Design** | Is the exposed interface right for its consumers? | Ergonomics, consistency, discoverability, error semantics, versioning strategy, backward compatibility, documentation alignment, principle of least surprise |
 | **Operability** | Can this be run, observed, debugged, and scaled in production? | Configuration management, logging, metrics, tracing, health checks, graceful degradation, deployment strategy, failure modes, runbooks |
 | **Security** | Is this safe against misuse, abuse, and attack? | Trust boundaries, input validation, authentication/authorization model, secrets management, dependency vulnerabilities, data sensitivity, threat model alignment |
@@ -80,7 +80,7 @@ This review is conducted by a **Coordinator Agent** that launches specialized ag
 All agents use this severity taxonomy:
 
 | Severity | Definition | Action |
-|----------|------------|--------|
+| --- | --- | --- |
 | **Critical** | Blocks production use or represents active risk. Data loss, security vulnerability, correctness failure in core path. | Must fix before release. |
 | **Major** | Significant impact on quality, maintainability, or safety. Not immediately dangerous but will cause pain. | Fix in current cycle. |
 | **Minor** | Should be fixed but doesn't block progress. Code smells, inconsistencies, minor inefficiencies. | Fix when touching related code. |
@@ -117,6 +117,7 @@ All agents write findings in this consistent format:
 The Coordinator Agent manages the entire review process. It does not perform analysis itself — it launches specialist agents, monitors progress, and ensures cross-phase dependencies are respected.
 
 **Responsibilities:**
+
 1. **Phase Management**: Execute phases in order, respecting dependencies
 2. **Agent Launching**: Launch specialist agents with correct context and instructions
 3. **Progress Tracking**: Verify each phase completes before proceeding
@@ -132,6 +133,7 @@ The Coordinator Agent manages the entire review process. It does not perform ana
 - **Phase 5: Synthesis** — Launch Synthesis Agent. Reads all findings and cross-cutting analysis. Produces the final report and recommendations.
 
 **Error Handling:**
+
 - If an agent fails to produce output: retry once, then note the gap in synthesis and proceed.
 - If an agent produces malformed output: extract what's usable, note format issues for manual review.
 
@@ -142,6 +144,7 @@ The Coordinator Agent manages the entire review process. It does not perform ana
 Explores the entire codebase and produces a System Overview document. This document is read by all subsequent agents, so it must be thorough and accurate.
 
 **Exploration Checklist:**
+
 1. **Repository Structure** — Top-level directories, organizational principle
 2. **Entrypoints** — Main entrypoints, startup/shutdown, modes of operation
 3. **Configuration** — Config files, environment variables, loading, validation, defaults
@@ -163,6 +166,7 @@ Explores the entire codebase and produces a System Overview document. This docum
 **Lens:** Can a newcomer understand what this does and why?
 
 **Evaluation Criteria:**
+
 - **Naming** — Accuracy, consistency, abbreviation clarity, similar/different naming
 - **Structure** — File/module organization, findability, hierarchy, grouping
 - **Abstraction** — Well-chosen boundaries, unnecessary indirection, missing abstraction, leaky abstractions
@@ -179,6 +183,7 @@ Explores the entire codebase and produces a System Overview document. This docum
 **Lens:** Does this do what it claims, under all expected conditions?
 
 **Evaluation Criteria:**
+
 - **Test Coverage** — Right things tested, behavior vs implementation tests, edge cases, error paths
 - **Test Quality** — Real assertions vs smoke tests, determinism, isolation, flakiness
 - **Error Handling** — Failure modes, propagation, actionability, recovery, silent failures
@@ -196,6 +201,7 @@ Explores the entire codebase and produces a System Overview document. This docum
 **Lens:** Can this be changed safely and confidently?
 
 **Evaluation Criteria:**
+
 - **Modularity** — Clear boundaries, self-contained modules, appropriate sizing, clear responsibilities
 - **Coupling** — Interconnectedness, change isolation, hidden dependencies, data structure coupling
 - **Cohesion** — Related functionality grouping, mixed-concern modules, split functionality
@@ -214,6 +220,7 @@ Explores the entire codebase and produces a System Overview document. This docum
 **Lens:** Does this use resources appropriately for its workload?
 
 **Evaluation Criteria:**
+
 - **Algorithmic Complexity** — Hot path complexity, data structure appropriateness, unnecessary computation, caching
 - **Memory** — Hot path allocations, leaks/unbounded growth, unnecessary copies
 - **I/O** — Batching, N+1 patterns, blocking vs async appropriateness, connection pooling
@@ -233,6 +240,7 @@ Explores the entire codebase and produces a System Overview document. This docum
 **Lens:** Is the exposed interface right for its consumers?
 
 **Evaluation Criteria:**
+
 - **Consistency** — Naming conventions, similar operation handling, error formats
 - **Ergonomics** — Easy to use correctly, hard to use incorrectly, simple common operations
 - **Discoverability** — Logical grouping, helpful errors, self-documenting
@@ -249,6 +257,7 @@ Explores the entire codebase and produces a System Overview document. This docum
 **Lens:** Can this be run, observed, debugged, and scaled in production?
 
 **Evaluation Criteria:**
+
 - **Configuration** — Management, startup validation, sensible defaults, environment support, runtime changes
 - **Observability: Logging** — Usefulness, log levels, context, sensitive data exclusion, structure
 - **Observability: Metrics** — Four golden signals, business metrics, health-from-metrics
@@ -266,6 +275,7 @@ Explores the entire codebase and produces a System Overview document. This docum
 **Lens:** Is this safe against misuse, abuse, and attack?
 
 **Evaluation Criteria:**
+
 - **Trust Boundaries** — Identification, clarity, enforcement consistency, defense in depth
 - **Input Validation** — Untrusted input entry points, validation coverage, allowlist vs blocklist, injection potential
 - **Authentication** — Identity establishment, credential handling, required coverage, bypass risks
@@ -283,6 +293,7 @@ Explores the entire codebase and produces a System Overview document. This docum
 Identifies findings that span multiple lenses and traces symptoms to root causes.
 
 **Evaluation Tasks:**
+
 1. **Cross-Lens Findings** — Findings noted by multiple agents or with multi-lens implications. Which lenses affected? What's the relationship? Should severity be reconsidered?
 2. **Root Cause Analysis** — Patterns where multiple findings trace to a single root cause. Architectural decisions, missing abstractions, process issues.
 3. **Tension Identification** — Places where lenses are in tension (performance vs legibility, security vs usability, evolvability vs operations). Tension isn't bad — the question is whether tradeoffs were conscious and appropriate.
@@ -294,14 +305,16 @@ Identifies findings that span multiple lenses and traces symptoms to root causes
 
 Produces the final deliverables.
 
-**Deliverable 1: `09-report.md`**
+**Deliverable 1:** `09-report.md`
+
 - Executive Summary (1-2 paragraphs, overall assessment, key themes, top concerns)
 - Summary Table (findings count by lens and severity)
 - Findings by Lens (summary + all findings + positive patterns per lens)
 - Cross-Cutting Concerns (root causes, severity adjustments, systemic patterns)
 - Appendix: System Overview
 
-**Deliverable 2: `10-recommendations.md`**
+**Deliverable 2:** `10-recommendations.md`
+
 - Overview (how to read, prioritization rationale)
 - Immediate Actions (must address before further development)
 - Short-Term Actions (address in next cycle)
@@ -309,10 +322,10 @@ Produces the final deliverables.
 - Architectural Recommendations (systemic improvements beyond individual findings)
 - Summary Roadmap (sequenced view of recommended work)
 
-**Recommendation Format:**
-Each recommendation includes: Addresses (finding IDs), Severity of addressed findings, Effort estimate (Hours/Days/Weeks), What to do, Why it matters, Suggested approach, Dependencies.
+**Recommendation Format**:Each recommendation includes: Addresses (finding IDs), Severity of addressed findings, Effort estimate (Hours/Days/Weeks), What to do, Why it matters, Suggested approach, Dependencies.
 
 **Requirements:**
+
 - Every Critical and Major finding must have a corresponding recommendation
 - Recommendations must be actionable
 - Group related findings into single recommendations where appropriate

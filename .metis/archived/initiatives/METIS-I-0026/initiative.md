@@ -7,7 +7,7 @@ created_at: 2026-03-10T13:54:31.301933+00:00
 updated_at: 2026-03-10T20:05:26.339518+00:00
 parent: METIS-V-0001
 blocked_by: []
-archived: false
+archived: true
 
 tags:
   - "#initiative"
