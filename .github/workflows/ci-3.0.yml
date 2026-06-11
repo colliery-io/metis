@@ -1,9 +1,9 @@
 name: CI (3.0)
 
-# Metis 3.0 server work lives on the long-lived `3.0` branch and short-lived
-# feature branches off it (see METIS-I-0031). This workflow runs the
-# dual-backend core checks there. It is separate from the 2.x `ci.yml`, which
-# guards `main`.
+# Metis 3.0 is built on the `3.0` release line, which integrates one branch per
+# initiative (`initiative/**`); METIS-I-0031 is the first. This workflow runs
+# the dual-backend checks on initiative branches and on PRs into `3.0`. It is
+# separate from the 2.x `ci.yml`, which guards `main`.
 #
 # NOTE: metis-core depends on diesel-dualdb, currently an out-of-tree path
 # dependency. Until diesel-dualdb is published to crates.io (or pinned as a git
@@ -13,7 +13,7 @@ name: CI (3.0)
 
 on:
   push:
-    branches: [ "3.0" ]
+    branches: [ "3.0", "initiative/**" ]
   pull_request:
     branches: [ "3.0" ]
 
