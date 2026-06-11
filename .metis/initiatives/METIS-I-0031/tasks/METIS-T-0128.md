@@ -4,14 +4,14 @@ level: task
 title: "ObjectStore trait with db-blob and filesystem backends"
 short_code: "METIS-T-0128"
 created_at: 2026-06-11T13:09:26.508688+00:00
-updated_at: 2026-06-11T13:09:26.508688+00:00
+updated_at: 2026-06-11T14:48:32.055898+00:00
 parent: METIS-I-0031
-blocked_by: ["METIS-T-0126"]
+blocked_by: [METIS-T-0126]
 archived: false
 
 tags:
   - "#task"
-  - "#phase/todo"
+  - "#phase/completed"
 
 
 exit_criteria_met: false
@@ -30,12 +30,16 @@ Implement the content-addressed `ObjectStore` abstraction from the initiative de
 
 ## Acceptance Criteria
 
-- [ ] `trait ObjectStore { get, put, delete, list }` in `metis-core`; `put` computes and returns the sha256 hex key and is idempotent (same content → same key, no duplicate work)
-- [ ] db-blob backend over the `objects` table, working on both database backends; participates in the caller's transaction where one exists
-- [ ] Filesystem backend under a configured root with sharded layout (`ab/cdef…`), atomic writes (temp file + rename)
-- [ ] One conformance test suite (round-trip, idempotent put, missing-key get, delete, list) run against both backends
-- [ ] GC function: deletes objects referenced by neither any `work_items.content_key` nor any content key recorded in `events` payloads; dry-run mode; covered by tests
-- [ ] Write-ordering contract (object written before row commit; orphans are harmless and GC-able) documented on the trait
+## Acceptance Criteria
+
+## Acceptance Criteria
+
+- [x] `trait ObjectStore { get, put, delete, list }` in `metis-core`; `put` returns sha256 hex key and is idempotent
+- [x] db-blob backend over the `objects` table, working on both database backends; takes `&mut DualConnection` so it shares the caller's transaction
+- [x] Filesystem backend under a configured root, sharded (`ab/<key>`), atomic temp+rename writes
+- [x] One conformance suite (round-trip, idempotent put, missing-key get, delete, empty-blob) run against both stores × both DB backends
+- [x] Conservative GC over `work_items.content_key` + any 64-hex string in `events` payloads; dry-run mode; tested
+- [x] Write-ordering contract documented on the module/trait
 
 ## Implementation Notes
 
@@ -54,4 +58,13 @@ Implement the content-addressed `ObjectStore` abstraction from the initiative de
 
 ## Status Updates
 
-*To be added during implementation*
+### 2026-06-11 — Complete (branch `feat/T-0128-object-store` off `3.0`)
+
+`metis-core::objects` module; 8 tests green on both DB backends.
+
+**Decisions / deviations:**
+- **Trait methods take `&mut DualConnection`** (not a conn-free trait). This is how db-blob shares the caller's transaction; fs/s3 ignore the arg. The service layer always holds a connection, so no awkwardness.
+- **`put` uses check-then-insert, not `ON CONFLICT`** — diesel-dualdb's `MultiBackend` doesn't support upsert clauses, and a failed insert would poison the caller's open Postgres transaction. The existence fast-path also makes the common dedup case a no-op. Residual TOCTOU race on byte-identical concurrent inserts is caught by mapping `UniqueViolation` → Ok.
+- **GC reference scan is maximally conservative**: any 64-hex string anywhere in any event payload counts as a reference, so future event shapes can't make GC reclaim a live object. Convention for edit events (`prev_content_key`/`new_content_key`) will be honored by T-0129.
+- s3 backend is `ObjectStoreConfig::S3` that parses but returns `Unsupported` (later task).
+- Hand-rolled hex encoding to avoid a `hex` crate dep.
