@@ -1,0 +1,43 @@
+# Single-team self-hosted Metis 3.0 deployment: the server + Postgres.
+#
+# The build context is the PARENT of the metis repo so the diesel-dualdb sibling
+# checkout is included (see Dockerfile note / METIS-T-0126 release blocker).
+# Once diesel-dualdb is published, `context` becomes the repo root and the
+# build args drop away.
+#
+#   docker compose -f crates/metis-server/docker-compose.yml up --build
+#
+# Bootstrap the first admin + token after the stack is up:
+#   docker compose ... exec server metis admin create-user you --admin
+#   docker compose ... exec server metis admin create-token --user you
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: metis
+      POSTGRES_PASSWORD: metis
+      POSTGRES_DB: metis
+    volumes:
+      - metis-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U metis"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  server:
+    build:
+      context: ../../..
+      dockerfile: metis/crates/metis-server/Dockerfile
+    environment:
+      DATABASE_URL: postgres://metis:metis@postgres:5432/metis
+      METIS_BIND: 0.0.0.0:7878
+    ports:
+      - "7878:7878"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  metis-pgdata:

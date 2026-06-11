@@ -19,6 +19,11 @@ def run_tests():
             'description': 'Running comprehensive tests (dual-backend core)'
         },
         {
+            'name': 'metis-server',
+            'strategy': 'integration_only',  # 3.0 server: integration tests (router/auth/admin)
+            'description': 'Running integration tests (3.0 server)'
+        },
+        {
             'name': 'metis-docs-core',
             'strategy': 'full',  # Has comprehensive unit tests + integration tests
             'description': 'Running comprehensive tests (unit + integration + doc)'

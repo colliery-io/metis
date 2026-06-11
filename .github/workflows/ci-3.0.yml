@@ -64,13 +64,13 @@ jobs:
         working-directory: metis
         run: DUALDB_DIR="$GITHUB_WORKSPACE/diesel-dualdb" bash crates/metis-core/scripts/check-schema-drift.sh
 
-      - name: Build metis-core
+      - name: Build core + server
         working-directory: metis
-        run: cargo build -p metis-core
+        run: cargo build -p metis-core -p metis-server
 
-      - name: Test metis-core on both backends
+      - name: Test core + server
         working-directory: metis
         # Single-threaded: the dualdb test macro shares one Postgres database
         # across tests, and each test resets the schema (db::reset), so the PG
         # arm must not run tests concurrently. SQLite uses per-test in-memory DBs.
-        run: cargo test -p metis-core -- --test-threads=1
+        run: cargo test -p metis-core -p metis-server -- --test-threads=1

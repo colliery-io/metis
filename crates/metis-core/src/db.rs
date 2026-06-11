@@ -10,6 +10,7 @@
 //! statements; [`run_migrations`] picks the right arm for the live connection.
 
 use diesel::connection::SimpleConnection;
+use diesel::prelude::*;
 use diesel_dualdb::pool::Backend;
 use diesel_dualdb::{DualConnection, Pool};
 
@@ -73,12 +74,33 @@ pub fn run_migrations(conn: &mut DualConnection) -> Result<(), DbError> {
     Ok(())
 }
 
-/// Connect and immediately apply migrations, returning the ready pool.
+/// Apply migrations only if the schema is not already present.
+///
+/// The initial migration uses bare `CREATE TABLE`, so re-running it on a
+/// populated database errors. This probes for a core table and migrates only
+/// when it is absent — the idempotent entry point a long-running server uses on
+/// startup. (A versioned-migration table will replace this once a second
+/// migration exists.)
+pub fn ensure_migrated(conn: &mut DualConnection) -> Result<(), DbError> {
+    use crate::schema::projects;
+    let present = projects::table
+        .select(projects::id)
+        .limit(1)
+        .load::<diesel_dualdb::types::Uuid>(conn)
+        .is_ok();
+    if present {
+        Ok(())
+    } else {
+        run_migrations(conn)
+    }
+}
+
+/// Connect and ensure migrations are applied, returning the ready pool.
 pub fn connect_and_migrate(database_url: &str) -> Result<Pool, DbError> {
     let pool = connect(database_url)?;
     {
         let mut conn = pool.get()?;
-        run_migrations(&mut conn)?;
+        ensure_migrated(&mut conn)?;
     }
     Ok(pool)
 }
