@@ -5,7 +5,7 @@ use std::path::PathBuf;
 
 use clap::{Args, Parser, Subcommand};
 use metis_server::config::ServerConfig;
-use metis_server::{admin, serve};
+use metis_server::{admin, build_state, mcp, serve};
 
 #[derive(Parser)]
 #[command(name = "metis", version, about = "Metis 3.0 server")]
@@ -18,9 +18,27 @@ struct Cli {
 enum Command {
     /// Run the HTTP server.
     Serve(ServeArgs),
+    /// Run the MCP server on stdio (for AI agents).
+    Mcp(McpArgs),
     /// Administrative commands run directly against the database (bootstrap).
     #[command(subcommand)]
     Admin(AdminCommand),
+}
+
+#[derive(Args)]
+struct McpArgs {
+    /// Local solo mode: SQLite, implicit single user, no token required.
+    #[arg(long)]
+    local: bool,
+    /// Database URL (env: DATABASE_URL). Required in team mode.
+    #[arg(long)]
+    database_url: Option<String>,
+    /// Store item bodies as files under this root (team mode; default db-blob).
+    #[arg(long)]
+    object_root: Option<PathBuf>,
+    /// Bearer token to act as (team mode; attribution is recorded from it).
+    #[arg(long, env = "METIS_TOKEN")]
+    token: Option<String>,
 }
 
 #[derive(Args)]
@@ -98,6 +116,16 @@ async fn main() -> anyhow::Result<()> {
                 ServerConfig::team(args.database_url, args.bind, args.object_root)?
             };
             serve(config).await
+        }
+        Command::Mcp(args) => {
+            let config = if args.local {
+                ServerConfig::local(args.database_url, None)
+            } else {
+                ServerConfig::team(args.database_url, None, args.object_root)?
+            };
+            let app = build_state(config)?;
+            let state = mcp::mcp_state_from(&app, args.token)?;
+            mcp::run_stdio(state).await
         }
         Command::Admin(AdminCommand::CreateUser(args)) => {
             let display = args.display_name.unwrap_or_else(|| args.username.clone());
