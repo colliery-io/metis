@@ -4,7 +4,9 @@ members = [
     "crates/metis-docs-cli",
     "crates/metis-docs-core",
     "crates/metis-docs-mcp",
-    "crates/metis-docs-gui/src-tauri"
+    "crates/metis-docs-gui/src-tauri",
+    # --- Metis 3.0 (server architecture, see METIS-I-0031) ---
+    "crates/metis-core"
 ]
 resolver = "2"
 
