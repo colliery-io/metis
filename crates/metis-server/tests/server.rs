@@ -115,6 +115,175 @@ async fn bad_token_is_rejected() {
     assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
 }
 
+// ----- /api/v1 REST flow (local mode, auth off) -----------------------------
+
+async fn local_app(url: String) -> axum::Router {
+    let state = build_state(ServerConfig::local(
+        Some(url),
+        Some("127.0.0.1:0".parse().unwrap()),
+    ))
+    .unwrap();
+    router(state)
+}
+
+fn get(uri: &str) -> Request<Body> {
+    Request::builder().uri(uri).body(Body::empty()).unwrap()
+}
+
+fn json_req(method: &str, uri: &str, body: serde_json::Value) -> Request<Body> {
+    Request::builder()
+        .method(method)
+        .uri(uri)
+        .header("content-type", "application/json")
+        .body(Body::from(body.to_string()))
+        .unwrap()
+}
+
+#[tokio::test]
+async fn rest_project_and_item_lifecycle() {
+    let (_dir, url) = temp_db();
+    let app = local_app(url).await;
+
+    // create project
+    let resp = app
+        .clone()
+        .oneshot(json_req(
+            "POST",
+            "/api/v1/projects",
+            serde_json::json!({"slug":"metis","name":"Metis"}),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let proj = body_json(resp).await;
+    assert_eq!(proj["slug"], "metis");
+    assert!(proj["config"]["types"]["task"].is_object());
+
+    // create an item
+    let resp = app
+        .clone()
+        .oneshot(json_req(
+            "POST",
+            "/api/v1/items",
+            serde_json::json!({"project":"metis","type":"task","title":"first","body":"# hi","exit_criteria":["done"]}),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let item = body_json(resp).await;
+    assert_eq!(item["short_code"], "METIS-T-0001");
+    assert_eq!(item["body"], "# hi");
+    let content_key = item["content_key"].as_str().unwrap().to_string();
+
+    // get it back
+    let resp = app
+        .clone()
+        .oneshot(get("/api/v1/items/METIS-T-0001"))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    // transition blocked by unmet criterion -> 409 phase_gate
+    let resp = app
+        .clone()
+        .oneshot(json_req(
+            "POST",
+            "/api/v1/items/METIS-T-0001/transition",
+            serde_json::json!({"phase":"todo"}),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::CONFLICT);
+    assert_eq!(body_json(resp).await["error"]["code"], "phase_gate");
+
+    // patch with correct If-Match succeeds; mark criterion met
+    let resp = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("PATCH")
+                .uri("/api/v1/items/METIS-T-0001")
+                .header("content-type", "application/json")
+                .header("If-Match", &content_key)
+                .body(Body::from(
+                    serde_json::json!({"exit_criteria":[{"ordinal":0,"text":"done","met":true}]})
+                        .to_string(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    // now the transition succeeds
+    let resp = app
+        .clone()
+        .oneshot(json_req(
+            "POST",
+            "/api/v1/items/METIS-T-0001/transition",
+            serde_json::json!({"phase":"todo"}),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    assert_eq!(body_json(resp).await["phase"], "todo");
+
+    // list filtered by type
+    let resp = app
+        .clone()
+        .oneshot(get("/api/v1/items?project=metis&type=task"))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    assert_eq!(body_json(resp).await.as_array().unwrap().len(), 1);
+
+    // unknown item -> 404
+    let resp = app
+        .clone()
+        .oneshot(get("/api/v1/items/METIS-T-9999"))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn rest_stale_if_match_conflicts() {
+    let (_dir, url) = temp_db();
+    let app = local_app(url).await;
+    app.clone()
+        .oneshot(json_req(
+            "POST",
+            "/api/v1/projects",
+            serde_json::json!({"slug":"m","name":"M"}),
+        ))
+        .await
+        .unwrap();
+    app.clone()
+        .oneshot(json_req(
+            "POST",
+            "/api/v1/items",
+            serde_json::json!({"project":"m","type":"task","title":"t","body":"v1"}),
+        ))
+        .await
+        .unwrap();
+
+    let resp = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("PATCH")
+                .uri("/api/v1/items/M-T-0001")
+                .header("content-type", "application/json")
+                .header("If-Match", "stalehash")
+                .body(Body::from(serde_json::json!({"body":"v2"}).to_string()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::CONFLICT);
+    assert_eq!(body_json(resp).await["error"]["code"], "conflict");
+}
+
 #[tokio::test]
 async fn local_mode_needs_no_token() {
     let (_dir, url) = temp_db();
