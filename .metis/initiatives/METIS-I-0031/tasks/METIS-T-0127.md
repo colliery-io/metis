@@ -4,14 +4,14 @@ level: task
 title: "Project config model and workflow engine"
 short_code: "METIS-T-0127"
 created_at: 2026-06-11T13:09:25.078162+00:00
-updated_at: 2026-06-11T13:09:25.078162+00:00
+updated_at: 2026-06-11T14:43:59.585861+00:00
 parent: METIS-I-0031
 blocked_by: []
 archived: false
 
 tags:
   - "#task"
-  - "#phase/todo"
+  - "#phase/completed"
 
 
 exit_criteria_met: false
@@ -30,13 +30,17 @@ Define the `projects.config` JSON model (work item types, workflows, short-code 
 
 ## Acceptance Criteria
 
-- [ ] Serde model for project config: a map of work item types, each with display name, short-code letter, ordered phase list, template body, and flags for special semantics (e.g. ADR-style `superseded` terminal phase, parent-type constraints)
-- [ ] Config validation with actionable errors: duplicate type letters, empty phase lists, unknown parent types, reserved names all rejected
-- [ ] Built-in Flight Levels default config reproducing today's five types and their phase sequences (vision, initiative, task, adr, specification), plus general-purpose `bug`/`feature`/`chore` task-like types
-- [ ] Transition engine: adjacent-phase rule, `force` semantics, exit-criteria gating (can't complete with unmet criteria unless forced) — pure functions, no I/O
-- [ ] Short-code formatting/parsing: `{PROJECT}-{LETTER}-{NNNN}` round-trips; parser rejects malformed codes
-- [ ] Unit tests cover legal and illegal transitions for the default config, including ADR supersede flow
-- [ ] Config format documented (rustdoc on the model is sufficient for now)
+## Acceptance Criteria
+
+## Acceptance Criteria
+
+- [x] Serde model for project config: a map of work item types, each with display name, short-code letter, ordered phase list, template body, and parent-type constraints (`allowed_parents` + `allow_root`)
+- [x] Config validation with actionable errors: duplicate type letters, empty/duplicate phases, unknown parent types, unreachable types, bad names all rejected
+- [x] Built-in Flight Levels default config reproducing today's five types and their phase sequences, plus general-purpose `bug`/`feature`/`chore`
+- [x] Transition engine: forward-adjacent rule, `force` semantics, exit-criteria gating — pure functions, no I/O
+- [x] Short-code formatting/parsing: `{PREFIX}-{LETTER}-{NNNN}` round-trips (hyphenated prefixes too); parser rejects malformed codes
+- [x] Unit tests cover legal and illegal transitions for the default config, including ADR supersede flow (22 tests)
+- [x] Config format documented (rustdoc on the model)
 
 ## Implementation Notes
 
@@ -54,4 +58,13 @@ None hard. Consumed by METIS-T-0129 (service layer enforces transitions through 
 
 ## Status Updates
 
-*To be added during implementation*
+### 2026-06-11 — Complete (branch `feat/T-0127-workflow-engine` off `3.0`)
+
+`metis-core::workflow` module (pure domain, no DB/ObjectStore), 22 unit tests green.
+
+**Decisions / deviations:**
+- **All default phase sequences are linear** (verified against 2.x `types.rs`), so the engine is forward-adjacent over an ordered list — no transition graph. ADR supersede is `decided → superseded` as the terminal step.
+- **Exit-criteria gate applies to every non-forced forward transition** (2.x behavior generalized), not only completion. `force` overrides adjacency + criteria and allows backward moves.
+- Engine takes `exit_criteria_met: bool` as input; the service layer (T-0129) computes it from the checklist. Engine stays I/O-free.
+- Added `allow_root` to `ItemTypeConfig` so a type can be root-capable AND have allowed parents (task: both). "Reserved names" enforced as format validation (`[a-z][a-z0-9_]*` names/phases, `[A-Z]{1,2}` letters).
+- Short codes parse right-to-left so hyphenated prefixes work. Templates are minimal per-type stubs for now (full 2.x parity deferred — not required).
