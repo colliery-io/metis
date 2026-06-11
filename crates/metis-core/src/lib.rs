@@ -7,9 +7,9 @@
 //! data-access layer, and service layer that the server and CLI build on.
 //!
 //! ## Layers (filled in across METIS-I-0031 tasks)
-//! - [`db`] — connection pooling + migrations (this task, T-0126)
+//! - [`db`] — connection pooling + migrations (T-0126)
 //! - [`schema`] — generated Diesel table definitions (T-0126)
-//! - workflow engine / project config (T-0127)
+//! - [`workflow`] — project config + transition engine + short codes (T-0127)
 //! - object store (T-0128)
 //! - DAL + service layer (T-0129)
 #![forbid(unsafe_code)]
@@ -17,6 +17,7 @@
 
 pub mod db;
 pub mod schema;
+pub mod workflow;
 
 /// Re-export of the dual-backend connection type for downstream crates.
 pub use diesel_dualdb::DualConnection;
