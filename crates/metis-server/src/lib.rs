@@ -12,12 +12,13 @@ pub mod admin;
 pub mod auth;
 pub mod config;
 pub mod error;
+pub mod routes;
 pub mod state;
 
 use std::sync::Arc;
 
 use axum::extract::State;
-use axum::routing::get;
+use axum::routing::{get, post};
 use axum::{middleware, Extension, Json, Router};
 use metis_core::actor::Actor;
 use metis_core::service::user;
@@ -58,6 +59,31 @@ pub fn build_state(config: ServerConfig) -> anyhow::Result<AppState> {
 pub fn router(state: AppState) -> Router {
     let protected = Router::new()
         .route("/api/v1/whoami", get(whoami))
+        .route("/api/v1/projects", post(routes::create_project))
+        .route(
+            "/api/v1/projects/:slug",
+            get(routes::get_project).patch(routes::update_project_config),
+        )
+        .route(
+            "/api/v1/items",
+            get(routes::list_items).post(routes::create_item),
+        )
+        .route(
+            "/api/v1/items/:short_code",
+            get(routes::get_item).patch(routes::patch_item),
+        )
+        .route(
+            "/api/v1/items/:short_code/transition",
+            post(routes::transition_item),
+        )
+        .route(
+            "/api/v1/items/:short_code/archive",
+            post(routes::archive_item),
+        )
+        .route(
+            "/api/v1/items/:short_code/links",
+            post(routes::add_link).delete(routes::remove_link),
+        )
         .route_layer(middleware::from_fn_with_state(
             state.clone(),
             auth::require_auth,
