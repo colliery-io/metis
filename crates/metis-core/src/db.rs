@@ -31,6 +31,8 @@ struct Migration {
     name: &'static str,
     postgres_up: &'static str,
     sqlite_up: &'static str,
+    postgres_down: &'static str,
+    sqlite_down: &'static str,
 }
 
 /// All migrations, in application order. Generated SQL is embedded at build
@@ -39,6 +41,8 @@ const MIGRATIONS: &[Migration] = &[Migration {
     name: "0001_init",
     postgres_up: include_str!("../schema/generated/migrations-postgres/0001_init/up.sql"),
     sqlite_up: include_str!("../schema/generated/migrations-sqlite/0001_init/up.sql"),
+    postgres_down: include_str!("../schema/generated/migrations-postgres/0001_init/down.sql"),
+    sqlite_down: include_str!("../schema/generated/migrations-sqlite/0001_init/down.sql"),
 }];
 
 /// Connect to `database_url`, returning a pool of dual connections.
@@ -77,6 +81,25 @@ pub fn connect_and_migrate(database_url: &str) -> Result<Pool, DbError> {
         run_migrations(&mut conn)?;
     }
     Ok(pool)
+}
+
+/// Drop and recreate the schema. Idempotent (down uses `DROP TABLE IF EXISTS`),
+/// so it is safe on a fresh database too.
+///
+/// Intended for tests, which share one Postgres database across the suite (the
+/// `#[diesel_dualdb::test]` macro does not isolate the PG arm). Call this at the
+/// start of each test and run the PG arm single-threaded. Not for production
+/// use — it destroys data.
+pub fn reset(conn: &mut DualConnection) -> Result<(), DbError> {
+    let backend = backend_of(conn);
+    for migration in MIGRATIONS.iter().rev() {
+        let down = match backend {
+            Backend::Postgres => migration.postgres_down,
+            Backend::Sqlite => migration.sqlite_down,
+        };
+        conn.batch_execute(down)?;
+    }
+    run_migrations(conn)
 }
 
 /// Which backend a live connection is using.

@@ -49,13 +49,13 @@ fn conformance(conn: &mut DualConnection, store: &dyn ObjectStore) {
 
 #[diesel_dualdb::test(pg, sqlite)]
 fn db_blob_conformance(conn: &mut DualConnection) {
-    db::run_migrations(conn).unwrap();
+    db::reset(conn).unwrap();
     conformance(conn, &DbBlobObjectStore::new());
 }
 
 #[diesel_dualdb::test(pg, sqlite)]
 fn fs_conformance(conn: &mut DualConnection) {
-    db::run_migrations(conn).unwrap();
+    db::reset(conn).unwrap();
     let dir = TempDir::new().unwrap();
     let store = FsObjectStore::new(dir.path().join("objects")).unwrap();
     conformance(conn, &store);
@@ -68,7 +68,7 @@ fn fs_conformance(conn: &mut DualConnection) {
 // crash window: object on disk, row never written.)
 #[diesel_dualdb::test(pg, sqlite)]
 fn fs_orphan_is_durable_then_reclaimable(conn: &mut DualConnection) {
-    db::run_migrations(conn).unwrap();
+    db::reset(conn).unwrap();
     let dir = TempDir::new().unwrap();
     let store = FsObjectStore::new(dir.path().join("objects")).unwrap();
 
@@ -87,7 +87,7 @@ fn fs_orphan_is_durable_then_reclaimable(conn: &mut DualConnection) {
 #[diesel_dualdb::test(pg, sqlite)]
 fn gc_keeps_live_and_historical_drops_orphan(conn: &mut DualConnection) {
     use metis_core::schema::{events, projects, work_items};
-    db::run_migrations(conn).unwrap();
+    db::reset(conn).unwrap();
 
     let store = DbBlobObjectStore::new();
     let now = chrono::Utc::now();
