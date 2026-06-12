@@ -148,7 +148,7 @@ impl ReadProjectTool {
 /// List work items with optional filters.
 #[mcp_tool(
     name = "list_items",
-    description = "List work items, newest first, with optional filters (project slug, type, phase, assignee uuid, tag, repo slug). Excludes archived unless include_archived is true.",
+    description = "List/search work items. With filters (project slug, type, phase, assignee uuid, tag, repo slug) results are newest-first; with `q` (free-text search) they come back by relevance. Excludes archived unless include_archived is true.",
     idempotent_hint = true,
     read_only_hint = true
 )]
@@ -167,6 +167,8 @@ pub struct ListItemsTool {
     pub tag: Option<String>,
     /// Restrict to a repo slug.
     pub repo: Option<String>,
+    /// Free-text search query; when set, results come back by relevance.
+    pub q: Option<String>,
     /// Include archived items.
     #[serde(default)]
     pub include_archived: bool,
@@ -192,6 +194,7 @@ impl ListItemsTool {
             assignee,
             tag: self.tag.clone(),
             repo: self.repo.clone(),
+            q: self.q.clone(),
             include_archived: self.include_archived,
             limit: self.limit,
             offset: self.offset,

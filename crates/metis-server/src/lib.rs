@@ -93,6 +93,15 @@ pub fn router(state: AppState) -> Router {
         )
         .route("/api/v1/repos/resolve", get(routes::resolve_repo))
         .route("/api/v1/briefing", get(routes::briefing))
+        .route(
+            "/api/v1/projects/:slug/views",
+            get(routes::list_views).post(routes::create_view),
+        )
+        .route(
+            "/api/v1/views/:id",
+            get(routes::get_view).delete(routes::delete_view),
+        )
+        .route("/api/v1/views/:id/items", get(routes::run_view))
         // Hosted MCP over Streamable HTTP (per-connection PAT auth via the
         // same middleware). POST only; GET yields 405 (no server push).
         .route("/mcp", post(mcp::http::post_mcp))

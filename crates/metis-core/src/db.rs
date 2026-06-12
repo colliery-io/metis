@@ -10,7 +10,6 @@
 //! statements; [`run_migrations`] picks the right arm for the live connection.
 
 use diesel::connection::SimpleConnection;
-use diesel::prelude::*;
 use diesel_dualdb::pool::Backend;
 use diesel_dualdb::{DualConnection, Pool};
 
@@ -30,21 +29,36 @@ pub enum DbError {
 /// One ordered migration step, with the SQL for each backend.
 struct Migration {
     name: &'static str,
+    /// A table this migration creates; used by [`ensure_migrated`] to detect
+    /// (per migration) whether it has already been applied.
+    probe_table: &'static str,
     postgres_up: &'static str,
     sqlite_up: &'static str,
     postgres_down: &'static str,
     sqlite_down: &'static str,
 }
 
-/// All migrations, in application order. Generated SQL is embedded at build
-/// time so the binary is self-contained (no migrations directory to ship).
-const MIGRATIONS: &[Migration] = &[Migration {
-    name: "0001_init",
-    postgres_up: include_str!("../schema/generated/migrations-postgres/0001_init/up.sql"),
-    sqlite_up: include_str!("../schema/generated/migrations-sqlite/0001_init/up.sql"),
-    postgres_down: include_str!("../schema/generated/migrations-postgres/0001_init/down.sql"),
-    sqlite_down: include_str!("../schema/generated/migrations-sqlite/0001_init/down.sql"),
-}];
+/// All migrations, in application order. SQL is embedded at build time so the
+/// binary is self-contained. `0001` is generated from the logical DDL; `0002`
+/// (FTS) is hand-written per backend (the generator emits only portable DDL).
+const MIGRATIONS: &[Migration] = &[
+    Migration {
+        name: "0001_init",
+        probe_table: "projects",
+        postgres_up: include_str!("../schema/generated/migrations-postgres/0001_init/up.sql"),
+        sqlite_up: include_str!("../schema/generated/migrations-sqlite/0001_init/up.sql"),
+        postgres_down: include_str!("../schema/generated/migrations-postgres/0001_init/down.sql"),
+        sqlite_down: include_str!("../schema/generated/migrations-sqlite/0001_init/down.sql"),
+    },
+    Migration {
+        name: "0002_fts",
+        probe_table: "work_item_search",
+        postgres_up: include_str!("../schema/manual/0002_fts/postgres/up.sql"),
+        sqlite_up: include_str!("../schema/manual/0002_fts/sqlite/up.sql"),
+        postgres_down: include_str!("../schema/manual/0002_fts/postgres/down.sql"),
+        sqlite_down: include_str!("../schema/manual/0002_fts/sqlite/down.sql"),
+    },
+];
 
 /// Connect to `database_url`, returning a pool of dual connections.
 ///
@@ -81,25 +95,32 @@ pub fn run_migrations(conn: &mut DualConnection) -> Result<(), DbError> {
     Ok(())
 }
 
-/// Apply migrations only if the schema is not already present.
+/// Apply each migration whose effect is not already present.
 ///
-/// The initial migration uses bare `CREATE TABLE`, so re-running it on a
-/// populated database errors. This probes for a core table and migrates only
-/// when it is absent — the idempotent entry point a long-running server uses on
-/// startup. (A versioned-migration table will replace this once a second
-/// migration exists.)
+/// Migrations use bare `CREATE TABLE`, so re-running an applied one errors. We
+/// probe each migration's `probe_table` (a backend-agnostic `SELECT 1 … LIMIT
+/// 1`) and run only the missing ones, so a new migration lands on an
+/// already-initialized database. This is the idempotent startup entry point. (A
+/// real version table supersedes this once migrations multiply.)
 pub fn ensure_migrated(conn: &mut DualConnection) -> Result<(), DbError> {
-    use crate::schema::projects;
-    let present = projects::table
-        .select(projects::id)
-        .limit(1)
-        .load::<diesel_dualdb::types::Uuid>(conn)
-        .is_ok();
-    if present {
-        Ok(())
-    } else {
-        run_migrations(conn)
+    let backend = backend_of(conn);
+    for migration in MIGRATIONS {
+        let exists = conn
+            .batch_execute(&format!("SELECT 1 FROM {} LIMIT 1", migration.probe_table))
+            .is_ok();
+        if exists {
+            continue;
+        }
+        let sql = match backend {
+            Backend::Postgres => migration.postgres_up,
+            Backend::Sqlite => migration.sqlite_up,
+        };
+        conn.batch_execute(sql).map_err(|e| {
+            tracing::error!(migration = migration.name, error = %e, "migration failed");
+            e
+        })?;
     }
+    Ok(())
 }
 
 /// Connect and ensure migrations are applied, returning the ready pool.

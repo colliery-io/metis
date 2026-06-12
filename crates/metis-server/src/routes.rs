@@ -14,6 +14,7 @@ use metis_core::service::item::{self, ItemEdit, NewItem};
 use metis_core::service::project;
 use metis_core::service::query::{self, ItemFilter};
 use metis_core::service::repo;
+use metis_core::service::view;
 use metis_core::workflow::config::ProjectConfig;
 use serde::{Deserialize, Serialize};
 
@@ -118,6 +119,8 @@ pub struct ListParams {
     pub tag: Option<String>,
     /// Repo slug.
     pub repo: Option<String>,
+    /// Free-text query (full-text search; results ordered by relevance).
+    pub q: Option<String>,
     /// Include archived (default false).
     #[serde(default)]
     pub include_archived: bool,
@@ -146,6 +149,7 @@ pub async fn list_items(
         assignee,
         tag: params.tag,
         repo: params.repo,
+        q: params.q,
         include_archived: params.include_archived,
         limit: params.limit,
         offset: params.offset,
@@ -458,6 +462,81 @@ pub async fn briefing(
         .blocking(move |conn| repo::briefing(conn, &params.repo).map_err(ApiError::from))
         .await?;
     Ok(Json(b))
+}
+
+// ----- saved views -----------------------------------------------------------
+
+/// `POST /projects/:slug/views` body.
+#[derive(Debug, Deserialize)]
+pub struct CreateView {
+    /// Display name.
+    pub name: String,
+    /// The query to save (same shape as the `GET /items` filters).
+    #[serde(default)]
+    pub query: ItemFilter,
+    /// Whether the view is visible to the whole team.
+    #[serde(default)]
+    pub shared: bool,
+}
+
+/// `POST /api/v1/projects/:slug/views`
+pub async fn create_view(
+    State(state): State<AppState>,
+    Extension(actor): Extension<Actor>,
+    Path(project): Path<String>,
+    Json(body): Json<CreateView>,
+) -> Result<(StatusCode, Json<view::View>), ApiError> {
+    let v = state
+        .blocking(move |conn| {
+            view::create(conn, &actor, &project, &body.name, body.query, body.shared)
+                .map_err(ApiError::from)
+        })
+        .await?;
+    Ok((StatusCode::CREATED, Json(v)))
+}
+
+/// `GET /api/v1/projects/:slug/views`
+pub async fn list_views(
+    State(state): State<AppState>,
+    Path(project): Path<String>,
+) -> Result<Json<Vec<view::View>>, ApiError> {
+    let views = state
+        .blocking(move |conn| view::list(conn, &project).map_err(ApiError::from))
+        .await?;
+    Ok(Json(views))
+}
+
+/// `GET /api/v1/views/:id`
+pub async fn get_view(
+    State(state): State<AppState>,
+    Path(id): Path<uuid::Uuid>,
+) -> Result<Json<view::View>, ApiError> {
+    let v = state
+        .blocking(move |conn| view::get(conn, id).map_err(ApiError::from))
+        .await?;
+    Ok(Json(v))
+}
+
+/// `DELETE /api/v1/views/:id`
+pub async fn delete_view(
+    State(state): State<AppState>,
+    Path(id): Path<uuid::Uuid>,
+) -> Result<StatusCode, ApiError> {
+    state
+        .blocking(move |conn| view::delete(conn, id).map_err(ApiError::from))
+        .await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// `GET /api/v1/views/:id/items` — run the view.
+pub async fn run_view(
+    State(state): State<AppState>,
+    Path(id): Path<uuid::Uuid>,
+) -> Result<Json<Vec<ItemSummary>>, ApiError> {
+    let items = state
+        .blocking(move |conn| view::run(conn, id).map_err(ApiError::from))
+        .await?;
+    Ok(Json(items))
 }
 
 /// serde helper: distinguish an absent field from an explicit `null`.
