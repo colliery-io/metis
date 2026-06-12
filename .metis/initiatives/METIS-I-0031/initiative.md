@@ -126,9 +126,9 @@ views           (id UUID PK, project_id FK, owner UUID, name TEXT,
 
 **Content storage — the ObjectStore abstraction.** The relational schema holds *structure* (identity, phase, links, assignment, criteria); item *content* (the markdown body) lives in an object store — conceptually a k=>v store of `key → file contents`, behind a `trait ObjectStore { get, put, delete, list }` with three backends:
 
-- **db-blob** (default, team and solo): the `objects` table in the same database. Zero extra infrastructure, and content writes share the row transaction — the simplest deployment stays one docker-compose.
-- **filesystem**: objects as files under a configured root — for deployments that want content on disk.
-- **s3**: any S3-compatible store — for teams that want DB backups small and content durable/cheap.
+- **db-blob** (default, team and solo): the `objects` table in the same database. Zero extra infrastructure, and content writes share the row transaction — the simplest deployment stays one docker-compose. **This is the day-one object store (decision 2026-06-12): "database as object store" via Postgres/SQLite.**
+- **filesystem**: objects as files under a configured root — for deployments that want content on disk. Implemented (T-0128).
+- **s3**: any S3-compatible store — for teams that want DB backups small and content durable/cheap. **Deferred (2026-06-12):** `ObjectStoreConfig::S3` parses but returns `Unsupported`; no s3 task is scheduled. Revisit when DB-blob backup size or content durability becomes a real constraint.
 
 Design rules that keep this clean:
 - **Keys are content-addressed** (`sha256(content)`), so objects are immutable: an edit writes a new object and repoints `work_items.content_key`. This buys dedup, makes the store append-only (cache-friendly), and gives **body history for free** — `events` rows record the prior `content_key`, so any past version of an item is retrievable. A periodic GC sweeps objects unreferenced by any item or event.
@@ -212,7 +212,7 @@ The existing Vue 3 + Vite + Tailwind + TipTap frontend is the starting point —
 ### D7. Testing strategy
 
 - DAL tests run on **both backends** via `#[diesel_dualdb::test]`; CI adds a Postgres service container next to the existing suite.
-- The `ObjectStore` trait gets one conformance suite run against all three backends (db-blob, fs, s3-via-minio in CI), plus crash-window tests for the write-object-then-commit ordering.
+- The `ObjectStore` trait gets one conformance suite run against the implemented backends (db-blob, fs; s3 deferred), plus crash-window tests for the write-object-then-commit ordering.
 - Service-layer tests against in-memory SQLite (fast path); API tests drive the axum router with `tower::ServiceExt::oneshot`; the FTS divergence gets explicit parity tests (same corpus, same queries, both backends).
 - The frozen 2.x crates keep their existing test suite untouched.
 
