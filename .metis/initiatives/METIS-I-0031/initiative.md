@@ -205,9 +205,19 @@ MCP tools are the same verbs agents know, renamed document→item at the 3.0 bou
 - Client flow: read `git remote get-url` for each remote (origin preferred) → normalize → `GET /repos/resolve`. Server URL + token come from `~/.config/metis/config.toml` (list of servers, default marked; no per-repo files).
 - Unmatched remote → explicit `unregistered` response; the session hook degrades to a one-line notice with the `metis repo add` command; MCP tools return the same actionable error. Multiple matches → disambiguate by the user config's default project, else error listing candidates.
 
-### D6. Web UI
+### D6. Web UI — Dioxus (revised 2026-06-12; supersedes the Vue plan)
 
-The existing Vue 3 + Vite + Tailwind + TipTap frontend is the starting point — it already has board, document views, and a markdown editor. It loses the Tauri IPC layer, gains an HTTP client + token login, and is embedded into `metis-server` via `rust-embed` (one deployable binary). Deep links: `/p/:project/i/:short_code` (shareable in PRs/chat), board at `/p/:project/board`, query bar mapping 1:1 to the `GET /items` filter params, saved views from the `views` table.
+**Decision: an all-Rust Dioxus UI, not the Vue frontend.** One `dioxus` component crate renders to two targets from the same code:
+- **`dioxus-web` → WASM**, embedded in `metis-server` via `rust-embed` and served at `/` (one deployable binary).
+- **`dioxus-desktop`** (wry/tao webview) — the same UI shipped as the desktop app, replacing the retired 2.x Tauri GUI. (Tauri is dropped; the desktop story is now a Dioxus build target, not a separate frontend.)
+
+Rationale over Vue/htmx: single language/toolchain (cargo, no npm/Vite), shared DTOs with the server (see `metis-types` below), and — decisively — htmx can't be a desktop app and Vue could only via Tauri again, whereas Dioxus gives web + desktop from one codebase. Rendering runs in the browser/webview, which also keeps server CPU to data work (helps the noisy-neighbor profile — see hardening, METIS-T-0137).
+
+**Prerequisite — `metis-types` crate.** `metis-core` can't compile to WASM (diesel + bundled libsqlite3), so the plain DTOs (`ItemSummary`, `ItemDetail`, `ProjectConfig`, `ItemFilter`, repo/briefing/view payloads) are extracted into a dependency-light `metis-types` crate (serde only) used by `metis-core`, `metis-server`, and the Dioxus app — one set of types across server and client.
+
+**Scope/MVP (read-first, then edit):** login (paste token), project board (items by phase), item detail (rendered markdown body, links, exit criteria), create/edit, search box (`?q=`), saved views. Markdown editing is a textarea + rendered preview (no TipTap; a WASM markdown renderer such as `pulldown-cmark`/`comrak`). Deep links `/p/:project/i/:short_code` (shareable), board at `/p/:project/board`. Consumes the REST API with the bearer token.
+
+Likely crate(s): `crates/metis-types` (shared DTOs), `crates/metis-web` (Dioxus app; web + desktop targets). The server gains a static-file fallback serving the embedded WASM bundle at `/` (outside the auth-protected `/api` + `/mcp`).
 
 ### D7. Testing strategy
 
