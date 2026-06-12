@@ -12,9 +12,11 @@ pub mod admin;
 pub mod auth;
 pub mod config;
 pub mod error;
+pub mod hook;
 pub mod mcp;
 pub mod routes;
 pub mod state;
+pub mod user_config;
 
 use std::sync::Arc;
 

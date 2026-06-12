@@ -1,0 +1,9 @@
+{
+  "name": "metis-3.0",
+  "version": "3.0.0-dev",
+  "description": "Metis 3.0 (server-backed): connects Claude Code to a self-hosted Metis server over MCP and briefs each session with the work in flight for the current repo. Supersedes the file-based 2.x metis plugin.",
+  "author": {
+    "name": "Colliery",
+    "email": "contact@colliery.io"
+  }
+}
