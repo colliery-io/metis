@@ -4,14 +4,14 @@ level: initiative
 title: "Metis 3.0 Web and Desktop UI (Dioxus)"
 short_code: "METIS-I-0032"
 created_at: 2026-06-12T14:09:55.523348+00:00
-updated_at: 2026-06-12T14:09:55.523348+00:00
+updated_at: 2026-06-12T20:00:06.031144+00:00
 parent: METIS-V-0001
 blocked_by: []
 archived: false
 
 tags:
   - "#initiative"
-  - "#phase/discovery"
+  - "#phase/decompose"
 
 
 exit_criteria_met: false
