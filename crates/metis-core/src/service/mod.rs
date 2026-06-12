@@ -11,7 +11,9 @@ pub mod item;
 pub mod project;
 pub mod query;
 pub mod repo;
+pub mod search;
 pub mod user;
+pub mod view;
 
 pub use query::ItemFilter;
 

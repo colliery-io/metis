@@ -537,6 +537,94 @@ async fn mcp_http_initialize_list_and_call() {
 }
 
 #[tokio::test]
+async fn rest_search_and_saved_views() {
+    let (_dir, url) = temp_db();
+    let app = local_app(url).await;
+
+    app.clone()
+        .oneshot(json_req(
+            "POST",
+            "/api/v1/projects",
+            serde_json::json!({"slug":"metis","name":"Metis"}),
+        ))
+        .await
+        .unwrap();
+    app.clone()
+        .oneshot(json_req("POST", "/api/v1/items", serde_json::json!({"project":"metis","type":"task","title":"flux capacitor","body":"time travel"})))
+        .await
+        .unwrap();
+    app.clone()
+        .oneshot(json_req("POST", "/api/v1/items", serde_json::json!({"project":"metis","type":"bug","title":"paint shed","body":"unrelated"})))
+        .await
+        .unwrap();
+
+    // search via /items?q=
+    let resp = app
+        .clone()
+        .oneshot(get("/api/v1/items?q=flux"))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let hits = body_json(resp).await;
+    assert_eq!(hits.as_array().unwrap().len(), 1);
+    assert_eq!(hits[0]["title"], "flux capacitor");
+
+    // save a view selecting only bugs
+    let resp = app
+        .clone()
+        .oneshot(json_req(
+            "POST",
+            "/api/v1/projects/metis/views",
+            serde_json::json!({"name":"Bugs","query":{"type":"bug"},"shared":true}),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let view = body_json(resp).await;
+    let view_id = view["id"].as_str().unwrap().to_string();
+    assert_eq!(view["name"], "Bugs");
+
+    // list views
+    let resp = app
+        .clone()
+        .oneshot(get("/api/v1/projects/metis/views"))
+        .await
+        .unwrap();
+    assert_eq!(body_json(resp).await.as_array().unwrap().len(), 1);
+
+    // run the view -> only the bug
+    let resp = app
+        .clone()
+        .oneshot(get(&format!("/api/v1/views/{view_id}/items")))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let items = body_json(resp).await;
+    assert_eq!(items.as_array().unwrap().len(), 1);
+    assert_eq!(items[0]["item_type"], "bug");
+
+    // delete the view
+    let resp = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("DELETE")
+                .uri(format!("/api/v1/views/{view_id}"))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+    let resp = app
+        .clone()
+        .oneshot(get("/api/v1/projects/metis/views"))
+        .await
+        .unwrap();
+    assert!(body_json(resp).await.as_array().unwrap().is_empty());
+}
+
+#[tokio::test]
 async fn local_mode_needs_no_token() {
     let (_dir, url) = temp_db();
     let state = build_state(ServerConfig::local(

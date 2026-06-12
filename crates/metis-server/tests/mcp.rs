@@ -132,6 +132,7 @@ async fn mcp_tool_lifecycle() {
             assignee: None,
             tag: None,
             repo: None,
+            q: None,
             include_archived: false,
             limit: None,
             offset: None,

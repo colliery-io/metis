@@ -153,7 +153,11 @@ pub fn create(
         });
 
         match result {
-            Ok(id) => return get_by_id(conn, store, id),
+            Ok(id) => {
+                let detail = get_by_id(conn, store, id)?;
+                index_search(conn, &detail);
+                return Ok(detail);
+            }
             Err(ServiceError::Db(diesel::result::Error::DatabaseError(
                 diesel::result::DatabaseErrorKind::UniqueViolation,
                 _,
@@ -277,7 +281,19 @@ pub fn edit(
         Ok(row.id.0)
     })?;
 
-    get_by_id(conn, store, id)
+    let detail = get_by_id(conn, store, id)?;
+    index_search(conn, &detail);
+    Ok(detail)
+}
+
+/// Feed an item's title + body into the full-text index (best-effort: a search
+/// indexing failure must not fail the create/edit it follows).
+fn index_search(conn: &mut DualConnection, detail: &ItemDetail) {
+    if let Err(e) =
+        crate::service::search::index(conn, &detail.short_code, &detail.title, &detail.body)
+    {
+        tracing::warn!(item = %detail.short_code, error = %e, "search index update failed");
+    }
 }
 
 /// Transition an item to a new phase. `to == None` advances to the next phase.

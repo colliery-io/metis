@@ -1,24 +1,31 @@
-//! Structured work item queries.
+//! Structured work item queries, plus free-text search via `q`.
 //!
-//! Filters by project, type, phase, assignee, tag, and repo, with limit/offset
-//! paging. Free-text search (`q`) is deliberately absent here — it is the one
-//! sanctioned per-backend divergence (FTS5 vs tsvector) and lands with the
-//! search/query task. All filters below are single-arm diesel.
+//! Structured filters (project, type, phase, assignee, tag, repo) are single-arm
+//! diesel. When `q` is set, results are restricted to full-text matches (see
+//! [`crate::service::search`], the sanctioned per-backend divergence) and
+//! returned in relevance order; the structured filters still apply.
+
+use std::collections::HashMap;
 
 use diesel::prelude::*;
 use diesel_dualdb::types::Uuid;
 use diesel_dualdb::DualConnection;
+use serde::{Deserialize, Serialize};
 
-use super::{Result, ServiceError};
+use super::{search, Result, ServiceError};
 use crate::models::{ItemSummary, WorkItemRow};
 use crate::schema::{projects, repos, work_item_repos, work_item_tags, work_items};
 
-/// Filters for [`list`]. Unset fields don't constrain.
-#[derive(Debug, Clone, Default)]
+/// Filters for [`list`]. Unset fields don't constrain. Serializable so saved
+/// views can persist a query.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(default)]
 pub struct ItemFilter {
     /// Restrict to a project slug.
     pub project: Option<String>,
-    /// Restrict to a work item type.
+    /// Restrict to a work item type. Serialized as `type` (matches the
+    /// `GET /items?type=` param and what users write in a saved view).
+    #[serde(rename = "type")]
     pub item_type: Option<String>,
     /// Restrict to a phase.
     pub phase: Option<String>,
@@ -28,6 +35,8 @@ pub struct ItemFilter {
     pub tag: Option<String>,
     /// Restrict to items referencing this repo slug.
     pub repo: Option<String>,
+    /// Free-text query (full-text search); results come back in relevance order.
+    pub q: Option<String>,
     /// Include archived items (default false).
     pub include_archived: bool,
     /// Max rows (default 100).
@@ -36,7 +45,11 @@ pub struct ItemFilter {
     pub offset: Option<i64>,
 }
 
-/// List items matching `filter`, newest first.
+/// Max FTS matches considered before applying structured filters + paging.
+const SEARCH_FETCH_CAP: i64 = 500;
+
+/// List items matching `filter`. Without `q`, newest first; with `q`, by search
+/// relevance.
 pub fn list(conn: &mut DualConnection, filter: &ItemFilter) -> Result<Vec<ItemSummary>> {
     // Resolve scoping ids up front (clean NotFound rather than empty results).
     let project_id = match &filter.project {
@@ -72,36 +85,64 @@ pub fn list(conn: &mut DualConnection, filter: &ItemFilter) -> Result<Vec<ItemSu
         None => None,
     };
 
-    let mut q = work_items::table.into_boxed();
+    // Free-text: get the ranked short codes first; restrict + reorder below.
+    let search_codes = match filter.q.as_deref().map(str::trim) {
+        Some(q) if !q.is_empty() => Some(search::search(conn, q, SEARCH_FETCH_CAP)?),
+        _ => None,
+    };
+    if matches!(&search_codes, Some(c) if c.is_empty()) {
+        return Ok(vec![]); // searched, nothing matched
+    }
 
+    let mut query = work_items::table.into_boxed();
     if let Some(pid) = project_id {
-        q = q.filter(work_items::project_id.eq(pid));
+        query = query.filter(work_items::project_id.eq(pid));
     }
     if let Some(t) = &filter.item_type {
-        q = q.filter(work_items::item_type.eq(t));
+        query = query.filter(work_items::item_type.eq(t));
     }
     if let Some(p) = &filter.phase {
-        q = q.filter(work_items::phase.eq(p));
+        query = query.filter(work_items::phase.eq(p));
     }
     if let Some(a) = filter.assignee {
-        q = q.filter(work_items::assignee.eq(Uuid(a)));
+        query = query.filter(work_items::assignee.eq(Uuid(a)));
     }
     if !filter.include_archived {
-        q = q.filter(work_items::archived.eq(false));
+        query = query.filter(work_items::archived.eq(false));
     }
     if let Some(ids) = tag_item_ids {
-        q = q.filter(work_items::id.eq_any(ids));
+        query = query.filter(work_items::id.eq_any(ids));
     }
     if let Some(ids) = repo_item_ids {
-        q = q.filter(work_items::id.eq_any(ids));
+        query = query.filter(work_items::id.eq_any(ids));
     }
 
-    let rows: Vec<WorkItemRow> = q
-        .order(work_items::created_at.desc())
-        .limit(filter.limit.unwrap_or(100))
-        .offset(filter.offset.unwrap_or(0))
-        .select(WorkItemRow::as_select())
-        .load(conn)?;
-
-    Ok(rows.iter().map(ItemSummary::from).collect())
+    if let Some(codes) = search_codes {
+        // Restrict to the FTS hits, then reorder by relevance in Rust (the
+        // SQL `IN (...)` loses the rank order) and page.
+        query = query.filter(work_items::short_code.eq_any(codes.clone()));
+        let rows: Vec<WorkItemRow> = query.select(WorkItemRow::as_select()).load(conn)?;
+        let rank: HashMap<&str, usize> = codes
+            .iter()
+            .enumerate()
+            .map(|(i, c)| (c.as_str(), i))
+            .collect();
+        let mut summaries: Vec<ItemSummary> = rows.iter().map(ItemSummary::from).collect();
+        summaries.sort_by_key(|s| {
+            rank.get(s.short_code.as_str())
+                .copied()
+                .unwrap_or(usize::MAX)
+        });
+        let offset = filter.offset.unwrap_or(0).max(0) as usize;
+        let limit = filter.limit.unwrap_or(100).max(0) as usize;
+        Ok(summaries.into_iter().skip(offset).take(limit).collect())
+    } else {
+        let rows: Vec<WorkItemRow> = query
+            .order(work_items::created_at.desc())
+            .limit(filter.limit.unwrap_or(100))
+            .offset(filter.offset.unwrap_or(0))
+            .select(WorkItemRow::as_select())
+            .load(conn)?;
+        Ok(rows.iter().map(ItemSummary::from).collect())
+    }
 }
