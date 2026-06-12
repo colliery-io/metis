@@ -19,6 +19,7 @@ pub mod actor;
 pub mod db;
 pub mod models;
 pub mod objects;
+pub mod repo;
 pub mod schema;
 pub mod service;
 pub mod workflow;

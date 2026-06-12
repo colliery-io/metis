@@ -285,6 +285,96 @@ async fn rest_stale_if_match_conflicts() {
 }
 
 #[tokio::test]
+async fn rest_repo_registry_resolve_and_briefing() {
+    let (_dir, url) = temp_db();
+    let app = local_app(url).await;
+
+    app.clone()
+        .oneshot(json_req(
+            "POST",
+            "/api/v1/projects",
+            serde_json::json!({"slug":"metis","name":"Metis"}),
+        ))
+        .await
+        .unwrap();
+
+    // register a repo
+    let resp = app
+        .clone()
+        .oneshot(json_req(
+            "POST",
+            "/api/v1/projects/metis/repos",
+            serde_json::json!({"slug":"core","git_urls":["git@github.com:colliery-io/metis.git"]}),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::CREATED);
+
+    // resolve a different spelling of the same remote
+    let resp = app
+        .clone()
+        .oneshot(get(
+            "/api/v1/repos/resolve?remote=https://github.com/colliery-io/metis",
+        ))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let ctx = body_json(resp).await;
+    assert_eq!(ctx["project"], "metis");
+    assert_eq!(ctx["repo"], "core");
+
+    // unregistered remote -> 404
+    let resp = app
+        .clone()
+        .oneshot(get(
+            "/api/v1/repos/resolve?remote=git@github.com:other/thing.git",
+        ))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+    assert_eq!(body_json(resp).await["error"]["code"], "unregistered_repo");
+
+    // create an item touching the repo and move it to active
+    app.clone()
+        .oneshot(json_req(
+            "POST",
+            "/api/v1/items",
+            serde_json::json!({"project":"metis","type":"task","title":"work","repos":["core"]}),
+        ))
+        .await
+        .unwrap();
+    app.clone()
+        .oneshot(json_req(
+            "POST",
+            "/api/v1/items/METIS-T-0001/transition",
+            serde_json::json!({"phase":"todo"}),
+        ))
+        .await
+        .unwrap();
+    app.clone()
+        .oneshot(json_req(
+            "POST",
+            "/api/v1/items/METIS-T-0001/transition",
+            serde_json::json!({"phase":"active"}),
+        ))
+        .await
+        .unwrap();
+
+    // briefing shows it under active
+    let resp = app
+        .clone()
+        .oneshot(get("/api/v1/briefing?repo=core"))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let b = body_json(resp).await;
+    assert_eq!(b["project"], "metis");
+    assert_eq!(b["active"].as_array().unwrap().len(), 1);
+    assert_eq!(b["active"][0]["short_code"], "METIS-T-0001");
+    assert_eq!(b["ready"].as_array().unwrap().len(), 0);
+}
+
+#[tokio::test]
 async fn local_mode_needs_no_token() {
     let (_dir, url) = temp_db();
     let state = build_state(ServerConfig::local(

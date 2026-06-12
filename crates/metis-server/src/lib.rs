@@ -85,6 +85,12 @@ pub fn router(state: AppState) -> Router {
             "/api/v1/items/:short_code/links",
             post(routes::add_link).delete(routes::remove_link),
         )
+        .route(
+            "/api/v1/projects/:slug/repos",
+            get(routes::list_repos).post(routes::register_repo),
+        )
+        .route("/api/v1/repos/resolve", get(routes::resolve_repo))
+        .route("/api/v1/briefing", get(routes::briefing))
         .route_layer(middleware::from_fn_with_state(
             state.clone(),
             auth::require_auth,

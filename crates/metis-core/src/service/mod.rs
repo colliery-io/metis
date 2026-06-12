@@ -10,6 +10,7 @@
 pub mod item;
 pub mod project;
 pub mod query;
+pub mod repo;
 pub mod user;
 
 pub use query::ItemFilter;

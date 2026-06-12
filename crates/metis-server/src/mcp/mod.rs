@@ -23,8 +23,9 @@ use rust_mcp_sdk::{McpServer, StdioTransport, ToMcpServerHandler, TransportOptio
 
 use crate::state::AppState;
 use tools::{
-    ArchiveItemTool, CreateItemTool, CreateProjectTool, EditItemTool, LinkItemTool, ListItemsTool,
-    McpState, MetisItemTools, ReadItemTool, ReadProjectTool, TransitionPhaseTool,
+    ArchiveItemTool, BriefingTool, CreateItemTool, CreateProjectTool, EditItemTool, LinkItemTool,
+    ListItemsTool, McpState, MetisItemTools, ReadItemTool, ReadProjectTool, ResolveRepoTool,
+    TransitionPhaseTool,
 };
 
 /// Resolve the session actor and build the MCP state from an [`AppState`].
@@ -145,6 +146,8 @@ impl ServerHandler for MetisMcpHandler {
             "transition_phase" => TransitionPhaseTool,
             "link_item" => LinkItemTool,
             "archive_item" => ArchiveItemTool,
+            "resolve_repo" => ResolveRepoTool,
+            "briefing" => BriefingTool,
         }
     }
 }
