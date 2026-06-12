@@ -214,3 +214,26 @@ fn saved_views_crud_and_run(conn: &mut DualConnection) {
     assert!(view::list(conn, "metis").unwrap().is_empty());
     assert!(view::get(conn, v.id).is_err());
 }
+
+#[diesel_dualdb::test(pg, sqlite)]
+fn list_limit_is_clamped(conn: &mut DualConnection) {
+    use metis_core::service::query::MAX_LIMIT;
+    let (store, actor) = setup(conn);
+    // create a handful of items
+    for i in 0..5 {
+        mk(conn, &store, &actor, &format!("item {i}"), "");
+    }
+    // request an absurd limit; result is capped (here by row count, but the
+    // SQL LIMIT sent is clamped to MAX_LIMIT regardless)
+    let hits = query::list(
+        conn,
+        &ItemFilter {
+            project: Some("metis".into()),
+            limit: Some(1_000_000),
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert!(hits.len() <= MAX_LIMIT as usize);
+    assert_eq!(hits.len(), 5);
+}

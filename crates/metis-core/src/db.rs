@@ -10,10 +10,9 @@
 //! statements; [`run_migrations`] picks the right arm for the live connection.
 
 use diesel::connection::SimpleConnection;
-use diesel_dualdb::pool::Backend;
 use diesel_dualdb::{DualConnection, Pool};
 
-pub use diesel_dualdb::pool::{detect_backend, Error as PoolError};
+pub use diesel_dualdb::pool::{detect_backend, Backend, Error as PoolError};
 
 /// Errors from connecting or migrating.
 #[derive(Debug, thiserror::Error)]
@@ -67,9 +66,13 @@ const MIGRATIONS: &[Migration] = &[
 /// a multi-connection pool only invites lock contention and read-after-write
 /// visibility races across connections. Postgres uses the default pool size.
 pub fn connect(database_url: &str) -> Result<Pool, DbError> {
+    // Fail fast (don't hang) when the pool is exhausted under load.
+    let builder = Pool::builder().connection_timeout(std::time::Duration::from_secs(10));
     let pool = match detect_backend(database_url) {
-        Some(Backend::Sqlite) => Pool::builder().max_size(1).connect(database_url)?,
-        _ => Pool::connect(database_url)?,
+        // SQLite is single-writer: one connection serializes access cleanly.
+        Some(Backend::Sqlite) => builder.max_size(1).connect(database_url)?,
+        // Bound Postgres connections so a request burst can't open unbounded.
+        _ => builder.max_size(16).connect(database_url)?,
     };
     Ok(pool)
 }
