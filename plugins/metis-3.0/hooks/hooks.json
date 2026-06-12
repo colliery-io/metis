@@ -1,0 +1,16 @@
+{
+  "description": "Metis 3.0 session briefing: resolve the repo's git remote against the server and inject the work in flight.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "metis hook session-start"
+          }
+        ]
+      }
+    ]
+  }
+}

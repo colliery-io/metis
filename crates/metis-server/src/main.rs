@@ -5,7 +5,8 @@ use std::path::PathBuf;
 
 use clap::{Args, Parser, Subcommand};
 use metis_server::config::ServerConfig;
-use metis_server::{admin, build_state, mcp, serve};
+use metis_server::user_config::UserConfig;
+use metis_server::{admin, build_state, hook, mcp, serve};
 
 #[derive(Parser)]
 #[command(name = "metis", version, about = "Metis 3.0 server")]
@@ -20,9 +21,18 @@ enum Command {
     Serve(ServeArgs),
     /// Run the MCP server on stdio (for AI agents).
     Mcp(McpArgs),
+    /// Claude Code hook entry points.
+    #[command(subcommand)]
+    Hook(HookCommand),
     /// Administrative commands run directly against the database (bootstrap).
     #[command(subcommand)]
     Admin(AdminCommand),
+}
+
+#[derive(Subcommand)]
+enum HookCommand {
+    /// Emit SessionStart context for the current repo (resolve remote → briefing).
+    SessionStart,
 }
 
 #[derive(Args)]
@@ -118,14 +128,28 @@ async fn main() -> anyhow::Result<()> {
             serve(config).await
         }
         Command::Mcp(args) => {
+            // Fall back to ~/.config/metis/config.toml for connection + token.
+            let uc = UserConfig::load();
+            let token = args.token.or(uc.token.clone());
             let config = if args.local {
                 ServerConfig::local(args.database_url, None)
             } else {
-                ServerConfig::team(args.database_url, None, args.object_root)?
+                let database_url = args.database_url.or(uc.database_url);
+                ServerConfig::team(database_url, None, args.object_root)?
             };
             let app = build_state(config)?;
-            let state = mcp::mcp_state_from(&app, args.token)?;
+            let state = mcp::mcp_state_from(&app, token)?;
             mcp::run_stdio(state).await
+        }
+        Command::Hook(HookCommand::SessionStart) => {
+            // Never break a session: resolve best-effort, print context if any.
+            let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+            match hook::session_start(&cwd, &UserConfig::load()) {
+                Ok(Some(json)) => println!("{json}"),
+                Ok(None) => {}
+                Err(e) => tracing::debug!("session-start hook: {e}"),
+            }
+            Ok(())
         }
         Command::Admin(AdminCommand::CreateUser(args)) => {
             let display = args.display_name.unwrap_or_else(|| args.username.clone());
