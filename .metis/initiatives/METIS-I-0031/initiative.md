@@ -41,7 +41,7 @@ Strategic decisions already made (see ADR-0008):
 - Flexible work types and workflows: Flight Levels (Vision→Initiative→Task) becomes the default configuration, not a hard constraint; general types (bug, feature, chore) supported
 - A real query layer: filter by phase/repo/assignee/tag, saved views
 - Local SQLite mode keeps working (same core, same MCP tools) for solo use
-- Markdown export for portability and lock-in avoidance
+- ~~Markdown export for portability and lock-in avoidance~~ — **moved to METIS-I-0033** (3.0 round-out), scheduled post-UI
 
 **Non-Goals:**
 - Importing existing 2.x `.metis` projects — clean break per discovery decision 7; 2.x stays available (bugfix-only), 3.0 starts fresh
@@ -235,4 +235,4 @@ To be developed at decompose. Expected rough sequencing (per Detailed Design):
 5. ~~Web UI migration~~ — **moved to METIS-I-0032** (Dioxus web + desktop UI); not part of this initiative
 6. Query layer + saved views; markdown export; docker-compose packaging; plugin/hook update
 
-**Status (2026-06-12):** server-side tranche largely shipped — schema/core, server, REST, hosted+stdio MCP, repo registry/briefing, session hook + 3.0 plugin, FTS + saved views, and resource guardrails are merged on `initiative/METIS-I-0031`. Remaining here: **markdown export** and the **2.x skills/commands port**. The web/desktop UI is now METIS-I-0032.
+**Status (2026-06-12):** the server backbone is **complete** — schema/core, server, REST, hosted+stdio MCP, auth, repo registry/briefing, session hook + 3.0 plugin, FTS + saved views, and resource guardrails are merged on `initiative/METIS-I-0031` (all tasks T-0126…T-0137 done). The web/desktop UI was split to **METIS-I-0032**, and the tail items (markdown export, 2.x skills/commands port, small carried deferrals) to **METIS-I-0033** (post-UI). With those moved out, this initiative's scope is delivered and ready to close.
