@@ -13,6 +13,7 @@ use metis_core::models::{ExitCriterion, ItemDetail, ItemSummary};
 use metis_core::service::item::{self, ItemEdit, NewItem};
 use metis_core::service::project;
 use metis_core::service::query::{self, ItemFilter};
+use metis_core::service::repo;
 use metis_core::workflow::config::ProjectConfig;
 use serde::{Deserialize, Serialize};
 
@@ -353,6 +354,110 @@ pub async fn remove_link(
         })
         .await?;
     Ok(StatusCode::NO_CONTENT)
+}
+
+// ----- repos + briefing ------------------------------------------------------
+
+/// Repo response view.
+#[derive(Debug, Serialize)]
+pub struct RepoView {
+    /// Repo slug.
+    pub slug: String,
+    /// Registered git URLs.
+    pub git_urls: Vec<String>,
+}
+
+impl From<metis_core::models::RepoRow> for RepoView {
+    fn from(r: metis_core::models::RepoRow) -> Self {
+        Self {
+            slug: r.slug,
+            git_urls: r.git_urls.0,
+        }
+    }
+}
+
+/// `POST /projects/:slug/repos` body.
+#[derive(Debug, Deserialize)]
+pub struct RegisterRepo {
+    /// Repo slug.
+    pub slug: String,
+    /// Git URLs in any spelling (ssh/https/scp); normalized keys are derived.
+    pub git_urls: Vec<String>,
+}
+
+/// `POST /api/v1/projects/:slug/repos`
+pub async fn register_repo(
+    State(state): State<AppState>,
+    Path(project): Path<String>,
+    Json(body): Json<RegisterRepo>,
+) -> Result<(StatusCode, Json<RepoView>), ApiError> {
+    let view = state
+        .blocking(move |conn| {
+            repo::register(conn, &project, &body.slug, body.git_urls)
+                .map(RepoView::from)
+                .map_err(ApiError::from)
+        })
+        .await?;
+    Ok((StatusCode::CREATED, Json(view)))
+}
+
+/// `GET /api/v1/projects/:slug/repos`
+pub async fn list_repos(
+    State(state): State<AppState>,
+    Path(project): Path<String>,
+) -> Result<Json<Vec<RepoView>>, ApiError> {
+    let views = state
+        .blocking(move |conn| {
+            repo::list(conn, &project)
+                .map(|rows| rows.into_iter().map(RepoView::from).collect::<Vec<_>>())
+                .map_err(ApiError::from)
+        })
+        .await?;
+    Ok(Json(views))
+}
+
+/// Query for `GET /repos/resolve`.
+#[derive(Debug, Deserialize)]
+pub struct ResolveParams {
+    /// A git remote URL (any spelling).
+    pub remote: String,
+}
+
+/// `GET /api/v1/repos/resolve?remote=…` → the project/repo context, or 404.
+pub async fn resolve_repo(
+    State(state): State<AppState>,
+    Query(params): Query<ResolveParams>,
+) -> Result<Json<repo::RepoContext>, ApiError> {
+    let ctx = state
+        .blocking(move |conn| repo::resolve(conn, &params.remote).map_err(ApiError::from))
+        .await?;
+    match ctx {
+        Some(ctx) => Ok(Json(ctx)),
+        None => Err(ApiError {
+            status: StatusCode::NOT_FOUND,
+            code: "unregistered_repo",
+            message: "no registered repo matches that remote".into(),
+            details: None,
+        }),
+    }
+}
+
+/// Query for `GET /briefing`.
+#[derive(Debug, Deserialize)]
+pub struct BriefingParams {
+    /// Repo slug to scope the briefing to.
+    pub repo: String,
+}
+
+/// `GET /api/v1/briefing?repo=…` → the repo-scoped session briefing.
+pub async fn briefing(
+    State(state): State<AppState>,
+    Query(params): Query<BriefingParams>,
+) -> Result<Json<repo::Briefing>, ApiError> {
+    let b = state
+        .blocking(move |conn| repo::briefing(conn, &params.repo).map_err(ApiError::from))
+        .await?;
+    Ok(Json(b))
 }
 
 /// serde helper: distinguish an absent field from an explicit `null`.

@@ -20,7 +20,7 @@ use metis_core::objects::ObjectStore;
 // metis-core need not depend on schemars.)
 use metis_core::service::item::{self, ItemEdit, NewItem};
 use metis_core::service::query::{self, ItemFilter};
-use metis_core::service::{project, ServiceError};
+use metis_core::service::{project, repo, ServiceError};
 use metis_core::{DualConnection, Pool};
 use rust_mcp_sdk::macros::{mcp_tool, JsonSchema};
 use rust_mcp_sdk::schema::{schema_utils::CallToolError, CallToolResult, TextContent};
@@ -434,12 +434,72 @@ impl ArchiveItemTool {
     }
 }
 
+// ----- repos + briefing ------------------------------------------------------
+
+/// Resolve a git remote URL to its project/repo context.
+#[mcp_tool(
+    name = "resolve_repo",
+    description = "Resolve a git remote URL (any spelling: ssh/https/scp) to the Metis project and repo it is registered under, or report that it is unregistered.",
+    idempotent_hint = true,
+    read_only_hint = true
+)]
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct ResolveRepoTool {
+    /// A git remote URL (e.g. from `git remote get-url origin`).
+    pub remote: String,
+}
+
+impl ResolveRepoTool {
+    pub async fn run(&self, state: &McpState) -> Result<CallToolResult, CallToolError> {
+        let remote = self.remote.clone();
+        state
+            .run_blocking(move |conn, _store, _actor| {
+                // Map "unmatched" to a structured payload rather than an error,
+                // so the caller can branch without parsing an error string.
+                repo::resolve(conn, &remote).map(|ctx| Resolved {
+                    matched: ctx.is_some(),
+                    context: ctx,
+                })
+            })
+            .await
+    }
+}
+
+/// Repo-scoped session briefing.
+#[mcp_tool(
+    name = "briefing",
+    description = "Return the work in flight for a repo (by slug): items touching it that are active or ready to pick up. Use after resolve_repo to brief a session.",
+    idempotent_hint = true,
+    read_only_hint = true
+)]
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct BriefingTool {
+    /// Repo slug (from resolve_repo).
+    pub repo: String,
+}
+
+impl BriefingTool {
+    pub async fn run(&self, state: &McpState) -> Result<CallToolResult, CallToolError> {
+        let repo_slug = self.repo.clone();
+        state
+            .run_blocking(move |conn, _store, _actor| repo::briefing(conn, &repo_slug))
+            .await
+    }
+}
+
 // ----- result helpers --------------------------------------------------------
 
 /// Minimal acknowledgement payload for void operations.
 #[derive(Serialize)]
 struct Ack {
     ok: bool,
+}
+
+/// Resolve-repo result: a flag plus the context when matched.
+#[derive(Serialize)]
+struct Resolved {
+    matched: bool,
+    context: Option<metis_core::service::repo::RepoContext>,
 }
 
 /// Serializable projection of a project row (config + identity).
@@ -472,6 +532,8 @@ tool_box!(
         EditItemTool,
         TransitionPhaseTool,
         LinkItemTool,
-        ArchiveItemTool
+        ArchiveItemTool,
+        ResolveRepoTool,
+        BriefingTool
     ]
 );
