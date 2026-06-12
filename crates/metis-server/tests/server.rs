@@ -625,6 +625,29 @@ async fn rest_search_and_saved_views() {
 }
 
 #[tokio::test]
+async fn oversized_body_is_rejected() {
+    let (_dir, url) = temp_db();
+    let app = local_app(url).await;
+    app.clone()
+        .oneshot(json_req(
+            "POST",
+            "/api/v1/projects",
+            serde_json::json!({"slug":"metis","name":"Metis"}),
+        ))
+        .await
+        .unwrap();
+
+    // a body well over the 1 MiB limit -> 413 (not buffered/processed)
+    let huge = "x".repeat(2 * 1024 * 1024);
+    let body = serde_json::json!({"project":"metis","type":"task","title":"big","body":huge});
+    let resp = app
+        .oneshot(json_req("POST", "/api/v1/items", body))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::PAYLOAD_TOO_LARGE);
+}
+
+#[tokio::test]
 async fn local_mode_needs_no_token() {
     let (_dir, url) = temp_db();
     let state = build_state(ServerConfig::local(

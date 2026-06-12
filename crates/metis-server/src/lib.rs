@@ -5,6 +5,21 @@
 //! (METIS-T-0130) delivers the skeleton — config, state, auth middleware,
 //! `/healthz`, a `/api/v1/whoami` probe, and admin commands. The full `/api/v1`
 //! surface lands in METIS-T-0131.
+//!
+//! ## Operations / limits (METIS-T-0137)
+//! Guardrails so one heavy client can't wedge the shared server:
+//! - list/search results are capped at [`metis_core::service::query::MAX_LIMIT`]
+//!   rows regardless of the requested `limit`;
+//! - request bodies are limited to 1 MiB ([`MAX_BODY_BYTES`]) → `413` if larger;
+//! - the DB pool fails fast on exhaustion (10s acquire timeout; Postgres
+//!   `max_size` bounded) instead of hanging;
+//! - **team deployments must use PostgreSQL** — SQLite is single-writer and
+//!   serializes all requests (a startup warning fires if team mode runs on it).
+//!
+//! Recommended (deployment, not enforced here): set a Postgres
+//! `statement_timeout` via `DATABASE_URL` (`?options=-c statement_timeout=30000`)
+//! so a pathological query can't run forever. For hard UI/agent isolation, run
+//! two stateless `metis serve` processes against the same database.
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
@@ -35,6 +50,20 @@ use crate::state::AppState;
 /// Build application state: connect + migrate, construct the object store, and
 /// (in local mode) ensure the implicit user exists.
 pub fn build_state(config: ServerConfig) -> anyhow::Result<AppState> {
+    // Team mode on SQLite serializes every request through one connection
+    // (single-writer); fine for solo, a noisy-neighbor hazard for a team.
+    if !config.local
+        && matches!(
+            db::detect_backend(&config.database_url),
+            Some(db::Backend::Sqlite)
+        )
+    {
+        tracing::warn!(
+            "team mode is running on a SQLite database; all requests serialize through a \
+             single connection. Use PostgreSQL for multi-user/agent deployments."
+        );
+    }
+
     let pool = db::connect_and_migrate(&config.database_url)?;
     let store: Arc<dyn ObjectStore + Send + Sync> = config.object_store.build()?.into();
 
@@ -113,8 +142,15 @@ pub fn router(state: AppState) -> Router {
     Router::new()
         .route("/healthz", get(healthz))
         .merge(protected)
+        // Bound request bodies (markdown item bodies are the largest payload);
+        // an oversized body is rejected with 413 rather than buffered.
+        .layer(axum::extract::DefaultBodyLimit::max(MAX_BODY_BYTES))
         .with_state(state)
 }
+
+/// Maximum request body (1 MiB) — comfortably large for markdown prose, bounds
+/// abuse. See METIS-T-0137.
+const MAX_BODY_BYTES: usize = 1024 * 1024;
 
 /// Bind and serve until shutdown.
 pub async fn serve(config: ServerConfig) -> anyhow::Result<()> {

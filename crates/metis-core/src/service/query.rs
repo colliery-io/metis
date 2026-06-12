@@ -45,8 +45,22 @@ pub struct ItemFilter {
     pub offset: Option<i64>,
 }
 
+/// Hard ceiling on returned rows, regardless of the requested `limit` — a
+/// guardrail so no client (REST or MCP) can pull an unbounded result set.
+pub const MAX_LIMIT: i64 = 500;
+
 /// Max FTS matches considered before applying structured filters + paging.
-const SEARCH_FETCH_CAP: i64 = 500;
+const SEARCH_FETCH_CAP: i64 = MAX_LIMIT;
+
+/// Clamp a requested limit to `[1, MAX_LIMIT]` (default 100).
+fn clamp_limit(limit: Option<i64>) -> i64 {
+    limit.unwrap_or(100).clamp(1, MAX_LIMIT)
+}
+
+/// Clamp a requested offset to `>= 0` (default 0).
+fn clamp_offset(offset: Option<i64>) -> i64 {
+    offset.unwrap_or(0).max(0)
+}
 
 /// List items matching `filter`. Without `q`, newest first; with `q`, by search
 /// relevance.
@@ -133,14 +147,14 @@ pub fn list(conn: &mut DualConnection, filter: &ItemFilter) -> Result<Vec<ItemSu
                 .copied()
                 .unwrap_or(usize::MAX)
         });
-        let offset = filter.offset.unwrap_or(0).max(0) as usize;
-        let limit = filter.limit.unwrap_or(100).max(0) as usize;
+        let offset = clamp_offset(filter.offset) as usize;
+        let limit = clamp_limit(filter.limit) as usize;
         Ok(summaries.into_iter().skip(offset).take(limit).collect())
     } else {
         let rows: Vec<WorkItemRow> = query
             .order(work_items::created_at.desc())
-            .limit(filter.limit.unwrap_or(100))
-            .offset(filter.offset.unwrap_or(0))
+            .limit(clamp_limit(filter.limit))
+            .offset(clamp_offset(filter.offset))
             .select(WorkItemRow::as_select())
             .load(conn)?;
         Ok(rows.iter().map(ItemSummary::from).collect())
