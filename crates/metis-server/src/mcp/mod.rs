@@ -1,11 +1,12 @@
-//! MCP server over the service layer (METIS-T-0132).
+//! MCP server over the service layer (METIS-T-0132, T-0135).
 //!
-//! Exposes the work-item verbs to agents via `rust-mcp-sdk` over **stdio**. The
-//! handler holds an [`McpState`] (pool + object store + the actor this session
-//! acts as) and each tool calls `metis-core::service::*`. Hosted
-//! streamable-HTTP transport with per-connection auth is a follow-up; the tool
-//! layer here is transport-agnostic so it can be reused.
+//! Exposes the work-item verbs to agents via `rust-mcp-sdk`, over **stdio**
+//! (direct-DB, single session actor) and over **HTTP** (hosted, per-connection
+//! PAT auth — see [`http`]). Both transports route through the shared
+//! [`call_tool`]/[`tool_list`] dispatch so behavior is identical; each tool
+//! calls `metis-core::service::*` via an [`McpState`].
 
+pub mod http;
 pub mod tools;
 
 use std::sync::Arc;
@@ -17,9 +18,10 @@ use rust_mcp_sdk::mcp_server::{server_runtime, McpServerOptions, ServerHandler};
 use rust_mcp_sdk::schema::{
     schema_utils::CallToolError, CallToolRequestParams, CallToolResult, Implementation,
     InitializeResult, ListToolsResult, PaginatedRequestParams, RpcError, ServerCapabilities,
-    ServerCapabilitiesTools, LATEST_PROTOCOL_VERSION,
+    ServerCapabilitiesTools, Tool, LATEST_PROTOCOL_VERSION,
 };
 use rust_mcp_sdk::{McpServer, StdioTransport, ToMcpServerHandler, TransportOptions};
+use serde_json::Value;
 
 use crate::state::AppState;
 use tools::{
@@ -27,6 +29,72 @@ use tools::{
     ListItemsTool, McpState, MetisItemTools, ReadItemTool, ReadProjectTool, ResolveRepoTool,
     TransitionPhaseTool,
 };
+
+/// The advertised tool schemas (shared by every transport).
+pub fn tool_list() -> Vec<Tool> {
+    MetisItemTools::tools()
+}
+
+/// Server identity + capabilities for `initialize` (shared by every transport).
+pub fn server_info() -> InitializeResult {
+    InitializeResult {
+        server_info: Implementation {
+            name: "Metis".to_string(),
+            version: env!("CARGO_PKG_VERSION").to_string(),
+            title: Some("Metis MCP Server".to_string()),
+            description: Some("Work-item management over the Metis 3.0 service layer".to_string()),
+            icons: vec![],
+            website_url: None,
+        },
+        capabilities: ServerCapabilities {
+            tools: Some(ServerCapabilitiesTools { list_changed: None }),
+            ..Default::default()
+        },
+        meta: None,
+        instructions: Some(
+            "Metis work-item tools. Items are addressed by short code (e.g. METIS-T-0001). \
+             Create items under a project slug with a type from the project config; transitions \
+             enforce the type's workflow unless forced."
+                .to_string(),
+        ),
+        protocol_version: LATEST_PROTOCOL_VERSION.to_string(),
+    }
+}
+
+/// Dispatch a tool call by name against `state`. The one place tool names map to
+/// implementations; every transport calls this.
+pub async fn call_tool(
+    state: &McpState,
+    name: &str,
+    args: Value,
+) -> Result<CallToolResult, CallToolError> {
+    macro_rules! dispatch {
+        ($($n:literal => $ty:ty),* $(,)?) => {
+            match name {
+                $(
+                    $n => {
+                        let tool: $ty = serde_json::from_value(args).map_err(CallToolError::new)?;
+                        tool.run(state).await
+                    }
+                )*
+                _ => Err(CallToolError::unknown_tool(name.to_string())),
+            }
+        };
+    }
+    dispatch! {
+        "create_project" => CreateProjectTool,
+        "read_project" => ReadProjectTool,
+        "list_items" => ListItemsTool,
+        "read_item" => ReadItemTool,
+        "create_item" => CreateItemTool,
+        "edit_item" => EditItemTool,
+        "transition_phase" => TransitionPhaseTool,
+        "link_item" => LinkItemTool,
+        "archive_item" => ArchiveItemTool,
+        "resolve_repo" => ResolveRepoTool,
+        "briefing" => BriefingTool,
+    }
+}
 
 /// Resolve the session actor and build the MCP state from an [`AppState`].
 ///
@@ -51,29 +119,6 @@ pub fn mcp_state_from(app: &AppState, token: Option<String>) -> anyhow::Result<M
 
 /// Run the MCP server on stdio until the client disconnects.
 pub async fn run_stdio(state: McpState) -> anyhow::Result<()> {
-    let server_details = InitializeResult {
-        server_info: Implementation {
-            name: "Metis".to_string(),
-            version: env!("CARGO_PKG_VERSION").to_string(),
-            title: Some("Metis MCP Server".to_string()),
-            description: Some("Work-item management over the Metis 3.0 service layer".to_string()),
-            icons: vec![],
-            website_url: None,
-        },
-        capabilities: ServerCapabilities {
-            tools: Some(ServerCapabilitiesTools { list_changed: None }),
-            ..Default::default()
-        },
-        meta: None,
-        instructions: Some(
-            "Metis work-item tools. Items are addressed by short code (e.g. METIS-T-0001). \
-             Create items under a project slug with a type from the project config; transitions \
-             enforce the type's workflow unless forced."
-                .to_string(),
-        ),
-        protocol_version: LATEST_PROTOCOL_VERSION.to_string(),
-    };
-
     let transport = StdioTransport::new(TransportOptions::default())
         .map_err(|e| anyhow::anyhow!("failed to create stdio transport: {e}"))?;
     let handler = MetisMcpHandler {
@@ -82,7 +127,7 @@ pub async fn run_stdio(state: McpState) -> anyhow::Result<()> {
     .to_mcp_server_handler();
 
     let server = server_runtime::create_server(McpServerOptions {
-        server_details,
+        server_details: server_info(),
         transport,
         handler,
         task_store: None,
@@ -108,7 +153,7 @@ impl ServerHandler for MetisMcpHandler {
         _runtime: Arc<dyn McpServer>,
     ) -> Result<ListToolsResult, RpcError> {
         Ok(ListToolsResult {
-            tools: MetisItemTools::tools(),
+            tools: tool_list(),
             meta: None,
             next_cursor: None,
         })
@@ -119,35 +164,7 @@ impl ServerHandler for MetisMcpHandler {
         params: CallToolRequestParams,
         _runtime: Arc<dyn McpServer>,
     ) -> Result<CallToolResult, CallToolError> {
-        let args = serde_json::Value::Object(params.arguments.clone().unwrap_or_default());
-        let state = &self.state;
-
-        macro_rules! dispatch {
-            ($($name:literal => $ty:ty),* $(,)?) => {
-                match params.name.as_str() {
-                    $(
-                        $name => {
-                            let tool: $ty = serde_json::from_value(args).map_err(CallToolError::new)?;
-                            tool.run(state).await
-                        }
-                    )*
-                    _ => Err(CallToolError::unknown_tool(params.name.clone())),
-                }
-            };
-        }
-
-        dispatch! {
-            "create_project" => CreateProjectTool,
-            "read_project" => ReadProjectTool,
-            "list_items" => ListItemsTool,
-            "read_item" => ReadItemTool,
-            "create_item" => CreateItemTool,
-            "edit_item" => EditItemTool,
-            "transition_phase" => TransitionPhaseTool,
-            "link_item" => LinkItemTool,
-            "archive_item" => ArchiveItemTool,
-            "resolve_repo" => ResolveRepoTool,
-            "briefing" => BriefingTool,
-        }
+        let args = Value::Object(params.arguments.clone().unwrap_or_default());
+        call_tool(&self.state, &params.name, args).await
     }
 }
