@@ -93,6 +93,9 @@ pub fn router(state: AppState) -> Router {
         )
         .route("/api/v1/repos/resolve", get(routes::resolve_repo))
         .route("/api/v1/briefing", get(routes::briefing))
+        // Hosted MCP over Streamable HTTP (per-connection PAT auth via the
+        // same middleware). POST only; GET yields 405 (no server push).
+        .route("/mcp", post(mcp::http::post_mcp))
         .route_layer(middleware::from_fn_with_state(
             state.clone(),
             auth::require_auth,

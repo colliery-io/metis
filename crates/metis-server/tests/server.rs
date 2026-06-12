@@ -374,6 +374,168 @@ async fn rest_repo_registry_resolve_and_briefing() {
     assert_eq!(b["ready"].as_array().unwrap().len(), 0);
 }
 
+// ----- hosted MCP over HTTP -------------------------------------------------
+
+fn mcp_post(token: Option<&str>, body: serde_json::Value) -> Request<Body> {
+    let mut b = Request::builder()
+        .method("POST")
+        .uri("/mcp")
+        .header("content-type", "application/json");
+    if let Some(t) = token {
+        b = b.header("Authorization", format!("Bearer {t}"));
+    }
+    b.body(Body::from(body.to_string())).unwrap()
+}
+
+#[tokio::test]
+async fn mcp_http_requires_token() {
+    let (_dir, url) = temp_db();
+    let state = build_state(
+        ServerConfig::team(Some(url), Some("127.0.0.1:0".parse().unwrap()), None).unwrap(),
+    )
+    .unwrap();
+    let app = router(state);
+
+    let resp = app
+        .oneshot(mcp_post(
+            None,
+            serde_json::json!({"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
+async fn mcp_http_get_is_405() {
+    // Local mode (auth disabled) so the GET reaches method routing rather than
+    // being rejected by the auth layer first — proving there is no SSE handler.
+    let (_dir, url) = temp_db();
+    let app = local_app(url).await;
+
+    let resp = app
+        .oneshot(
+            Request::builder()
+                .method("GET")
+                .uri("/mcp")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::METHOD_NOT_ALLOWED);
+}
+
+#[tokio::test]
+async fn mcp_http_initialize_list_and_call() {
+    let (_dir, url) = temp_db();
+    let user_id = admin::create_user(&url, "dev", "Dev", None, true).unwrap();
+    let token = admin::create_token(&url, "dev", "laptop", Some("claude-code")).unwrap();
+    let state = build_state(
+        ServerConfig::team(Some(url), Some("127.0.0.1:0".parse().unwrap()), None).unwrap(),
+    )
+    .unwrap();
+    let app = router(state);
+
+    // initialize
+    let resp = app
+        .clone()
+        .oneshot(mcp_post(
+            Some(&token),
+            serde_json::json!({"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let v = body_json(resp).await;
+    assert_eq!(v["result"]["serverInfo"]["name"], "Metis");
+
+    // notifications/initialized -> 202, no body
+    let resp = app
+        .clone()
+        .oneshot(mcp_post(
+            Some(&token),
+            serde_json::json!({"jsonrpc":"2.0","method":"notifications/initialized"}),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::ACCEPTED);
+
+    // tools/list includes the renamed tools
+    let resp = app
+        .clone()
+        .oneshot(mcp_post(
+            Some(&token),
+            serde_json::json!({"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}),
+        ))
+        .await
+        .unwrap();
+    let v = body_json(resp).await;
+    let names: Vec<&str> = v["result"]["tools"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|t| t["name"].as_str().unwrap())
+        .collect();
+    assert!(names.contains(&"create_item"));
+    assert!(names.contains(&"transition_phase"));
+    assert!(names.contains(&"briefing"));
+
+    // tools/call: create project + item (attributed to the token's user)
+    app.clone()
+        .oneshot(mcp_post(
+            Some(&token),
+            serde_json::json!({"jsonrpc":"2.0","id":3,"method":"tools/call",
+                "params":{"name":"create_project","arguments":{"slug":"metis","name":"Metis"}}}),
+        ))
+        .await
+        .unwrap();
+    let resp = app
+        .clone()
+        .oneshot(mcp_post(
+            Some(&token),
+            serde_json::json!({"jsonrpc":"2.0","id":4,"method":"tools/call",
+                "params":{"name":"create_item","arguments":{"project":"metis","type":"task","title":"via http mcp","exit_criteria":["ship"]}}}),
+        ))
+        .await
+        .unwrap();
+    let v = body_json(resp).await;
+    let text = v["result"]["content"][0]["text"].as_str().unwrap();
+    let item: serde_json::Value = serde_json::from_str(text).unwrap();
+    assert_eq!(item["short_code"], "METIS-T-0001");
+    assert_eq!(item["created_by"], user_id.to_string());
+
+    // gated transition -> result with isError true (not a protocol error)
+    let resp = app
+        .clone()
+        .oneshot(mcp_post(
+            Some(&token),
+            serde_json::json!({"jsonrpc":"2.0","id":5,"method":"tools/call",
+                "params":{"name":"transition_phase","arguments":{"short_code":"METIS-T-0001","phase":"todo"}}}),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let v = body_json(resp).await;
+    assert_eq!(v["result"]["isError"], true);
+    assert!(v["result"]["content"][0]["text"]
+        .as_str()
+        .unwrap()
+        .contains("exit criteria"));
+
+    // unknown method -> JSON-RPC -32601
+    let resp = app
+        .clone()
+        .oneshot(mcp_post(
+            Some(&token),
+            serde_json::json!({"jsonrpc":"2.0","id":6,"method":"nope/nope","params":{}}),
+        ))
+        .await
+        .unwrap();
+    let v = body_json(resp).await;
+    assert_eq!(v["error"]["code"], -32601);
+}
+
 #[tokio::test]
 async fn local_mode_needs_no_token() {
     let (_dir, url) = temp_db();
