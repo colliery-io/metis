@@ -236,21 +236,10 @@ impl Specification {
             DocumentValidationError::InvalidContent(format!("Frontmatter render error: {}", e))
         })?;
 
-        // Use the actual content body
-        let content_body = &self.content().body;
-
-        // Use actual acceptance criteria if present
-        let acceptance_criteria = if let Some(ac) = &self.content().acceptance_criteria {
-            format!("\n\n## Acceptance Criteria\n\n{}", ac)
-        } else {
-            String::new()
-        };
-
         Ok(format!(
-            "---\n{}\n---\n\n{}{}",
+            "---\n{}\n---\n\n{}",
             frontmatter.trim_end(),
-            content_body,
-            acceptance_criteria
+            self.content().full_content()
         ))
     }
 }
