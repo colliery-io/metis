@@ -289,22 +289,11 @@ impl Task {
             DocumentValidationError::InvalidContent(format!("Frontmatter render error: {}", e))
         })?;
 
-        // Use the actual content body
-        let content_body = &self.content().body;
-
-        // Use actual acceptance criteria if present, otherwise empty string
-        let acceptance_criteria = if let Some(ac) = &self.content().acceptance_criteria {
-            format!("\n\n## Acceptance Criteria\n\n{}", ac)
-        } else {
-            String::new()
-        };
-
         // Combine everything
         Ok(format!(
-            "---\n{}\n---\n\n{}{}",
+            "---\n{}\n---\n\n{}",
             frontmatter.trim_end(),
-            content_body,
-            acceptance_criteria
+            self.content().full_content()
         ))
     }
 }
@@ -504,11 +493,23 @@ Details on how to implement this.
         let file_path = temp_dir.path().join("test-task.md");
 
         task.to_file(&file_path).await.unwrap();
+
+        let written_content = std::fs::read_to_string(&file_path).unwrap();
+        assert_eq!(
+            written_content.matches("## Acceptance Criteria").count(),
+            1,
+            "acceptance criteria header must not be duplicated on save"
+        );
+
         let loaded_task = Task::from_file(&file_path).await.unwrap();
 
         assert_eq!(loaded_task.title(), task.title());
         assert_eq!(loaded_task.phase().unwrap(), task.phase().unwrap());
         assert_eq!(loaded_task.content().body, task.content().body);
+        assert_eq!(
+            loaded_task.content().acceptance_criteria,
+            task.content().acceptance_criteria
+        );
         assert_eq!(loaded_task.archived(), task.archived());
         assert_eq!(loaded_task.tags().len(), task.tags().len());
     }
