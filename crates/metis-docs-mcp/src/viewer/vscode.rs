@@ -1,5 +1,5 @@
 use super::traits::{DocumentViewer, ViewerError};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 /// VSCode viewer backend that opens documents via the `code` CLI.
@@ -64,7 +64,7 @@ impl DocumentViewer for VscodeViewer {
         Ok(())
     }
 
-    fn is_open(&self, _path: &PathBuf) -> Result<bool, ViewerError> {
+    fn is_open(&self, _path: &Path) -> Result<bool, ViewerError> {
         // VSCode CLI doesn't provide a reliable way to check if a specific file
         // is open in a tab. The `--reuse-window` flag handles the "don't spawn
         // new windows" concern, and VSCode itself won't duplicate tabs for the

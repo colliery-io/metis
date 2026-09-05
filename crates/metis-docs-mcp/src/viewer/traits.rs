@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// Trait that all viewer backends must implement.
 ///
@@ -12,7 +12,7 @@ pub trait DocumentViewer: Send + Sync {
 
     /// Check whether a file is already open in this viewer.
     /// Used for "look before you leap" — skip opening if already visible.
-    fn is_open(&self, path: &PathBuf) -> Result<bool, ViewerError>;
+    fn is_open(&self, path: &Path) -> Result<bool, ViewerError>;
 
     /// Human-readable name of this viewer backend (e.g., "VSCode", "System Editor").
     fn name(&self) -> &str;

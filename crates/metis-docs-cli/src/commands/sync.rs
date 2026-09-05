@@ -115,7 +115,6 @@ impl SyncCommand {
 mod tests {
     use super::*;
     use crate::commands::InitCommand;
-    use std::fs;
     use tempfile::tempdir;
 
     #[tokio::test]

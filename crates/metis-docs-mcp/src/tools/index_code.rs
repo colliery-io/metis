@@ -85,7 +85,7 @@ impl IndexCodeTool {
             .iter()
             .map(|(lang, files)| (lang.name().to_string(), files.len()))
             .collect();
-        lang_summary.sort_by(|a, b| b.1.cmp(&a.1));
+        lang_summary.sort_by_key(|(_, count)| std::cmp::Reverse(*count));
 
         // Step 2: Parse and extract symbols
         let symbols_by_file: BTreeMap<PathBuf, Vec<Symbol>>;

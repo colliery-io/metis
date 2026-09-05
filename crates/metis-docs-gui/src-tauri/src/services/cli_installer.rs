@@ -8,7 +8,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use tauri::{AppHandle, Emitter, Manager};
 
@@ -81,7 +81,7 @@ fn read_version_info() -> Option<CliVersionInfo> {
 }
 
 /// Write CLI version info after installation
-fn write_version_info(version: &str, binary_path: &PathBuf) -> Result<(), String> {
+fn write_version_info(version: &str, binary_path: &Path) -> Result<(), String> {
     let info = CliVersionInfo {
         version: version.to_string(),
         installed_at: chrono::Utc::now().to_rfc3339(),
@@ -142,7 +142,8 @@ fn get_sidecar_path(app: &AppHandle) -> Result<PathBuf, String> {
     {
         // On macOS, the binary is in Contents/MacOS/
         let macos_dir = exe_dir
-            .parent().map(|p| p.join("MacOS"))
+            .parent()
+            .map(|p| p.join("MacOS"))
             .ok_or("Failed to find MacOS directory")?;
 
         let sidecar = macos_dir.join("metis");

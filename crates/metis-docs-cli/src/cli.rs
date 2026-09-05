@@ -85,9 +85,10 @@ impl Cli {
 mod tests {
     use super::*;
     use crate::commands::create::CreateCommands;
+    use crate::commands::list::OutputFormat;
     use crate::commands::{
-        ArchiveCommand, CreateCommand, ListCommand, OutputFormat, SearchCommand, StatusCommand,
-        SyncCommand, TransitionCommand, ValidateCommand,
+        ArchiveCommand, CreateCommand, ListCommand, SearchCommand, StatusCommand, SyncCommand,
+        TransitionCommand, ValidateCommand,
     };
     use std::fs;
     use tempfile::tempdir;

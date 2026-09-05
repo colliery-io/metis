@@ -62,7 +62,7 @@ impl IndexCommand {
             .iter()
             .map(|(lang, files)| (lang.name(), files.len()))
             .collect();
-        lang_summary.sort_by(|a, b| b.1.cmp(&a.1));
+        lang_summary.sort_by_key(|(_, count)| std::cmp::Reverse(*count));
         for (name, count) in &lang_summary {
             println!("    {}: {} files", name, count);
         }

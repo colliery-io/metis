@@ -156,8 +156,8 @@ impl ConfigurationRecoveryService {
             .unwrap_or_else(|| "PROJ".to_string());
         let flight_levels = config_repo.get_flight_level_config()?;
 
-        let config_file = ConfigFile::new(prefix, flight_levels)
-            .map_err(MetisError::ConfigurationError)?;
+        let config_file =
+            ConfigFile::new(prefix, flight_levels).map_err(MetisError::ConfigurationError)?;
 
         config_file
             .save(config_file_path)

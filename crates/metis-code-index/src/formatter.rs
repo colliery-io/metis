@@ -276,8 +276,6 @@ fn first_sentence(doc: &str) -> Option<&str> {
     // Find sentence boundary: period followed by space, end, or newline
     if let Some(pos) = first_line.find(". ") {
         Some(&first_line[..=pos])
-    } else if first_line.ends_with('.') {
-        Some(first_line)
     } else {
         Some(first_line)
     }

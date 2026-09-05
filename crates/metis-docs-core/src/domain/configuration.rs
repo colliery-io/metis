@@ -164,8 +164,7 @@ impl fmt::Display for ViewerBackend {
 }
 
 /// Viewer configuration section in config.toml
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct ViewerConfig {
     /// Default viewer backend. Falls back to $EDITOR if not set.
     pub default: Option<ViewerBackend>,
@@ -177,7 +176,6 @@ pub struct ViewerConfig {
     #[serde(default)]
     pub background: bool,
 }
-
 
 /// Configuration file structure that persists to .metis/config.toml
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

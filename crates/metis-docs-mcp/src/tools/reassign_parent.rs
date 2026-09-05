@@ -64,7 +64,7 @@ impl ReassignParentTool {
                 ))
             })?;
 
-            let category = BacklogCategory::from_str(category_str).ok_or_else(|| {
+            let category = BacklogCategory::parse(category_str).ok_or_else(|| {
                 CallToolError::new(std::io::Error::new(
                     std::io::ErrorKind::InvalidInput,
                     format!(

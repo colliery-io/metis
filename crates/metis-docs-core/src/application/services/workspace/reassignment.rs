@@ -28,7 +28,7 @@ pub enum BacklogCategory {
 }
 
 impl BacklogCategory {
-    pub fn from_str(s: &str) -> Option<Self> {
+    pub fn parse(s: &str) -> Option<Self> {
         match s.to_lowercase().as_str() {
             "bug" => Some(Self::Bug),
             "feature" => Some(Self::Feature),
@@ -257,24 +257,24 @@ mod tests {
 
     #[test]
     fn test_backlog_category_parsing() {
-        assert_eq!(BacklogCategory::from_str("bug"), Some(BacklogCategory::Bug));
+        assert_eq!(BacklogCategory::parse("bug"), Some(BacklogCategory::Bug));
         assert_eq!(
-            BacklogCategory::from_str("feature"),
+            BacklogCategory::parse("feature"),
             Some(BacklogCategory::Feature)
         );
         assert_eq!(
-            BacklogCategory::from_str("tech-debt"),
+            BacklogCategory::parse("tech-debt"),
             Some(BacklogCategory::TechDebt)
         );
         assert_eq!(
-            BacklogCategory::from_str("techdebt"),
+            BacklogCategory::parse("techdebt"),
             Some(BacklogCategory::TechDebt)
         );
         assert_eq!(
-            BacklogCategory::from_str("tech_debt"),
+            BacklogCategory::parse("tech_debt"),
             Some(BacklogCategory::TechDebt)
         );
-        assert_eq!(BacklogCategory::from_str("invalid"), None);
+        assert_eq!(BacklogCategory::parse("invalid"), None);
     }
 
     #[test]

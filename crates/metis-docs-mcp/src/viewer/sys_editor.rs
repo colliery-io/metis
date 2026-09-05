@@ -1,5 +1,5 @@
 use super::traits::{DocumentViewer, ViewerError};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use tracing::info;
 
@@ -146,7 +146,7 @@ impl DocumentViewer for SysEditorViewer {
         }
     }
 
-    fn is_open(&self, _path: &PathBuf) -> Result<bool, ViewerError> {
+    fn is_open(&self, _path: &Path) -> Result<bool, ViewerError> {
         // We don't have a reliable way to check if a file is open in an arbitrary
         // system editor. Return false and let the editor handle it.
         Ok(false)

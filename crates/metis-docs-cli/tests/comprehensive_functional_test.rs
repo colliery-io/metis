@@ -3,7 +3,7 @@
 
 use metis_core::{Application, Database};
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// Helper to run CLI commands programmatically
 mod cli_helpers {
@@ -35,7 +35,7 @@ mod cli_helpers {
         result
     }
 
-    pub fn verify_workspace(path: &PathBuf) -> bool {
+    pub fn verify_workspace(path: &Path) -> bool {
         let metis_dir = path.join(".metis");
         let db_path = metis_dir.join("metis.db");
         let config_path = metis_dir.join("config.toml");
@@ -44,7 +44,7 @@ mod cli_helpers {
         metis_dir.exists() && db_path.exists() && config_path.exists() && vision_path.exists()
     }
 
-    pub fn verify_config_toml(path: &PathBuf, expected_prefix: &str) -> bool {
+    pub fn verify_config_toml(path: &Path, expected_prefix: &str) -> bool {
         let config_path = path.join(".metis/config.toml");
         if let Ok(content) = fs::read_to_string(&config_path) {
             content.contains(&format!("prefix = \"{}\"", expected_prefix))

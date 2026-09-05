@@ -340,9 +340,9 @@ impl RustExtractor {
                         outer_node.and_then(|n| build_const_signature(n, source))
                     }
                     SymbolKind::Type => {
-                        if trait_name.is_some() {
+                        if let Some(trait_name) = &trait_name {
                             // impl Trait for Type
-                            Some(format!("impl {} for {}", trait_name.unwrap(), name))
+                            Some(format!("impl {} for {}", trait_name, name))
                         } else {
                             outer_node.and_then(|n| build_type_alias_signature(n, source))
                         }

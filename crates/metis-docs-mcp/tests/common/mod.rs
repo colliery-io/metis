@@ -1,4 +1,8 @@
 //! Common utilities and helper functions for integration tests
+//!
+//! Each integration test binary compiles this module separately, so helpers
+//! unused by one binary would otherwise trip dead_code.
+#![allow(dead_code)]
 
 use anyhow::Result;
 use metis_core::dal::Database;

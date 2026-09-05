@@ -10,7 +10,7 @@ use tempfile::TempDir;
 
 /// Helper to build and spawn the MCP server binary
 struct McpServerProcess {
-    temp_dir: TempDir,
+    _temp_dir: TempDir,
     project_path: String,
     metis_dir: String,
 }
@@ -22,7 +22,7 @@ impl McpServerProcess {
         let metis_dir = format!("{}/.metis", project_path);
 
         Ok(Self {
-            temp_dir,
+            _temp_dir: temp_dir,
             project_path,
             metis_dir,
         })

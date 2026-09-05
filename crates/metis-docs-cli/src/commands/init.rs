@@ -136,10 +136,8 @@ impl InitCommand {
                     );
                 }
             }
-        } else if self.initiatives.is_some() {
+        } else if let Some(initiatives_enabled) = self.initiatives {
             // Use custom configuration
-            let initiatives_enabled = self.initiatives.unwrap();
-
             FlightLevelConfig::new(initiatives_enabled)
                 .map_err(|e| anyhow::anyhow!("Invalid configuration: {}", e))
         } else {

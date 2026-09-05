@@ -199,45 +199,4 @@ impl ReadDocumentTool {
 
         sections
     }
-
-    fn extract_exit_criteria(&self, content: &str) -> Vec<ExitCriterion> {
-        let mut criteria = Vec::new();
-
-        for line in content.lines() {
-            let trimmed = line.trim();
-
-            // Look for markdown checkbox patterns
-            if trimmed.starts_with("- [") {
-                if let Some(checkbox_end) = trimmed.find(']') {
-                    if checkbox_end >= 3 {
-                        let checkbox_content = &trimmed[3..checkbox_end];
-                        let completed =
-                            checkbox_content.trim() == "x" || checkbox_content.trim() == "X";
-
-                        // Extract the criterion text after the checkbox
-                        let criterion_text = if trimmed.len() > checkbox_end + 1 {
-                            trimmed[checkbox_end + 1..].trim().to_string()
-                        } else {
-                            "".to_string()
-                        };
-
-                        if !criterion_text.is_empty() {
-                            criteria.push(ExitCriterion {
-                                text: criterion_text,
-                                completed,
-                            });
-                        }
-                    }
-                }
-            }
-        }
-
-        criteria
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct ExitCriterion {
-    text: String,
-    completed: bool,
 }

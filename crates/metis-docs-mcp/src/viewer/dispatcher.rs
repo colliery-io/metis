@@ -214,8 +214,8 @@ mod tests {
             }
         }
 
-        fn is_open(&self, path: &PathBuf) -> Result<bool, ViewerError> {
-            Ok(self.files_open.contains(path))
+        fn is_open(&self, path: &std::path::Path) -> Result<bool, ViewerError> {
+            Ok(self.files_open.iter().any(|p| p == path))
         }
 
         fn name(&self) -> &str {
@@ -304,7 +304,9 @@ mod tests {
 
         let dispatcher = ViewerDispatcher::new(config, vec![Box::new(vscode)]);
 
-        let result = dispatcher.open(&[open_path.clone()], None).unwrap();
+        let result = dispatcher
+            .open(std::slice::from_ref(&open_path), None)
+            .unwrap();
         assert!(result.opened.is_empty());
         assert_eq!(result.skipped.len(), 1);
         // open() should NOT have been called since everything was already open
