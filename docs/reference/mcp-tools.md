@@ -229,7 +229,7 @@ Generate a code index for AI agent navigation.
 
 **Returns:** Table with: Files indexed, Symbols extracted, Time, Output path, Parse errors. Subheader "Languages Detected" with language and file count.
 
-**Supported languages:** Rust, Python, TypeScript, JavaScript, Go
+**Supported languages:** Rust, Python, TypeScript, JavaScript, Go, Odin
 
 **Notes:**
 - Writes output to `.metis/code-index.md`

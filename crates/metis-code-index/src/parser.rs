@@ -37,6 +37,7 @@ pub enum Language {
     TypeScript,
     JavaScript,
     Go,
+    Odin,
 }
 
 impl Language {
@@ -48,6 +49,7 @@ impl Language {
             "ts" | "tsx" => Some(Language::TypeScript),
             "js" | "jsx" | "mjs" | "cjs" => Some(Language::JavaScript),
             "go" => Some(Language::Go),
+            "odin" => Some(Language::Odin),
             _ => None,
         }
     }
@@ -68,6 +70,7 @@ impl Language {
             Language::TypeScript => tree_sitter_typescript::LANGUAGE_TSX.into(),
             Language::JavaScript => tree_sitter_javascript::LANGUAGE.into(),
             Language::Go => tree_sitter_go::LANGUAGE.into(),
+            Language::Odin => tree_sitter_odin::LANGUAGE.into(),
         }
     }
 
@@ -79,6 +82,7 @@ impl Language {
             Language::TypeScript => &["ts", "tsx"],
             Language::JavaScript => &["js", "jsx", "mjs", "cjs"],
             Language::Go => &["go"],
+            Language::Odin => &["odin"],
         }
     }
 
@@ -90,6 +94,7 @@ impl Language {
             Language::TypeScript => "TypeScript",
             Language::JavaScript => "JavaScript",
             Language::Go => "Go",
+            Language::Odin => "Odin",
         }
     }
 
@@ -101,6 +106,7 @@ impl Language {
             Language::TypeScript,
             Language::JavaScript,
             Language::Go,
+            Language::Odin,
         ]
     }
 }
@@ -136,6 +142,7 @@ impl LanguageConfig {
             Language::TypeScript => include_str!("queries/typescript_symbols.scm"),
             Language::JavaScript => include_str!("queries/javascript_symbols.scm"),
             Language::Go => include_str!("queries/go_symbols.scm"),
+            Language::Odin => include_str!("queries/odin_symbols.scm"),
         }
     }
 }
@@ -310,6 +317,7 @@ mod tests {
         assert_eq!(Language::from_extension("jsx"), Some(Language::JavaScript));
         assert_eq!(Language::from_extension("mjs"), Some(Language::JavaScript));
         assert_eq!(Language::from_extension("cjs"), Some(Language::JavaScript));
+        assert_eq!(Language::from_extension("odin"), Some(Language::Odin));
         assert_eq!(Language::from_extension("unknown"), None);
     }
 
@@ -335,6 +343,10 @@ mod tests {
             Language::from_path(Path::new("index.js")),
             Some(Language::JavaScript)
         );
+        assert_eq!(
+            Language::from_path(Path::new("src/game.odin")),
+            Some(Language::Odin)
+        );
         assert_eq!(Language::from_path(Path::new("noext")), None);
     }
 
@@ -349,6 +361,21 @@ mod tests {
 
         let parsed = parser.parse_source(source, Language::Rust).unwrap();
         assert_eq!(parsed.language, Language::Rust);
+        assert!(!parsed.tree.root_node().has_error());
+    }
+
+    #[test]
+    fn test_parser_parse_odin_source() {
+        let mut parser = Parser::new();
+        let source = r#"package main
+
+add :: proc(a: int, b: int) -> int {
+    return a + b
+}
+"#;
+
+        let parsed = parser.parse_source(source, Language::Odin).unwrap();
+        assert_eq!(parsed.language, Language::Odin);
         assert!(!parsed.tree.root_node().has_error());
     }
 

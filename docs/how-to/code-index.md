@@ -56,7 +56,7 @@ metis index --incremental --structure-only
 
 ## Supported Languages
 
-Rust, Python, TypeScript, JavaScript, and Go. See [CLI Reference](../reference/cli.md) (`metis index`) for the full list of supported file extensions and extracted symbol types.
+Rust, Python, TypeScript, JavaScript, Go, and Odin. See [CLI Reference](../reference/cli.md) (`metis index`) for the full list of supported file extensions and extracted symbol types.
 
 The walker automatically skips build and dependency directories (`target/`, `node_modules/`, `__pycache__/`, `.git/`, `vendor/`, `dist/`, `build/`, `.venv/`, `.next/`, and others) and respects `.gitignore` rules.
 

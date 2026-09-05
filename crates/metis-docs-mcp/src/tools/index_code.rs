@@ -8,8 +8,8 @@ use metis_code_index::parser::{Language, ParsedFile, Parser};
 use metis_code_index::symbols::Symbol;
 use metis_code_index::walker::walk_directory;
 use metis_code_index::{
-    format_index, GoExtractor, HashManifest, PythonExtractor, RustExtractor, SymbolCache,
-    TypeScriptExtractor,
+    format_index, GoExtractor, HashManifest, OdinExtractor, PythonExtractor, RustExtractor,
+    SymbolCache, TypeScriptExtractor,
 };
 use rust_mcp_sdk::{
     macros::{mcp_tool, JsonSchema},
@@ -293,5 +293,6 @@ fn extract_symbols_for_language(
             TypeScriptExtractor::extract_symbols(tree, source, file_path, language)
         }
         Language::Go => GoExtractor::extract_symbols(tree, source, file_path),
+        Language::Odin => OdinExtractor::extract_symbols(tree, source, file_path),
     }
 }

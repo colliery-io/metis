@@ -183,7 +183,7 @@ See the [full plugin documentation](docs/claude-code-plugin.md) for details.
 
 ## Code Indexing
 
-Metis can generate a structured codebase map at `.metis/code-index.md` for AI agent navigation. It uses tree-sitter to extract symbols (functions, structs, traits, classes, interfaces) across five languages: **Rust, Python, TypeScript, JavaScript, and Go**.
+Metis can generate a structured codebase map at `.metis/code-index.md` for AI agent navigation. It uses tree-sitter to extract symbols (functions, structs, traits, classes, interfaces) across six languages: **Rust, Python, TypeScript, JavaScript, Go, and Odin**.
 
 The index has two layers:
 

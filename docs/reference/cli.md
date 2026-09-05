@@ -389,7 +389,7 @@ metis index [OPTIONS]
 
 Walks the project directory, parses source files with tree-sitter, extracts symbols, and writes `.metis/code-index.md`.
 
-Supports: Rust, Python, TypeScript, JavaScript, Go.
+Supports: Rust, Python, TypeScript, JavaScript, Go, Odin.
 
 Incremental mode uses:
 - `.metis/code-index-hashes.json` — BLAKE3 file content hashes

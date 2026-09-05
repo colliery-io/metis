@@ -164,7 +164,7 @@ walk_directory() → parse_file() → extract_symbols() → format_index()
 
 - **Walker:** Gitignore-aware file discovery, skips build directories
 - **Parser:** Tree-sitter-based, lazy language initialization
-- **Extractors:** Language-specific symbol extraction (Rust, Python, TypeScript, JavaScript, Go)
+- **Extractors:** Language-specific symbol extraction (Rust, Python, TypeScript, JavaScript, Go, Odin)
 - **Formatter:** Generates markdown with project tree, grouped symbols, and preserved summaries
 - **Hasher:** BLAKE3 content hashing for incremental re-indexing
 
