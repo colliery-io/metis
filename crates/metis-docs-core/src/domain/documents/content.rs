@@ -77,7 +77,10 @@ mod tests {
         let content = DocumentContent::from_markdown(markdown);
         assert_eq!(content.full_content(), markdown);
         assert_eq!(
-            content.full_content().matches("## Acceptance Criteria").count(),
+            content
+                .full_content()
+                .matches("## Acceptance Criteria")
+                .count(),
             1
         );
 

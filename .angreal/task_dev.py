@@ -19,7 +19,12 @@ def run_tests():
             'description': 'Running comprehensive tests (unit + integration + doc)'
         },
         {
-            'name': 'metis-docs-cli', 
+            'name': 'metis-code-index',
+            'strategy': 'full',  # Unit tests per language extractor
+            'description': 'Running comprehensive tests (unit + doc)'
+        },
+        {
+            'name': 'metis-docs-cli',
             'strategy': 'integration_only',  # Binary crate, only integration tests
             'description': 'Running integration tests only (binary crate)'
         },
