@@ -141,7 +141,7 @@ Ralph loop state is stored at `.claude/metis-ralph.local.md`:
 ```yaml
 ---
 active: true
-mode: task          # or "decompose"
+mode: task          # or "tasks"
 short_code: "PROJ-T-0001"
 project_path: "/path/to/.metis"
 iteration: 1
@@ -154,7 +154,7 @@ started_at: "2026-03-25T14:30:00Z"
 | Field | Description |
 |-------|-------------|
 | `active` | Whether the loop is currently running |
-| `mode` | `task` for task execution, `decompose` for initiative decomposition |
+| `mode` | `task` for single-task execution, `tasks` for serial multi-task execution |
 | `short_code` | Document being worked on |
 | `project_path` | Path to the `.metis` directory |
 | `iteration` | Current iteration count |

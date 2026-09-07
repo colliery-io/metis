@@ -24,7 +24,7 @@ To cancel the Metis Ralph loop:
 3. **If FOUND**:
    - Read the state file to get the current state:
      - `iteration:` field for iteration count
-     - `mode:` field for loop type (task or decompose)
+     - `mode:` field for loop type (task or tasks)
      - `short_code:` field for the document being worked on
    - Remove the file using Bash: `rm <state_file_path>`
    - Report: "Cancelled Metis Ralph loop for [SHORT_CODE] (was at iteration N, mode: MODE)"

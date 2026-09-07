@@ -118,7 +118,7 @@ Loop state is stored in `.claude/metis-ralph.local.md`:
 ```yaml
 ---
 active: true
-mode: task  # or "decompose"
+mode: task  # or "tasks"
 short_code: "PROJ-T-0001"
 project_path: "/path/to/.metis"
 iteration: 1
