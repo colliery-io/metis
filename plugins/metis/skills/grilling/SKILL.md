@@ -7,7 +7,7 @@ description: This skill should be used when the user asks to "grill me", "stress
 
 Interview the user relentlessly until you reach a shared understanding. Map the conversation as a **design tree**: every decision branches into the decisions that hang off it. Nothing is left silently assumed.
 
-This is the interview engine. The `grill-vision` and `grill-initiative` skills tell you *which* Metis document you are sharpening and which sections its branches map to. Read them for the document-specific parts; this file covers how to run the interview.
+This is the interview engine. The `grill-vision`, `grill-initiative`, and `grill-decomposition` skills tell you *which* Metis document you are sharpening and which sections its branches map to. Read them for the document-specific parts; this file covers how to run the interview.
 
 ## Rounds and the Frontier
 

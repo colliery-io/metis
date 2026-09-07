@@ -33,7 +33,7 @@ Open the task file and define clear acceptance criteria:
 - [ ] Integration test confirms 400 response for invalid requests
 ```
 
-The more specific your criteria, the better the Ralph loop performs.
+The more specific your criteria, the better the Ralph loop performs. If the task came out of an initiative, `/grill-decomposition MFP-I-0001` reviews every task under it and tightens criteria that a loop could not verify.
 
 ## Step 2: Launch a Task Ralph Loop
 

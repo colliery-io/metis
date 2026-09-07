@@ -142,6 +142,10 @@ Bad decomposition smells:
 - **Tiny initiative?** Consider if it's really just a task
 - **Cross-cutting?** May need tasks under multiple initiatives, or dedicated "platform" initiative
 
+## After Drafting Tasks
+
+Once the tasks exist, run one bounded review over them as a set with the `grill-decomposition` skill (`/grill-decomposition PROJ-I-0001`). It checks slice boundaries, ordering, verifiable acceptance criteria, and scope leaks, and writes the answers into the task documents. Do this before the initiative moves to `active`. If the review keeps surfacing design questions, that is a signal to go back to `grill-initiative`, not to press on.
+
 ## Additional Resources
 
 For detailed decomposition patterns and examples:

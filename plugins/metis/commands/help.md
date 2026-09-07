@@ -93,6 +93,10 @@ Relentless interview to sharpen a vision. Questions come in numbered rounds with
 
 Same for an initiative, with depth set by its phase (discovery vs design). Offers a Metis ADR when a rejected alternative is a real, hard-to-reverse trade-off. Never transitions the phase; hands off to decomposition when you confirm the design.
 
+### /grill-decomposition <SHORT_CODE>
+
+One bounded pass over the tasks under an initiative, as a set. Checks slice boundaries, ordering, verifiable acceptance criteria, and scope leaks, and writes the answers into the tasks. Run it before `/metis-ralph-tasks`.
+
 ---
 
 ## Options

@@ -4,7 +4,7 @@ The Metis plugin teaches Claude Code *when* and *why* to use Metis tools, provid
 
 ## What the Plugin Provides
 
-- **Skills**: Guidance on document selection, decomposition patterns, phase transitions, and project patterns, plus design interviews (`/grill-vision`, `/grill-initiative`) that sharpen visions and initiatives before work starts
+- **Skills**: Guidance on document selection, decomposition patterns, phase transitions, and project patterns, plus design interviews (`/grill-vision`, `/grill-initiative`, `/grill-decomposition`) that sharpen visions, initiatives, and their task breakdown before work starts
 - **Commands**: `/metis-ralph` and `/metis-ralph-tasks` for autonomous task execution
 - **Agents**: Flight Levels methodology expert for document type selection and work decomposition
 - **MCP Integration**: Automatic Metis MCP server configuration
@@ -79,6 +79,7 @@ The plugin provides methodology guidance through skills:
 - **grilling**: The interview engine. Claude questions you in rounds, recommends an answer for each question, looks up facts itself, and leaves decisions to you
 - **grill-vision** (`/grill-vision PROJ-V-0001` or `/grill-vision "A title"`): Grills a vision and writes settled answers into its Purpose, Current State, Future State, Success Criteria, Principles, and Constraints sections as they land
 - **grill-initiative** (`/grill-initiative PROJ-I-0001` or `/grill-initiative "A title"`): Grills an initiative with depth set by its phase, fills its sections as decisions settle, and offers a Metis ADR for trade-offs that are hard to reverse
+- **grill-decomposition** (`/grill-decomposition PROJ-I-0001`): One bounded pass over an initiative's drafted tasks as a set. Sharpens slice boundaries, ordering, and acceptance criteria until each task is something a Ralph loop can verify, and writes the results into the task documents
 
 The grill skills are the Metis equivalent of [grill-with-docs](https://github.com/mattpocock/skills): the same relentless interview, but the document being sharpened is the Metis vision or initiative itself, and decisions worth keeping become Metis ADRs. Phase transitions stay with you; the skills never advance a document on their own.
 

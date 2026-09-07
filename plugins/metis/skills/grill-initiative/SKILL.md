@@ -85,4 +85,4 @@ When the frontier is empty:
 1. Read the initiative back in full. Check its exit criteria (context and goals defined, technical approach designed, implementation plan phased, testing strategy defined, dependencies identified).
 2. Summarise the settled design in a few lines and ask the user to confirm shared understanding.
 3. Do not transition the phase. Tell the user which phase the document is in and what the next one is, and let them decide.
-4. If the user confirms and the initiative is in `design` or later, offer the `decomposition` skill for breaking it into tasks. Decomposition stays human-in-the-loop.
+4. If the user confirms and the initiative is in `design` or later, offer the `decomposition` skill for breaking it into tasks, followed by `grill-decomposition` to review the drafted set. Decomposition stays human-in-the-loop.

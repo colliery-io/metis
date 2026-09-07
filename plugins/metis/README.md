@@ -6,7 +6,7 @@ Flight Levels methodology plugin for Metis work management. Includes methodology
 
 | Component | Description |
 |-----------|-------------|
-| **Skills** | Flight Levels methodology guidance (decomposition, phases, patterns) and design interviews (`/grill-vision`, `/grill-initiative`) |
+| **Skills** | Flight Levels methodology guidance (decomposition, phases, patterns) and design interviews (`/grill-vision`, `/grill-initiative`, `/grill-decomposition`) |
 | **Agent** | `flight-levels` - Methodology expert for document selection and best practices |
 | **Commands** | `/metis-ralph`, `/metis-ralph-tasks`, `/cancel-metis-ralph` - Iterative work loops |
 | **Hooks** | SessionStart (project detection), Stop (Ralph loop control) |
@@ -14,7 +14,7 @@ Flight Levels methodology plugin for Metis work management. Includes methodology
 
 ## Skills: Flight Levels Methodology
 
-Four focused skills provide targeted methodology guidance, and three more run design interviews:
+Four focused skills provide targeted methodology guidance, and four more run design interviews:
 
 ### document-selection
 **Triggers:** "what document type", "create a bug ticket", "should this be a task or initiative", "when to use ADR"
@@ -54,6 +54,11 @@ Grills a vision across Purpose, Current State, Future State, Success Criteria, P
 **Invoke:** `/grill-initiative PROJ-I-0001` or `/grill-initiative "A title for a new initiative"`
 
 Grills an initiative with depth set by its phase: context, goals, and non-goals in `discovery`; detailed design, alternatives, implementation plan, and testing strategy in `design`. Flags scope that should be its own initiative. Hands off to the `decomposition` skill once you confirm the design.
+
+### grill-decomposition
+**Invoke:** `/grill-decomposition PROJ-I-0001`
+
+One bounded pass over an initiative's drafted tasks, taken as a set, not one interview per task. Checks slice boundaries, ordering and risk, whether each acceptance criterion is something a Ralph loop can verify, and scope leaks against the initiative's non-goals. Writes the answers into the task documents. If it keeps hitting design questions, it stops and sends you back to `grill-initiative`.
 
 ## Agent: Flight Levels
 
