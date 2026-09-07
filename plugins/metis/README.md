@@ -1,12 +1,12 @@
 # Metis Plugin
 
-Flight Levels methodology plugin for Metis work management. Includes methodology skills, iterative Ralph loops for task execution, and a Flight Levels agent for guidance.
+Flight Levels methodology plugin for Metis work management. Includes methodology skills, design interviews for visions and initiatives, iterative Ralph loops for task execution, and a Flight Levels agent for guidance.
 
 ## Components
 
 | Component | Description |
 |-----------|-------------|
-| **Skills** | Flight Levels methodology guidance (decomposition, phases, patterns) |
+| **Skills** | Flight Levels methodology guidance (decomposition, phases, patterns) and design interviews (`/grill-vision`, `/grill-initiative`, `/grill-decomposition`) |
 | **Agent** | `flight-levels` - Methodology expert for document selection and best practices |
 | **Commands** | `/metis-ralph`, `/metis-ralph-tasks`, `/cancel-metis-ralph` - Iterative work loops |
 | **Hooks** | SessionStart (project detection), Stop (Ralph loop control) |
@@ -14,7 +14,7 @@ Flight Levels methodology plugin for Metis work management. Includes methodology
 
 ## Skills: Flight Levels Methodology
 
-Four focused skills provide targeted methodology guidance:
+Four focused skills provide targeted methodology guidance, and four more run design interviews:
 
 ### document-selection
 **Triggers:** "what document type", "create a bug ticket", "should this be a task or initiative", "when to use ADR"
@@ -35,6 +35,30 @@ Explains phase sequences, exit criteria, and the critical rule that phases canno
 **Triggers:** "start a new project", "greenfield", "tech debt campaign", "incident response", "which preset"
 
 Provides patterns for different work types: greenfield projects, tech debt campaigns, incident response, and feature development. Also covers preset selection and anti-patterns.
+
+## Skills: Design Interviews
+
+The Metis equivalent of [grill-with-docs](https://github.com/mattpocock/skills). Claude interviews you relentlessly about a vision or initiative, and the Metis document is the record: every settled decision is written into its sections as it lands, and trade-offs that are hard to reverse are offered as Metis ADRs. Phase transitions stay with you.
+
+### grilling
+**Triggers:** "grill me", "stress-test this plan", "poke holes in this", "sharpen this initiative"
+
+The interview engine. Maps the conversation as a design tree and asks the whole frontier of answerable questions each round, numbered, each with a recommended answer. Facts (what the code does, what documents exist) are Claude's job to look up; decisions are yours. Ends only when nothing is left silently assumed, and never acts on the design until you confirm.
+
+### grill-vision
+**Invoke:** `/grill-vision PROJ-V-0001` or `/grill-vision "A title for a new vision"`
+
+Grills a vision across Purpose, Current State, Future State, Success Criteria, Principles, and Constraints. Pushes back on anything that is really an initiative and notes it as a candidate for later.
+
+### grill-initiative
+**Invoke:** `/grill-initiative PROJ-I-0001` or `/grill-initiative "A title for a new initiative"`
+
+Grills an initiative with depth set by its phase: context, goals, and non-goals in `discovery`; detailed design, alternatives, implementation plan, and testing strategy in `design`. Flags scope that should be its own initiative. Hands off to the `decomposition` skill once you confirm the design.
+
+### grill-decomposition
+**Invoke:** `/grill-decomposition PROJ-I-0001`
+
+One bounded pass over an initiative's drafted tasks, taken as a set, not one interview per task. Checks slice boundaries, ordering and risk, whether each acceptance criterion is something a Ralph loop can verify, and scope leaks against the initiative's non-goals. Writes the answers into the task documents. If it keeps hitting design questions, it stops and sends you back to `grill-initiative`.
 
 ## Agent: Flight Levels
 
@@ -94,7 +118,7 @@ Loop state is stored in `.claude/metis-ralph.local.md`:
 ```yaml
 ---
 active: true
-mode: task  # or "decompose"
+mode: task  # or "tasks"
 short_code: "PROJ-T-0001"
 project_path: "/path/to/.metis"
 iteration: 1

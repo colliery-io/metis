@@ -177,6 +177,8 @@ A visual kanban interface for managing projects. Boards for each document type, 
 
 **`/metis-ralph <SHORT_CODE>`** -- Autonomous task execution loop. Claude picks up a task, works on it iteratively (writing code, running tests, fixing issues), updates the task document with progress, and signals when done for your review. Use `/cancel-metis-ralph` to stop a running loop.
 
+**`/grill-vision`**, **`/grill-initiative`**, and **`/grill-decomposition`** -- Design-first interviews. Claude questions you in rounds about a vision, an initiative, or an initiative's drafted tasks, looks up facts in the codebase itself, recommends an answer for each question, and writes each settled decision into the Metis documents as you go. Hard-to-reverse trade-offs are offered as ADRs. Nothing is transitioned until you confirm.
+
 The plugin also includes **skills** (contextual methodology guidance for decomposition, phase transitions, and project setup) and **hooks** (automatic project detection on session start, state re-injection after context compaction).
 
 See the [full plugin documentation](docs/claude-code-plugin.md) for details.

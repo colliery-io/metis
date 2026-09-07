@@ -71,6 +71,12 @@ if [[ ! "$MAX_ITERATIONS" =~ ^[0-9]+$ ]]; then
   exit 0
 fi
 
+if [[ "$MODE" != "task" ]] && [[ "$MODE" != "tasks" ]]; then
+  echo "Metis Ralph: State file corrupted (unknown mode: '$MODE')" >&2
+  rm "$STATE_FILE"
+  exit 0
+fi
+
 # Check if max iterations reached
 if [[ $MAX_ITERATIONS -gt 0 ]] && [[ $ITERATION -ge $MAX_ITERATIONS ]]; then
   if [[ "$MODE" == "tasks" ]]; then
@@ -130,10 +136,8 @@ if [[ -n "$COMPLETION_PROMISE" ]]; then
   if [[ -n "$PROMISE_TEXT" ]] && [[ "$PROMISE_TEXT" = "$COMPLETION_PROMISE" ]]; then
     if [[ "$MODE" == "task" ]]; then
       echo "Metis Ralph: Task $SHORT_CODE completed successfully"
-    elif [[ "$MODE" == "tasks" ]]; then
-      echo "Metis Ralph: All tasks completed successfully"
     else
-      echo "Metis Ralph: Initiative $SHORT_CODE decomposition completed"
+      echo "Metis Ralph: All tasks completed successfully"
     fi
     rm "$STATE_FILE"
     exit 0
@@ -179,7 +183,7 @@ Current task index: $CURRENT_IDX (0-based)
 4. When ALL tasks are complete:
    - Output: <promise>$COMPLETION_PROMISE</promise>"
   SYSTEM_MSG="Metis Ralph iteration $NEXT_ITERATION | Multi-task execution | Complete remaining tasks, output <promise>$COMPLETION_PROMISE</promise> when all done"
-elif [[ "$MODE" == "task" ]]; then
+else
   PROMPT_TEXT="Continue working on Metis task $SHORT_CODE.
 
 $CODE_INDEX_HINT
@@ -192,37 +196,6 @@ $CODE_INDEX_HINT
    - Do NOT transition to \"completed\" (user will review and approve)
    - Output: <promise>$COMPLETION_PROMISE</promise>"
   SYSTEM_MSG="Metis Ralph iteration $NEXT_ITERATION | Task: $SHORT_CODE | Log progress, complete work, output <promise>$COMPLETION_PROMISE</promise> when ready for review"
-elif [[ "$MODE" == "initiative" ]]; then
-  PROMPT_TEXT="Continue executing tasks under Metis initiative $SHORT_CODE.
-
-$CODE_INDEX_HINT
-
-1. Read the initiative using mcp__metis__read_document with short_code=\"$SHORT_CODE\" and project_path=\"$PROJECT_PATH\"
-2. List all tasks under it using mcp__metis__list_documents
-3. Find tasks in \"todo\" or \"active\" phase
-4. For each incomplete task:
-   - If in \"todo\", transition to \"active\"
-   - Implement the task
-   - Log progress to the task's Status Updates section
-   - Transition the task to \"completed\" when done
-5. When ALL tasks are complete (no todo/active remain):
-   - Do NOT transition the initiative (user reviews)
-   - Output: <promise>$COMPLETION_PROMISE</promise>"
-  SYSTEM_MSG="Metis Ralph iteration $NEXT_ITERATION | Initiative: $SHORT_CODE | Execute and complete tasks, output <promise>$COMPLETION_PROMISE</promise> when all done"
-else
-  # decompose mode
-  PROMPT_TEXT="Continue decomposing Metis initiative $SHORT_CODE.
-
-$CODE_INDEX_HINT
-
-1. Read the initiative using mcp__metis__read_document with short_code=\"$SHORT_CODE\" and project_path=\"$PROJECT_PATH\"
-2. Review existing tasks created so far
-3. Continue creating tasks to fully decompose the initiative
-4. Log your progress to the initiative's Status Updates section using mcp__metis__edit_document
-5. When FULLY decomposed:
-   - Do NOT transition to \"active\" (user will review and approve)
-   - Output: <promise>$COMPLETION_PROMISE</promise>"
-  SYSTEM_MSG="Metis Ralph iteration $NEXT_ITERATION | Initiative: $SHORT_CODE | Complete decomposition, output <promise>$COMPLETION_PROMISE</promise> when ready for review"
 fi
 
 # Output JSON to block stop and feed prompt back

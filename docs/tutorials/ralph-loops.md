@@ -1,6 +1,6 @@
 # Running Autonomous Tasks with Ralph Loops
 
-This tutorial walks you through setting up and running a Ralph loop — an autonomous AI execution cycle where Claude Code works on a Metis task iteratively until it's complete. By the end, you'll understand how to launch, monitor, and cancel Ralph loops for both individual tasks and full initiative execution.
+This tutorial walks you through setting up and running a Ralph loop — an autonomous AI execution cycle where Claude Code works on a Metis task iteratively until it's complete. By the end, you'll understand how to launch, monitor, and cancel Ralph loops for individual tasks and for lists of tasks.
 
 ## Prerequisites
 
@@ -33,7 +33,7 @@ Open the task file and define clear acceptance criteria:
 - [ ] Integration test confirms 400 response for invalid requests
 ```
 
-The more specific your criteria, the better the Ralph loop performs.
+The more specific your criteria, the better the Ralph loop performs. If the task came out of an initiative, `/grill-decomposition MFP-I-0001` reviews every task under it and tightens criteria that a loop could not verify.
 
 ## Step 2: Launch a Task Ralph Loop
 
@@ -103,15 +103,7 @@ Execute a list of tasks serially:
 
 Claude works through each task in order, completing one before moving to the next. The completion signal for multi-task execution is `<promise>ALL TASKS COMPLETE</promise>`.
 
-## Running an Initiative's Tasks
-
-Execute all tasks under a decomposed initiative:
-
-```
-/metis-ralph-initiative MFP-I-0001
-```
-
-This reads the initiative, finds all its child tasks, and executes them serially using the Ralph loop pattern.
+To run every task under a decomposed initiative, list the initiative's tasks (`metis list --type task` or `mcp__metis__list_documents`) and pass their short codes to `/metis-ralph-tasks`. Initiatives themselves are not executed by a loop: their discovery, design, and decomposition are human-in-the-loop work. See `/grill-initiative` in [the plugin documentation](../claude-code-plugin.md) for the interview that sharpens an initiative before decomposition.
 
 ## Running in a Docker Sandbox
 

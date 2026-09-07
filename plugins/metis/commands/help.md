@@ -81,6 +81,24 @@ Note: This removes the loop state but does NOT revert Metis document phase trans
 
 ---
 
+## Design Interviews
+
+Before a task loop runs, the initiative it belongs to should be sharp. Two skills interview you and write the answers into the Metis document as you go (the Metis equivalent of grill-with-docs):
+
+### /grill-vision <SHORT_CODE | "title">
+
+Relentless interview to sharpen a vision. Questions come in numbered rounds with a recommended answer each; settled decisions are written into the vision's sections immediately.
+
+### /grill-initiative <SHORT_CODE | "title">
+
+Same for an initiative, with depth set by its phase (discovery vs design). Offers a Metis ADR when a rejected alternative is a real, hard-to-reverse trade-off. Never transitions the phase; hands off to decomposition when you confirm the design.
+
+### /grill-decomposition <SHORT_CODE>
+
+One bounded pass over the tasks under an initiative, as a set. Checks slice boundaries, ordering, verifiable acceptance criteria, and scope leaks, and writes the answers into the tasks. Run it before `/metis-ralph-tasks`.
+
+---
+
 ## Options
 
 | Option | Description |

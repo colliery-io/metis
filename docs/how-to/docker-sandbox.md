@@ -55,9 +55,9 @@ Execute a single task:
 /metis-ralph PROJ-T-0001
 ```
 
-Execute all tasks under an initiative:
+Execute several tasks serially:
 ```
-/metis-ralph-initiative PROJ-I-0001
+/metis-ralph-tasks PROJ-T-0001 PROJ-T-0002 PROJ-T-0003
 ```
 
 ## What the Sandbox Provides
