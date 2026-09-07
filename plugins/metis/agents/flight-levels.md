@@ -113,7 +113,11 @@ Metis names everything it tracks. Use its names, not your own — an invented na
 | sprint, milestone, release, "phase 2", "batch 1" | nothing — this is ordering between tasks. Record it as a dependency in the initiative's implementation plan |
 | in progress / done / on hold | the phase words: `active` / `completed` / `blocked` |
 
-**No invented grouping entities.** Work that belongs together is children of the same initiative. If a grouping is real and durable, propose an initiative for it rather than naming a phantom.
+**No invented grouping entities or numbering schemes.** Work that belongs together is children of the same initiative. A "slice" is a shape of decomposition, not a name — it becomes a task with a short code. A decision is its ADR short code (`PROJ-A-0003`) or, while open, a named decision area — never `D1`/`D2`/`D3`.
+
+**Plans are written in short codes.** An implementation plan, a decision log, a status summary — every item names the task, initiative, specification, or ADR by short code, or by quoted title if the document doesn't exist yet. A short code written into a document must be one you just created or just read back; never propagate one you found in an existing document without `read_document` confirming it is what the sentence claims.
+
+**One carve-out: a specification's requirements tables keep their IDs.** `REQ-x.y.z` for functional, `NFR-x.y.z` for non-functional, each with a rationale — this is where PRD-style requirements live and they must stay citable. From outside that specification, qualify the citation: `METIS-S-0002` REQ-2.1.1. No other document type gets a numbering scheme: initiative goals are prose, task criteria are the template's checklist, decisions are ADRs.
 
 **Write into the template's headings.** A task's progress belongs in its `Status Updates` section — not in a section you invented, and not in a separate notes or progress file.
 

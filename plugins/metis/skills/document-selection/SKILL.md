@@ -111,6 +111,8 @@ Create when:
 
 **Phases**: discovery → drafting → review → published (published content remains editable as a living document)
 
+**Requirements keep their IDs**: a specification is where PRD-style requirements live, and the template gives its Functional and Non-Functional tables an `ID` column -- `REQ-x.y.z` and `NFR-x.y.z`, each with a rationale. Fill them in; they are what makes a requirement citable and traceable. This is the only numbering scheme in Metis: no other document type gets one. Cited from outside the specification, qualify the ID with the short code (`METIS-S-0002` REQ-2.1.1).
+
 ### ADR
 Create when:
 - Making significant architectural decision

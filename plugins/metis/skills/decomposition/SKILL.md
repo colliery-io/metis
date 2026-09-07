@@ -123,7 +123,11 @@ Do not assign an interim ID — not `T1`, not "task A", not a placeholder short 
 
 The moment you call `create_document`, the tool result gives you the real short code. From then on the task's name is that short code, and the working title is just its title. Never predict what a short code will be — the counter is Metis's, not yours.
 
+**A slice is a shape, not a name.** "Vertical slice" describes how the work was cut, the way "horizontal layer" and "risk-first" do. It is not an identifier. Labelling the cuts "Slice 1" through "Slice 5" while drafting, and then writing those labels into the initiative's Implementation Plan, leaves the plan referring to five entities that exist nowhere -- no short code, no phase, nothing that can be completed. A slice becomes a task; its name is that task's short code.
+
 The same applies to sequencing. "Phase 1 tasks", "the first batch", "the DB workstream" are entities nothing in Metis holds; they die with the conversation while people keep referring to them. Express ordering as a dependency between short codes and record it in the initiative's implementation plan.
+
+**The implementation plan is written in short codes.** Every item in it names a real task, or a quoted title for a task not yet created. Never write a short code into the plan that you have not just created or just read back -- a plan citing `PROJ-T-0012` for a task that was never created is worse than a vague one, because it looks like it resolves.
 
 See the `metis-vocabulary` skill for the full rules.
 

@@ -181,7 +181,7 @@ A visual kanban interface for managing projects. Boards for each document type, 
 
 The plugin also includes **skills** (contextual methodology guidance for decomposition, phase transitions, and project setup) and **hooks** (automatic project detection on session start, state re-injection after context compaction).
 
-One of those skills, **metis-vocabulary**, exists to stop a common failure: an AI agent quietly inventing its own names for work. Left alone it will call things "Task 3", "the auth epic", or "phase 2" -- labels that resolve to nothing in `metis status`, in the GUI, or after a context compaction. The plugin's hooks and skills keep it on Metis's names instead: a work item is its short code, and document types, phases, and backlog categories are closed sets that outside vocabulary gets translated into.
+One of those skills, **metis-vocabulary**, exists to stop a common failure: an AI agent quietly inventing its own names for work. Left alone it will call things "Task 3", "Slice 2", "the auth epic", or "D3" for the third decision -- labels that resolve to nothing in `metis status`, in the GUI, or after a context compaction -- and thread short codes for tasks it never created through an initiative's implementation plan. The plugin's hooks and skills keep it on Metis's names instead: plans are written in short codes that have been created or read back, decisions are ADRs, and types, phases, and backlog categories are closed sets that outside vocabulary gets translated into. The one carve-out is a specification's requirements tables, which keep their `REQ-`/`NFR-` IDs so PRD-style requirements stay citable.
 
 See the [full plugin documentation](docs/claude-code-plugin.md) for details.
 

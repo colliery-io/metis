@@ -75,6 +75,8 @@ read -r -d '' CONTEXT << EOF
 - **A work item's name is its Metis short code** (\`PREFIX-T-0042\`). Never guess, predict, reserve, renumber, or abbreviate one — only \`create_document\` mints a short code, and its result is where you read it from.
 - **No interim IDs** for work that doesn't exist yet. Full quoted title, marked not yet created, until the document is real.
 - **Closed sets**: types are \`vision\`, \`initiative\`, \`task\`, \`adr\`, \`specification\`; backlog categories are \`bug\`, \`feature\`, \`tech-debt\`; task phases are \`backlog\`, \`todo\`, \`active\`, \`blocked\`, \`completed\` (\`active\`, not "in progress"; \`completed\`, not "done"). No epics, stories, sub-tasks, or invented groupings like "batch 2".
+- **Plans are written in short codes** — implementation plans, decision logs, status summaries. No "Slice 2", no \`D3\` for a decision (that is an ADR short code), no "phase 1 work". A short code you write into a document must be one you just created or just read back; a code recalled from memory after a compaction is a guess.
+- **One carve-out**: a specification's requirements tables keep their \`REQ-x.y.z\` / \`NFR-x.y.z\` IDs. No other document type gets a numbering scheme.
 - Commits, PRs, TODOs, and status summaries carry the real short code or no ID at all. Load the \`metis-vocabulary\` skill for the full tables and repair steps.
 
 ### Current Project State

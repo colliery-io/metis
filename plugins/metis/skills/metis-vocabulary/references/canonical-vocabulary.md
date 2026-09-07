@@ -88,6 +88,9 @@ Users bring vocabulary from Jira, Linear, GitHub, and Shortcut. Translate on the
 | sprint, milestone, release, phase 2 | no Metis equivalent -- this is ordering between tasks, not a document. Record it as a dependency in the initiative's implementation plan |
 | backlog grooming, refinement | the `decompose` phase of an initiative |
 | status, state, column, swimlane | phase |
+| slice, vertical slice, workstream slice | a shape of decomposition, not a name -- the slice becomes a task with a short code |
+| D1 / D2 / D3, "decision 3" | the ADR's short code, or the decision area's name while it is still open |
+| FR-1, F1, R.1 | `REQ-x.y.z` in a specification's Functional Requirements table |
 | assignee, owner | not tracked as a field -- name people in the document body if it matters |
 
 The last few rows matter most: they are the terms with **no** Metis document behind them. Naming one anyway is how a phantom entity enters a project.
@@ -102,9 +105,38 @@ Fill in the headings the template already has instead of adding your own. If con
 | Initiative | Context, Goals & Non-Goals, Detailed Design, Alternatives Considered, Implementation Plan, Testing Strategy |
 | Task | Parent Initiative, Objective, Acceptance Criteria, Implementation Notes, Status Updates |
 | ADR | Context, Decision, Rationale, Consequences (Positive / Negative / Neutral) |
-| Specification | Overview, System Context, Requirements, Architecture Framing, Decision Log, Constraints, Changelog |
+| Specification | Overview, System Context, Requirements (Functional / Non-Functional, each an ID table), Architecture Framing, Decision Log, Constraints, Changelog |
 
 Read the document after creating it -- the template is the source of truth, and presets or project-local template overrides can change it. Placeholder text in `{braces}` is not content; replace all of it.
+
+## Numbered Requirements: Specifications Only
+
+A specification is the one document type with a numbering scheme of its own, because it is where PRD-style requirements live and those need to be citable and traceable. The template provides it:
+
+| Table | ID prefix | Example |
+|-------|-----------|---------|
+| Functional Requirements | `REQ-` | `REQ-1.1.1` |
+| Non-Functional Requirements | `NFR-` | `NFR-1.1.1` |
+
+Rules:
+
+- Every row gets an ID and a rationale. A blank ID column is an incomplete document.
+- Use the template's prefixes. Not `FR-`, `F1`, or `R.1` -- the project reads the template's convention.
+- IDs never get renumbered; a new requirement takes a new number, because something may already cite the old ones.
+- Cited from outside the specification, an ID is qualified with the short code: `METIS-S-0002` REQ-2.1.1.
+
+**No other document type gets a numbering scheme.** Initiative goals and design are prose. Task acceptance criteria are the template's checklist, cited as "`PROJ-T-0042`, third criterion". A decision is an ADR short code, never `D3`.
+
+## Where Decisions Live
+
+| Situation | Its name |
+|-----------|----------|
+| Decision made, recorded as an ADR | The ADR short code, e.g. `PROJ-A-0003` |
+| Decision area open on a specification | Its area name ("Session storage backend"), ADR field pending |
+| Design choice not worth an ADR | Prose in the Detailed Design section -- no identifier at all |
+| A round of interview questions | `Q1`-`Q6`, valid only inside that one message |
+
+The specification template's Decision Log is a table keyed by ADR short code. A `D1`/`D2`/`D3` scheme is a substitute for that key, and it resolves to nothing.
 
 ## Progress Goes In Status Updates
 

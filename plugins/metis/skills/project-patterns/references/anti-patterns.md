@@ -64,12 +64,16 @@ Common mistakes when using Metis, how to recognize them, and how to recover.
 - Status reported in words Metis doesn't use: "in progress", "done", "on hold"
 - Document types that aren't Metis types: epic, story, sub-task, chore, milestone
 - Progress notes in a file beside the code instead of the task's Status Updates section
+- Invented numbering that looks official: "Slice 2", `D3` for the third decision, `AC-3` for an acceptance criterion
+- Short codes threaded through an initiative's implementation plan for tasks that were never created
 
 **How to fix**:
 - One name per work item: the short code Metis assigned, taken from the `create_document` result
 - Work that doesn't exist yet has a quoted title and no ID, until it's created
 - Translate outside vocabulary into Metis types and phases instead of adopting it
 - Group with the parent initiative; express ordering as a dependency between short codes
+- Plans are written in short codes; a code goes into a document only after you created it or read it back
+- The one legitimate numbering scheme is a specification's requirements tables (`REQ-x.y.z`, `NFR-x.y.z`) -- keep those
 - When you find an invented name, resolve it with `search_documents`, state the mapping, and fix the documents that carry it
 
 ## Too Many Active Items

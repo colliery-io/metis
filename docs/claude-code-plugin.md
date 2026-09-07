@@ -72,7 +72,7 @@ Cancels an active Ralph loop.
 
 The plugin provides methodology guidance through skills:
 
-- **metis-vocabulary**: Keeps Claude on Metis's own names — short codes for work items, closed sets for document types, phases, and backlog categories — instead of shorthand it invented ("Task 3", "the auth epic", "in progress")
+- **metis-vocabulary**: Keeps Claude on Metis's own names — short codes for work items, closed sets for document types, phases, and backlog categories — instead of shorthand it invented ("Task 3", "Slice 2", "D3", "the auth epic", "in progress"). Plans are written in short codes that have been created or read back; the one carve-out is a specification's `REQ-`/`NFR-` requirement IDs
 - **document-selection**: Helps choose the right document type (vision, initiative, task, ADR, specification)
 - **decomposition**: Patterns for breaking down work into tasks
 - **phase-transitions**: Guidance on advancing documents through their lifecycle

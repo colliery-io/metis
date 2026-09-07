@@ -158,7 +158,7 @@ mv "$TEMP_FILE" "$STATE_FILE"
 CODE_INDEX_HINT="If you need to locate code and the task doesn't already tell you which files to edit, read .metis/code-index.md first — do not explore the codebase from scratch."
 
 # Common naming hint for all modes — loops are where invented shorthand accumulates
-NAMING_HINT="Refer to every work item by its Metis short code (e.g. PROJ-T-0042) — in your notes, your status updates, your commit messages, and your summary to the user. Never invent an ID, a shorthand, or a label for work ('task 2', 'T-3', 'step A', 'batch 1'); if you don't know an item's short code, look it up with mcp__metis__list_documents or mcp__metis__search_documents. Report phases with Metis's words: a task is 'active', not 'in progress'; 'completed', not 'done'. Write progress into the task's existing Status Updates section — do not add sections of your own or a separate progress file."
+NAMING_HINT="Refer to every work item by its Metis short code (e.g. PROJ-T-0042) — in your notes, your status updates, your commit messages, and your summary to the user. Never invent an ID, a shorthand, or a numbering scheme for work ('task 2', 'T-3', 'step A', 'batch 1', 'Slice 2', 'D3' for a decision); if you don't know an item's short code, look it up with mcp__metis__list_documents or mcp__metis__search_documents. A short code you write into a document must be one you just created or just read back — never one recalled from memory. Report phases with Metis's words: a task is 'active', not 'in progress'; 'completed', not 'done'. Write progress into the task's existing Status Updates section — do not add sections of your own or a separate progress file."
 
 # Build prompt based on mode
 if [[ "$MODE" == "tasks" ]]; then

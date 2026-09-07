@@ -19,7 +19,9 @@ Five focused skills provide targeted methodology guidance, and four more run des
 ### metis-vocabulary
 **Triggers:** "what should I call this", "what's the ID for this", "task 1", "epic", "story", "sub-task", "mark it done", "in progress", or any time work is named, referred to, or grouped
 
-Keeps Claude on Metis's own vocabulary instead of shorthand it made up. A work item's name is its short code, minted only by `create_document` and never guessed, predicted, or abbreviated; work that doesn't exist yet is named by quoted title, not an interim ID; document types, phases, and backlog categories are closed sets that outside terminology gets translated into; and groupings like "phase 2" or "batch 1", which nothing in Metis holds, are expressed as dependencies between short codes instead. Also covers repairing an invented name once it has leaked into documents or commits.
+Keeps Claude on Metis's own vocabulary instead of shorthand it made up. A work item's name is its short code, minted only by `create_document` and never guessed, predicted, or abbreviated. Plans -- implementation plans, decision logs, status summaries -- are written in short codes, and a code only goes into a document after being created or read back, so an initiative's plan never fills up with references to tasks that don't exist. Work that doesn't exist yet is named by quoted title, not an interim ID. Slices are a shape of decomposition, not a name; decisions are ADR short codes, not `D1`/`D2`/`D3`; types, phases, and backlog categories are closed sets that outside terminology gets translated into.
+
+The one carve-out is a **specification's requirements tables**, which keep their `REQ-x.y.z` and `NFR-x.y.z` IDs -- that's where PRD-style requirements live and they need to stay citable. No other document type gets a numbering scheme. Also covers repairing an invented name once it has leaked into documents or commits.
 
 ### document-selection
 **Triggers:** "what document type", "create a bug ticket", "should this be a task or initiative", "when to use ADR"
