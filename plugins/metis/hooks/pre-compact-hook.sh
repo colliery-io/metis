@@ -101,6 +101,8 @@ For initiatives: ALWAYS check in with the human before phase transitions, design
 
 ### Skills
 - \`/metis-ralph <short-code>\` - Execute task with Ralph loop
+- \`/grill-vision <short-code|title>\` - Interview the human to sharpen a vision, writing answers into the document
+- \`/grill-initiative <short-code|title>\` - Interview the human to sharpen an initiative before decomposition
 EOF
 
 # Output JSON for Claude - PreCompact uses systemContext field

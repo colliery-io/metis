@@ -127,7 +127,6 @@ This is particularly effective for tasks with clear, testable criteria:
 **Good fit:**
 - Tasks with objective, testable acceptance criteria
 - Iterative work (getting tests to pass, fixing bugs)
-- Systematic initiative decomposition
 - Well-scoped implementation tasks
 
 **Poor fit:**
@@ -151,10 +150,6 @@ Single task execution. Claude works on one task document until complete. The tas
 ### Multi-Task Mode (`/metis-ralph-tasks`)
 
 Serial execution of multiple tasks. Claude completes one task, then moves to the next. Each task is transitioned independently.
-
-### Initiative Mode (`/metis-ralph-initiative`)
-
-Finds all tasks under an initiative and executes them serially using task mode. Combines decomposition awareness with sequential execution.
 
 ## Progress Tracking
 

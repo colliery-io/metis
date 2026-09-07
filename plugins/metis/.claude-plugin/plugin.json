@@ -1,7 +1,7 @@
 {
   "name": "metis",
   "version": "2.2.0",
-  "description": "Flight Levels methodology plugin for Metis. Includes methodology skills, iterative Ralph loops for task execution, and Flight Levels agent guidance.",
+  "description": "Flight Levels methodology plugin for Metis. Includes methodology skills, design interviews for visions and initiatives, iterative Ralph loops for task execution, and Flight Levels agent guidance.",
   "author": {
     "name": "Colliery",
     "email": "contact@colliery.io"

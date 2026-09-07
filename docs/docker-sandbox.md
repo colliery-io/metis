@@ -60,10 +60,10 @@ Once configured, you can run autonomous task execution:
 /metis-ralph PROJ-T-0001
 ```
 
-Or execute all tasks under an initiative:
+Or execute several tasks serially:
 
 ```
-/metis-ralph-initiative PROJ-I-0001
+/metis-ralph-tasks PROJ-T-0001 PROJ-T-0002 PROJ-T-0003
 ```
 
 The sandbox provides:
