@@ -6,7 +6,7 @@ Flight Levels methodology plugin for Metis work management. Includes methodology
 
 | Component | Description |
 |-----------|-------------|
-| **Skills** | Flight Levels methodology guidance (decomposition, phases, patterns) and design interviews (`/grill-vision`, `/grill-initiative`, `/grill-decomposition`) |
+| **Skills** | Flight Levels methodology guidance (vocabulary, decomposition, phases, patterns) and design interviews (`/grill-vision`, `/grill-initiative`, `/grill-decomposition`) |
 | **Agent** | `flight-levels` - Methodology expert for document selection and best practices |
 | **Commands** | `/metis-ralph`, `/metis-ralph-tasks`, `/cancel-metis-ralph` - Iterative work loops |
 | **Hooks** | SessionStart (project detection), Stop (Ralph loop control) |
@@ -14,7 +14,12 @@ Flight Levels methodology plugin for Metis work management. Includes methodology
 
 ## Skills: Flight Levels Methodology
 
-Four focused skills provide targeted methodology guidance, and four more run design interviews:
+Five focused skills provide targeted methodology guidance, and four more run design interviews:
+
+### metis-vocabulary
+**Triggers:** "what should I call this", "what's the ID for this", "task 1", "epic", "story", "sub-task", "mark it done", "in progress", or any time work is named, referred to, or grouped
+
+Keeps Claude on Metis's own vocabulary instead of shorthand it made up. A work item's name is its short code, minted only by `create_document` and never guessed, predicted, or abbreviated; work that doesn't exist yet is named by quoted title, not an interim ID; document types, phases, and backlog categories are closed sets that outside terminology gets translated into; and groupings like "phase 2" or "batch 1", which nothing in Metis holds, are expressed as dependencies between short codes instead. Also covers repairing an invented name once it has leaked into documents or commits.
 
 ### document-selection
 **Triggers:** "what document type", "create a bug ticket", "should this be a task or initiative", "when to use ADR"

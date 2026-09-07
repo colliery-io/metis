@@ -46,6 +46,32 @@ Common mistakes when using Metis, how to recognize them, and how to recover.
 - Review and prune regularly - it's okay to archive things
 - Trust the system or fix the system, don't route around it
 
+## Invented Shorthand
+
+**What it is**: Naming work something Metis doesn't recognize - "Task 3", "T-7", "the auth epic", "phase 2 work", "batch 1" - instead of using the document's short code and Metis's own document types, phases, and categories.
+
+**Why it's bad**:
+- The name resolves to nothing: not in `list_documents`, not in the GUI, not in `metis status`
+- Two people (or two sessions) use the same label for different work
+- After a context compaction, nobody can tell which document a shorthand meant
+- Commits and PRs carrying invented IDs can never be traced back to the work
+- A grouping label like "phase 2" implies a tracked thing that does not exist, so nothing ever closes it
+
+**How to recognize**:
+- References to work that can't be looked up
+- Renumbered or abbreviated short codes (`T-7`, `#7`, "the 0007 task")
+- A short code cited for a document that was never created
+- Status reported in words Metis doesn't use: "in progress", "done", "on hold"
+- Document types that aren't Metis types: epic, story, sub-task, chore, milestone
+- Progress notes in a file beside the code instead of the task's Status Updates section
+
+**How to fix**:
+- One name per work item: the short code Metis assigned, taken from the `create_document` result
+- Work that doesn't exist yet has a quoted title and no ID, until it's created
+- Translate outside vocabulary into Metis types and phases instead of adopting it
+- Group with the parent initiative; express ordering as a dependency between short codes
+- When you find an invented name, resolve it with `search_documents`, state the mapping, and fix the documents that carry it
+
 ## Too Many Active Items
 
 **What it is**: Multiple initiatives or tasks in active state simultaneously.

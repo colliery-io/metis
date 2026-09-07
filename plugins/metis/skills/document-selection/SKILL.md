@@ -52,9 +52,14 @@ When users request work items using common terms, map to Metis document types:
 | "bug ticket", "bug", "defect" | `create_document(type="task", backlog_category="bug", ...)` |
 | "feature ticket", "feature request" | `create_document(type="task", backlog_category="feature", ...)` |
 | "tech debt ticket", "tech debt" | `create_document(type="task", backlog_category="tech-debt", ...)` |
-| "project", "epic", "feature work" | Initiative (with parent) |
-| "work item", "ticket" | Task (if has parent) or Backlog Item (if standalone) |
+| "project", "epic", "feature work", "workstream" | Initiative (with parent) |
+| "work item", "ticket", "story", "card", "issue" | Task (if has parent) or Backlog Item (if standalone) |
+| "sub-task", "step", "checklist item" | An acceptance criterion inside a task -- not its own document |
+| "spike", "investigation", "research" | Task, titled "Spike: ..." |
 | "spec", "specification", "design doc" | `create_document(type="specification", parent_id="...", ...)` |
+| "sprint", "milestone", "release", "phase 2", "batch 1" | Nothing -- ordering between tasks, recorded in the initiative's implementation plan |
+
+**Translate, don't adopt.** These are the only document types Metis has; a term that isn't on this list doesn't become one because a user said it. Answer using the Metis type so the mapping stays visible ("that's an initiative -- `PROJ-I-0003`"), and never create a document whose type or category you made up. The last row matters most: it names things with no Metis document behind them, and naming one anyway is how a phantom entity enters a project. See the `metis-vocabulary` skill for the full translation table.
 
 ## When to Create Each Type
 
@@ -140,3 +145,6 @@ Create when:
 For detailed decision trees and edge cases:
 - **`references/decision-trees.md`** - Complete decision framework
 - **`references/when-to-adr.md`** - ADR-specific guidance
+
+Related skill:
+- **`metis-vocabulary`** - Canonical short codes, types, phases, and categories; how to refer to work that doesn't exist yet

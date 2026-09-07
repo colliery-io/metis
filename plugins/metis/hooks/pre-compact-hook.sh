@@ -70,6 +70,13 @@ read -r -d '' CONTEXT << EOF
 - **TodoWrite is allowed ONLY as an ephemeral tactical scratchpad** (e.g., sequencing steps across multiple tickets). Durable plans and progress MUST go in Metis — never let the todo list become a shadow plan.
 - Check for active tasks with \`mcp__metis__list_documents\`, then \`read_document\` to restore context.
 
+### CRITICAL: Use Metis's Names, Never Invent Your Own
+- **Compaction is when invented names appear**: the real short codes just fell out of context, so anything you half-remember ("the auth task", "task 2") is a guess. Look it up with \`list_documents\`/\`search_documents\` before referring to it.
+- **A work item's name is its Metis short code** (\`PREFIX-T-0042\`). Never guess, predict, reserve, renumber, or abbreviate one — only \`create_document\` mints a short code, and its result is where you read it from.
+- **No interim IDs** for work that doesn't exist yet. Full quoted title, marked not yet created, until the document is real.
+- **Closed sets**: types are \`vision\`, \`initiative\`, \`task\`, \`adr\`, \`specification\`; backlog categories are \`bug\`, \`feature\`, \`tech-debt\`; task phases are \`backlog\`, \`todo\`, \`active\`, \`blocked\`, \`completed\` (\`active\`, not "in progress"; \`completed\`, not "done"). No epics, stories, sub-tasks, or invented groupings like "batch 2".
+- Commits, PRs, TODOs, and status summaries carry the real short code or no ID at all. Load the \`metis-vocabulary\` skill for the full tables and repair steps.
+
 ### Current Project State
 ${STATE_SUMMARY}
 

@@ -73,6 +73,26 @@ When documents are created, they start in these phases:
 
 **Backlog note**: Tasks created with `backlog_category` start in `backlog` phase and do NOT auto-transition. You must explicitly transition from `backlog` → `todo` before the task can be worked.
 
+## Phase Names Are a Closed Set
+
+The phases above are all of them. A phase is not a mood you describe in your own words -- it is a value stored on the document, and it is what `list_documents`, `metis status`, and the GUI board read.
+
+So report status with Metis's word, exactly:
+
+| Don't say | Say |
+|-----------|-----|
+| in progress, WIP, started, underway | `active` |
+| done, shipped, closed, finished | `completed` |
+| open, not started, queued, up next | `todo` |
+| on hold, waiting, stuck, parked | `blocked` |
+| icebox, someday, unprioritized | `backlog` |
+| approved, signed off | `published` (vision/spec) or `decided` (ADR) |
+
+Two rules follow:
+
+- **Never invent a phase.** There is no `in-review` for tasks, no `qa`, no `deployed`. If the workflow you want isn't in the sequence, say so rather than inventing a status word to paper over it.
+- **Saying it doesn't make it so.** Reporting a task as complete is not the same as transitioning it. Call `transition_phase`; if it errors, the transition wasn't valid, and the phase is whatever the document still says -- report that, not what you intended.
+
 ## Critical Rule: No Phase Skipping
 
 **Transitions are constrained to adjacent phases only.**
@@ -212,3 +232,6 @@ Common mistakes:
 
 For detailed phase flow:
 - **`references/phase-flow.md`** - Complete phase documentation with all transition rules
+
+Related skill:
+- **`metis-vocabulary`** - Why phase words, document types, and short codes come from Metis rather than from you

@@ -86,6 +86,15 @@ This is a **Metis project** (detected \`.metis\` directory).
 - **TodoWrite is allowed ONLY as a tactical scratchpad** — e.g., sequencing the in-session steps of an implementation that spans multiple Metis tickets out of order. It is ephemeral and disposable. Anything durable (real plans, progress, decisions, next steps) MUST live in Metis. Never let the todo list become a shadow plan or a substitute for updating tasks.
 - Before starting work, check for active tasks with \`mcp__metis__list_documents\`.
 
+## CRITICAL: Use Metis's Names, Never Invent Your Own
+- **A work item's name is its Metis short code** (\`PREFIX-T-0042\`), and nothing else. Never guess, predict, reserve, renumber, or abbreviate one. Only \`create_document\` mints a short code — read it back from the tool result and use that exact string. If you don't know an item's code, look it up with \`list_documents\`/\`search_documents\`.
+- **Never invent an interim ID** for work that doesn't exist yet ("Task 1", "T-3", "AUTH-01", "task A"). Refer to proposed work by its full quoted title, marked as not yet created, and switch to the short code the moment the document exists. Numbers in a list are question numbers for that message only — never carry them forward.
+- **Metis's enumerations are closed sets. Translate outside terms; don't adopt them.** Types are \`vision\`, \`initiative\`, \`task\`, \`adr\`, \`specification\` — there is no epic, story, sub-task, chore, or milestone. Backlog categories are \`bug\`, \`feature\`, \`tech-debt\`. Task phases are \`backlog\`, \`todo\`, \`active\`, \`blocked\`, \`completed\` — a task is \`active\`, not "in progress"; \`completed\`, not "done".
+- **Never invent grouping entities** ("workstream A", "batch 2", "phase 1 tasks"). Nothing in Metis holds them. Work that belongs together is children of the same initiative; ordering is a dependency between short codes, recorded in the initiative's implementation plan.
+- **Short codes travel outside the conversation too**: commits, PRs, branch names, code TODOs, TodoWrite entries, and status summaries all carry the real short code or no ID at all — never a made-up one.
+- Write into the headings the template already gives you (a task's \`Status Updates\` is the progress log). Don't add your own sections or a parallel progress file.
+- Load the \`metis-vocabulary\` skill for the full tables and for how to repair an invented name once you spot one.
+
 ## Current Project State
 ${STATE_SUMMARY}
 

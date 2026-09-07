@@ -168,6 +168,7 @@ create_document(type="initiative", title="User Dashboard", parent_id="PROJ-V-000
 |--------------|---------|-----|
 | **Shadow work** | Work outside system | Track everything; create backlog items retroactively |
 | **Shadow backlogs** | Secret lists elsewhere | Capture in Metis; trust or fix the system |
+| **Invented shorthand** | "Task 3", "the auth epic" resolve to nothing | Use the short code Metis assigned; translate outside terms |
 | **Too many active** | Context switching | Limit WIP; finish before starting |
 | **Orphaned work** | No value alignment | Connect to parent or move to backlog |
 | **Skipping phases** | Problems found late | Respect exit criteria |
@@ -182,6 +183,7 @@ create_document(type="initiative", title="User Dashboard", parent_id="PROJ-V-000
 - **Phases exist for a reason**: Don't skip them
 - **Filesystem is truth**: Database is cache
 - **Scope over time**: Size by capability, not duration
+- **Metis's names, never your own**: Short codes identify work; types, phases, and categories are closed sets
 
 ## Additional Resources
 
@@ -192,3 +194,6 @@ For detailed patterns and anti-patterns:
 - **`references/feature-development.md`** - Feature flow details
 - **`references/anti-patterns.md`** - Full anti-pattern catalog
 - **`references/preset-selection.md`** - Preset decision guide
+
+Related skill:
+- **`metis-vocabulary`** - Canonical short codes, types, phases, and categories, and how to repair an invented name

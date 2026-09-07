@@ -53,7 +53,9 @@ CURRENT_TASK_INDEX=$(grep '^current_task_index:' "$STATE_FILE" | sed 's/current_
 TASK_LIST=()
 if [[ "$MODE" == "tasks" ]]; then
   while IFS= read -r line; do
-    task=$(echo "$line" | sed 's/.*- *"\{0,1\}\([^"]*\)"\{0,1\}/\1/')
+    # Strip the leading "  - " and any surrounding quotes. A greedy match here
+    # would eat through the short code's own hyphens (PROJ-T-0001 -> 0001).
+    task=$(echo "$line" | sed 's/^[[:space:]]*-[[:space:]]*//' | tr -d '"')
     TASK_LIST+=("$task")
   done < <(grep '^ *- ' "$STATE_FILE")
 fi
@@ -155,6 +157,9 @@ mv "$TEMP_FILE" "$STATE_FILE"
 # Common code index hint for all modes
 CODE_INDEX_HINT="If you need to locate code and the task doesn't already tell you which files to edit, read .metis/code-index.md first — do not explore the codebase from scratch."
 
+# Common naming hint for all modes — loops are where invented shorthand accumulates
+NAMING_HINT="Refer to every work item by its Metis short code (e.g. PROJ-T-0042) — in your notes, your status updates, your commit messages, and your summary to the user. Never invent an ID, a shorthand, or a label for work ('task 2', 'T-3', 'step A', 'batch 1'); if you don't know an item's short code, look it up with mcp__metis__list_documents or mcp__metis__search_documents. Report phases with Metis's words: a task is 'active', not 'in progress'; 'completed', not 'done'. Write progress into the task's existing Status Updates section — do not add sections of your own or a separate progress file."
+
 # Build prompt based on mode
 if [[ "$MODE" == "tasks" ]]; then
   # Multi-task serial execution mode
@@ -166,6 +171,8 @@ if [[ "$MODE" == "tasks" ]]; then
   PROMPT_TEXT="Continue executing Metis tasks serially.
 
 $CODE_INDEX_HINT
+
+$NAMING_HINT
 
 Tasks to execute:
 $(echo -e "$TASK_NAMES")
@@ -187,6 +194,8 @@ else
   PROMPT_TEXT="Continue working on Metis task $SHORT_CODE.
 
 $CODE_INDEX_HINT
+
+$NAMING_HINT
 
 1. Read the task using mcp__metis__read_document with short_code=\"$SHORT_CODE\" and project_path=\"$PROJECT_PATH\"
 2. Review what you've done so far (check the Status Updates section)

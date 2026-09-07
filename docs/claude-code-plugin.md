@@ -4,7 +4,7 @@ The Metis plugin teaches Claude Code *when* and *why* to use Metis tools, provid
 
 ## What the Plugin Provides
 
-- **Skills**: Guidance on document selection, decomposition patterns, phase transitions, and project patterns, plus design interviews (`/grill-vision`, `/grill-initiative`, `/grill-decomposition`) that sharpen visions, initiatives, and their task breakdown before work starts
+- **Skills**: Guidance on Metis vocabulary, document selection, decomposition patterns, phase transitions, and project patterns, plus design interviews (`/grill-vision`, `/grill-initiative`, `/grill-decomposition`) that sharpen visions, initiatives, and their task breakdown before work starts
 - **Commands**: `/metis-ralph` and `/metis-ralph-tasks` for autonomous task execution
 - **Agents**: Flight Levels methodology expert for document type selection and work decomposition
 - **MCP Integration**: Automatic Metis MCP server configuration
@@ -72,6 +72,7 @@ Cancels an active Ralph loop.
 
 The plugin provides methodology guidance through skills:
 
+- **metis-vocabulary**: Keeps Claude on Metis's own names — short codes for work items, closed sets for document types, phases, and backlog categories — instead of shorthand it invented ("Task 3", "the auth epic", "in progress")
 - **document-selection**: Helps choose the right document type (vision, initiative, task, ADR, specification)
 - **decomposition**: Patterns for breaking down work into tasks
 - **phase-transitions**: Guidance on advancing documents through their lifecycle

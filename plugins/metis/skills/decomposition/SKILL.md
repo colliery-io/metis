@@ -111,6 +111,22 @@ Initiative: "Platform migration"
 ```
 Each milestone independently valuable and deployable.
 
+## Naming Tasks Before They Exist
+
+Decomposition is the single biggest source of invented shorthand: you draft five tasks in a message, call them "Task 1" through "Task 5", and those labels outlive the message.
+
+While the tasks are still proposals, name them by **full title in quotes** and say they aren't created yet:
+
+> Proposed (not yet created): "Login flow", "Registration flow", "Password reset", "Session management".
+
+Do not assign an interim ID — not `T1`, not "task A", not a placeholder short code to be swapped later. Numbers in a list are for the user to answer against in *that message* ("re: 3, split it"); they are not identifiers and don't survive into the next message, a document, or a commit.
+
+The moment you call `create_document`, the tool result gives you the real short code. From then on the task's name is that short code, and the working title is just its title. Never predict what a short code will be — the counter is Metis's, not yours.
+
+The same applies to sequencing. "Phase 1 tasks", "the first batch", "the DB workstream" are entities nothing in Metis holds; they die with the conversation while people keep referring to them. Express ordering as a dependency between short codes and record it in the initiative's implementation plan.
+
+See the `metis-vocabulary` skill for the full rules.
+
 ## Quality Checklist
 
 Good decomposition - each child item:

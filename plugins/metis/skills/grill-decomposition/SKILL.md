@@ -26,6 +26,8 @@ Then:
 
 Each branch below is a root of the design tree. Ask across the whole set at once, naming tasks by short code. Give a recommended answer for every question.
 
+Name every existing task by its short code, never by position ("the second task") or a label of your own. A task you are proposing to add does not have a short code yet: give it a full quoted title and mark it as not yet created, and switch to the real code the moment `create_document` returns one. Question numbers belong to this round only — they never become names for work.
+
 **Slice boundaries.** For each task: is it a vertical slice that proves something on its own, or a horizontal layer that proves nothing until others land? Where a task is a layer, propose the merge or split that makes it a slice, and ask.
 
 **Ordering and risk.** Which task retires the most uncertainty? Recommend it go first. Where one task cannot start until another finishes, say so and ask whether the dependency is real or an artefact of how the work was cut.

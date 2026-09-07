@@ -59,6 +59,18 @@ The document should be readable at any point during the session by someone who w
 - When relationships between concepts are being discussed, invent concrete scenarios that probe edge cases and force the boundary to be stated.
 - When the user states how something works, check whether the code agrees. Surface contradictions.
 
+## Name Things The Way Metis Does
+
+An interview generates candidates faster than documents: work you have proposed but not created, ideas the user raised in passing, scope you have parked for later. Every one of them is a chance to invent a name that nothing in Metis holds.
+
+- **Documents that exist** are referred to by short code, always: "`PROJ-I-0003` already covers the retry policy." Never "the auth initiative" as if it were an identifier, never an abbreviated code.
+- **Candidates that don't exist yet** get a full quoted title and an explicit "not yet created" — never an interim ID, and never a predicted short code. Only `create_document` mints one; take it from the tool result.
+- **Question numbers are not identifiers.** `Q1`–`Q6` address a single round. They must not appear in a document, a commit, or a later message as a name for work.
+- **Use Metis's words for types and phases** — initiative, task, `decompose`, `active` — not epics, stories, sprints, or "in progress". When the user brings outside vocabulary, translate it in your reply so the mapping is visible rather than quietly adopting it.
+- When you park scope for later, park it as a named candidate ("out of scope, candidate initiative: \"Bulk import\"") or create the document. Do not invent a bucket like "phase 2" to hold it.
+
+The `metis-vocabulary` skill has the full rules and the repair procedure for a name that has already leaked into documents.
+
 ## Offer ADRs Sparingly
 
 Only offer to record an ADR when all three are true:

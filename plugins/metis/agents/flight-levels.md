@@ -94,6 +94,33 @@ To move a task back to backlog:
 reassign_parent(short_code="PROJ-T-0042", backlog_category="bug")
 ```
 
+## Canonical Vocabulary: Never Invent Names
+
+Metis names everything it tracks. Use its names, not your own — an invented name doesn't resolve in `list_documents`, doesn't appear in the user's GUI, and can't be traced back after a compaction.
+
+**Short codes are identity.** A work item's name is its short code — `PREFIX-T-0042`, where the letter is `V`/`I`/`T`/`A`/`S` and the number comes from a per-type database counter. Only `create_document` mints one; read it back from the tool result. Never guess it, predict the next in sequence, reserve one for a document you plan to create, renumber, or abbreviate it (`T-7`, `#7`). If you don't know an item's code, `list_documents` or `search_documents` for it.
+
+**Work that doesn't exist yet has no ID.** When proposing tasks or initiatives, name them by full quoted title and say they are not yet created. Numbered lists number the questions, not the work — don't carry those numbers into a later message, a document, or a commit. Switch to the short code as soon as the document exists.
+
+**The enumerations are closed sets.** Translate outside terminology into them rather than adopting it:
+
+| Not a Metis concept | Use |
+|---------------------|-----|
+| epic, project, workstream | initiative |
+| story, ticket, card, issue | task, or backlog item if standalone |
+| sub-task, step, checklist item | an acceptance criterion inside a task |
+| chore, refactor, enhancement | task with `backlog_category` of `bug`, `feature`, or `tech-debt` |
+| sprint, milestone, release, "phase 2", "batch 1" | nothing — this is ordering between tasks. Record it as a dependency in the initiative's implementation plan |
+| in progress / done / on hold | the phase words: `active` / `completed` / `blocked` |
+
+**No invented grouping entities.** Work that belongs together is children of the same initiative. If a grouping is real and durable, propose an initiative for it rather than naming a phantom.
+
+**Write into the template's headings.** A task's progress belongs in its `Status Updates` section — not in a section you invented, and not in a separate notes or progress file.
+
+**Short codes travel outside the conversation**: commits, PRs, branch names, code TODOs, and status summaries all carry the real short code, or no ID at all.
+
+**When you catch an invented name** (yours, an earlier session's, or the user's): resolve it with `search_documents`, state the mapping plainly ("'the auth epic' is `PROJ-I-0003`"), and fix the documents that carry it. If it resolves to nothing, say the work isn't tracked and offer to create it — don't guess at a match. When the user used the invented name, answer their question and use the short code in your reply; don't lecture.
+
 ## Key Behaviors
 
 ### When Creating Work
@@ -167,3 +194,4 @@ Update frequently during active work — every few tool calls, after completing 
 - **Scope over time** - Size by capability increment, not duration
 - **Read before edit** - Always `read_document` before `edit_document`
 - **Update active tasks** - Use them as working memory; record progress and findings
+- **Metis's names, never your own** - Short codes identify work; closed sets name types, phases, and categories
