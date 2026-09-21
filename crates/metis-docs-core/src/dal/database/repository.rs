@@ -206,6 +206,34 @@ impl DocumentRepository {
             .map_err(MetisError::Database)
     }
 
+    /// Get documents filtered by any combination of type, phase, and archived state.
+    /// `None` for `doc_type`/`phase_name` leaves that axis unfiltered.
+    pub fn find_filtered(
+        &mut self,
+        doc_type: Option<&str>,
+        phase_name: Option<&str>,
+        include_archived: bool,
+    ) -> Result<Vec<Document>> {
+        use schema::documents::dsl::*;
+
+        let mut query = documents.into_boxed();
+
+        if let Some(t) = doc_type {
+            query = query.filter(document_type.eq(t.to_string()));
+        }
+        if let Some(p) = phase_name {
+            query = query.filter(phase.eq(p.to_string()));
+        }
+        if !include_archived {
+            query = query.filter(archived.eq(false));
+        }
+
+        query
+            .order(updated_at.desc())
+            .load(&mut self.connection)
+            .map_err(MetisError::Database)
+    }
+
     /// Get all documents belonging to an initiative
     pub fn find_by_initiative_id(&mut self, initiative_document_id: &str) -> Result<Vec<Document>> {
         use schema::documents::dsl::*;

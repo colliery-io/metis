@@ -41,6 +41,8 @@ async fn get_vision_short_code(metis_path: &str) -> String {
     let list_tool = ListDocumentsTool {
         project_path: metis_path.to_string(),
         include_archived: None,
+        document_type: None,
+        phase: None,
     };
     let result = list_tool.call_tool().await.unwrap();
 
@@ -269,6 +271,8 @@ async fn test_list_and_search_include_archived() {
     let list_tool = ListDocumentsTool {
         project_path: metis_path.clone(),
         include_archived: None,
+        document_type: None,
+        phase: None,
     };
     let result = list_tool.call_tool().await.unwrap();
     let text = extract_text_from_result(&result).unwrap();
@@ -303,6 +307,8 @@ async fn test_list_and_search_include_archived() {
     let list_tool = ListDocumentsTool {
         project_path: metis_path.clone(),
         include_archived: None,
+        document_type: None,
+        phase: None,
     };
     let result = list_tool.call_tool().await.unwrap();
     let text = extract_text_from_result(&result).unwrap();
@@ -315,6 +321,8 @@ async fn test_list_and_search_include_archived() {
     let list_tool = ListDocumentsTool {
         project_path: metis_path.clone(),
         include_archived: Some(true),
+        document_type: None,
+        phase: None,
     };
     let result = list_tool.call_tool().await.unwrap();
     let text = extract_text_from_result(&result).unwrap();
@@ -351,6 +359,86 @@ async fn test_list_and_search_include_archived() {
     assert!(
         text.contains(&adr_short_code),
         "Archived ADR SHOULD appear in search when include_archived=true"
+    );
+}
+
+#[tokio::test]
+async fn test_list_documents_type_and_phase_filters() {
+    // Test that document_type and phase filters on list_documents narrow results correctly
+    let temp_dir = tempdir().unwrap();
+    let project_path = temp_dir.path().to_string_lossy().to_string();
+    let metis_path = format!("{}/.metis", project_path);
+
+    // Initialize project (creates a vision in "draft" phase)
+    let init_tool = InitializeProjectTool {
+        project_path: project_path.clone(),
+        prefix: None,
+    };
+    init_tool.call_tool().await.unwrap();
+    let vision_short_code = get_vision_short_code(&metis_path).await;
+
+    // Create an initiative (starts in "discovery" phase) under the vision
+    let create_initiative = CreateDocumentTool {
+        project_path: metis_path.clone(),
+        document_type: "initiative".to_string(),
+        title: "Filter Test Initiative".to_string(),
+        parent_id: Some(vision_short_code.clone()),
+        complexity: Some("m".to_string()),
+        stakeholders: Some(vec!["product_team".to_string()]),
+        decision_maker: None,
+        backlog_category: None,
+    };
+    let result = create_initiative.call_tool().await.unwrap();
+    let initiative_short_code = extract_short_code(&result);
+
+    // Filter by document_type=vision: only the vision should appear
+    let list_tool = ListDocumentsTool {
+        project_path: metis_path.clone(),
+        include_archived: None,
+        document_type: Some("vision".to_string()),
+        phase: None,
+    };
+    let result = list_tool.call_tool().await.unwrap();
+    let text = extract_text_from_result(&result).unwrap();
+    assert!(
+        text.contains(&vision_short_code),
+        "Vision should appear when filtering by document_type=vision"
+    );
+    assert!(
+        !text.contains(&initiative_short_code),
+        "Initiative should NOT appear when filtering by document_type=vision"
+    );
+
+    // Filter by phase=discovery: only the initiative should appear
+    let list_tool = ListDocumentsTool {
+        project_path: metis_path.clone(),
+        include_archived: None,
+        document_type: None,
+        phase: Some("discovery".to_string()),
+    };
+    let result = list_tool.call_tool().await.unwrap();
+    let text = extract_text_from_result(&result).unwrap();
+    assert!(
+        text.contains(&initiative_short_code),
+        "Initiative should appear when filtering by phase=discovery"
+    );
+    assert!(
+        !text.contains(&vision_short_code),
+        "Vision should NOT appear when filtering by phase=discovery (it's in draft)"
+    );
+
+    // Combined type+phase filter that matches nothing should return no documents
+    let list_tool = ListDocumentsTool {
+        project_path: metis_path.clone(),
+        include_archived: None,
+        document_type: Some("vision".to_string()),
+        phase: Some("discovery".to_string()),
+    };
+    let result = list_tool.call_tool().await.unwrap();
+    let text = extract_text_from_result(&result).unwrap();
+    assert!(
+        !text.contains(&vision_short_code) && !text.contains(&initiative_short_code),
+        "No documents should match vision+discovery filter combination"
     );
 }
 
@@ -483,6 +571,8 @@ async fn test_create_backlog_items() {
     let list_tool = ListDocumentsTool {
         project_path: metis_path.clone(),
         include_archived: None,
+        document_type: None,
+        phase: None,
     };
     let result = list_tool.call_tool().await.unwrap();
     let text = extract_text_from_result(&result).unwrap();

@@ -66,6 +66,8 @@ async fn get_vision_short_code(metis_path: &str) -> String {
     let list_tool = ListDocumentsTool {
         project_path: metis_path.to_string(),
         include_archived: None,
+        document_type: None,
+        phase: None,
     };
     let result = list_tool.call_tool().await.unwrap();
 
@@ -203,6 +205,8 @@ async fn test_streamlined_configuration_workflow() {
     let list_tool = ListDocumentsTool {
         project_path: metis_path.clone(),
         include_archived: None,
+        document_type: None,
+        phase: None,
     };
     let final_list = list_tool.call_tool().await;
     assert!(final_list.is_ok(), "Final document listing should succeed");
@@ -318,6 +322,8 @@ async fn test_direct_configuration_workflow() {
     let list_tool = ListDocumentsTool {
         project_path: metis_path.clone(),
         include_archived: None,
+        document_type: None,
+        phase: None,
     };
     let final_list = list_tool.call_tool().await;
     assert!(final_list.is_ok(), "Final document listing should succeed");
@@ -360,6 +366,8 @@ async fn test_specification_workflow() {
     let list_tool = ListDocumentsTool {
         project_path: metis_path.clone(),
         include_archived: None,
+        document_type: None,
+        phase: None,
     };
     let list_result = list_tool.call_tool().await.unwrap();
     let list_text = extract_text_from_result(&list_result).unwrap();
