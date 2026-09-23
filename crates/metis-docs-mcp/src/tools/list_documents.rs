@@ -10,7 +10,7 @@ use std::path::Path;
 
 #[mcp_tool(
     name = "list_documents",
-    description = "List documents in a project with optional filtering. Returns document details including unique short codes (format: PREFIX-TYPE-NNNN).",
+    description = "List documents in a project, optionally filtered by document_type and/or phase. Returns document details including unique short codes (format: PREFIX-TYPE-NNNN).",
     idempotent_hint = true,
     destructive_hint = false,
     open_world_hint = false,
@@ -23,6 +23,12 @@ pub struct ListDocumentsTool {
     /// Include archived documents in results (defaults to false)
     #[serde(default)]
     pub include_archived: Option<bool>,
+    /// Only return documents of this type (vision, initiative, task, adr, specification)
+    #[serde(default)]
+    pub document_type: Option<String>,
+    /// Only return documents in this phase (e.g. "active", "todo", "blocked", "completed")
+    #[serde(default)]
+    pub phase: Option<String>,
 }
 
 impl ListDocumentsTool {
@@ -43,13 +49,35 @@ impl ListDocumentsTool {
 
         let mut repo = db.into_repository();
 
-        // List all documents (respecting include_archived flag, defaults to false)
+        // List documents matching the requested filters (type/phase/archived)
         let include_archived = self.include_archived.unwrap_or(false);
-        let mut documents = self.list_all_documents(&mut repo, include_archived)?;
+        let mut documents = repo
+            .find_filtered(
+                self.document_type.as_deref(),
+                self.phase.as_deref(),
+                include_archived,
+            )
+            .map_err(|e| {
+                CallToolError::new(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    format!("Failed to query documents: {}", e),
+                ))
+            })?;
         let total_count = documents.len();
 
         // Build formatted output
-        let mut output = ToolOutput::new().header(&format!("Documents ({} total)", total_count));
+        let mut header = format!("Documents ({} total)", total_count);
+        let mut filters = Vec::new();
+        if let Some(t) = &self.document_type {
+            filters.push(format!("type={}", t));
+        }
+        if let Some(p) = &self.phase {
+            filters.push(format!("phase={}", p));
+        }
+        if !filters.is_empty() {
+            header = format!("{} [{}]", header, filters.join(", "));
+        }
+        let mut output = ToolOutput::new().header(&header);
 
         if total_count == 0 {
             output = output.text("No documents found.");
@@ -90,38 +118,5 @@ impl ListDocumentsTool {
         }
 
         Ok(output.build_result())
-    }
-
-    fn list_all_documents(
-        &self,
-        repo: &mut metis_core::dal::database::repository::DocumentRepository,
-        include_archived: bool,
-    ) -> Result<Vec<metis_core::dal::database::models::Document>, CallToolError> {
-        let mut all_docs = Vec::new();
-
-        // Collect all document types
-        for doc_type in ["vision", "initiative", "task", "adr", "specification"] {
-            let mut docs = if include_archived {
-                repo.find_by_type(doc_type)
-            } else {
-                repo.find_by_type_unarchived(doc_type)
-            }
-            .map_err(|e| {
-                CallToolError::new(std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    format!("Failed to query {} documents: {}", doc_type, e),
-                ))
-            })?;
-            all_docs.append(&mut docs);
-        }
-
-        // Sort by updated_at descending
-        all_docs.sort_by(|a, b| {
-            b.updated_at
-                .partial_cmp(&a.updated_at)
-                .unwrap_or(std::cmp::Ordering::Equal)
-        });
-
-        Ok(all_docs)
     }
 }
