@@ -80,7 +80,7 @@ read -r -d '' CONTEXT << EOF
 - Commits, PRs, TODOs, and status summaries carry the real short code or no ID at all. Load the \`metis-vocabulary\` skill for the full tables and repair steps.
 
 ### CRITICAL: Write Design Documents in ASD-STE100
-- All content that you write into a Metis document uses ASD-STE100 Simplified Technical English: approved words with one meaning each, one term for one thing, simple tenses, active voice, no "-ing" verbs, no idioms or phrasal verbs.
+- All content that you write into a Metis document uses ASD-STE100 Simplified Technical English: approved words with one meaning each, one term for one thing, simple tenses, active voice, no "-ing" verbs, no phrasal verbs, contractions, semicolons, or Latin abbreviations.
 - Procedural sentences (steps, acceptance criteria): imperative, 20 words or fewer, one instruction each. Descriptive sentences: 25 words or fewer. Use numbers, not "some" or "fast".
 - Short codes, \`REQ-\`/\`NFR-\` IDs, code, paths, and commands do not change. Load the \`ste100-writing\` skill for the full rules.
 
