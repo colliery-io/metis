@@ -232,6 +232,23 @@ reassign_parent:
 - **Hierarchy matters**: Tasks need initiatives, initiatives need visions
 - **Short codes everywhere**: Reference documents by ID, not title
 - **Archive completed work**: Use `archive_document` to clean up finished trees
+- **Write in ASD-STE100**: All document content is written in Simplified Technical English. See "Writing Style" below.
+
+## Writing Style: ASD-STE100 Simplified Technical English
+
+**All content that you write into a Metis document is written in ASD-STE100 Simplified Technical English (STE).** This includes visions, initiatives, tasks, ADRs, specifications, acceptance criteria, implementation plans, decision rationale, requirements, and status updates. Design documents are read by people and agents who were not in the conversation. STE gives each sentence one possible interpretation.
+
+The core rules:
+- **Approved words, one meaning each.** Use short, common words: "use", not "utilize"; "do", not "perform"; "before", not "prior to". Use one term for one thing in all documents. Do not use synonyms, idioms, or phrasal verbs ("kick off", "look into").
+- **Simple verbs.** Use the simple present, simple past, or simple future tense. Use the active voice. Do not use "-ing" forms as verbs or nouns.
+- **Short sentences.** Procedural sentences (steps, acceptance criteria) have 20 words or fewer and use the imperative. Descriptive sentences (context, design, rationale) have 25 words or fewer.
+- **One instruction per sentence. One topic per paragraph**, with 6 sentences or fewer.
+- **Do not omit words.** Keep articles and verbs. Do not use noun clusters of more than three words.
+- **Be specific.** Use numbers and units, not "some", "fast", or "better". Put a condition before its action ("If X, do Y").
+
+**Do not change technical names**: short codes, `REQ-`/`NFR-` IDs, Metis types and phases, code, identifiers, paths, and commands stay exactly as they are. Quotations from the user stay as they are.
+
+Example: not "We should look into utilizing a cache to make loading faster." Write: "Add a cache for document summaries. The load time must be less than 1 s for 500 documents."
 
 ## Human-in-the-Loop for Strategic Work
 

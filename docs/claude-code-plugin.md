@@ -4,7 +4,7 @@ The Metis plugin teaches Claude Code *when* and *why* to use Metis tools, provid
 
 ## What the Plugin Provides
 
-- **Skills**: Guidance on Metis vocabulary, document selection, decomposition patterns, phase transitions, and project patterns, plus design interviews (`/grill-vision`, `/grill-initiative`, `/grill-decomposition`) that sharpen visions, initiatives, and their task breakdown before work starts
+- **Skills**: Guidance on Metis vocabulary, ASD-STE100 writing style for design documents, document selection, decomposition patterns, phase transitions, and project patterns, plus design interviews (`/grill-vision`, `/grill-initiative`, `/grill-decomposition`) that sharpen visions, initiatives, and their task breakdown before work starts
 - **Commands**: `/metis-ralph` and `/metis-ralph-tasks` for autonomous task execution
 - **Agents**: Flight Levels methodology expert for document type selection and work decomposition
 - **MCP Integration**: Automatic Metis MCP server configuration
@@ -73,6 +73,7 @@ Cancels an active Ralph loop.
 The plugin provides methodology guidance through skills:
 
 - **metis-vocabulary**: Keeps Claude on Metis's own names — short codes for work items, closed sets for document types, phases, and backlog categories — instead of shorthand it invented ("Task 3", "Slice 2", "D3", "the auth epic", "in progress"). Plans are written in short codes that have been created or read back; the one carve-out is a specification's `REQ-`/`NFR-` requirement IDs
+- **ste100-writing**: Directs Claude to write all Metis document content (visions, initiatives, tasks, ADRs, specifications, acceptance criteria, status updates) in ASD-STE100 Simplified Technical English: approved words with one meaning each, simple tenses, active voice, and short sentences (20 words for procedures, 25 for descriptions). Short codes, code, and other technical names stay as they are
 - **document-selection**: Helps choose the right document type (vision, initiative, task, ADR, specification)
 - **decomposition**: Patterns for breaking down work into tasks
 - **phase-transitions**: Guidance on advancing documents through their lifecycle

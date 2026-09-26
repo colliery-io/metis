@@ -138,6 +138,7 @@ Good decomposition - each child item:
 - **Clearly scoped**: Know when it's done
 - **Right-sized**: Matches scope expectations for level
 - **Aligned to parent**: Clearly contributes to level above
+- **Written in STE**: Objective and acceptance criteria use ASD-STE100 Simplified Technical English. Each criterion is one imperative sentence of 20 words or fewer, with a verifiable result. See the `ste100-writing` skill.
 
 Bad decomposition smells:
 - **Too granular**: "write line 42" - steps, not tasks
