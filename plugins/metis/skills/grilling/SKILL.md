@@ -49,6 +49,7 @@ This is the "with docs" half. The document you are grilling is a Metis document,
 - When a decision settles, immediately `mcp__metis__edit_document` the section it belongs to. Replace template placeholders with the actual answer. Always `read_document` before `edit_document`.
 - When a decision reverses an earlier one, update the section so it reads as the current truth, not as a changelog.
 - Add a short entry to the document's status updates section per round: which questions closed, what changed.
+- Write everything you put into the document in ASD-STE100 Simplified Technical English. The user can answer in any style; you translate the settled answer into STE when you write it. See the `ste100-writing` skill.
 
 The document should be readable at any point during the session by someone who was not in the conversation.
 
@@ -56,6 +57,7 @@ The document should be readable at any point during the session by someone who w
 
 - When the user uses a vague or overloaded term, propose a precise one. "You said 'account'. Do you mean the Customer or the User? Those are different things."
 - When a term conflicts with how existing Metis documents or the code use it, call it out immediately and ask which is right.
+- When a term settles, it has one meaning from then on (the STE rule "one word, one meaning"). Write its definition into the document and use only that term. Do not alternate between synonyms.
 - When relationships between concepts are being discussed, invent concrete scenarios that probe edge cases and force the boundary to be stated.
 - When the user states how something works, check whether the code agrees. Surface contradictions.
 

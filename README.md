@@ -183,6 +183,8 @@ The plugin also includes **skills** (contextual methodology guidance for decompo
 
 One of those skills, **metis-vocabulary**, exists to stop a common failure: an AI agent quietly inventing its own names for work. Left alone it will call things "Task 3", "Slice 2", "the auth epic", or "D3" for the third decision -- labels that resolve to nothing in `metis status`, in the GUI, or after a context compaction -- and thread short codes for tasks it never created through an initiative's implementation plan. The plugin's hooks and skills keep it on Metis's names instead: plans are written in short codes that have been created or read back, decisions are ADRs, and types, phases, and backlog categories are closed sets that outside vocabulary gets translated into. The one carve-out is a specification's requirements tables, which keep their `REQ-`/`NFR-` IDs so PRD-style requirements stay citable.
 
+The plugin, the hooks, and the MCP server instructions also direct agents to write design documents in **ASD-STE100 Simplified Technical English**. Visions, initiatives, tasks, ADRs, and specifications are read by people and agents who were not in the conversation, so their text uses approved words with one meaning each, simple tenses, active voice, and short sentences. The **ste100-writing** skill has the full rules and examples.
+
 See the [full plugin documentation](docs/claude-code-plugin.md) for details.
 
 ## Code Indexing

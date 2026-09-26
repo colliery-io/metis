@@ -97,6 +97,15 @@ This is a **Metis project** (detected \`.metis\` directory).
 - Write into the headings the template already gives you (a task's \`Status Updates\` is the progress log). Don't add your own sections or a parallel progress file.
 - Load the \`metis-vocabulary\` skill for the full tables and for how to repair an invented name once you spot one.
 
+## CRITICAL: Write Design Documents in ASD-STE100
+- **All content that you write into a Metis document uses ASD-STE100 Simplified Technical English (STE)**: visions, initiatives, tasks, ADRs, specifications, acceptance criteria, implementation plans, decision rationale, and status updates.
+- **Approved words, one meaning each**: \`use\`, not "utilize"; \`do\`, not "perform"; \`before\`, not "prior to". One term for one thing in all documents. No idioms or phrasal verbs.
+- **Simple present, past, or future tense. Active voice.** No "-ing" verbs, contractions, semicolons, or Latin abbreviations ("e.g.", "etc.").
+- **Procedural sentences: 20 words or fewer, in the imperative, one instruction per sentence.** Descriptive sentences: 25 words or fewer. Paragraphs: one topic, 6 sentences or fewer.
+- **Be specific**: numbers and units, not "some", "fast", or "better". Keep articles; no noun clusters of more than three words.
+- **Technical nouns do not change**: short codes, \`REQ-\`/\`NFR-\` IDs, types, phases, code, paths, and commands stay exactly as they are.
+- Load the \`ste100-writing\` skill before you write or edit design content.
+
 ## Current Project State
 ${STATE_SUMMARY}
 

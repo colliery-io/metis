@@ -32,7 +32,7 @@ Name every existing task by its short code, never by position ("the second task"
 
 **Ordering and risk.** Which task retires the most uncertainty? Recommend it go first. Where one task cannot start until another finishes, say so and ask whether the dependency is real or an artefact of how the work was cut.
 
-**Done criteria.** For each acceptance criterion: could a Ralph loop verify it without a human? Criteria like "works well" or "is clean" are not verifiable. Propose a concrete replacement (a command that passes, a response code, a file that exists, a metric under a threshold) and ask the user to confirm or correct it. Criteria that genuinely need a human eye should say so explicitly.
+**Done criteria.** For each acceptance criterion: could a Ralph loop verify it without a human? Criteria like "works well" or "is clean" are not verifiable. Propose a concrete replacement (a command that passes, a response code, a file that exists, a metric under a threshold) and ask the user to confirm or correct it. Criteria that genuinely need a human eye should say so explicitly. Write each settled criterion in ASD-STE100 Simplified Technical English: one imperative sentence, 20 words or fewer, one result (see the `ste100-writing` skill).
 
 **Scope leaks.** Compare every task against the initiative's non-goals and goals. Flag any task that does work the initiative ruled out, and any goal no task covers. Ask whether to cut, add, or accept the gap.
 

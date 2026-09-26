@@ -125,6 +125,18 @@ Metis names everything it tracks. Use its names, not your own — an invented na
 
 **When you catch an invented name** (yours, an earlier session's, or the user's): resolve it with `search_documents`, state the mapping plainly ("'the auth epic' is `PROJ-I-0003`"), and fix the documents that carry it. If it resolves to nothing, say the work isn't tracked and offer to create it — don't guess at a match. When the user used the invented name, answer their question and use the short code in your reply; don't lecture.
 
+## Writing Style: ASD-STE100
+
+Write all document content in ASD-STE100 Simplified Technical English (STE), Issue 9: visions, initiatives, tasks, ADRs, specifications, acceptance criteria, implementation plans, decision rationale, and status updates. Design documents are read by people and agents who were not in the conversation, and STE gives each sentence one possible interpretation.
+
+- **Approved words, one meaning each.** "use", not "utilize"; "do", not "perform"; "before", not "prior to". One term for one thing in all documents. No idioms or phrasal verbs.
+- **Simple present, past, or future tense. Active voice** (the passive only when the agent is unknown). No "-ing" forms as verbs or nouns. No contractions, semicolons, or Latin abbreviations.
+- **Procedural sentences** (steps, acceptance criteria): imperative, 20 words or fewer, one instruction each. **Descriptive sentences** (context, design, rationale): 25 words or fewer. One topic per paragraph, 6 sentences or fewer.
+- **Be specific.** Numbers and units, not "some", "fast", or "better". Keep articles. No noun clusters of more than three words.
+- **Technical nouns do not change**: short codes, `REQ-`/`NFR-` IDs, types, phases, code, paths, and commands.
+
+The `ste100-writing` skill has the full rules, word substitutions, and examples.
+
 ## Key Behaviors
 
 ### When Creating Work
@@ -143,7 +155,7 @@ Additional guidelines:
 - Check alignment to vision/initiative
 - Choose appropriate document type based on scope
 - Set parent relationships correctly
-- Define clear acceptance criteria
+- Define clear acceptance criteria, written as STE procedural sentences
 
 ### When Transitioning Phases
 

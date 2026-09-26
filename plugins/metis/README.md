@@ -6,7 +6,7 @@ Flight Levels methodology plugin for Metis work management. Includes methodology
 
 | Component | Description |
 |-----------|-------------|
-| **Skills** | Flight Levels methodology guidance (vocabulary, decomposition, phases, patterns) and design interviews (`/grill-vision`, `/grill-initiative`, `/grill-decomposition`) |
+| **Skills** | Flight Levels methodology guidance (vocabulary, ASD-STE100 writing style, decomposition, phases, patterns) and design interviews (`/grill-vision`, `/grill-initiative`, `/grill-decomposition`) |
 | **Agent** | `flight-levels` - Methodology expert for document selection and best practices |
 | **Commands** | `/metis-ralph`, `/metis-ralph-tasks`, `/cancel-metis-ralph` - Iterative work loops |
 | **Hooks** | SessionStart (project detection), Stop (Ralph loop control) |
@@ -14,7 +14,7 @@ Flight Levels methodology plugin for Metis work management. Includes methodology
 
 ## Skills: Flight Levels Methodology
 
-Five focused skills provide targeted methodology guidance, and four more run design interviews:
+Six focused skills provide targeted methodology guidance, and four more run design interviews:
 
 ### metis-vocabulary
 **Triggers:** "what should I call this", "what's the ID for this", "task 1", "epic", "story", "sub-task", "mark it done", "in progress", or any time work is named, referred to, or grouped
@@ -22,6 +22,11 @@ Five focused skills provide targeted methodology guidance, and four more run des
 Keeps Claude on Metis's own vocabulary instead of shorthand it made up. A work item's name is its short code, minted only by `create_document` and never guessed, predicted, or abbreviated. Plans -- implementation plans, decision logs, status summaries -- are written in short codes, and a code only goes into a document after being created or read back, so an initiative's plan never fills up with references to tasks that don't exist. Work that doesn't exist yet is named by quoted title, not an interim ID. Slices are a shape of decomposition, not a name; decisions are ADR short codes, not `D1`/`D2`/`D3`; types, phases, and backlog categories are closed sets that outside terminology gets translated into.
 
 The one carve-out is a **specification's requirements tables**, which keep their `REQ-x.y.z` and `NFR-x.y.z` IDs -- that's where PRD-style requirements live and they need to stay citable. No other document type gets a numbering scheme. Also covers repairing an invented name once it has leaked into documents or commits.
+
+### ste100-writing
+**Triggers:** writing or editing any Metis document content, "STE", "ASD-STE100", "Simplified Technical English", "make this clearer"
+
+Directs Claude to write all design text in Metis documents -- visions, initiatives, tasks, ADRs, specifications, acceptance criteria, implementation plans, decision rationale, and status updates -- in [ASD-STE100 Simplified Technical English](https://www.asd-ste100.org). Approved words with one meaning each, one term for one thing, simple tenses, active voice, and short sentences: 20 words or fewer for procedural text such as acceptance criteria, 25 for descriptive text. Short codes, `REQ-`/`NFR-` IDs, code, and other technical nouns stay exactly as they are. Includes a word-substitution table and before/after examples.
 
 ### document-selection
 **Triggers:** "what document type", "create a bug ticket", "should this be a task or initiative", "when to use ADR"
