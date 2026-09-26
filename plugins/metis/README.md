@@ -26,7 +26,7 @@ The one carve-out is a **specification's requirements tables**, which keep their
 ### ste100-writing
 **Triggers:** writing or editing any Metis document content, "STE", "ASD-STE100", "Simplified Technical English", "make this clearer"
 
-Directs Claude to write all design text in Metis documents -- visions, initiatives, tasks, ADRs, specifications, acceptance criteria, implementation plans, decision rationale, and status updates -- in [ASD-STE100 Simplified Technical English](https://www.asd-ste100.org). Approved words with one meaning each, one term for one thing, simple tenses, active voice, and short sentences: 20 words or fewer for procedural text such as acceptance criteria, 25 for descriptive text. Short codes, `REQ-`/`NFR-` IDs, code, and other technical names stay exactly as they are. Includes a word-substitution table and before/after examples.
+Directs Claude to write all design text in Metis documents -- visions, initiatives, tasks, ADRs, specifications, acceptance criteria, implementation plans, decision rationale, and status updates -- in [ASD-STE100 Simplified Technical English](https://www.asd-ste100.org). Approved words with one meaning each, one term for one thing, simple tenses, active voice, and short sentences: 20 words or fewer for procedural text such as acceptance criteria, 25 for descriptive text. Short codes, `REQ-`/`NFR-` IDs, code, and other technical nouns stay exactly as they are. Includes a word-substitution table and before/after examples.
 
 ### document-selection
 **Triggers:** "what document type", "create a bug ticket", "should this be a task or initiative", "when to use ADR"

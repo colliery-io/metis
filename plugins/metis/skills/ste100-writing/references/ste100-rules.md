@@ -1,6 +1,8 @@
 # ASD-STE100 Reference for Metis Documents
 
-Every substitution in this file was checked against the dictionary in ASD-STE100 Issue 9 (2025-01-15), Part 2. The dictionary is the authority. Get it free from https://www.asd-ste100.org/STE_downloads.html. It is in the PDF, not on a web page.
+Every substitution in this file was checked against the dictionary in ASD-STE100 Issue 9 (2025-01-15), Part 2. This table is the word list for Metis documents. Do not look for or download the full dictionary.
+
+If a word is not in this table and it is not a technical noun or technical verb, use the shortest, most usual word that has only one meaning. If you are not sure about a word, write the sentence again with words from this table.
 
 In the dictionary, approved words are in uppercase. Unapproved words are in lowercase and show one or more approved alternatives. An approved word is approved for one part of speech only. For example, `CHANGE (v)` is approved, `COMPLETE (v)` is approved, but `complete (adj)` is not: use `FULL (adj)`.
 

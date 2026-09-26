@@ -92,4 +92,4 @@ STE:
 ## Additional Resources
 
 - **`references/ste100-rules.md`** - Word substitutions verified against the Issue 9 dictionary, and more examples for acceptance criteria, decision rationale, and status updates.
-- The official standard is ASD-STE100 Issue 9, free from the ASD Simplified Technical English Maintenance Group. The dictionary is Part 2 of the PDF, not a separate web page: https://www.asd-ste100.org/STE_downloads.html. It has approximately 900 approved words and 1,200 unapproved words with approved alternatives. Approved words are in uppercase, unapproved words in lowercase.
+- The rules and substitutions here come from ASD-STE100 Issue 9 (2025-01-15), from the ASD Simplified Technical English Maintenance Group. The reference table is the word list for Metis documents. Do not look for or download the full standard.
