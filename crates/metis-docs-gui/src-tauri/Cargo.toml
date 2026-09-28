@@ -29,6 +29,12 @@ serde_json = "1.0"
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 tauri = { version = "=2.11.2", features = [] }
+# tauri 2.11.2 resolves its companion crates by caret range; the 2.12.0 runtime
+# and 2.10.0 utils releases (2026-09-26) do not compile against it, so pin the
+# companions to the versions tauri 2.11.2 was published with.
+tauri-runtime = "=2.11.3"
+tauri-runtime-wry = "=2.11.4"
+tauri-utils = "=2.9.3"
 tauri-plugin-log = "=2.8.0"
 tauri-plugin-shell = "=2.3.5"
 tauri-plugin-dialog = "=2.7.1"
