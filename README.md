@@ -1,5 +1,9 @@
 # Metis
 
+> [!IMPORTANT]
+> Metis is no longer maintained, and this repository is archived.
+> Use [Kairos](https://github.com/colliery-io/kairos) going forward.
+
 <div align="center">
   <img src="crates/metis-docs-gui/src-tauri/icons/icon.png" alt="Metis Owl Logo" width="128" height="128">
   <br><br>
